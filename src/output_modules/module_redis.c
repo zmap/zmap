@@ -15,8 +15,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include "../../lib/zdlibc/logger.h"
-#include "../../lib/zdlibc/redis.h"
+#include "../../lib/logger.h"
+#include "../../lib/redis.h"
 
 #include "output_modules.h"
 
