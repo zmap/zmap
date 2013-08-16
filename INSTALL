@@ -1,6 +1,7 @@
 ZMap is designed to run on GNU/Linux systems and can be built with
 most recent versions of gcc.  ZMap requires GMP, a free library for
-arbitrary precision arithmetic, gengetopt, and libpcap.
+arbitrary precision arithmetic, gengetopt, and libpcap.   Currently
+ZMap only supports 64-bit systems.
 
 These packages can be installed on Debian-based systems by running:
 
