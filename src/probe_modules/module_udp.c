@@ -25,6 +25,9 @@
 
 #include "probe_modules.h"
 #include "packet.h"
+#include "logger.h"
+
+#define MAX_UDP_PAYLOAD_LEN 1472
 
 char *udp_send_msg = NULL; // Must be null-terminated
 int udp_send_msg_len = 0;
@@ -52,8 +55,9 @@ int udp_global_initialize(struct state_conf * zconf) {
 	args = strdup(zconf->probe_args);
 	c = strchr(args, ':');
 	if (! c) {
-		fprintf(stderr, "error: unknown UDP probe specification (expected type:value, like file:/path or text:STRING or hex:01020304)\n");
 		free(args);
+		free(udp_send_msg);
+		log_fatal("udp", "unknown UDP probe specification (expected type:value, like file:/path or text:STRING or hex:01020304)");
 		exit(1);
 	}
 
@@ -66,16 +70,19 @@ int udp_global_initialize(struct state_conf * zconf) {
 	} else if (strcmp(args, "file") == 0) {
 		inp = fopen(c, "rb");
 		if (!inp) {
-			fprintf(stderr, "error: could not open the specified file\n");
 			free(args);
+			free(udp_send_msg);
+			log_fatal("udp", "could not open UDP data file '%s'\n", c);
 			exit(1);
 		}
-		udp_send_msg = malloc(1472);
+		udp_send_msg = malloc(MAX_UDP_PAYLOAD_LEN);
 		if (! udp_send_msg) {
 			free(args);
+			free(udp_send_msg);
+			log_fatal("udp", "failed to malloc payload buffer");
 			exit(1);
 		}
-		udp_send_msg_len = fread(udp_send_msg, 1, 1472, inp);
+		udp_send_msg_len = fread(udp_send_msg, 1, MAX_UDP_PAYLOAD_LEN, inp);
 		fclose(inp);
 
 	} else if (strcmp(args, "hex") == 0) {
@@ -83,19 +90,27 @@ int udp_global_initialize(struct state_conf * zconf) {
 		udp_send_msg = malloc(udp_send_msg_len);
 		if (! udp_send_msg) {
 			free(args);
+			free(udp_send_msg);
+			log_fatal("udp", "failed to malloc payload buffer");
 			exit(1);
 		}
 
 		for (i=0; i < udp_send_msg_len; i++) {
-			sscanf(c + (i*2), "%2x", &n);
+			if (sscanf(c + (i*2), "%2x", &n) != 1) {
+				free(args);
+				free(udp_send_msg);
+				log_fatal("udp", "non-hex character: '%c'", c[i*2]);
+				exit(1);
+			}
 			udp_send_msg[i] = (n & 0xff);
 		}
 	} else {
-		fprintf(stderr, "error: unknown UDP probe specification (expected file:/path, text:STRING, or hex:01020304)\n");
+		log_fatal("udp", "unknown UDP probe specification (expected file:/path, text:STRING, or hex:01020304)");
 		free(args);
-		exit(1);		
+		exit(1);
 	}
 
+	assert(udp_send_msg_len < MAX_UDP_PAYLOAD_LEN);	
 	free(args);
 	return(0);
 }
