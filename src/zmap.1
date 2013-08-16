@@ -1,0 +1,155 @@
+.TH zmap 1 "06 Aug 2013" "1.0" "zmap man page"
+.SH NAME
+zmap \- A fast Internet-wide scanner
+.SH SYNOPSIS
+.B zmap 
+[ 
+.I "OPTIONS \&..."
+] 
+.SH DESCRIPTION
+.I ZMap 
+is a network tool for scanning the entire Internet (or large samples).
+.SH OPTIONS
+.SS "Basic options"
+.TP
+.B  \-p, --target-port=port
+TCP port number to scan (for SYN scans)
+.TP
+.B \-o, --output-file=name
+When using an output module that uses a file (such as the default),
+write results to this file. Use - for stdout.
+.TP
+.B \-b, --blacklist-file=path
+File of subnets to exclude, in CIDR notation (e.g. 192.168.0.0/16), 
+one-per line. It is recommended you use this to exclude RFC 1918
+addresses, multicast, IANA reserved space, and other IANA
+special-purpose addresses. An example blacklist file is provided in
+.B conf/blacklist.example
+for this purpose.
+.TP
+.B  -w, --whitelist-file=path
+File of subnets to constrain scan to, in CIDR 
+notation, e.g. 192.168.0.0/16
+
+.SS "Scan options"
+.TP
+.B \-n, --max-targets=n
+Cap number of targets to probe (as a number or 
+a percentage of the address space)
+.TP
+.B \-N, --max-results=n
+Cap number of results to return
+.TP
+.B \-t, --max-runtime=secs
+Cap length of time for sending packets
+.TP
+.B \-r, --rate=pps
+Set send rate in packets/sec
+.TP
+.B \-B, --bandwidth=bps
+Set send rate in bits/second (supports suffixes G, M and K). This 
+overrides the
+.B --rate
+flag.
+.TP
+.B \-c, --cooldown-time=secs
+How long to continue receiving after sending 
+last probe  (default=8)
+.TP
+.B \-e, --seed=n
+Seed used to select address permutation.  Specify the same seed in order to scan the same sample repeatedly.
+.TP
+.B \-T, --sender-threads=n
+Threads used to send packets  (default=1)
+.TP
+.B \-P, --probes=n
+Number of probes to send to each IP  
+(default=1)
+.TP
+.B \-d, --dryrun
+Print out each packet to stdout instead of sending it.
+(May be useful for debugging.)
+
+.SS "Network options"
+.TP
+.B \-s, --source-port=port|range
+Source port(s) for scan packets
+.TP
+.B \-S, --source-ip=ip|range
+Source address(es) for scan packets
+.TP
+.B \-G, --gateway-mac=addr
+Specify gateway MAC address. All packets will be sent to this
+Ethernet address.
+.TP
+.B \-i, --interface=name
+Specify network interface to use.
+
+.SS "Advanced options"
+.TP
+.B \-M, --probe-module=name
+Select probe module  (default=tcp_synscan)
+.TP
+.B \-O, --output-module=name
+Select output module  (default=simple_file)
+.TP
+.B --probe-args=args
+Arguments to pass to probe module
+.TP
+.B --output-args=args
+Arguments to pass to output module
+.TP
+.B --list-output-modules
+List available output modules
+.TP
+.B --list-probe-modules
+List available probe modules
+
+.SS "Additional options"
+.TP
+.B \-C, --config=filename
+Read a configuration file, which can specify 
+any of these options  (default=zmap.conf)
+.TP
+.B \-q, --quiet
+Do not print status updates
+.TP
+.B \-g, --summary
+Print configuration and summary at end of scan
+.TP
+.B \-v, --verbosity=n
+Level of log detail (0-5)  (default=3)
+.TP
+.B \-h, --help
+Print help and exit
+.TP
+.B \-V, --version
+Print version and exit
+
+.SH EXAMPLES
+Scan the whole Internet for hosts with port 443 open (results discarded):
+.PP
+.\" -p: example of
+.B zmap \-p 443
+.PP
+Find 5 HTTP servers (port 80), scanning at 10 Mb/s, print the results to stdout:
+.PP
+.\" -N: example of
+.\" -B: example of
+.B zmap -N 5 -B 10M -p 80 -o -
+
+.SH WARNING
+By default, ZMap attempts to scan at the line speed of your Ethernet
+interface and can easily use 1 Gbit/second of bandwidth. If your
+network is not able to support sending packets this quickly, your
+local network may become congested, causing connectivity problems for
+you and those around you.  Use the -B (--bandwidth) option to set
+ZMap's maximum bandwidth to an appropriate limit for your network and
+upstream connection.
+.
+.SH AUTHOR
+Zakir Durumeric,
+Eric Wustrow,
+J. Alex Halderman
+.B (https://www.zmap.io)
+

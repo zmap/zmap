@@ -1,0 +1,54 @@
+
+TCP Banner Grab
+======
+
+This utility will connect (TCP) to ip addresses provide over stdin, optionally
+send them a small message, and wait for their response. The response is then
+printed along with their IP address on stdout. Status messages appear on stderr.
+
+
+USING:
+-----
+make
+#echo -e -n "GET / HTTP/1.1\r\nHost: %s\r\n\r\n" > http-req
+zmap -p 80 -N 1000 -o - | ./banner-grab-tcp -p 80 -c 100 -d http-req > http-banners.out
+
+
+OPTIONS:
+-----
+-c, --concurent         Number of connections that can be going on at once.
+                        This, combined with timeouts, will decide the maximum
+                        rate at which banners are grabbed. If this value
+                        is set higher than 1000, you should use 
+                        `ulimit -SSn 1000000` and `ulimit -SHn 1000000` to
+                        avoid running out of file descriptors (typically capped
+                        at 1024).
+
+-p, --port              The port which to connect to hosts on
+
+-t, --conn-timeout      Connection timeout (seconds). Give up on a host if connect
+                        has not completed by this time. Default: 4 seconds.
+
+-r, --read-timeout      Read timeout (seconds). Give up on a host if after
+                        connecting (and optionally sending data), it does
+                        not send any response by this time. Default: 4 seconds.
+
+-v, --verbosity         Set status verbosity. Status/error messages are outputed
+                        on stderr. This value can be 0-5, with 5 being the most
+                        verbose (LOG_TRACE). Default: 3 (LOG_INFO)
+
+-f, --format            Format to output banner responses. One of 'hex', 'ascii',
+                        or 'base64'. 
+                        'hex' outputs ascii hex characters, e.g. 48656c6c6f.  
+                        'ascii' outputs ascii, without separators, e.g. Hello
+                        'base64' outputs base64 encoding, e.g. SGVsbG8=
+                        Default is base64.
+
+-d, --data              Optional data file. This data will be sent to each host
+                        upon successful connection. Currently, this file does 
+                        not allow null characters, but supports up to 4
+                        occurances of the current host's IP address, by replacing
+                        %s with the string (inet_ntoa) of that host's IP address.   
+
+
+

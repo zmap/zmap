@@ -1,0 +1,119 @@
+# ZMap Copyright 2013 Regents of the University of Michigan
+
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+# zmap option description to be processed by gengetopt
+
+package "zmap"
+version "1.0.0"
+purpose "A fast Internet-wide scanner."
+
+section "Basic arguments"
+
+option "target-port"    	p "TCP port number to scan (for SYN scans)"
+	   typestr="port"
+	   optional int
+option "output-file"  		o "Output file"
+	   typestr="name"
+	   optional string
+option "blacklist-file"		b "File of subnets to exclude, in CIDR notation, e.g. 192.168.0.0/16"
+	   typestr="path"
+	   optional string
+option "whitelist-file"		w "File of subnets to constrain scan to, in CIDR notation, e.g. 192.168.0.0/16"
+	   typestr="path"
+	   optional string
+
+section "Scan options"
+
+option "max-targets"		n "Cap number of targets to probe (as a number or a percentage of the address space)"
+	   typestr="n"
+	   optional string
+option "max-results"		N "Cap number of results to return"
+	   typestr="n"
+	   optional int
+option "max-runtime"		t "Cap length of time for sending packets"
+	   typestr="ses"
+	   optional int
+option "rate"           	r "Set send rate in packets/sec"
+	   typestr="pps"
+	   optional int
+option "bandwidth"			B "Set send rate in bits/second (supports suffixes G, M and K)"
+	   typestr="bps"
+	   optional string
+option "cooldown-time"  	c "How long to continue receiving after sending last probe"
+	   typestr="secs"
+	   default="8"
+	   optional int
+option "seed"           	e "Seed used to select address permutation"
+	   typestr="n"
+	   optional int
+option "sender-threads"		T "Threads used to send packets"
+	   typestr="n"
+	   default="1"
+	   optional int
+option "probes"				P "Number of probes to send to each IP"
+	   typestr="n"
+	   default="1"
+	   optional int
+option "dryrun"				d "Don't actually send packets"
+	   optional
+
+section "Network options" 
+
+option "source-port"    	s "Source port(s) for scan packets"
+	   typestr="port|range"
+	   optional string
+option "source-ip"			S "Source address(es) for scan packets"
+	   typestr="ip|range"
+	   optional string
+option "gateway-mac"		G "Specify gateway MAC address"
+	   typestr="addr"
+	   optional string
+option "interface"			i "Specify network interface to use"
+	   typestr="name"
+	   optional string
+
+section "Advanced options"
+
+option "probe-module"		M "Select probe module"
+	   typestr="name"
+	   default="tcp_synscan"
+	   optional string
+option "output-module"		O "Select output module"
+	   typestr="name"
+	   default="simple_file"
+	   optional string
+option "probe-args"			- "Arguments to pass to probe module"
+	   typestr="args"
+	   optional string
+option "output-args"		- "Arguments to pass to output module"
+	   typestr="args"
+	   optional string
+option "list-output-modules" - "List available output modules"
+           optional
+option "list-probe-modules"	 - "List available probe modules"
+           optional
+
+section "Additional options"
+
+option "config"				C "Read a configuration file, which can specify any of these options"
+	   typestr="filename"
+	   default="/etc/zmap/zmap.conf"
+	   optional string
+option "quiet"				q "Do not print status updates"
+       optional
+option "summary"			g "Print configuration and summary at end of scan"
+       optional
+option "verbosity"			v "Level of log detail (0-5)"
+	   typestr="n"
+	   default="3"
+	   optional int
+option "help"				h "Print help and exit"
+	   optional
+option "version"			V "Print version and exit"
+	   optional
+
+text "\nExamples:\n\
+     zmap -p 443  (scans the whole Internet for hosts with port 443 open)\n\
+     zmap -N 5 -B 10M -p 80 -o -  (find 5 HTTP servers, scanning at 10 Mb/s)"
+
