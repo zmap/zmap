@@ -287,9 +287,9 @@ static response_type_t responses[] = {
 
 probe_module_t module_udp = {
 	.name = "udp",
-	.packet_length = 96,
+	.packet_length = 1,
 	.pcap_filter = "udp || icmp",
-	.pcap_snaplen = 96,
+	.pcap_snaplen = 1500,
 	.port_args = 1,
 	.thread_initialize = &udp_init_perthread,
 	.global_initialize = &udp_global_initialize,
