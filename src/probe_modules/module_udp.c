@@ -50,7 +50,7 @@ int udp_global_initialize(struct state_conf * zconf) {
 		return(0);
 	
 	args = strdup(zconf->probe_args);
-	if (! args) exit(1)
+	if (! args) exit(1);
 
 	c = strchr(args, ':');
 	if (! c) {
@@ -107,8 +107,13 @@ int udp_global_initialize(struct state_conf * zconf) {
 	return(0);
 }
 
-int udp_global_cleanup(void) {
+int udp_cleanup(struct state_conf *zconf,  struct state_send *send_state, struct state_recv *recv_state) {
+	assert(zconf);
+	assert(send_state);
+	assert(recv_state);
+
 	if (udp_send_msg) free(udp_send_msg);
+	udp_send_msg = NULL;
 	return(0);
 }
 
@@ -304,7 +309,7 @@ probe_module_t module_udp = {
 	.print_packet = &udp_print_packet,
 	.validate_packet = &udp_validate_packet,
 	.classify_packet = &udp_classify_packet,
-	.close = udp_global_cleanup,
+	.close = &udp_cleanup,
 	.responses = responses
 };
 
