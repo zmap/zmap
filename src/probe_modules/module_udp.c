@@ -115,7 +115,9 @@ int udp_global_initialize(struct state_conf * zconf) {
 	return(0);
 }
 
-int udp_global_cleanup(void) {
+int udp_global_cleanup(__attribute__((unused)) struct state_conf *zconf,
+					   __attribute__((unused)) struct state_send *zsend,
+					   __attribute__((unused)) struct state_recv *zrecv) {
 	if (udp_send_msg) free(udp_send_msg);
 	return(0);
 }
@@ -312,7 +314,7 @@ probe_module_t module_udp = {
 	.print_packet = &udp_print_packet,
 	.validate_packet = &udp_validate_packet,
 	.classify_packet = &udp_classify_packet,
-	.close = NULL,
+	.close = udp_global_cleanup,
 	.responses = responses
 };
 
