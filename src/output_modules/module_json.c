@@ -181,6 +181,7 @@ int json_output_file_ip(ipaddr_n_t saddr, ipaddr_n_t daddr,
 			json_object_object_add(obj, "proto", json_object_new_string("icmp"));
 			json_object_object_add(obj, "icmp_type", json_object_new_int(icmp->type));
 			json_object_object_add(obj, "icmp_code", json_object_new_int(icmp->code));
+			data_offset = sizeof(struct ethhdr) + ip_hdr->ihl*4 + sizeof(struct icmphdr);
 			break;
 
 		case IPPROTO_IGMP:
