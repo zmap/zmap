@@ -192,7 +192,7 @@ int json_output_file_ip(ipaddr_n_t saddr, ipaddr_n_t daddr,
 			json_object_object_add(obj, "proto", json_object_new_string("tcp"));
 			json_object_object_add(obj, "sport", json_object_new_int(ntohs(tcp->source)));
 			json_object_object_add(obj, "dport", json_object_new_int(ntohs(tcp->dest)));
-			// Print these as 64-bit bits to keep the printed value unsigned
+			// Print these as 64-bit values to keep the text output unsigned
 			json_object_object_add(obj, "seq", json_object_new_int64(ntohl(tcp->seq)));
 			json_object_object_add(obj, "ack", json_object_new_int64(ntohl(tcp->ack_seq)));
 			data_offset = sizeof(struct ethhdr) + ip_hdr->ihl*4 + tcp->doff*4;
