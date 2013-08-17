@@ -1,17 +1,23 @@
-ZMap is designed to run on GNU/Linux systems and can be built with
-most recent versions of gcc.  ZMap requires GMP, a free library for
-arbitrary precision arithmetic, gengetopt, and libpcap.   Currently
-ZMap only supports 64-bit systems.
+SYSTEM REQUIREMENTS
 
-These packages can be installed on Debian-based systems by running:
+ZMap is designed to run on GNU/Linux systems and can be built with
+most recent versions of gcc.  Currently, ZMap only supports 64-bit
+systems.  Running it requires at least 600 MB of free memory.
+
+BUILDING AND INSTALLING ZMAP
+
+ZMap requires GMP, a free library for arbitrary precision arithmetic,
+gengetopt, and libpcap.  These packages can be installed on
+Debian-based systems by running:
 
   sudo apt-get install libgmp3-dev gengetopt libpcap-dev
- 
+
 or on RHEL- and Fedora-based systems by running:
 
   sudo yum install gmp gmp-devel gengetopt libpcap-devel
 
-Once these prerequisites have been installed, ZMap can be installed by running:
+Once these prerequisites have been installed, ZMap can be installed
+ by running:
 
   cd src
   make
@@ -23,4 +29,3 @@ followed by:
 Redis support is not enabled by default.  If you are want to use ZMap
 with Redis, you will first need to install Hiredis.  Then, rebuild
 ZMap with the command "make REDIS=true".
-
