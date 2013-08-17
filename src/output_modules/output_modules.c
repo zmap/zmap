@@ -18,7 +18,6 @@ extern output_module_t module_extended_file;
 
 #ifdef REDIS
 extern output_module_t module_redis;
-extern output_module_t module_ssldbfeed;
 #endif
 
 
@@ -27,7 +26,6 @@ output_module_t* output_modules[] = {
 	&module_extended_file,
 #ifdef REDIS
 	&module_redis,
-	&module_ssldbfeed,
 #endif
 	// ADD YOUR MODULE HERE
 };
