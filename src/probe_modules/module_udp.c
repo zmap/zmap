@@ -304,7 +304,7 @@ probe_module_t module_udp = {
 	.print_packet = &udp_print_packet,
 	.validate_packet = &udp_validate_packet,
 	.classify_packet = &udp_classify_packet,
-	.close = NULL,
+	.close = udp_global_cleanup,
 	.responses = responses
 };
 
