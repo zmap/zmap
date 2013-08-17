@@ -57,7 +57,7 @@ int udp_global_initialize(struct state_conf * zconf) {
 	if (! c) {
 		free(args);
 		free(udp_send_msg);
-		log_fatal("udp", "unknown UDP probe specification (expected type:value, like file:/path or text:STRING or hex:01020304)");
+		log_fatal("udp", "unknown UDP probe specification (expected file:/path or text:STRING or hex:01020304)");
 		exit(1);
 	}
 
