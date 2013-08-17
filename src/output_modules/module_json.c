@@ -25,6 +25,7 @@
 #include "../../lib/logger.h"
 
 #include "output_modules.h"
+#include "../probe_modules/probe_modules.h"
 
 static FILE *file = NULL;
 #define UNUSED __attribute__((unused))
@@ -34,6 +35,9 @@ static FILE *file = NULL;
 
 int json_output_file_init(struct state_conf *conf)
 {
+	int i;
+	char mac_buf[ (IFHWADDRLEN * 2) + (IFHWADDRLEN - 1) + 1 ];
+	char *p;
 	json_object *obj = json_object_new_object();
 	assert(conf);
 
@@ -65,17 +69,27 @@ int json_output_file_init(struct state_conf *conf)
 		json_object_object_add(obj, "use_seed", json_object_new_int(conf->use_seed));
 		json_object_object_add(obj, "seed", json_object_new_int(conf->seed));
 		json_object_object_add(obj, "generator", json_object_new_int(conf->generator));
-
 		json_object_object_add(obj, "packet_streams", json_object_new_int(conf->packet_streams));
-
-		//json_object_object_add(obj, "probe_module", json_object_new_string(conf->probe_module->name));
-		//json_object_object_add(obj, "output_module", json_object_new_string(conf->output_module->name));
-
+		json_object_object_add(obj, "probe_module", json_object_new_string(((probe_module_t *)conf->probe_module)->name));
+		json_object_object_add(obj, "output_module", json_object_new_string(((output_module_t *)conf->output_module)->name));
+		
 		if (conf->probe_args) json_object_object_add(obj, "probe_args", json_object_new_string(conf->probe_args));
 		if (conf->output_args) json_object_object_add(obj, "output_args", json_object_new_string(conf->output_args));
 
-		// macaddr_t gw_mac[IFHWADDRLEN];
-		//json_object_object_add(obj, "gw_mac", json_object_new_string(conf->gw_mac));
+		if (conf->gw_mac) {
+			memset(mac_buf, 0, sizeof(mac_buf));
+			p = mac_buf;
+			for(i=0; i < IFHWADDRLEN; i++) {
+				if (i == IFHWADDRLEN-1) {
+					snprintf(p, 3, "%.2x", conf->gw_mac[i]);
+					p += 2;
+				} else {
+					snprintf(p, 4, "%.2x:", conf->gw_mac[i]);
+					p += 3;
+				}
+			}
+			json_object_object_add(obj, "gw_mac", json_object_new_string(mac_buf));
+		}
 
 		json_object_object_add(obj, "source_ip_first", json_object_new_string(conf->source_ip_first));
 		json_object_object_add(obj, "source_ip_last", json_object_new_string(conf->source_ip_last));
