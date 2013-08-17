@@ -219,7 +219,7 @@ int json_output_file_ip(ipaddr_n_t saddr, ipaddr_n_t daddr,
 	gettimeofday(&t, NULL);
 	json_output_file_store_tv(obj, &t);
 
-	if ((ip_hdr->protocol == IPPROTO_UDP || ip_hdr->protocol == IPPROTO_ICMP) && buflen - data_offset > 0)
+	if ((ip_hdr->protocol == IPPROTO_UDP || ip_hdr->protocol == IPPROTO_ICMP) && (buflen - data_offset) > 0)
 		json_output_file_store_data(obj, packet + data_offset, buflen - data_offset);
 
 	fprintf(file, "%s\n", json_object_to_json_string(obj));
