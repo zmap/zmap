@@ -1,10 +1,4 @@
-==============================================================================
-Now it should be working on 32 bits systems (only possible issues 
-should be on some prints).
-Further testing is needed though
-==============================================================================
-
-ZMap is a fast network scanner designed for Internet-wide network surveys. On a
+Map is a fast network scanner designed for Internet-wide network surveys. On a
 typical desktop computer with a gigabit Ethernet connection, ZMap is capable
 scanning the entire public IPv4 address space in under 45 minutes.
 
