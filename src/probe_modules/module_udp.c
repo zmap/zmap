@@ -50,6 +50,8 @@ int udp_global_initialize(struct state_conf * zconf) {
 		return(0);
 	
 	args = strdup(zconf->probe_args);
+	if (! args) exit(1)
+
 	c = strchr(args, ':');
 	if (! c) {
 		fprintf(stderr, "error: unknown UDP probe specification (expected file:/path, text:STRING, or hex:01020304)\n");
@@ -94,6 +96,11 @@ int udp_global_initialize(struct state_conf * zconf) {
 		fprintf(stderr, "error: unknown UDP probe specification (expected file:/path, text:STRING, or hex:01020304)\n");
 		free(args);
 		exit(1);		
+	}
+
+	if (udp_send_msg_len > 1472) {
+		fprintf(stderr, "warning: reducing UDP payload to 1472 bytes (from %d) to fit on the wire\n", udp_send_msg_len);
+		udp_send_msg_len = 1472;
 	}
 
 	free(args);
