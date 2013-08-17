@@ -458,7 +458,7 @@ int main(int argc, char *argv[])
 		}
 		if (end[0] == '%' && end[1] == '\0') {
 			// treat as percentage
-			v = v * (1L << (int)sizeof(long)*4) / 100.;
+			v = v * ((unsigned long long int)1 << 32) / 100.;
 		} else if (end[0] != '\0') {
 			fprintf(stderr, "%s: extra characters after max-targets\n",
 				  CMDLINE_PARSER_PACKAGE);
@@ -467,7 +467,7 @@ int main(int argc, char *argv[])
 		if (v <= 0) {
 			zconf.max_targets = 0;
 		}
-		else if (v >= (1L << (int)sizeof(long)*4)) {
+		else if (v >= ((unsigned long long int)1 << 32)) {
 			zconf.max_targets = 0xFFFFFFFF;
 		} else {
 			zconf.max_targets = v;
