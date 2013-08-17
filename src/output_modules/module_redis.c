@@ -44,7 +44,7 @@ int redismodule_init(UNUSED struct state_conf *conf)
 
 int redismodule_flush(void)
 {
-	if (redis_lpush(QUEUE_NAME, buffer,
+	if (redis_lpush((char *)QUEUE_NAME, buffer,
 			buffer_fill, sizeof(scannable_t))) {
 		return EXIT_FAILURE;
 	}
@@ -53,9 +53,8 @@ int redismodule_flush(void)
 }
 
 int redismodule_newip(ipaddr_n_t saddr, UNUSED ipaddr_n_t daddr,
-        UNUSED port_n_t sport, UNUSED port_n_t dport,
         UNUSED const char *response_type, int is_repeat,
-        UNUSED int in_cooldown, UNUSED const u_char *packet)
+        UNUSED int in_cooldown, UNUSED const u_char *packet, UNUSED size_t len)
 {
 	if (!is_repeat) {
 		buffer[buffer_fill].ip_address = saddr;
