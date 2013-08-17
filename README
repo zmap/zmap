@@ -1,4 +1,4 @@
-Map is a fast network scanner designed for Internet-wide network surveys. On a
+ZMap is a fast network scanner designed for Internet-wide network surveys. On a
 typical desktop computer with a gigabit Ethernet connection, ZMap is capable
 scanning the entire public IPv4 address space in under 45 minutes.
 
