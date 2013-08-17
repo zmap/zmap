@@ -143,7 +143,7 @@ int json_output_file_ip(ipaddr_n_t saddr, ipaddr_n_t daddr,
 	struct iphdr *ip_hdr = (struct iphdr *)&packet[sizeof(struct ethhdr)];
 	int data_offset = 0;
 	struct timeval t;
-	char tbuff[16];
+	char tbuff[10];
 	struct tcphdr *tcp;
 	struct udphdr *udp; 
 	struct icmphdr *icmp;
@@ -208,8 +208,7 @@ int json_output_file_ip(ipaddr_n_t saddr, ipaddr_n_t daddr,
 			break;
 
 		default:
-			memset(tbuff, 0, sizeof(tbuff));
-			snprintf(tbuff, sizeof(tbuff)-1, "proto-%d", ip_hdr->protocol);
+			snprintf(tbuff, sizeof(tbuff), "proto-%d", ip_hdr->protocol);
 			json_object_object_add(obj, "proto", json_object_new_string(tbuff));
 	}
 
