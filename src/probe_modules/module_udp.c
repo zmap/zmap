@@ -53,6 +53,8 @@ int udp_global_initialize(struct state_conf * zconf) {
 		return(0);
 	
 	args = strdup(zconf->probe_args);
+	if (! args) exit(1);
+
 	c = strchr(args, ':');
 	if (! c) {
 		free(args);
@@ -110,7 +112,11 @@ int udp_global_initialize(struct state_conf * zconf) {
 		exit(1);
 	}
 
-	assert(udp_send_msg_len < MAX_UDP_PAYLOAD_LEN);	
+	if (udp_send_msg_len > MAX_UDP_PAYLOAD_LEN) {
+		fprintf(stderr, "warning: reducing UDP payload to %d bytes (from %d) to fit on the wire\n", 
+				MAX_UDP_PAYLOAD_LEN, udp_send_msg_len);
+		udp_send_msg_len = MAX_UDP_PAYLOAD_LEN;
+	}
 	free(args);
 	return(0);
 }
@@ -119,6 +125,7 @@ int udp_global_cleanup(__attribute__((unused)) struct state_conf *zconf,
 					   __attribute__((unused)) struct state_send *zsend,
 					   __attribute__((unused)) struct state_recv *zrecv) {
 	if (udp_send_msg) free(udp_send_msg);
+	udp_send_msg = NULL;
 	return(0);
 }
 
@@ -314,7 +321,7 @@ probe_module_t module_udp = {
 	.print_packet = &udp_print_packet,
 	.validate_packet = &udp_validate_packet,
 	.classify_packet = &udp_classify_packet,
-	.close = udp_global_cleanup,
+	.close = &udp_global_cleanup,
 	.responses = responses
 };
 
