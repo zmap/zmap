@@ -52,7 +52,7 @@ int udp_global_initialize(struct state_conf * zconf) {
 	args = strdup(zconf->probe_args);
 	c = strchr(args, ':');
 	if (! c) {
-		fprintf(stderr, "error: unknown UDP probe specification (expected type:value, like file:/path or text:STRING or hex:01020304)\n");
+		fprintf(stderr, "error: unknown UDP probe specification (expected file:/path, text:STRING, or hex:01020304)\n");
 		free(args);
 		exit(1);
 	}
