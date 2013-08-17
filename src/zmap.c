@@ -81,7 +81,7 @@ static void *start_mon(__attribute__((unused)) void *arg)
 #define SI(w,x,y) printf("%s\t%s\t%i\n", w, x, y);
 #define SD(w,x,y) printf("%s\t%s\t%f\n", w, x, y);
 #define SU(w,x,y) printf("%s\t%s\t%u\n", w, x, y);
-#define SLU(w,x,y) printf("%s\t%s\t%lu\n", w, x, y);
+#define SLU(w,x,y) printf("%s\t%s\t%lu\n", w, x, (long unsigned int)y);
 #define SS(w,x,y) printf("%s\t%s\t%s\n", w, x, y);
 #define STRTIME_LEN 1024
 
@@ -458,7 +458,7 @@ int main(int argc, char *argv[])
 		}
 		if (end[0] == '%' && end[1] == '\0') {
 			// treat as percentage
-			v = v * (1L << 32) / 100.;
+			v = v * (1L << (int)sizeof(long)*4) / 100.;
 		} else if (end[0] != '\0') {
 			fprintf(stderr, "%s: extra characters after max-targets\n",
 				  CMDLINE_PARSER_PACKAGE);
@@ -467,7 +467,7 @@ int main(int argc, char *argv[])
 		if (v <= 0) {
 			zconf.max_targets = 0;
 		}
-		else if (v >= (1L << 32)) {
+		else if (v >= (1L << (int)sizeof(long)*4)) {
 			zconf.max_targets = 0xFFFFFFFF;
 		} else {
 			zconf.max_targets = v;
