@@ -109,7 +109,11 @@ static void summary(void)
 	SI("cnf", "cooldown-period", zconf.cooldown_secs);
 	SS("cnf", "send-interface", zconf.iface);
 	SI("cnf", "rate", zconf.rate);
-	SLU("cnf", "bandwidth", zconf.bandwidth);
+	#if UINTPTR_MAX == 0xffffffff
+		SLU("cnf", "bandwidth", (long unsigned int ) zconf.bandwidth);
+	#elif UINTPTR_MAX == 0xffffffffffffffff
+		SLU("cnf", "bandwidth", zconf.bandwidth);
+	#endif
 	SU("env", "nprocessors", (unsigned) sysconf(_SC_NPROCESSORS_ONLN));
 	SS("exc", "send-start-time", send_start_time);
 	SS("exc", "send-end-time", send_end_time);
@@ -458,7 +462,12 @@ int main(int argc, char *argv[])
 		}
 		if (end[0] == '%' && end[1] == '\0') {
 			// treat as percentage
-			v = v * (1L << 32) / 100.;
+	#if UINTPTR_MAX == 0xffffffff
+		v = v * (1LL << 32) / 100.;
+	#elif UINTPTR_MAX == 0xffffffffffffffff
+		v = v * (1L << 32) / 100.;
+	#endif
+
 		} else if (end[0] != '\0') {
 			fprintf(stderr, "%s: extra characters after max-targets\n",
 				  CMDLINE_PARSER_PACKAGE);
@@ -467,7 +476,11 @@ int main(int argc, char *argv[])
 		if (v <= 0) {
 			zconf.max_targets = 0;
 		}
+	#if UINTPTR_MAX == 0xffffffff
+		else if (v >= (1LL << 32)) {
+	#elif UINTPTR_MAX == 0xffffffffffffffff
 		else if (v >= (1L << 32)) {
+	#endif	
 			zconf.max_targets = 0xFFFFFFFF;
 		} else {
 			zconf.max_targets = v;
