@@ -39,7 +39,7 @@ objects=constraint.o blacklist.o cyclic.o logger.o send.o recv.o state.o monitor
 
 ifeq ($(REDIS), true)
 	LDLIBS+=-lhiredis
-	objects+=module_redis.o redis.o module_ssldb.o
+	objects+=module_redis.o redis.o
 	CFLAGS+=-DREDIS
 endif
 
