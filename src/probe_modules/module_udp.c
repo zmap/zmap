@@ -26,10 +26,97 @@
 #include "probe_modules.h"
 #include "packet.h"
 
-const char *udp_send_msg = "GET / HTTP/1.1\r\n\r\n"; // Must be null-terminated
+char *udp_send_msg = NULL; // Must be null-terminated
+int udp_send_msg_len = 0;
+
+const char *udp_send_msg_default = "GET / HTTP/1.1\r\n\r\n"; 
+
 static int num_ports = 1;
 
 probe_module_t module_udp;
+
+
+int udp_global_initialize(struct state_conf * zconf) {
+	char *args, *c;
+	int i;
+	unsigned int n;
+
+	FILE *inp;
+
+	udp_send_msg = strdup(udp_send_msg_default);
+	udp_send_msg_len = strlen(udp_send_msg);
+
+	if (! (zconf->probe_args && strlen(zconf->probe_args) > 0)) 
+		return(0);
+	
+	args = strdup(zconf->probe_args);
+	if (! args) exit(1);
+
+	c = strchr(args, ':');
+	if (! c) {
+		fprintf(stderr, "error: unknown UDP probe specification (expected file:/path, text:STRING, or hex:01020304)\n");
+		free(args);
+		exit(1);
+	}
+
+	*c++ = 0;
+
+	if (strcmp(args, "text") == 0) {
+		udp_send_msg = strdup(c);
+		udp_send_msg_len = strlen(udp_send_msg);
+
+	} else if (strcmp(args, "file") == 0) {
+		inp = fopen(c, "rb");
+		if (!inp) {
+			fprintf(stderr, "error: could not open the specified file\n");
+			free(args);
+			exit(1);
+		}
+		udp_send_msg = malloc(1472);
+		if (! udp_send_msg) {
+			free(args);
+			exit(1);
+		}
+		udp_send_msg_len = fread(udp_send_msg, 1, 1472, inp);
+		fclose(inp);
+
+	} else if (strcmp(args, "hex") == 0) {
+		udp_send_msg_len = strlen(c) / 2;
+		udp_send_msg = malloc(udp_send_msg_len);
+		if (! udp_send_msg) {
+			free(args);
+			exit(1);
+		}
+
+		for (i=0; i < udp_send_msg_len; i++) {
+			sscanf(c + (i*2), "%2x", &n);
+			udp_send_msg[i] = (n & 0xff);
+		}
+	} else {
+		fprintf(stderr, "error: unknown UDP probe specification (expected file:/path, text:STRING, or hex:01020304)\n");
+		free(args);
+		exit(1);		
+	}
+
+	if (udp_send_msg_len > 1472) {
+		fprintf(stderr, "warning: reducing UDP payload to 1472 bytes (from %d) to fit on the wire\n", udp_send_msg_len);
+		udp_send_msg_len = 1472;
+	}
+
+	free(args);
+	return(0);
+}
+
+int udp_cleanup(struct state_conf *zconf,  struct state_send *send_state, struct state_recv *recv_state) {
+	assert(zconf);
+	assert(send_state);
+	assert(recv_state);
+
+	if (udp_send_msg) free(udp_send_msg);
+	udp_send_msg = NULL;
+	return(0);
+}
+
 
 int udp_init_perthread(void* buf, macaddr_t *src,
 		macaddr_t *gw, __attribute__((unused)) port_h_t dst_port)
@@ -38,20 +125,20 @@ int udp_init_perthread(void* buf, macaddr_t *src,
 	struct ethhdr *eth_header = (struct ethhdr *)buf;
 	make_eth_header(eth_header, src, gw);
 	struct iphdr *ip_header = (struct iphdr*)(&eth_header[1]);
-	uint16_t len = htons(sizeof(struct iphdr) + sizeof(struct udphdr) + strlen(udp_send_msg));
+	uint16_t len = htons(sizeof(struct iphdr) + sizeof(struct udphdr) + udp_send_msg_len);
 	make_ip_header(ip_header, IPPROTO_UDP, len);
 
 	struct udphdr *udp_header = (struct udphdr*)(&ip_header[1]);
-	len = sizeof(struct udphdr) + strlen(udp_send_msg);
+	len = sizeof(struct udphdr) + udp_send_msg_len;
 	make_udp_header(udp_header, zconf.target_port, len);
 
 	char* payload = (char*)(&udp_header[1]);
 
 	module_udp.packet_length = sizeof(struct ethhdr) + sizeof(struct iphdr) 
-				+ sizeof(struct udphdr) + strlen(udp_send_msg);
+				+ sizeof(struct udphdr) + udp_send_msg_len;
 	assert(module_udp.packet_length <= MAX_PACKET_SIZE);
 
-	strcpy(payload, udp_send_msg);
+	memcpy(payload, udp_send_msg, udp_send_msg_len);
 
 	num_ports = zconf.source_port_last - zconf.source_port_first + 1;
 
@@ -212,16 +299,17 @@ static response_type_t responses[] = {
 
 probe_module_t module_udp = {
 	.name = "udp",
-	.packet_length = 96,
+	.packet_length = 1,
 	.pcap_filter = "udp || icmp",
-	.pcap_snaplen = 96,
+	.pcap_snaplen = 1500,
 	.port_args = 1,
 	.thread_initialize = &udp_init_perthread,
+	.global_initialize = &udp_global_initialize,
 	.make_packet = &udp_make_packet,
 	.print_packet = &udp_print_packet,
 	.validate_packet = &udp_validate_packet,
 	.classify_packet = &udp_classify_packet,
-	.close = NULL,
+	.close = &udp_cleanup,
 	.responses = responses
 };
 
