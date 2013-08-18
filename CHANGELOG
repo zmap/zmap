@@ -6,5 +6,9 @@ BUGFIX 	Issue #4 "Missing module_ssldb? Redis module won't compile."
 	- removed dependencies on ssldb (zakir)
 SUPPORT	Issue #3 "Error after running make"
 	- added documentation that zmap requires 64-bit system
-SUPPORT Issue #1 "Failure at calloc for 'ip_seen' on KVM VPSs?"
+SUPPORT	Issue #1 "Failure at calloc for 'ip_seen' on KVM VPSs?"
 	- added documentation on memory requirements for zmap
+
+1.0.2	2013-8-18
+BUGFIX	Issue #14 "gcc 4.7.2 -Wunprototyped-calls error with recv_run."
+	- changed recv_run header to match def in recv.c
