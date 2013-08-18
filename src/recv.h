@@ -10,7 +10,6 @@
 #define _RECV_H
 
 int recv_update_pcap_stats(void);
-
-int recv_run();
+int recv_run(pthread_mutex_t *recv_ready_mutex);
 
 #endif //_RECV_H
