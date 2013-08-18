@@ -29,10 +29,10 @@
 
 #define MAX_UDP_PAYLOAD_LEN 1472
 
-char *udp_send_msg = NULL; // Must be null-terminated
+char *udp_send_msg = NULL;
 int udp_send_msg_len = 0;
 
-const char *udp_send_msg_default = "GET / HTTP/1.1\r\n\r\n"; 
+const char *udp_send_msg_default = "GET / HTTP/1.1\r\nHost: www\r\n\r\n"; 
 
 static int num_ports = 1;
 
@@ -66,6 +66,7 @@ int udp_global_initialize(struct state_conf * zconf) {
 	*c++ = 0;
 
 	if (strcmp(args, "text") == 0) {
+		free(udp_send_msg);
 		udp_send_msg = strdup(c);
 		udp_send_msg_len = strlen(udp_send_msg);
 
@@ -77,10 +78,10 @@ int udp_global_initialize(struct state_conf * zconf) {
 			log_fatal("udp", "could not open UDP data file '%s'\n", c);
 			exit(1);
 		}
+		free(udp_send_msg);
 		udp_send_msg = malloc(MAX_UDP_PAYLOAD_LEN);
 		if (! udp_send_msg) {
 			free(args);
-			free(udp_send_msg);
 			log_fatal("udp", "failed to malloc payload buffer");
 			exit(1);
 		}
@@ -89,10 +90,10 @@ int udp_global_initialize(struct state_conf * zconf) {
 
 	} else if (strcmp(args, "hex") == 0) {
 		udp_send_msg_len = strlen(c) / 2;
+		free(udp_send_msg);
 		udp_send_msg = malloc(udp_send_msg_len);
 		if (! udp_send_msg) {
 			free(args);
-			free(udp_send_msg);
 			log_fatal("udp", "failed to malloc payload buffer");
 			exit(1);
 		}
@@ -108,12 +109,13 @@ int udp_global_initialize(struct state_conf * zconf) {
 		}
 	} else {
 		log_fatal("udp", "unknown UDP probe specification (expected file:/path, text:STRING, or hex:01020304)");
+		free(udp_send_msg);
 		free(args);
 		exit(1);
 	}
 
 	if (udp_send_msg_len > MAX_UDP_PAYLOAD_LEN) {
-		fprintf(stderr, "warning: reducing UDP payload to %d bytes (from %d) to fit on the wire\n", 
+		log_warn("udp", "warning: reducing UDP payload to %d bytes (from %d) to fit on the wire\n", 
 				MAX_UDP_PAYLOAD_LEN, udp_send_msg_len);
 		udp_send_msg_len = MAX_UDP_PAYLOAD_LEN;
 	}
