@@ -359,7 +359,7 @@ int main(int argc, char *argv[])
 	zconf.output_module = get_output_module_by_name(args.output_module_arg);
 	if (!zconf.output_module) {
 	  fprintf(stderr, "%s: specified output module (%s) does not exist\n",
-		  args.output_module_arg, CMDLINE_PARSER_PACKAGE);
+		  CMDLINE_PARSER_PACKAGE, args.output_module_arg);
 	  exit(EXIT_FAILURE);
 	}
 	zconf.probe_module = get_probe_module_by_name(args.probe_module_arg);
