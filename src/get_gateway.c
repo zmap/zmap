@@ -72,7 +72,7 @@ int send_nl_req(uint16_t msg_type, uint32_t seq,
 		return -1;
 	}
 
-	memset(nlmsg, 0, sizeof(nlmsg));
+	memset(nlmsg, 0, sizeof(struct nlmsghdr));
 	memcpy(NLMSG_DATA(nlmsg), payload, payload_len);
 	nlmsg->nlmsg_type = msg_type;
 	nlmsg->nlmsg_len = NLMSG_LENGTH(payload_len);
