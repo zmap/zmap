@@ -35,7 +35,7 @@ LDFLAGS+=$(EXTRALDFLAGS)
 
 modules=module_tcp_synscan.o module_icmp_echo.o module_udp.o #ADD YOUR MODULE HERE
 
-objects=constraint.o blacklist.o cyclic.o logger.o send.o recv.o state.o monitor.o zopt.o zmap.o random.o output_modules.o module_simple_file.o module_extended_file.o packet.o probe_modules.o ${modules} validate.o rijndael-alg-fst.o get_gateway.o aesrand.o
+objects=constraint.o blacklist.o cyclic.o logger.o send.o recv.o state.o monitor.o zopt.o zmap.o random.o output_modules.o module_simple_file.o module_extended_file.o packet.o probe_modules.o ${modules} validate.o rijndael-alg-fst.o get_gateway.o aesrand.o fieldset.o
 
 ifeq ($(REDIS), true)
 	LDLIBS+=-lhiredis

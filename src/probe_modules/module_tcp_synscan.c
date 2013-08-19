@@ -149,29 +149,7 @@ int synscan_validate_packet(const struct iphdr *ip_hdr, uint32_t len,
 	return 1;
 }
 
-void fs_add_sys_fields(fieldset_t *fs)
-{
 
-}
-
-char *make_ip_str(uint32_t ip)
-{
-	struct in_addr t;
-	t.saddr = ip;
-	const char *temp = inet_ntoa(t);
-	char *retv = malloc(strlen(temp)+1);
-	assert (retv);
-	strcpy(retv, temp);
-	return retv;
-}
-
-void fs_add_ip_fields(fieldset_t *fs, struct iphdr *ip)
-{
-	fs_add_string(fs, "saddr", make_ip_str(ip->saddr), 1);
-	fs_add_string(fs, "daddr", make_ip_str(ip->daddr), 1);
-	fs_add_uint64(fs, "ipid", ntohl(ip->id);
-	fs_add_uint64(fs, "ttl", ntohl(ip->ttl);
-}
 
 void synscan_process_packet(const u_char *packet,
 		__attribute__((unused)) uint32_t len, fieldset_t *fs)
@@ -187,14 +165,22 @@ void synscan_process_packet(const u_char *packet,
 	fs_add_uint64(fs, "window", (uint64_t) ntohs(tcp->window));
 
 	if (tcp->rst) { // RST packet
-		fs_add_string(fs, "classification", "rst", 0);
+		fs_add_string(fs, "classification", (char*) "rst", 0);
 		fs_add_uint64(fs, "success", 0);
 	} else { // SYNACK packet
-		fs_add_string(fs, "classification", "synack", 0);
+		fs_add_string(fs, "classification", (char*) "synack", 0);
 		fs_add_uint64(fs, "success", 1);
 	}
-	return
 }
+
+static fielddef_t fields[] = {
+	{.name = "sport", .type = "int", .desc = "TCP source port"},
+	{.name = "dport", .type = "int", .desc = "TCP destination port"},
+	{.name = "seqnum", .type = "int", .desc = "TCP sequence number"},
+	{.name = "acknum", .type = "int", .desc = "TCP acknowledgement number"},
+	{.name = "window", .type = "int", .desc = "TCP window"},
+};
+
 
 probe_module_t module_tcp_synscan = {
 	.name = "tcp_synscan",
@@ -209,12 +195,5 @@ probe_module_t module_tcp_synscan = {
 	.process_packet = &synscan_process_packet,
 	.validate_packet = &synscan_validate_packet,
 	.close = NULL,
-	.fields = {
-		{.name = "sport", .type = "int", .desc = "TCP source port"},
-		{.name = "dport", .type = "int", .desc = "TCP destination port"},
-		{.name = "seqnum", .type = "int", .desc = "TCP sequence number"},
-		{.name = "acknum", .type = "int", .desc = "TCP acknowledgement number"},
-		{.name = "window", .type = "int", .desc = "TCP window"},
-	}
-};
+	.fields = fields};
 

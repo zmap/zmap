@@ -8,7 +8,15 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
+#include <linux/if_packet.h>
+
+#include "../fieldset.h"
 #include "probe_modules.h"
 
 extern probe_module_t module_tcp_synscan;
@@ -40,3 +48,30 @@ void print_probe_modules(void)
 		printf("%s\n", probe_modules[i]->name);
 	}
 }
+
+void print_probe_module_fields(probe_module_t *p)
+{
+	for (int i=0; i < (int) (sizeof(p->fields)/sizeof(p->fields[0])); i++) {
+
+	}
+}
+
+char *make_ip_str(uint32_t ip)
+{
+	struct in_addr t;
+	t.s_addr = ip;
+	const char *temp = inet_ntoa(t);
+	char *retv = malloc(strlen(temp)+1);
+	assert (retv);
+	strcpy(retv, temp);
+	return retv;
+}
+
+void fs_add_ip_fields(fieldset_t *fs, struct iphdr *ip)
+{
+	fs_add_string(fs, "saddr", make_ip_str(ip->saddr), 1);
+	fs_add_string(fs, "daddr", make_ip_str(ip->daddr), 1);
+	fs_add_uint64(fs, "ipid", ntohl(ip->id));
+	fs_add_uint64(fs, "ttl", ntohl(ip->ttl));
+}
+

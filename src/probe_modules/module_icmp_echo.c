@@ -158,37 +158,45 @@ int icmp_validate_packet(const struct iphdr *ip_hdr,
 }
 
 void icmp_echo_process_packet(const u_char *packet,
-		__attribute__((unused)) uint32_t len, fieldset *fs)
+		__attribute__((unused)) uint32_t len, fieldset_t *fs)
 {
 	struct iphdr *ip_hdr = (struct iphdr *)&packet[sizeof(struct ethhdr)];
-	struct icmp *icmp_hdr = (struct icmp*)((char *)ip_hdr
-					+ sizeof(struct iphdr)); 
-
+	struct icmphdr *icmp_hdr = (struct icmphdr*)((char *)ip_hdr + 4 *ip_hdr->ihl);
 	fs_add_uint64(fs, "type", ntohs(icmp_hdr->type));
 	fs_add_uint64(fs, "code", ntohs(icmp_hdr->code));
 	fs_add_uint64(fs, "icmp-id", ntohs(icmp_hdr->un.echo.id));
 	fs_add_uint64(fs, "seq", ntohs(icmp_hdr->un.echo.sequence));
-	switch (icmp_hdr->icmp_type) {
+	switch (icmp_hdr->type) {
 		case ICMP_ECHOREPLY:
-			fs_add_string(fs, "classification", "echoreply", 0); 
+			fs_add_string(fs, "classification", (char*) "echoreply", 0); 
 			fs_add_uint64(fs, "success", 1); 
 		case ICMP_UNREACH: 
-			fs_add_string(fs, "classification", "unreach", 0); 
+			fs_add_string(fs, "classification", (char*) "unreach", 0); 
 			fs_add_uint64(fs, "success", 0); 
 		case ICMP_SOURCEQUENCH:
-			fs_add_string(fs, "classification", "sourcequench", 0); 
+			fs_add_string(fs, "classification", (char*) "sourcequench", 0); 
 			fs_add_uint64(fs, "success", 0); 
 		case ICMP_REDIRECT:
-			fs_add_string(fs, "classification", "redirect", 0); 
+			fs_add_string(fs, "classification", (char*) "redirect", 0); 
 			fs_add_uint64(fs, "success", 0); 
 		case ICMP_TIMXCEED:
-			fs_add_string(fs, "classification", "timxceed", 0); 
+			fs_add_string(fs, "classification", (char*) "timxceed", 0); 
 			fs_add_uint64(fs, "success", 0); 
 		default:
-			fs_add_string(fs, "classification", "other", 0); 
+			fs_add_string(fs, "classification", (char*) "other", 0); 
 			fs_add_uint64(fs, "success", 0); 
 	}
 }
+
+fielddef_t fields[] = {
+	{.name="type", .type="int", .desc="icmp message type"},
+	{.name="code", .type="int", .desc="icmp message sub type code"},
+	{.name="icmp-id", .type="int", .desc="icmp id number"},
+	{.name="seq", .type="int", .desc="icmp sequence number"},
+	{.name="classification", .type="string", .desc="probe module classification"},
+	{.name="success", .type="int", .desc="did probe module classify response as success"}
+};
+
 
 probe_module_t module_icmp_echo = {
 	.name = "icmp_echoscan",
@@ -199,16 +207,8 @@ probe_module_t module_icmp_echo = {
 	.thread_initialize = &icmp_echo_init_perthread,
 	.make_packet = &icmp_echo_make_packet,
 	.print_packet = &icmp_echo_print_packet,
-	.process_response = &icmp_echo_process_response,
+	.process_packet = &icmp_echo_process_packet,
 	.validate_packet = &icmp_validate_packet,
 	.close = NULL,
-	.fields = {
-		{.name "type", .type="int", .desc="icmp message type"},
-		{.name "code", .type="int", .desc="icmp message sub type code"},
-		{.name "icmp-id", .type="int", .desc="icmp id number"},
-		{.name "seq", .type="int", .desc="icmp sequence number"},
-		{.name="classification", .type="string", .desc="probe module classification"},
-		{.name="success", .type="int", .desc="did probe module classify response as success"}
-	}
-};
+	.fields = fields};
 
