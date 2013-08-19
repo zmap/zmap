@@ -112,6 +112,8 @@ option "help"				h "Print help and exit"
 	   optional
 option "version"			V "Print version and exit"
 	   optional
+option "cidr"				z "CIDR to scan (ex: 192.168.0.1/24)"
+		optional string
 
 text "\nExamples:\n\
      zmap -p 443  (scans the whole Internet for hosts with port 443 open)\n\

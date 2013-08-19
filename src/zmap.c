@@ -339,6 +339,7 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	SET_IF_GIVEN(zconf.cidr, cidr);
 	SET_IF_GIVEN(zconf.output_filename, output_file);
 	SET_IF_GIVEN(zconf.blacklist_filename, blacklist_file);
 	SET_IF_GIVEN(zconf.whitelist_filename, whitelist_file);

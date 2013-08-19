@@ -75,6 +75,9 @@ struct state_conf {
 	int summary;
 	int quiet;
 	int recv_ready;
+
+	//CIDR to scan
+	char *cidr;
 };
 extern struct state_conf zconf;
 
@@ -86,6 +89,7 @@ struct state_send {
 	uint32_t blacklisted;
 	int complete;
 	uint32_t first_scanned;
+	uint32_t last_to_scan;
 	uint32_t targets;
 	uint32_t sendto_failures;
 };
