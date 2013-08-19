@@ -26,7 +26,13 @@
 #include "packet.h"
 
 probe_module_t module_tcp_synscan;
-uint32_t num_ports = 1;
+static uint32_t num_ports;
+
+int synscan_global_initialize(struct state_conf *state)
+{
+	num_ports = state->source_port_last - state->source_port_first + 1;
+	return EXIT_SUCCESS;
+}
 
 int synscan_init_perthread(void* buf, macaddr_t *src,
 		macaddr_t *gw, port_h_t dst_port)
@@ -39,7 +45,6 @@ int synscan_init_perthread(void* buf, macaddr_t *src,
 	make_ip_header(ip_header, IPPROTO_TCP, len);
 	struct tcphdr *tcp_header = (struct tcphdr*)(&ip_header[1]);
 	make_tcp_header(tcp_header, dst_port);
-	num_ports = zconf.source_port_last - zconf.source_port_first + 1;
 	return EXIT_SUCCESS;
 }
 
@@ -49,15 +54,13 @@ int synscan_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 	struct ethhdr *eth_header = (struct ethhdr *)buf;
 	struct iphdr *ip_header = (struct iphdr*)(&eth_header[1]);
 	struct tcphdr *tcp_header = (struct tcphdr*)(&ip_header[1]);
-	uint16_t src_port = zconf.source_port_first 
-					+ ((validation[1] + probe_num) % num_ports);
 	uint32_t tcp_seq = validation[0];
-	
 
 	ip_header->saddr = src_ip;
 	ip_header->daddr = dst_ip;
 
-	tcp_header->source = htons(src_port);
+	tcp_header->source = htons(get_src_port(num_ports,
+				probe_num, validation));
 	tcp_header->seq = tcp_seq;
 	tcp_header->check = 0;
 	tcp_header->check = tcp_checksum(sizeof(struct tcphdr),
@@ -121,19 +124,7 @@ response_type_t* synscan_classify_packet(const u_char *packet, uint32_t len)
 			return &(module_tcp_synscan.responses[0]);
 	}
 }
-// Returns 0 if dst_port is outside the expected valid range, non-zero otherwise
-static inline int check_dst_port(uint16_t port, uint32_t *validation)
-{
-	if (port > zconf.source_port_last 
-					|| port < zconf.source_port_first) {
-		return EXIT_FAILURE;
-	}
-	int32_t to_validate = port - zconf.source_port_first;
-	int32_t min = validation[1] % num_ports;
-	int32_t max = (validation[1] + zconf.packet_streams - 1) % num_ports;
 
-	return (((max - min) % num_ports) >= ((to_validate - min) % num_ports));
-}
 
 int synscan_validate_packet(const struct iphdr *ip_hdr, uint32_t len, 
 				__attribute__((unused))uint32_t *src_ip, uint32_t *validation)
@@ -156,7 +147,7 @@ int synscan_validate_packet(const struct iphdr *ip_hdr, uint32_t len,
 	}
 
 	// validate destination port
-	if (!check_dst_port(ntohs(dport), validation)) {
+	if (!check_dst_port(ntohs(dport), num_ports, validation)) {
 		return 0;
 	}
 
@@ -185,6 +176,7 @@ probe_module_t module_tcp_synscan = {
 	.pcap_filter = "tcp && tcp[13] & 4 != 0 || tcp[13] == 18",
 	.pcap_snaplen = 96,
 	.port_args = 1,
+	.global_initialize = &synscan_global_initialize,
 	.thread_initialize = &synscan_init_perthread,
 	.make_packet = &synscan_make_packet,
 	.print_packet = &synscan_print_packet,

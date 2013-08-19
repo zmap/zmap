@@ -34,25 +34,26 @@ int udp_send_msg_len = 0;
 
 const char *udp_send_msg_default = "GET / HTTP/1.1\r\nHost: www\r\n\r\n"; 
 
-static int num_ports = 1;
+static int num_ports;
 
 probe_module_t module_udp;
 
-
-int udp_global_initialize(struct state_conf * zconf) {
+int udp_global_initialize(struct state_conf *conf) {
 	char *args, *c;
 	int i;
 	unsigned int n;
 
 	FILE *inp;
 
+	num_ports = conf->source_port_last - conf->source_port_first + 1;
+
 	udp_send_msg = strdup(udp_send_msg_default);
 	udp_send_msg_len = strlen(udp_send_msg);
 
-	if (! (zconf->probe_args && strlen(zconf->probe_args) > 0)) 
+	if (!(conf->probe_args && strlen(conf->probe_args) > 0)) 
 		return(0);
 	
-	args = strdup(zconf->probe_args);
+	args = strdup(conf->probe_args);
 	if (! args) exit(1);
 
 	c = strchr(args, ':');
@@ -154,10 +155,11 @@ int udp_init_perthread(void* buf, macaddr_t *src,
 
 	memcpy(payload, udp_send_msg, udp_send_msg_len);
 
-	num_ports = zconf.source_port_last - zconf.source_port_first + 1;
-
 	return EXIT_SUCCESS;
 }
+
+
+
 
 int udp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip, 
 		uint32_t *validation, int probe_num)
@@ -165,12 +167,11 @@ int udp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 	struct ethhdr *eth_header = (struct ethhdr *)buf;
 	struct iphdr *ip_header = (struct iphdr*)(&eth_header[1]);
 	struct udphdr *udp_header = (struct udphdr*)(&ip_header[1]);
-	uint16_t src_port = zconf.source_port_first
-					+ ((validation[1] + probe_num) % num_ports);
 
 	ip_header->saddr = src_ip;
 	ip_header->daddr = dst_ip;
-	udp_header->source = src_port;
+	udp_header->source = get_src_port(num_ports, probe_num,
+					validation);
 
 	ip_header->check = 0;
 	ip_header->check = ip_checksum((unsigned short *) ip_header);
@@ -218,7 +219,6 @@ void udp_print_packet(FILE *fp, void* packet)
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
-
 response_type_t* udp_classify_packet(const u_char *packet, uint32_t len)
 {
 	(void)len;
@@ -230,20 +230,6 @@ response_type_t* udp_classify_packet(const u_char *packet, uint32_t len)
 	} else {
 		return &(module_udp.responses[2]);
 	}
-}
-
-// Returns 0 if dst_port is outside the expected valid range, non-zero otherwise
-static inline int check_dst_port(uint16_t port, uint32_t *validation)
-{
-	if (port > zconf.source_port_last 
-					|| port < zconf.source_port_first) {
-		return EXIT_FAILURE;
-	}
-	int32_t to_validate = port - zconf.source_port_first;
-	int32_t min = validation[1] % num_ports;
-	int32_t max = (validation[1] + zconf.packet_streams - 1) % num_ports;
-
-	return (((max - min) % num_ports) >= ((to_validate - min) % num_ports));
 }
 
 int udp_validate_packet(const struct iphdr *ip_hdr, uint32_t len, 
@@ -290,7 +276,7 @@ int udp_validate_packet(const struct iphdr *ip_hdr, uint32_t len,
 	if (dport != zconf.target_port) {
 		return 0;
 	}
-	if (!check_dst_port(sport, validation)) {
+	if (!check_dst_port(sport, num_ports, validation)) {
 		return 0;
 	}
 	return 1;
