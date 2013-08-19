@@ -71,6 +71,9 @@ struct state_conf {
 	char *output_filename;
 	char *blacklist_filename;
 	char *whitelist_filename;
+	char *raw_output_fields;
+	char **output_fields;
+	int output_fields_len;
 	int dryrun;
 	int summary;
 	int quiet;

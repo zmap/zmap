@@ -15,6 +15,11 @@ int fs_split_string(int *len, char**results)
 	return 0;
 }
 
+void combine_definitions()
+{
+
+}
+
 fieldset_t *fs_new_fieldset(void)
 {
 	fieldset_t *f = malloc(sizeof(fieldset_t));
