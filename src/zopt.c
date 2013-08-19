@@ -69,7 +69,7 @@ const char *gengetopt_args_info_help[] = {
   "  -v, --verbosity=n             Level of log detail (0-5)  (default=`3')",
   "  -h, --help                    Print help and exit",
   "  -V, --version                 Print version and exit",
-  "  -z, --cidr=STRING             CIDR to scan",
+  "  -z, --cidr=STRING             CIDR to scan (ex: 192.168.0.1/24)",
   "\nExamples:\n     zmap -p 443  (scans the whole Internet for hosts with port 443 open)\n     zmap -N 5 -B 10M -p 80 -o -  (find 5 HTTP servers, scanning at 10 Mb/s)",
     0
 };
@@ -1054,7 +1054,7 @@ cmdline_parser_internal (
             goto failure;
         
           break;
-        case 'z':	/* CIDR to scan.  */
+        case 'z':	/* CIDR to scan (ex: 192.168.0.1/24).  */
         
         
           if (update_arg( (void *)&(args_info->cidr_arg), 

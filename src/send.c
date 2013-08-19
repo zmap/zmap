@@ -91,7 +91,7 @@ int send_init(void)
 	    }
 		log_info("send"," Last IP %d.%d.%d.%d", octet[3],octet[2],octet[1],octet[0]);
 
-		zsend.first_scanned = cidr_get_next_ip();
+		zsend.first_scanned = cidr_get_curr_ip();
 
 		//Convert to same format that will be used in the packet send.
 		uint32_t val = ((result_second << 8) & 0xFF00FF00 ) | ((result_second >> 8) & 0xFF00FF ); 

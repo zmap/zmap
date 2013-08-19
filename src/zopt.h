@@ -113,9 +113,9 @@ struct gengetopt_args_info
   const char *verbosity_help; /**< @brief Level of log detail (0-5) help description.  */
   const char *help_help; /**< @brief Print help and exit help description.  */
   const char *version_help; /**< @brief Print version and exit help description.  */
-  char * cidr_arg;	/**< @brief CIDR to scan.  */
-  char * cidr_orig;	/**< @brief CIDR to scan original value given at command line.  */
-  const char *cidr_help; /**< @brief CIDR to scan help description.  */
+  char * cidr_arg;	/**< @brief CIDR to scan (ex: 192.168.0.1/24).  */
+  char * cidr_orig;	/**< @brief CIDR to scan (ex: 192.168.0.1/24) original value given at command line.  */
+  const char *cidr_help; /**< @brief CIDR to scan (ex: 192.168.0.1/24) help description.  */
   
   unsigned int target_port_given ;	/**< @brief Whether target-port was given.  */
   unsigned int output_file_given ;	/**< @brief Whether output-file was given.  */
