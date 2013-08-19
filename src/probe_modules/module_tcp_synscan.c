@@ -13,6 +13,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
+#include <assert.h>
 
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
@@ -22,6 +23,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "../fieldset.h"
 #include "probe_modules.h"
 #include "packet.h"
 
@@ -112,18 +114,6 @@ void synscan_print_packet(FILE *fp, void* packet)
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
-response_type_t* synscan_classify_packet(const u_char *packet, uint32_t len)
-{
-	(void)len;
-	struct iphdr *ip_hdr = (struct iphdr *)&packet[sizeof(struct ethhdr)];
-	struct tcphdr *tcp = (struct tcphdr*)((char *)ip_hdr 
-					+ (sizeof(struct iphdr)));
-	if (tcp->rst) { // RST packet
-			return &(module_tcp_synscan.responses[1]);
-	} else { // SYNACK packet
-			return &(module_tcp_synscan.responses[0]);
-	}
-}
 
 
 int synscan_validate_packet(const struct iphdr *ip_hdr, uint32_t len, 
@@ -159,16 +149,52 @@ int synscan_validate_packet(const struct iphdr *ip_hdr, uint32_t len,
 	return 1;
 }
 
-static response_type_t responses[] = {
-	{
-		.is_success = 1,	
-		.name = "synack"
-	},
-	{
-		.is_success = 0,
-		.name = "rst"
+void fs_add_sys_fields(fieldset_t *fs)
+{
+
+}
+
+char *make_ip_str(uint32_t ip)
+{
+	struct in_addr t;
+	t.saddr = ip;
+	const char *temp = inet_ntoa(t);
+	char *retv = malloc(strlen(temp)+1);
+	assert (retv);
+	strcpy(retv, temp);
+	return retv;
+}
+
+void fs_add_ip_fields(fieldset_t *fs, struct iphdr *ip)
+{
+	fs_add_string(fs, "saddr", make_ip_str(ip->saddr), 1);
+	fs_add_string(fs, "daddr", make_ip_str(ip->daddr), 1);
+	fs_add_uint64(fs, "ipid", ntohl(ip->id);
+	fs_add_uint64(fs, "ttl", ntohl(ip->ttl);
+}
+
+void synscan_process_packet(const u_char *packet,
+		__attribute__((unused)) uint32_t len, fieldset_t *fs)
+{
+	struct iphdr *ip_hdr = (struct iphdr *)&packet[sizeof(struct ethhdr)];
+	struct tcphdr *tcp = (struct tcphdr*)((char *)ip_hdr 
+					+ (sizeof(struct iphdr)));
+
+	fs_add_uint64(fs, "sport", (uint64_t) ntohs(tcp->source)); 
+	fs_add_uint64(fs, "dport", (uint64_t) ntohs(tcp->dest));
+	fs_add_uint64(fs, "seqnum", (uint64_t) ntohs(tcp->seq));
+	fs_add_uint64(fs, "acknum", (uint64_t) ntohl(tcp->ack_seq));
+	fs_add_uint64(fs, "window", (uint64_t) ntohs(tcp->window));
+
+	if (tcp->rst) { // RST packet
+		fs_add_string(fs, "classification", "rst", 0);
+		fs_add_uint64(fs, "success", 0);
+	} else { // SYNACK packet
+		fs_add_string(fs, "classification", "synack", 0);
+		fs_add_uint64(fs, "success", 1);
 	}
-};
+	return
+}
 
 probe_module_t module_tcp_synscan = {
 	.name = "tcp_synscan",
@@ -180,9 +206,15 @@ probe_module_t module_tcp_synscan = {
 	.thread_initialize = &synscan_init_perthread,
 	.make_packet = &synscan_make_packet,
 	.print_packet = &synscan_print_packet,
-	.classify_packet = &synscan_classify_packet,
+	.process_packet = &synscan_process_packet,
 	.validate_packet = &synscan_validate_packet,
 	.close = NULL,
-	.responses = responses,
+	.fields = {
+		{.name = "sport", .type = "int", .desc = "TCP source port"},
+		{.name = "dport", .type = "int", .desc = "TCP destination port"},
+		{.name = "seqnum", .type = "int", .desc = "TCP sequence number"},
+		{.name = "acknum", .type = "int", .desc = "TCP acknowledgement number"},
+		{.name = "window", .type = "int", .desc = "TCP window"},
+	}
 };
 

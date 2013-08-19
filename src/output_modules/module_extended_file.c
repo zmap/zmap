@@ -24,6 +24,7 @@
 static FILE *file = NULL;
 #define UNUSED __attribute__((unused))
 
+
 int extendedfile_init(struct state_conf *conf)
 {
 	assert(conf);
