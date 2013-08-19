@@ -7,10 +7,24 @@
 
 #include "../lib/logger.h"
 
-
-int fs_split_string(int *len, char**results)
+int fs_split_string(char* in, int *len, char**results)
 {
+	
+	char** fields = calloc(MAX_FIELDS, sizeof(char*));
+	memset(fields, 0, sizeof(fields));
+	int retvlen = 0;
+	char *currloc = in;
+	// parse csv into a set of strings
+	while (1) {
+		size_t len = strcspn(currloc, ", ");	
+		char *new = malloc(len+1);
+			
+	
+	}
+
 	(void)len;
+	*results = fields;
+	*len = retvlen;
 	(void)results;
 	return 0;
 }

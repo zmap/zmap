@@ -67,11 +67,29 @@ char *make_ip_str(uint32_t ip)
 	return retv;
 }
 
+fielddef_t ip_fields[] = {
+	{.name="saddr", .type="string", .desc="source IP address of response"},
+	{.name="daddr", .type="string", .desc="destination IP address of response"},
+	{.name="ipid", .type="int", .desc="IP identification number of response"},
+	{.name="ttl", .type="int", .desc="time-to-live of response packet"}
+}
+
+fielddef_t sys_fields[] = {
+	{.name="repeat", .type="int", .desc="Is response a repeat response from host"},
+	{.name="timestamp-str", .type="string", .desc="timestamp of when response arrived in ISO8601 format."}
+}
+
 void fs_add_ip_fields(fieldset_t *fs, struct iphdr *ip)
 {
 	fs_add_string(fs, "saddr", make_ip_str(ip->saddr), 1);
 	fs_add_string(fs, "daddr", make_ip_str(ip->daddr), 1);
 	fs_add_uint64(fs, "ipid", ntohl(ip->id));
 	fs_add_uint64(fs, "ttl", ntohl(ip->ttl));
+}
+
+void fs_add_system_fields(fieldset_t *fs)
+{
+
+
 }
 
