@@ -6,10 +6,20 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#ifndef _SEND_H
-#define _SEND_H
+#include <stdint.h>
 
-int send_init(void);
-int send_run(void);
+#ifndef _CIDR_H
+#define _CIDR_H
 
-#endif //_SEND_H
+int cidr_init(uint32_t);
+
+// get next IP address to scan
+uint32_t cidr_get_next_ip(void);
+
+// what IP address was returned last
+uint32_t cidr_get_curr_ip(void);
+
+// Split CIDR
+char** cidr_split(char*, const char*);
+
+#endif

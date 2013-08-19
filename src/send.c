@@ -29,6 +29,7 @@
 #include "../lib/random.h"
 #include "../lib/blacklist.h"
 
+#include "cidr.h"
 #include "cyclic.h"
 #include "state.h"
 #include "probe_modules/packet.h"
@@ -53,12 +54,11 @@ static uint32_t srcip_offset;
 // global sender initialize (not thread specific)
 int send_init(void)
 {
-	// generate a new primitive root and starting position
-	cyclic_init(0, 0);
-	zsend.first_scanned = cyclic_get_curr_ip();
+	
+	
 
-	if(zconf.cidr && *zconf.cidr != 0){
-		log_info("send", "Processing CIDR %s\n",zconf.cidr);
+	if(zconf.cidr != '\0'){
+		log_info("send", "Processing CIDR %s",zconf.cidr);
 
 		//Split the range and IP
 		char** range_split = cidr_split(zconf.cidr, "/");
@@ -73,25 +73,25 @@ int send_init(void)
 		int number_of_ips = (pow(2,(32-atoll(range))) - 1);
 		uint32_t result_second = (unsigned long) result_first + number_of_ips;
 
-		// log_info("send"," Scanning from %d to %d\n", result_first, result_second);
+		cidr_init(result_first);
 
-	 //  	uint8_t  octet[4];
-	 //    int x;
-	 //    for (x = 0; x < 4; x++)
-	 //    {
-	 //        octet[x] = (result_first >> (x * 8)) & (uint8_t)-1;
-	 //    }
+		
 
-		// printf("First %d.%d.%d.%d\n",octet[3],octet[2],octet[1],octet[0]);
+	  	uint8_t octet[4];
+	    int x;
+	    for (x = 0; x < 4; x++)
+	    {
+	        octet[x] = (result_first >> (x * 8)) & (uint8_t)-1;
+	    }
+		log_info("send"," First IP %d.%d.%d.%d", octet[3],octet[2],octet[1],octet[0]);
 
-	 //    for (x = 0; x < 4; x++)
-	 //    {
-	 //        octet[x] = (result_second >> (x * 8)) & (uint8_t)-1;
-	 //    }
+	    for (x = 0; x < 4; x++)
+	    {
+	        octet[x] = (result_second >> (x * 8)) & (uint8_t)-1;
+	    }
+		log_info("send"," Last IP %d.%d.%d.%d", octet[3],octet[2],octet[1],octet[0]);
 
-		// printf("Last %d.%d.%d.%d\n",octet[3],octet[2],octet[1],octet[0]);
-
-		zsend.first_scanned = result_first;
+		zsend.first_scanned = cidr_get_next_ip();
 
 		//Convert to same format that will be used in the packet send.
 		uint32_t val = ((result_second << 8) & 0xFF00FF00 ) | ((result_second >> 8) & 0xFF00FF ); 
@@ -100,14 +100,20 @@ int send_init(void)
 
 
 	}
-
-	// compute number of targets
-	uint64_t allowed = blacklist_count_allowed();
-	if (allowed == (1LL << 32)) {
-		zsend.targets = 0xFFFFFFFF;
-	} else {
-		zsend.targets = allowed;
+	else{
+		// generate a new primitive root and starting position
+		cyclic_init(0, 0);
+		zsend.first_scanned = cyclic_get_curr_ip();
+		// compute number of targets
+		uint64_t allowed = blacklist_count_allowed();
+		if (allowed == (1LL << 32)) {
+			zsend.targets = 0xFFFFFFFF;
+		} else {
+			zsend.targets = allowed;
+		}
 	}
+
+
 	if (zsend.targets > zconf.max_targets) {
 		zsend.targets = zconf.max_targets;
 	}
@@ -309,9 +315,8 @@ int send_run(void)
 		if(zconf.cidr != '\0'){
 
 			//Get next IP and convert to correct format
-			uint32_t val = zsend.first_scanned++;
-	    	val = ((val << 8) & 0xFF00FF00 ) | ((val >> 8) & 0xFF00FF ); 
-	    	curr  = (val << 16) | (val >> 16);
+			// uint32_t val = zsend.first_scanned++;
+			curr = cidr_get_next_ip();
 
 			if (curr == zsend.last_to_scan) {
 				zsend.complete = 1;
@@ -358,40 +363,4 @@ int send_run(void)
 	}
 	log_debug("send", "thread finished");
 	return EXIT_SUCCESS;
-}
-
-
-char** cidr_split(char* a_str, const char* s)
-{
-	char ** res  = NULL;
-	char *  p    = strtok (a_str, s);
-	int n_spaces = 0;
-
-
-	/* split string and append tokens to 'res' */
-
-	while (p) {
-	  res = realloc (res, sizeof (char*) * ++n_spaces);
-
-	  if (res == NULL)
-	    exit (-1); /* memory allocation failed */
-
-	  res[n_spaces-1] = p;
-
-	  p = strtok (NULL, ".");
-	}
-
-
-	/* realloc one extra element for the last NULL */
-
-	res = realloc (res, sizeof (char*) * (n_spaces+1));
-	res[n_spaces] = 0;
-
-	/* print the result */
-
-	// for (i = 0; i < (n_spaces+1); ++i)
-	//   printf ("res[%d] = %s\n", i, res[i]);
-
-
-	return res;
 }
