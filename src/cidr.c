@@ -77,7 +77,7 @@ char** cidr_split(char* a_str, const char* s)
 
 	  res[n_spaces-1] = p;
 
-	  p = strtok (NULL, ".");
+	  p = strtok (NULL, s);
 	}
 
 
