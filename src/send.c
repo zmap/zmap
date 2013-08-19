@@ -53,16 +53,12 @@ static uint32_t srcip_offset;
 // global sender initialize (not thread specific)
 int send_init(void)
 {
-	printf("Init.\n");
-	
-	cyclic_init(0, 0);
-		
 	// generate a new primitive root and starting position
-	
+	cyclic_init(0, 0);
 	zsend.first_scanned = cyclic_get_curr_ip();
 
-	if(zconf.cidr[0] != '\0'){
-		printf("Not cyclic");
+	if(zconf.cidr && *zconf.cidr != 0){
+		log_info("send", "Processing CIDR\n");
 		printf("%s\n", zconf.cidr);
 		char** range_split = cidr_range(zconf.cidr);
 		char** split = cidr_split(range_split[0]);
@@ -103,18 +99,6 @@ int send_init(void)
 		zsend.last_to_scan = _last;
 
 
-	}
-	else{
-
-		printf("c is empty\n");
-		printf("c is empty\n");
-		
-		printf("\nCyclic\n");
-		printf("\nCyclic\n");
-		printf("\nCyclic\n");
-
-
-	
 	}
 
 	// compute number of targets
@@ -323,7 +307,7 @@ int send_run(void)
 
 		//if has CIDR
 		
-		if(zconf.cidr[0] != '\0'){
+		if(zconf.cidr != '\0'){
 			uint32_t val = zsend.first_scanned++;
 	    	val = ((val << 8) & 0xFF00FF00 ) | ((val >> 8) & 0xFF00FF ); 
 	    	curr  = (val << 16) | (val >> 16);
@@ -343,10 +327,7 @@ int send_run(void)
 				zsend.finish = now();
 			}
 		}
-
-		//If is cyclic
 		else{
-			printf("Cyclic2\n");
 			curr = cyclic_get_next_ip();
 
 			if (curr == zsend.first_scanned) {
