@@ -58,42 +58,42 @@ int send_init(void)
 	zsend.first_scanned = cyclic_get_curr_ip();
 
 	if(zconf.cidr && *zconf.cidr != 0){
-		log_info("send", "Processing CIDR\n");
-		printf("%s\n", zconf.cidr);
-		char** range_split = cidr_range(zconf.cidr);
-		char** split = cidr_split(range_split[0]);
+		log_info("send", "Processing CIDR %s\n",zconf.cidr);
 
+		//Split the range and IP
+		char** range_split = cidr_split(zconf.cidr, "/");
 		char* range = range_split[1];
-
+		//Get IP split
+		char** split = cidr_split(range_split[0], ".");
+		
+		//Get start of CIDR
 		uint32_t result_first = (unsigned long) (atoll(split[0]) * 16777216) + (atoll(split[1]) * 65536) + (atoll(split[2]) * 256) + atoll(split[3]);
 
+		//Get end of CIDR
 		int number_of_ips = (pow(2,(32-atoll(range))) - 1);
 		uint32_t result_second = (unsigned long) result_first + number_of_ips;
 
-		printf("range -> %s\n", range);
-		printf("number_of_ips -> %d\n", number_of_ips);
-		printf("result_first -> %d\n", result_first);
-		printf("result_second -> %d\n", result_second);
+		// log_info("send"," Scanning from %d to %d\n", result_first, result_second);
 
-	  	uint8_t  octet[4];
-	    int x;
-	    for (x = 0; x < 4; x++)
-	    {
-	        octet[x] = (result_first >> (x * 8)) & (uint8_t)-1;
-	    }
+	 //  	uint8_t  octet[4];
+	 //    int x;
+	 //    for (x = 0; x < 4; x++)
+	 //    {
+	 //        octet[x] = (result_first >> (x * 8)) & (uint8_t)-1;
+	 //    }
 
-		printf("First %d.%d.%d.%d\n",octet[3],octet[2],octet[1],octet[0]);
+		// printf("First %d.%d.%d.%d\n",octet[3],octet[2],octet[1],octet[0]);
 
-	    for (x = 0; x < 4; x++)
-	    {
-	        octet[x] = (result_second >> (x * 8)) & (uint8_t)-1;
-	    }
+	 //    for (x = 0; x < 4; x++)
+	 //    {
+	 //        octet[x] = (result_second >> (x * 8)) & (uint8_t)-1;
+	 //    }
 
-		printf("Last %d.%d.%d.%d\n",octet[3],octet[2],octet[1],octet[0]);
+		// printf("Last %d.%d.%d.%d\n",octet[3],octet[2],octet[1],octet[0]);
 
 		zsend.first_scanned = result_first;
 
-
+		//Convert to same format that will be used in the packet send.
 		uint32_t val = ((result_second << 8) & 0xFF00FF00 ) | ((result_second >> 8) & 0xFF00FF ); 
 		uint32_t _last = (val << 16) | (val >> 16);
 		zsend.last_to_scan = _last;
@@ -306,23 +306,14 @@ int send_run(void)
 
 
 		//if has CIDR
-		
 		if(zconf.cidr != '\0'){
+
+			//Get next IP and convert to correct format
 			uint32_t val = zsend.first_scanned++;
 	    	val = ((val << 8) & 0xFF00FF00 ) | ((val >> 8) & 0xFF00FF ); 
 	    	curr  = (val << 16) | (val >> 16);
 
-
-		  	uint8_t  octet[4];
-		    int x;
-		    for (x = 0; x < 4; x++)
-		    {
-		        octet[x] = (zsend.first_scanned >> (x * 8)) & (uint8_t)-1;
-		    }
-
-
 			if (curr == zsend.last_to_scan) {
-				log_info("send", "Sent all packets for this CIDR...");
 				zsend.complete = 1;
 				zsend.finish = now();
 			}
@@ -370,45 +361,10 @@ int send_run(void)
 }
 
 
-char** cidr_split(char* a_str)
+char** cidr_split(char* a_str, const char* s)
 {
 	char ** res  = NULL;
-	char *  p    = strtok (a_str, ".");
-	int n_spaces = 0;
-
-
-	/* split string and append tokens to 'res' */
-
-	while (p) {
-	  res = realloc (res, sizeof (char*) * ++n_spaces);
-
-	  if (res == NULL)
-	    exit (-1); /* memory allocation failed */
-
-	  res[n_spaces-1] = p;
-
-	  p = strtok (NULL, ".");
-	}
-
-
-	/* realloc one extra element for the last NULL */
-
-	res = realloc (res, sizeof (char*) * (n_spaces+1));
-	res[n_spaces] = 0;
-
-	/* print the result */
-
-	// for (i = 0; i < (n_spaces+1); ++i)
-	//   printf ("res[%d] = %s\n", i, res[i]);
-
-
-	return res;
-}
-
-char** cidr_range(char* a_str)
-{
-	char ** res  = NULL;
-	char *  p    = strtok (a_str, "/");
+	char *  p    = strtok (a_str, s);
 	int n_spaces = 0;
 
 

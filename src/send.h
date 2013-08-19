@@ -11,7 +11,7 @@
 
 int send_init(void);
 int send_run(void);
-char** cidr_split(char*);
+char** cidr_split(char*, const char*);
 char** cidr_range(char*);
 
 #endif //_SEND_H
