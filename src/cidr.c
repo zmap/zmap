@@ -23,14 +23,14 @@
 #include "aesrand.h"
 
 
-static uint64_t current = 0;
+static uint32_t current = 0;
 
 int cidr_init(uint32_t current_)
 {
-	uint32_t val = current_;
-	val = ((val << 8) & 0xFF00FF00 ) | ((val >> 8) & 0xFF00FF ); 
-	current = (val << 16) | (val >> 16);
-	current = current_;
+	// uint32_t val = current_;
+	// val = ((val << 8) & 0xFF00FF00 ) | ((val >> 8) & 0xFF00FF ); 
+	// current = (val << 16) | (val >> 16);
+	current = current_-1;
 
 	return 0;
 }
@@ -54,7 +54,9 @@ uint32_t cidr_get_next_ip(void)
 
 uint32_t cidr_get_curr_ip(void)
 {
-	return (uint32_t) current;
+	uint32_t val = current;
+	val = ((val << 8) & 0xFF00FF00 ) | ((val >> 8) & 0xFF00FF ); 
+	return  (val << 16) | (val >> 16);
 }
 
 //Split CIDR

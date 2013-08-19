@@ -69,7 +69,6 @@ const char *gengetopt_args_info_help[] = {
   "  -v, --verbosity=n             Level of log detail (0-5)  (default=`3')",
   "  -h, --help                    Print help and exit",
   "  -V, --version                 Print version and exit",
-  "\nHack:",
   "  -z, --cidr=STRING             CIDR to scan",
   "\nExamples:\n     zmap -p 443  (scans the whole Internet for hosts with port 443 open)\n     zmap -N 5 -B 10M -p 80 -o -  (find 5 HTTP servers, scanning at 10 Mb/s)",
     0
@@ -238,7 +237,7 @@ void init_args_info(struct gengetopt_args_info *args_info)
   args_info->verbosity_help = gengetopt_args_info_help[32] ;
   args_info->help_help = gengetopt_args_info_help[33] ;
   args_info->version_help = gengetopt_args_info_help[34] ;
-  args_info->cidr_help = gengetopt_args_info_help[36] ;
+  args_info->cidr_help = gengetopt_args_info_help[35] ;
   
 }
 
