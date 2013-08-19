@@ -113,6 +113,11 @@ option "help"				h "Print help and exit"
 option "version"			V "Print version and exit"
 	   optional
 
+section "Hack"
+
+option "cidr"				z "CIDR to scan"
+		optional string
+
 text "\nExamples:\n\
      zmap -p 443  (scans the whole Internet for hosts with port 443 open)\n\
      zmap -N 5 -B 10M -p 80 -o -  (find 5 HTTP servers, scanning at 10 Mb/s)"

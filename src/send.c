@@ -17,6 +17,7 @@
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
+ #include <math.h>
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -52,9 +53,69 @@ static uint32_t srcip_offset;
 // global sender initialize (not thread specific)
 int send_init(void)
 {
-	// generate a new primitive root and starting position
+	printf("Init.\n");
+	
 	cyclic_init(0, 0);
+		
+	// generate a new primitive root and starting position
+	
 	zsend.first_scanned = cyclic_get_curr_ip();
+
+	if(zconf.cidr[0] != '\0'){
+		printf("Not cyclic");
+		printf("%s\n", zconf.cidr);
+		char** range_split = cidr_range(zconf.cidr);
+		char** split = cidr_split(range_split[0]);
+
+		char* range = range_split[1];
+
+		uint32_t result_first = (unsigned long) (atoll(split[0]) * 16777216) + (atoll(split[1]) * 65536) + (atoll(split[2]) * 256) + atoll(split[3]);
+
+		int number_of_ips = (pow(2,(32-atoll(range))) - 1);
+		uint32_t result_second = (unsigned long) result_first + number_of_ips;
+
+		printf("range -> %s\n", range);
+		printf("number_of_ips -> %d\n", number_of_ips);
+		printf("result_first -> %d\n", result_first);
+		printf("result_second -> %d\n", result_second);
+
+	  	uint8_t  octet[4];
+	    int x;
+	    for (x = 0; x < 4; x++)
+	    {
+	        octet[x] = (result_first >> (x * 8)) & (uint8_t)-1;
+	    }
+
+		printf("First %d.%d.%d.%d\n",octet[3],octet[2],octet[1],octet[0]);
+
+	    for (x = 0; x < 4; x++)
+	    {
+	        octet[x] = (result_second >> (x * 8)) & (uint8_t)-1;
+	    }
+
+		printf("Last %d.%d.%d.%d\n",octet[3],octet[2],octet[1],octet[0]);
+
+		zsend.first_scanned = result_first;
+
+
+		uint32_t val = ((result_second << 8) & 0xFF00FF00 ) | ((result_second >> 8) & 0xFF00FF ); 
+		uint32_t _last = (val << 16) | (val >> 16);
+		zsend.last_to_scan = _last;
+
+
+	}
+	else{
+
+		printf("c is empty\n");
+		printf("c is empty\n");
+		
+		printf("\nCyclic\n");
+		printf("\nCyclic\n");
+		printf("\nCyclic\n");
+
+
+	
+	}
 
 	// compute number of targets
 	uint64_t allowed = blacklist_count_allowed();
@@ -255,11 +316,45 @@ int send_run(void)
 			pthread_mutex_unlock(&send_mutex);
 			break;
 		}
-		uint32_t curr = cyclic_get_next_ip();
-		if (curr == zsend.first_scanned) {
-			zsend.complete = 1;
-			zsend.finish = now();
+
+		uint32_t curr;
+
+
+
+		//if has CIDR
+		
+		if(zconf.cidr[0] != '\0'){
+			uint32_t val = zsend.first_scanned++;
+	    	val = ((val << 8) & 0xFF00FF00 ) | ((val >> 8) & 0xFF00FF ); 
+	    	curr  = (val << 16) | (val >> 16);
+
+
+		  	uint8_t  octet[4];
+		    int x;
+		    for (x = 0; x < 4; x++)
+		    {
+		        octet[x] = (zsend.first_scanned >> (x * 8)) & (uint8_t)-1;
+		    }
+
+
+			if (curr == zsend.last_to_scan) {
+				log_info("send", "Sent all packets for this CIDR...");
+				zsend.complete = 1;
+				zsend.finish = now();
+			}
 		}
+
+		//If is cyclic
+		else{
+			printf("Cyclic2\n");
+			curr = cyclic_get_next_ip();
+
+			if (curr == zsend.first_scanned) {
+				zsend.complete = 1;
+				zsend.finish = now();
+			}
+		}
+
 		zsend.sent++;
 		pthread_mutex_unlock(&send_mutex);
 		for (int i=0; i < zconf.packet_streams; i++) {
@@ -293,3 +388,73 @@ int send_run(void)
 	return EXIT_SUCCESS;
 }
 
+
+char** cidr_split(char* a_str)
+{
+	char ** res  = NULL;
+	char *  p    = strtok (a_str, ".");
+	int n_spaces = 0;
+
+
+	/* split string and append tokens to 'res' */
+
+	while (p) {
+	  res = realloc (res, sizeof (char*) * ++n_spaces);
+
+	  if (res == NULL)
+	    exit (-1); /* memory allocation failed */
+
+	  res[n_spaces-1] = p;
+
+	  p = strtok (NULL, ".");
+	}
+
+
+	/* realloc one extra element for the last NULL */
+
+	res = realloc (res, sizeof (char*) * (n_spaces+1));
+	res[n_spaces] = 0;
+
+	/* print the result */
+
+	// for (i = 0; i < (n_spaces+1); ++i)
+	//   printf ("res[%d] = %s\n", i, res[i]);
+
+
+	return res;
+}
+
+char** cidr_range(char* a_str)
+{
+	char ** res  = NULL;
+	char *  p    = strtok (a_str, "/");
+	int n_spaces = 0;
+
+
+	/* split string and append tokens to 'res' */
+
+	while (p) {
+	  res = realloc (res, sizeof (char*) * ++n_spaces);
+
+	  if (res == NULL)
+	    exit (-1); /* memory allocation failed */
+
+	  res[n_spaces-1] = p;
+
+	  p = strtok (NULL, ".");
+	}
+
+
+	/* realloc one extra element for the last NULL */
+
+	res = realloc (res, sizeof (char*) * (n_spaces+1));
+	res[n_spaces] = 0;
+
+	/* print the result */
+
+	// for (i = 0; i < (n_spaces+1); ++i)
+	//   printf ("res[%d] = %s\n", i, res[i]);
+
+
+	return res;
+}
