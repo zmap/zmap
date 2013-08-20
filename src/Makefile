@@ -1,6 +1,6 @@
-CFLAGS+=-Wall -pedantic -Wextra -std=gnu99 -I../lib -I./ -Ioutput_modules -O2 -g
-LDFLAGS+=-g -pthread
-LDLIBS+= -lpcap -lgmp -lm
+INCLUDE+=-I../lib -I./ -Ioutput_modules
+LDFLAGS+=-pthread
+LDLIBS+=-lpcap -lgmp -lm
 TARGETS=zmap
 VPATH=../lib:output_modules:probe_modules
 PREFIX=/usr/local
@@ -13,22 +13,22 @@ bindir=$(PREFIX)/sbin
 # Hardening and warnings for building with gcc
 #M aybe add -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations
 #-Wold-style-definition -Wswitch-enum 
-GCCWARNINGS = -Wall -fno-strict-aliasing -W -Wfloat-equal -Wundef      \
+GCCWARNINGS = -Wall -pedantic -fno-strict-aliasing -Wfloat-equal -Wundef      \
 -Wpointer-arith														   \
 -Wwrite-strings -Wredundant-decls -Wchar-subscripts -Wcomment          \
 -Wformat=2 -Wwrite-strings -Wredundant-decls  \
 -Wnested-externs -Wbad-function-cast -Winit-self         \
 -Wmissing-field-initializers										   \
 -Waddress -Wmissing-noreturn -Wnormalized=id    \
--Woverride-init -Wstrict-overflow=1 -Wextra -Warray-bounds             \
+-Wstrict-overflow=1 -Wextra               \
 -Wstack-protector -Wformat -Wformat-security -Wpointer-sign -Wno-format-nonliteral -Wno-format-y2k
 GCCHARDENING=-D_FORTIFY_SOURCE=2 -fstack-protector-all -fwrapv -fPIC --param ssp-buffer-size=1
 LDHARDENING=-z relro -z now
 
-EXTRACFLAGS=-g -O2 $(EXTRA_CFLAGS) $(GCCHARDENING) $(GCCWARNINGS) -Werror
+EXTRACFLAGS=-std=gnu99 -g -O2 $(EXTRA_CFLAGS) $(GCCHARDENING) $(GCCWARNINGS) -Werror
 EXTRALDFLAGS= $(LDHARDENING)
 
-CFLAGS+=-Wall $(INCLUDE) $(EXTRACFLAGS)
+CFLAGS+=$(INCLUDE) $(EXTRACFLAGS)
 LDFLAGS+=$(EXTRALDFLAGS)
 
 modules=module_tcp_synscan.o module_icmp_echo.o module_udp.o #ADD YOUR MODULE HERE
