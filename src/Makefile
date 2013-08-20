@@ -22,7 +22,7 @@ GCCWARNINGS = -Wall -pedantic -fno-strict-aliasing -Wfloat-equal -Wundef      \
 -Waddress -Wmissing-noreturn -Wnormalized=id    \
 -Wstrict-overflow=1 -Wextra               \
 -Wstack-protector -Wformat -Wformat-security -Wpointer-sign -Wno-format-nonliteral -Wno-format-y2k
-GCCHARDENING=-D_FORTIFY_SOURCE=2 -fstack-protector-all -fwrapv -fPIC --param ssp-buffer-size=1
+GCCHARDENING=-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-all -fwrapv -fPIC --param ssp-buffer-size=1
 LDHARDENING=-z relro -z now
 
 EXTRACFLAGS=-std=gnu99 -g -O2 $(EXTRA_CFLAGS) $(GCCHARDENING) $(GCCWARNINGS) -Werror
