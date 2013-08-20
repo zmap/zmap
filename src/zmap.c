@@ -39,6 +39,35 @@
 pthread_mutex_t cpu_affinity_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t recv_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+// splits comma delimited string into char*[]. Does not handle
+// escaping or complicated setups: designed to process a set
+// of fields that the user wants output 
+static void fs_split_string(char* in, int *len, char***results)
+{
+        char** fields = calloc(MAX_FIELDS, sizeof(char*));
+        memset(fields, 0, sizeof(fields));
+        int retvlen = 0;
+        char *currloc = in; 
+        // parse csv into a set of strings
+        while (1) {
+                size_t len = strcspn(currloc, ", ");    
+                if (len == 0) {
+                        currloc++;
+                } else {
+                        char *new = malloc(len+1);
+                        strncpy(new, currloc, len);
+                        new[len] = '\0';             
+                        fields[retvlen++] = new;
+                }   
+                currloc += len;
+                if (currloc == in + (size_t) strlen(in)) {
+                        break;
+                }   
+        }   
+        *results = fields;
+        *len = retvlen;
+}
+
 static void set_cpu(void)
 {
 	pthread_mutex_lock(&cpu_affinity_mutex);
@@ -368,6 +397,25 @@ int main(int argc, char *argv[])
 				CMDLINE_PARSER_PACKAGE, args.probe_module_arg);
 	  exit(EXIT_FAILURE);
 	}
+	// we need to generate a master fielddef list
+
+	// process the list of output fields.
+	if (args.output_fields_given) {
+		zconf.raw_output_fields = zopt.output_fields;
+		fs_split_string(zopt.output_fields, &(zconf.output_fields),
+				&(zconf.output_fields_len));	
+	} else {
+		zconf.output_fields = {"saddr"};
+		zconf.num_output_fields = 1;
+	}
+	// check the list of requested fields to see if they are available
+	// with the selected probe module.
+	for (int i=0; i < zonf.num_output_fields; i++) {
+		fs_check
+
+	}
+
+
 	if (zconf.probe_module->port_args) {
 		if (args.source_port_given) {
 			char *dash = strchr(args.source_port_arg, '-');
