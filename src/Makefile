@@ -57,7 +57,7 @@ install: zmap
 	$(INSTALL) zmap $(bindir)/zmap
 	test -d /etc/zmap || (mkdir /etc/zmap && $(INSTALLDATA) ../conf/* /etc/zmap/)
 	$(INSTALLDATA) ./zmap.1 $(mandir)
-	echo "\n\n\n\n**************\nSuccess! ZMap is installed. Try running (as root):\nzmap -p 80 -N 10 -B 1M -o -\n**************"
+	@echo "\n**************\nSuccess! ZMap is installed. Try running (as root):\nzmap -p 80 -N 10 -B 1M -o -\n**************"
 
 clean:
 	-rm -f $(objects) $(TARGETS)
