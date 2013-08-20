@@ -11,17 +11,15 @@ mandir=/usr/share/man/man1/
 bindir=$(PREFIX)/sbin
 
 # Hardening and warnings for building with gcc
-#M aybe add -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations
-#-Wold-style-definition -Wswitch-enum 
-GCCWARNINGS = -Wall -pedantic -fno-strict-aliasing -Wfloat-equal -Wundef      \
--Wpointer-arith														   \
--Wwrite-strings -Wredundant-decls -Wchar-subscripts -Wcomment          \
--Wformat=2 -Wwrite-strings -Wredundant-decls  \
+# Maybe add -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations
+GCCWARNINGS = -Wall -Wformat=2 -Wno-format-nonliteral\
+-pedantic -fno-strict-aliasing \
+-Wextra \
+-Wfloat-equal -Wundef -Wwrite-strings -Wredundant-decls  \
 -Wnested-externs -Wbad-function-cast -Winit-self         \
--Wmissing-field-initializers										   \
--Waddress -Wmissing-noreturn -Wnormalized=id    \
--Wstrict-overflow=1 -Wextra               \
--Wstack-protector -Wformat -Wformat-security -Wpointer-sign -Wno-format-nonliteral -Wno-format-y2k
+-Wmissing-noreturn -Wnormalized=id    \
+-Wstack-protector
+
 GCCHARDENING=-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-all -fwrapv -fPIC --param ssp-buffer-size=1
 LDHARDENING=-z relro -z now
 
