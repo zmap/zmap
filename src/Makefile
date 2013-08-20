@@ -34,10 +34,11 @@ LDFLAGS+=$(EXTRALDFLAGS)
 modules=module_tcp_synscan.o module_icmp_echo.o module_udp.o #ADD YOUR MODULE HERE
 
 objects=constraint.o blacklist.o cyclic.o logger.o send.o recv.o state.o monitor.o zopt_compat.o zmap.o random.o output_modules.o module_simple_file.o module_extended_file.o packet.o probe_modules.o ${modules} validate.o rijndael-alg-fst.o get_gateway.o aesrand.o
+redis_objects=module_redis.o redis.o
 
 ifeq ($(REDIS), true)
 	LDLIBS+=-lhiredis
-	objects+=module_redis.o redis.o
+	objects+=$(redis_objects)
 	CFLAGS+=-DREDIS
 endif
 
@@ -60,7 +61,7 @@ install: zmap
 	@echo "\n**************\nSuccess! ZMap is installed. Try running (as root):\nzmap -p 80 -N 10 -B 1M -o -\n**************"
 
 clean:
-	-rm -f $(objects) $(TARGETS)
+	-rm -f $(objects) $(redis_objects) $(TARGETS)
 
 .PHONY: install clean
 
