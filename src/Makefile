@@ -16,7 +16,7 @@ bindir=$(PREFIX)/sbin
 GCCWARNINGS = -Wall -fno-strict-aliasing -W -Wfloat-equal -Wundef      \
 -Wpointer-arith														   \
 -Wwrite-strings -Wredundant-decls -Wchar-subscripts -Wcomment          \
--Wformat=2 -Wwrite-strings -Wredundant-decls -Wno-unused-but-set-variable    \
+-Wformat=2 -Wwrite-strings -Wredundant-decls  \
 -Wnested-externs -Wbad-function-cast -Winit-self         \
 -Wmissing-field-initializers										   \
 -Waddress -Wmissing-noreturn -Wnormalized=id    \
@@ -33,7 +33,7 @@ LDFLAGS+=$(EXTRALDFLAGS)
 
 modules=module_tcp_synscan.o module_icmp_echo.o module_udp.o #ADD YOUR MODULE HERE
 
-objects=constraint.o blacklist.o cyclic.o logger.o send.o recv.o state.o monitor.o zopt.o zmap.o random.o output_modules.o module_simple_file.o module_extended_file.o packet.o probe_modules.o ${modules} validate.o rijndael-alg-fst.o get_gateway.o aesrand.o
+objects=constraint.o blacklist.o cyclic.o logger.o send.o recv.o state.o monitor.o zopt_compat.o zmap.o random.o output_modules.o module_simple_file.o module_extended_file.o packet.o probe_modules.o ${modules} validate.o rijndael-alg-fst.o get_gateway.o aesrand.o
 
 ifeq ($(REDIS), true)
 	LDLIBS+=-lhiredis
@@ -47,6 +47,8 @@ $(TARGETS):
 	$(CC) $(CFLAGS) $(DFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
 zmap: $(objects) 
+
+zopt_compat.o: zopt.c
 
 zopt.c zopt.h: zopt.ggo
 	gengetopt -C --no-help --no-version -i $^ -F $*
