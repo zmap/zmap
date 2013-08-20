@@ -1,8 +1,6 @@
-CC=gcc
-
-CFLAGS=-Wall -pedantic -Wextra -std=gnu99 -I../lib -I./ -Ioutput_modules -O2 -g
-LDFLAGS=-g -pthread
-LDLIBS= -lpcap -lgmp -lm
+CFLAGS+=-Wall -pedantic -Wextra -std=gnu99 -I../lib -I./ -Ioutput_modules -O2 -g
+LDFLAGS+=-g -pthread
+LDLIBS+= -lpcap -lgmp -lm
 TARGETS=zmap
 VPATH=../lib:output_modules:probe_modules
 PREFIX=/usr/local
