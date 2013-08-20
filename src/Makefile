@@ -49,7 +49,7 @@ $(TARGETS):
 
 zmap: $(objects) 
 
-VERSION=`if [ -d ../.git ]; then echo \`git describe\`; else echo \`pwd | sed s:.*zmap-:: | sed s:/src::\`; fi`
+VERSION=`if [ -d ../.git ]; then echo \`git describe --always --dirty\`; else echo \`pwd | sed s:.*zmap-:: | sed s:/src::\`; fi`
 zmap_version.o:
 	@if [ -z "$(VERSION)" ]; then echo "Error determining zmap version"; exit 1; fi
 	echo "const char *zmap_version(void) {return \"$(VERSION)\";}" | $(CC) -x c -c - -o $@ $(CFLAGS)
