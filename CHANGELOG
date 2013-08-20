@@ -12,3 +12,8 @@ SUPPORT	Issue #1 "Failure at calloc for 'ip_seen' on KVM VPSs?"
 1.0.2	2013-8-18
 BUGFIX	Issue #14 "gcc 4.7.2 -Wunprototyped-calls error with recv_run."
 	- changed recv_run header to match def in recv.c
+
+1.0.3	2013-8-19
+BUGFIX	Issues 21,28 "fixed get_gateway malloc/memset errors"
+BUGFIX  Issue 24 "Makefile does not respect LDFLAGS"
+	- changed = to += for CFLAGS, LDFAGS, and LDLIBS
