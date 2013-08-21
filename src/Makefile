@@ -31,7 +31,7 @@ LDFLAGS+=$(EXTRALDFLAGS)
 
 modules=module_tcp_synscan.o module_icmp_echo.o module_udp.o #ADD YOUR MODULE HERE
 
-objects=constraint.o blacklist.o cyclic.o logger.o send.o recv.o state.o monitor.o zopt_compat.o zmap.o random.o output_modules.o module_simple_file.o module_extended_file.o packet.o probe_modules.o ${modules} validate.o rijndael-alg-fst.o get_gateway.o aesrand.o
+objects=constraint.o blacklist.o cyclic.o logger.o send.o recv.o state.o monitor.o zopt_compat.o zmap_version.o zmap.o random.o output_modules.o module_simple_file.o module_extended_file.o packet.o probe_modules.o ${modules} validate.o rijndael-alg-fst.o get_gateway.o aesrand.o
 redis_objects=module_redis.o redis.o
 
 ifeq ($(REDIS), true)
@@ -46,6 +46,11 @@ $(TARGETS):
 	$(CC) $(CFLAGS) $(DFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
 zmap: $(objects) 
+
+VERSION=`if [ -d ../.git ]; then echo \`git describe --always --dirty\`; else echo \`pwd | sed s:.*zmap-:: | sed s:/src::\`; fi`
+zmap_version.o:
+	@if [ -z "$(VERSION)" ]; then echo "Error determining zmap version"; exit 1; fi
+	echo "const char *zmap_version(void) {return \"$(VERSION)\";}" | $(CC) -x c -c - -o $@ $(CFLAGS)
 
 zopt_compat.o: zopt.c
 
