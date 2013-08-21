@@ -40,6 +40,12 @@ ifeq ($(REDIS), true)
 	CFLAGS+=-DREDIS
 endif
 
+ifeq ($(JSON), true)
+	LDLIBS += $(shell pkg-config --libs json-c)
+	CFLAGS += $(shell pkg-config --cflags json-c) -DJSON
+	objects+=module_json.o
+endif
+
 all: $(TARGETS)
 
 $(TARGETS):

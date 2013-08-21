@@ -20,12 +20,18 @@ extern output_module_t module_extended_file;
 extern output_module_t module_redis;
 #endif
 
+#ifdef JSON
+extern output_module_t module_json_file;
+#endif
 
 output_module_t* output_modules[] = {
 	&module_simple_file,
 	&module_extended_file,
 #ifdef REDIS
 	&module_redis,
+#endif
+#ifdef JSON
+	&module_json_file,
 #endif
 	// ADD YOUR MODULE HERE
 };
