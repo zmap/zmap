@@ -5,10 +5,10 @@ TARGETS=zmap
 VPATH=../lib:output_modules:probe_modules
 PREFIX=/usr/local
 
-INSTALL=install
-INSTALLDATA=install -m 644
-mandir=/usr/share/man/man1/
-bindir=$(PREFIX)/sbin
+INSTALL=install -p
+INSTALLDATA=install -pm 644
+mandir=$(DESTDIR)$(PREFIX)/share/man/man1/
+bindir=$(DESTDIR)$(PREFIX)/sbin
 
 # Hardening and warnings for building with gcc
 # Maybe add -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations
