@@ -4,6 +4,7 @@ LDLIBS+=-lpcap -lgmp -lm
 TARGETS=zmap
 VPATH=../lib:output_modules:probe_modules
 PREFIX=/usr/local
+DESTDIR =
 
 INSTALL=install
 INSTALLDATA=install -m 644
@@ -53,9 +54,9 @@ zopt.c zopt.h: zopt.ggo
 	gengetopt -C --no-help --no-version -i $^ -F $*
 
 install: zmap
-	$(INSTALL) zmap $(bindir)/zmap
-	test -d /etc/zmap || (mkdir /etc/zmap && $(INSTALLDATA) ../conf/* /etc/zmap/)
-	$(INSTALLDATA) ./zmap.1 $(mandir)
+	test -d $(DESTDIR)$(bindir) || (mkdir -p $(DESTDIR)$(bindir) && $(INSTALL) zmap $(DESTDIR)$(bindir)/zmap)
+	test -d $(DESTDIR)/etc/zmap || (mkdir -p $(DESTDIR)/etc/zmap && $(INSTALLDATA) ../conf/* $(DESTDIR)/etc/zmap/)
+	test -d $(DESTDIR)$(mandir) || (mkdir -p $(DESTDIR)$(mandir) && $(INSTALLDATA) ./zmap.1 $(DESTDIR)$(mandir))
 	@echo "\n**************\nSuccess! ZMap is installed. Try running (as root):\nzmap -p 80 -N 10 -B 1M -o -\n**************"
 
 clean:
