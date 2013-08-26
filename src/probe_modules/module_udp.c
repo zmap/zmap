@@ -109,14 +109,17 @@ int udp_global_initialize(struct state_conf *conf) {
 			udp_send_msg[i] = (n & 0xff);
 		}
 	} else {
-		log_fatal("udp", "unknown UDP probe specification (expected file:/path, text:STRING, or hex:01020304)");
+		log_fatal("udp", "unknown UDP probe specification "
+				 "(expected file:/path, text:STRING, "
+				 "or hex:01020304)");
 		free(udp_send_msg);
 		free(args);
 		exit(1);
 	}
 
 	if (udp_send_msg_len > MAX_UDP_PAYLOAD_LEN) {
-		log_warn("udp", "warning: reducing UDP payload to %d bytes (from %d) to fit on the wire\n", 
+		log_warn("udp", "warning: reducing UDP payload to %d "
+			        "bytes (from %d) to fit on the wire\n", 
 				MAX_UDP_PAYLOAD_LEN, udp_send_msg_len);
 		udp_send_msg_len = MAX_UDP_PAYLOAD_LEN;
 	}
@@ -131,7 +134,6 @@ int udp_global_cleanup(__attribute__((unused)) struct state_conf *zconf,
 	udp_send_msg = NULL;
 	return(0);
 }
-
 
 int udp_init_perthread(void* buf, macaddr_t *src,
 		macaddr_t *gw, __attribute__((unused)) port_h_t dst_port)
@@ -157,9 +159,6 @@ int udp_init_perthread(void* buf, macaddr_t *src,
 
 	return EXIT_SUCCESS;
 }
-
-
-
 
 int udp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip, 
 		uint32_t *validation, int probe_num)
@@ -188,34 +187,8 @@ void udp_print_packet(FILE *fp, void* packet)
 			ntohs(udph->source),
 			ntohs(udph->dest),
 			ntohl(udph->check));
-	//ip_header = (struct iphdr*)(&eth_header[1])
-	struct in_addr *s = (struct in_addr *) &(iph->saddr);
-	struct in_addr *d = (struct in_addr *) &(iph->daddr);
-	char srcip[20];
-	char dstip[20];
-	// inet_ntoa is a const char * so we if just call it in
-	// fprintf, you'll get back wrong results since we're
-	// calling it twice.
-	strncpy(srcip, inet_ntoa(*s), 19);
-	strncpy(dstip, inet_ntoa(*d), 19);
-	fprintf(fp, "ip { saddr: %s | daddr: %s | checksum: %u }\n",
-			srcip,
-			dstip,
-			ntohl(iph->check));
-	fprintf(fp, "eth { shost: %02x:%02x:%02x:%02x:%02x:%02x | "
-			"dhost: %02x:%02x:%02x:%02x:%02x:%02x }\n",
-			(int) ((unsigned char *) ethh->h_source)[0],
-			(int) ((unsigned char *) ethh->h_source)[1],
-			(int) ((unsigned char *) ethh->h_source)[2],
-			(int) ((unsigned char *) ethh->h_source)[3],
-			(int) ((unsigned char *) ethh->h_source)[4],
-			(int) ((unsigned char *) ethh->h_source)[5],
-			(int) ((unsigned char *) ethh->h_dest)[0],
-			(int) ((unsigned char *) ethh->h_dest)[1],
-			(int) ((unsigned char *) ethh->h_dest)[2],
-			(int) ((unsigned char *) ethh->h_dest)[3],
-			(int) ((unsigned char *) ethh->h_dest)[4],
-			(int) ((unsigned char *) ethh->h_dest)[5]);
+	fprintf_ip_header(fp, iph);
+	fprintf_eth_header(fp, ethh);
 	fprintf(fp, "------------------------------------------------------\n");
 }
 

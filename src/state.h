@@ -13,19 +13,25 @@
 #include <netinet/ether.h>
 #include <net/if.h>
 
+#include "types.h"
+#include "fieldset.h"
+
 #ifndef _STATE_H
 #define _STATE_H
 
 #define MAX_PACKET_SIZE 4096
 
-typedef uint32_t ipaddr_n_t; // IPv4 address network order
-typedef uint32_t ipaddr_h_t; // IPv4 address host order
-typedef uint16_t port_n_t; // port network order
-typedef uint16_t port_h_t; // port host order
-typedef unsigned char macaddr_t;
-
 struct probe_module;
 struct output_module;
+
+struct fieldset_conf {
+	fielddefset_t defs;
+	int *translation;
+	int translation_len;
+	int success_index;
+	int classification_index;
+};
+
 
 // global configuration
 struct state_conf {
@@ -73,6 +79,7 @@ struct state_conf {
 	char *whitelist_filename;
 	char *raw_output_fields;
 	char **output_fields;
+	struct fieldset_conf fs_conf;
 	int output_fields_len;
 	int dryrun;
 	int summary;
@@ -80,6 +87,7 @@ struct state_conf {
 	int recv_ready;
 };
 extern struct state_conf zconf;
+
 
 // global sender stats
 struct state_send {

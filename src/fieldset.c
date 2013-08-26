@@ -7,31 +7,14 @@
 
 #include "../lib/logger.h"
 
-int fs_split_string(char* in, int *len, char**results)
+void gen_fielddef_set(fielddefset_t *fds, fieldset_t fs[], int len)
 {
-	
-	char** fields = calloc(MAX_FIELDS, sizeof(char*));
-	memset(fields, 0, sizeof(fields));
-	int retvlen = 0;
-	char *currloc = in;
-	// parse csv into a set of strings
-	while (1) {
-		size_t len = strcspn(currloc, ", ");	
-		char *new = malloc(len+1);
-			
-	
+	if (fds->len + len > MAX_FIELDS) {
+		log_fatal("fieldset", "out of room in field def set");
 	}
-
-	(void)len;
-	*results = fields;
-	*len = retvlen;
-	(void)results;
-	return 0;
-}
-
-void combine_definitions()
-{
-
+	fielddef_t *open = &(fds->fielddefs[fds->len]);
+	memcpy(open, fs, len*sizeof(fielddef_t)); 
+	fds->len += len;
 }
 
 fieldset_t *fs_new_fieldset(void)
@@ -75,8 +58,27 @@ void fs_add_binary(fieldset_t *fs, const char *name, size_t len,
 	fs_add_word(fs, name, FS_BINARY, free_, len, value);
 }
 
-void fs_free(fieldset_t *fs)
+uint64_t fs_get_uint64_by_index(fieldset_t *fs, int index)
 {
+	return (uint64_t) fs->fields[i].value;
+}
+
+char* fs_get_string_by_index(fieldset_t *fs, int index)
+{
+	return (char*) fs->fields[i].value;
+}
+
+int fds_get_index_by_name(fielddefset_t *fds, char *name)
+{
+	for (int i=0; i < fds->len; i++) {
+		if (!strcmp(fds->fielddefs[i].name, name)) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+void fs_free(fieldset_t *fs)
 	for (int i=0; i < fs->len; i++) {
 		field_t *f = &(fs->fields[i]);
 		if (f->free_) {

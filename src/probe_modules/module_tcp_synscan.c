@@ -84,45 +84,18 @@ void synscan_print_packet(FILE *fp, void* packet)
 			ntohs(tcph->dest),
 			ntohl(tcph->seq),
 			ntohl(tcph->check));
-	struct in_addr *s = (struct in_addr *) &(iph->saddr);
-	struct in_addr *d = (struct in_addr *) &(iph->daddr);
-	char srcip[20];
-	char dstip[20];
-	// inet_ntoa is a const char * so we if just call it in
-	// fprintf, you'll get back wrong results since we're
-	// calling it twice.
-	strncpy(srcip, inet_ntoa(*s), 19);
-	strncpy(dstip, inet_ntoa(*d), 19);
-	fprintf(fp, "ip { saddr: %s | daddr: %s | checksum: %u }\n",
-			srcip,
-			dstip,
-			ntohl(iph->check));
-	fprintf(fp, "eth { shost: %02x:%02x:%02x:%02x:%02x:%02x | "
-			"dhost: %02x:%02x:%02x:%02x:%02x:%02x }\n",
-			(int) ((unsigned char *) ethh->h_source)[0],
-			(int) ((unsigned char *) ethh->h_source)[1],
-			(int) ((unsigned char *) ethh->h_source)[2],
-			(int) ((unsigned char *) ethh->h_source)[3],
-			(int) ((unsigned char *) ethh->h_source)[4],
-			(int) ((unsigned char *) ethh->h_source)[5],
-			(int) ((unsigned char *) ethh->h_dest)[0],
-			(int) ((unsigned char *) ethh->h_dest)[1],
-			(int) ((unsigned char *) ethh->h_dest)[2],
-			(int) ((unsigned char *) ethh->h_dest)[3],
-			(int) ((unsigned char *) ethh->h_dest)[4],
-			(int) ((unsigned char *) ethh->h_dest)[5]);
+	fprintf_ip_header(fp, iph);
+	fprintf_eth_header(fp, ethh);
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
-
-
 int synscan_validate_packet(const struct iphdr *ip_hdr, uint32_t len, 
-				__attribute__((unused))uint32_t *src_ip, uint32_t *validation)
+		__attribute__((unused))uint32_t *src_ip, 
+		uint32_t *validation)
 {
 	if (ip_hdr->protocol != IPPROTO_TCP) {
 		return 0;
 	}
-
 	if ((4*ip_hdr->ihl + sizeof(struct tcphdr)) > len) {
 		// buffer not large enough to contain expected tcp header 
 		return 0;
@@ -130,26 +103,20 @@ int synscan_validate_packet(const struct iphdr *ip_hdr, uint32_t len,
 	struct tcphdr *tcp = (struct tcphdr*)((char *)ip_hdr + 4*ip_hdr->ihl);
 	uint16_t sport = tcp->source;
 	uint16_t dport = tcp->dest;
-
 	// validate source port
 	if (ntohs(sport) != zconf.target_port) {
 		return 0;
 	}
-
 	// validate destination port
 	if (!check_dst_port(ntohs(dport), num_ports, validation)) {
 		return 0;
 	}
-
 	// validate tcp acknowledgement number
 	if (htonl(tcp->ack_seq) != htonl(validation[0])+1) {
 		return 0;
 	}
-	
 	return 1;
 }
-
-
 
 void synscan_process_packet(const u_char *packet,
 		__attribute__((unused)) uint32_t len, fieldset_t *fs)
@@ -174,13 +141,18 @@ void synscan_process_packet(const u_char *packet,
 }
 
 static fielddef_t fields[] = {
-	{.name = "sport", .type = "int", .desc = "TCP source port"},
-	{.name = "dport", .type = "int", .desc = "TCP destination port"},
+	{.name = "sport",  .type = "int", .desc = "TCP source port"},
+	{.name = "dport",  .type = "int", .desc = "TCP destination port"},
 	{.name = "seqnum", .type = "int", .desc = "TCP sequence number"},
 	{.name = "acknum", .type = "int", .desc = "TCP acknowledgement number"},
 	{.name = "window", .type = "int", .desc = "TCP window"},
 };
 
+const char *help =
+		"Probe module that sends a TCP SYN packet to a specific "
+		"port. Possible classifications are: synack and rst. A "
+		"SYN-ACK packet is considered a success and a reset packet "
+		"is considered a failed response.";
 
 probe_module_t module_tcp_synscan = {
 	.name = "tcp_synscan",
@@ -195,5 +167,6 @@ probe_module_t module_tcp_synscan = {
 	.process_packet = &synscan_process_packet,
 	.validate_packet = &synscan_validate_packet,
 	.close = NULL,
+	.helptext = help,
 	.fields = fields};
 

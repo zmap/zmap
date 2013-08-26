@@ -37,12 +37,14 @@ typedef struct probe_module {
 	probe_classify_packet_cb process_packet;
 	probe_close_cb close;
 	fielddef_t *fields;
-
+	const char *helptext;
 
 } probe_module_t;
 
 probe_module_t* get_probe_module_by_name(const char*);
 
+void fs_add_ip_fields(fieldset_t *fs, struct iphdr *ip);
+void fs_add_system_fields(fieldset_t *fs, int is_repeat, int in_cooldown);
 void print_probe_modules(void);
 
 #endif // HEADER_PROBE_MODULES_H

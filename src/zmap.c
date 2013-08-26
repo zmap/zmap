@@ -367,6 +367,59 @@ int main(int argc, char *argv[])
 	if (cmdline_parser_required(&args, CMDLINE_PARSER_PACKAGE) != 0) {
 		exit(EXIT_FAILURE);
 	}
+	// parse the provided probe and output module s.t. that we can support
+	// other command-line helpers (e.g. probe help)
+	zconf.output_module = get_output_module_by_name(args.output_module_arg);
+	if (!zconf.output_module) {
+	  fprintf(stderr, "%s: specified output module (%s) does not exist\n",
+		  CMDLINE_PARSER_PACKAGE, args.output_module_arg);
+	  exit(EXIT_FAILURE);
+	}
+	zconf.probe_module = get_probe_module_by_name(args.probe_module_arg);
+	if (!zconf.probe_module) {
+		fprintf(stderr, "%s: specified probe module (%s) does not exist\n",
+				CMDLINE_PARSER_PACKAGE, args.probe_module_arg);
+	  exit(EXIT_FAILURE);
+	}
+
+	// now that we know the probe module, let's find what it supports
+	memset(zconf.fs_conf, 0, sizeof(struct fieldset_conf));
+	// the set of fields made available to a user is constructed
+	// of IP header fields + probe module fields + system fields
+	fielddefset_t *fds = &(zconf.fs_conf.defs);
+	gen_fieldset_def(fds, &(ip_fields),
+		sizeof(ip_fields)/sizeof(fielddef_t));
+	gen_fieldset_def(fds, &(zconf.probe_module->fields),
+		sizeof(zconf.probe_module->fields)/sizeof(fielddef_t));
+	gen_fieldset_def(fds, &(sys_fields),
+		sizeof(sys_fields)/sizeof(fielddef_t));
+	// find the fields we need for the framework
+	zconf.fs_conf.success_index =
+			fs_get_index_by_name(fds, "success");	
+	if (zconf.fs_conf.success_index < 0) {
+		log_fatal("fieldset", "probe module does not supply "
+				      "required success field.");
+	}
+	zconf.fs_conf.classification_index =
+			fs_get_index_by_name(fds, "classification");
+	if (zconf.fs_conf.classification_index < 0) {
+		log_fatal("fieldset", "probe module does not supply "
+				      "required packet classification field.");
+	}
+	// process the list of requested output fields.
+	if (args.output_fields_given) {
+		zconf.raw_output_fields = args.output_fields_arg;
+	} else {
+		zconf.raw_output_fields = (char*) "saddr";
+	}	
+	fs_split_string(args.output_fields_arg, &(zconf.output_fields_len),
+			&(zconf.output_fields));
+	for (int i=0; i < zconf.output_fields_len; i++) {
+		log_trace("zmap", "requested output field (%i): %s",
+				zconf.output_fields[i]);
+	}
+	// generate a translation that can be used to convert output
+	// from a probe module to the input for an output module
 
 	SET_IF_GIVEN(zconf.output_filename, output_file);
 	SET_IF_GIVEN(zconf.blacklist_filename, blacklist_file);
@@ -385,36 +438,7 @@ int main(int argc, char *argv[])
 	zconf.senders = args.sender_threads_arg;
 	zconf.log_level = args.verbosity_arg;
 
-	zconf.output_module = get_output_module_by_name(args.output_module_arg);
-	if (!zconf.output_module) {
-	  fprintf(stderr, "%s: specified output module (%s) does not exist\n",
-		  CMDLINE_PARSER_PACKAGE, args.output_module_arg);
-	  exit(EXIT_FAILURE);
-	}
-	zconf.probe_module = get_probe_module_by_name(args.probe_module_arg);
-	if (!zconf.probe_module) {
-		fprintf(stderr, "%s: specified probe module (%s) does not exist\n",
-				CMDLINE_PARSER_PACKAGE, args.probe_module_arg);
-	  exit(EXIT_FAILURE);
-	}
-	// we need to generate a master fielddef list
-
-	// process the list of output fields.
-	if (args.output_fields_given) {
-		zconf.raw_output_fields = zopt.output_fields;
-		fs_split_string(zopt.output_fields, &(zconf.output_fields),
-				&(zconf.output_fields_len));	
-	} else {
-		zconf.output_fields = {"saddr"};
-		zconf.num_output_fields = 1;
-	}
-	// check the list of requested fields to see if they are available
-	// with the selected probe module.
-	for (int i=0; i < zonf.num_output_fields; i++) {
-		fs_check
-
-	}
-
+	
 
 	if (zconf.probe_module->port_args) {
 		if (args.source_port_given) {

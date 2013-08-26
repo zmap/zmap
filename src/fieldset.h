@@ -8,6 +8,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include "types.h"
 
 #ifndef _FIELDSET_H
 #define _FIELDSET_H
@@ -28,6 +29,11 @@ typedef struct field_def {
 	const char *type;
 	const char *desc;
 } fielddef_t;
+
+typedef struct fielddef_set {
+	fielddef_t fielddefs[MAX_FIELDS];
+	int len;
+} fielddefset_t;
 
 // the internal field type used by fieldset
 typedef struct field {
@@ -60,6 +66,14 @@ typedef struct translation {
 
 
 fieldset_t *fs_new_fieldset(void);
+
+uint64_t fs_get_uint64_by_index(fieldset_t *fs, int index);
+
+char* fs_get_string_by_index(fieldset_t *fs, int index);
+
+int fds_get_index_by_name(fielddefset_t *fds, char *name);
+
+void gen_fielddef_set(fielddefset_t *fds, fieldset_t fs[], int len);
 
 void fs_add_uint64(fieldset_t *fs, const char *name, uint64_t value);
 

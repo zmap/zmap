@@ -31,7 +31,6 @@ probe_module_t* probe_modules[] = {
 	// ADD YOUR MODULE HERE
 };
 
-
 probe_module_t* get_probe_module_by_name(const char* name)
 {
 	for (int i=0; i < (int) (sizeof(probe_modules)/sizeof(probe_modules[0])); i++) {
@@ -76,6 +75,8 @@ fielddef_t ip_fields[] = {
 
 fielddef_t sys_fields[] = {
 	{.name="repeat", .type="int", .desc="Is response a repeat response from host"},
+	{.name="cooldown", .type="int", .desc="Was response received during the cooldown period"},
+
 	{.name="timestamp-str", .type="string", .desc="timestamp of when response arrived in ISO8601 format."}
 }
 
@@ -87,9 +88,8 @@ void fs_add_ip_fields(fieldset_t *fs, struct iphdr *ip)
 	fs_add_uint64(fs, "ttl", ntohl(ip->ttl));
 }
 
-void fs_add_system_fields(fieldset_t *fs)
+void fs_add_system_fields(fieldset_t *fs, int is_repeat, int in_cooldown)
 {
-
 
 }
 

@@ -27,11 +27,13 @@
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <net/if.h>
+#include <assert.h>
 
 #include "../lib/logger.h"
 
 #include "state.h"
 #include "validate.h"
+#include "fieldset.h"
 #include "probe_modules/probe_modules.h"
 #include "output_modules/output_modules.h"
 
@@ -92,9 +94,16 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 	}
 
 	int is_repeat = check_ip(src_ip);
-	response_type_t *r = zconf.probe_module->classify_packet(bytes, buflen);
 
-	if (r->is_success) {
+	fieldset_t *fs = fs_new_fieldset();
+	fs_add_ip_fields(fs, ip_hdr);
+	zconf.probe_module->process_packet(bytes, buflen, fs);
+	fs_add_system_fields(fs, is_repeat, zsend.complete);
+	int success_index = zconf.fsconf.success_index;
+	assert(success_index < fs->len);
+	int is_success = fs_get_uint64_byindex(success_index);
+	
+	if (is_success) {
 		zrecv.success_total++;
 		if (!is_repeat) {
 			zrecv.success_unique++;
@@ -106,19 +115,15 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 				zrecv.cooldown_unique++;
 			}
 		}
-		if (zconf.output_module && zconf.output_module->success_ip) {
-			zconf.output_module->success_ip(
-					ip_hdr->saddr, ip_hdr->daddr,
-					r->name, is_repeat, zsend.complete, bytes, buflen);
-		}
+		
 	} else {
 		zrecv.failure_total++;
-		if (zconf.output_module && zconf.output_module->other_ip) {
-			zconf.output_module->other_ip(
-					ip_hdr->saddr, ip_hdr->daddr,
-					r->name, is_repeat,	zsend.complete, bytes, buflen);
-		}
 	}
+	//if (zconf.output_module && zconf.output_module->process_record) {
+	//	//zconf.output_module->success_ip(
+	//	//		ip_hdr->saddr, ip_hdr->daddr,
+	//	//		r->name, is_repeat, zsend.complete, bytes, buflen);
+	//}
 
 	if (zconf.output_module && zconf.output_module->update
 			&& !(zrecv.success_unique % zconf.output_module->update_interval)) {
