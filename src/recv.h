@@ -6,8 +6,8 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#ifndef _RECV_H
-#define _RECV_H
+#ifndef RECV_H
+#define RECV_H
 
 int recv_update_pcap_stats(void);
 int recv_run(pthread_mutex_t *recv_ready_mutex);

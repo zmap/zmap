@@ -6,8 +6,8 @@
 #include <netinet/ip_icmp.h>
 #include <netinet/udp.h>
 
-#ifndef HEADER_ZMAP_PACKET_H
-#define HEADER_ZMAP_PACKET_H
+#ifndef PACKET_H
+#define PACKET_H
 
 #define MAX_PACKET_SIZE 4096
 

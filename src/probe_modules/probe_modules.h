@@ -1,7 +1,7 @@
 #include "../state.h"
 
-#ifndef HEADER_PROBE_MODULES_H
-#define HEADER_PROBE_MODULES_H
+#ifndef PROBE_MODULES_H
+#define PROBE_MODULES_H
 
 typedef struct probe_response_type {
 		const uint8_t is_success;

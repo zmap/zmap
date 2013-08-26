@@ -13,8 +13,8 @@
 #include <netinet/ether.h>
 #include <net/if.h>
 
-#ifndef _STATE_H
-#define _STATE_H
+#ifndef STATE_H
+#define STATE_H
 
 #define MAX_PACKET_SIZE 4096
 

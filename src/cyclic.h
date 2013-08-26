@@ -8,8 +8,8 @@
 
 #include <stdint.h>
 
-#ifndef _CYCLIC_H
-#define _CYCLIC_H
+#ifndef CYCLIC_H
+#define CYCLIC_H
 
 int cyclic_init(uint32_t, uint32_t);
 
