@@ -20,6 +20,8 @@ void make_tcp_header(struct tcphdr*, port_h_t);
 void make_icmp_header(struct icmp *);
 void make_udp_header(struct udphdr *udp_header, port_h_t dest_port,
 				uint16_t len);
+void fprintf_ip_header(FILE *fp, struct iphdr *iph);
+void fprintf_eth_header(FILE *fp, struct ethhdr *ethh);
 
 static inline unsigned short in_checksum(unsigned short *ip_pkt, int len)
 {

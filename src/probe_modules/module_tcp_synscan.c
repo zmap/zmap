@@ -146,13 +146,9 @@ static fielddef_t fields[] = {
 	{.name = "seqnum", .type = "int", .desc = "TCP sequence number"},
 	{.name = "acknum", .type = "int", .desc = "TCP acknowledgement number"},
 	{.name = "window", .type = "int", .desc = "TCP window"},
+	{.name = "classification", .type="string", .desc = "packet classification"},
+	{.name = "success", .type="int", .desc = "is response considered success"}
 };
-
-const char *help =
-		"Probe module that sends a TCP SYN packet to a specific "
-		"port. Possible classifications are: synack and rst. A "
-		"SYN-ACK packet is considered a success and a reset packet "
-		"is considered a failed response.";
 
 probe_module_t module_tcp_synscan = {
 	.name = "tcp_synscan",
@@ -167,6 +163,11 @@ probe_module_t module_tcp_synscan = {
 	.process_packet = &synscan_process_packet,
 	.validate_packet = &synscan_validate_packet,
 	.close = NULL,
-	.helptext = help,
-	.fields = fields};
+	.helptext = "Probe module that sends a TCP SYN packet to a specific "
+		"port. Possible classifications are: synack and rst. A "
+		"SYN-ACK packet is considered a success and a reset packet "
+		"is considered a failed response.",
+
+	.fields = fields,
+	.numfields = 7};
 

@@ -26,12 +26,12 @@ struct output_module;
 
 struct fieldset_conf {
 	fielddefset_t defs;
+	fielddefset_t outdefs;
 	int *translation;
 	int translation_len;
 	int success_index;
 	int classification_index;
 };
-
 
 // global configuration
 struct state_conf {
@@ -79,7 +79,7 @@ struct state_conf {
 	char *whitelist_filename;
 	char *raw_output_fields;
 	char **output_fields;
-	struct fieldset_conf fs_conf;
+	struct fieldset_conf fsconf;
 	int output_fields_len;
 	int dryrun;
 	int summary;

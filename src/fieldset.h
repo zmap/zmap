@@ -10,8 +10,8 @@
 #include <stdint.h>
 #include "types.h"
 
-#ifndef _FIELDSET_H
-#define _FIELDSET_H
+#ifndef FIELDSET_H
+#define FIELDSET_H
 
 // maximum number of records that can be stored in a fieldset
 #define MAX_FIELDS 128
@@ -67,13 +67,11 @@ typedef struct translation {
 
 fieldset_t *fs_new_fieldset(void);
 
-uint64_t fs_get_uint64_by_index(fieldset_t *fs, int index);
-
 char* fs_get_string_by_index(fieldset_t *fs, int index);
 
 int fds_get_index_by_name(fielddefset_t *fds, char *name);
 
-void gen_fielddef_set(fielddefset_t *fds, fieldset_t fs[], int len);
+void gen_fielddef_set(fielddefset_t *fds, fielddef_t fs[], int len);
 
 void fs_add_uint64(fieldset_t *fs, const char *name, uint64_t value);
 
@@ -82,10 +80,13 @@ void fs_add_string(fieldset_t *fs, const char *name, char *value, int free_);
 void fs_add_binary(fieldset_t *fs, const char *name, size_t len,
 		void *value, int free_);
 
+uint64_t fs_get_uint64_by_index(fieldset_t *fs, int index);
+
 void fs_free(fieldset_t *fs);
 
 translation_t *fs_generate_fieldset_translation();
 
 fieldset_t *translate_fieldset(fieldset_t *fs, translation_t *t);
 
-#endif
+#endif // FIELDSET_H
+

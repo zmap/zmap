@@ -10,18 +10,19 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-
+#include <string.h>
+#include <unistd.h>
 #include <assert.h>
 #include <sched.h>
-#include <unistd.h>
 #include <errno.h>
-#include <string.h>
+
 #include <net/if.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
 #include <pcap/pcap.h>
+
 #include <pthread.h>
 
 #include "../lib/logger.h"
@@ -32,9 +33,10 @@
 #include "recv.h"
 #include "state.h"
 #include "monitor.h"
+#include "get_gateway.h"
+
 #include "output_modules/output_modules.h"
 #include "probe_modules/probe_modules.h"
-#include "get_gateway.h"
 
 pthread_mutex_t cpu_affinity_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t recv_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -55,15 +57,17 @@ static void fs_split_string(char* in, int *len, char***results)
                         currloc++;
                 } else {
                         char *new = malloc(len+1);
+			assert(new);
                         strncpy(new, currloc, len);
                         new[len] = '\0';             
                         fields[retvlen++] = new;
+			assert(fields[retvlen-1]);
                 }   
+		if (len == strlen(currloc)) {
+			break;
+		}
                 currloc += len;
-                if (currloc == in + (size_t) strlen(in)) {
-                        break;
-                }   
-        }   
+        }
         *results = fields;
         *len = retvlen;
 }
@@ -160,7 +164,6 @@ static void summary(void)
 
 static void start_zmap(void)
 {
-	log_init(stderr, zconf.log_level);
 	log_info("zmap", "started");
 
 	// finish setting up configuration
@@ -208,7 +211,7 @@ static void start_zmap(void)
 
 	// initialization
 	if (zconf.output_module && zconf.output_module->init) {
-		zconf.output_module->init(&zconf);
+		zconf.output_module->init(&zconf, &zconf.fsconf.outdefs);
 	}
 	if (send_init()) {
 		exit(EXIT_FAILURE);
@@ -216,7 +219,6 @@ static void start_zmap(void)
 	if (zconf.output_module && zconf.output_module->start) {
 		zconf.output_module->start(&zconf, &zsend, &zrecv);
 	}
-
 	// start threads
 	pthread_t *tsend, trecv, tmon;
 	int r = pthread_create(&trecv, NULL, start_recv, NULL);
@@ -331,12 +333,25 @@ int parse_mac(macaddr_t *out, char *in)
 
 int main(int argc, char *argv[])
 {
+
 	struct gengetopt_args_info args;
 	struct cmdline_parser_params *params;
 	params = cmdline_parser_params_create();
 	params->initialize = 1;
 	params->override = 0;
 	params->check_required = 0;
+
+	SET_BOOL(zconf.dryrun, dryrun);
+	SET_BOOL(zconf.quiet, quiet);
+	SET_BOOL(zconf.summary, summary);
+	zconf.cooldown_secs = args.cooldown_time_arg;
+	zconf.senders = args.sender_threads_arg;
+	zconf.log_level = args.verbosity_arg;
+
+	log_init(stderr, zconf.log_level);
+	log_trace("zmap", "zmap main thread started");
+
+
 	if (cmdline_parser_ext(argc, argv, &args, params) != 0) {
 		exit(EXIT_SUCCESS);
 	}
@@ -383,26 +398,35 @@ int main(int argc, char *argv[])
 	}
 
 	// now that we know the probe module, let's find what it supports
-	memset(zconf.fs_conf, 0, sizeof(struct fieldset_conf));
+	memset(&zconf.fsconf, 0, sizeof(struct fieldset_conf));
 	// the set of fields made available to a user is constructed
 	// of IP header fields + probe module fields + system fields
-	fielddefset_t *fds = &(zconf.fs_conf.defs);
-	gen_fieldset_def(fds, &(ip_fields),
-		sizeof(ip_fields)/sizeof(fielddef_t));
-	gen_fieldset_def(fds, &(zconf.probe_module->fields),
-		sizeof(zconf.probe_module->fields)/sizeof(fielddef_t));
-	gen_fieldset_def(fds, &(sys_fields),
-		sizeof(sys_fields)/sizeof(fielddef_t));
+	fielddefset_t *fds = &(zconf.fsconf.defs);
+	gen_fielddef_set(fds, (fielddef_t*) &(ip_fields),
+		4);
+	gen_fielddef_set(fds, zconf.probe_module->fields,
+		zconf.probe_module->numfields);
+	gen_fielddef_set(fds, (fielddef_t*) &(sys_fields),
+		3);
+	if (args.list_output_fields_given) {
+		for (int i = 0; i < fds->len; i++) {
+			printf("%s (%s): %s\n", fds->fielddefs[i].name,
+				fds->fielddefs[i].type,
+				fds->fielddefs[i].desc);
+		}
+		exit(EXIT_SUCCESS);
+	}
+
 	// find the fields we need for the framework
-	zconf.fs_conf.success_index =
-			fs_get_index_by_name(fds, "success");	
-	if (zconf.fs_conf.success_index < 0) {
+	zconf.fsconf.success_index =
+			fds_get_index_by_name(fds, (char*) "success");	
+	if (zconf.fsconf.success_index < 0) {
 		log_fatal("fieldset", "probe module does not supply "
 				      "required success field.");
 	}
-	zconf.fs_conf.classification_index =
-			fs_get_index_by_name(fds, "classification");
-	if (zconf.fs_conf.classification_index < 0) {
+	zconf.fsconf.classification_index =
+			fds_get_index_by_name(fds, (char*) "classification");
+	if (zconf.fsconf.classification_index < 0) {
 		log_fatal("fieldset", "probe module does not supply "
 				      "required packet classification field.");
 	}
@@ -412,10 +436,11 @@ int main(int argc, char *argv[])
 	} else {
 		zconf.raw_output_fields = (char*) "saddr";
 	}	
-	fs_split_string(args.output_fields_arg, &(zconf.output_fields_len),
+	fs_split_string(zconf.raw_output_fields, &(zconf.output_fields_len),
 			&(zconf.output_fields));
 	for (int i=0; i < zconf.output_fields_len; i++) {
-		log_trace("zmap", "requested output field (%i): %s",
+		log_debug("zmap", "requested output field (%i): %s",
+				i,
 				zconf.output_fields[i]);
 	}
 	// generate a translation that can be used to convert output
@@ -431,13 +456,6 @@ int main(int argc, char *argv[])
 	SET_IF_GIVEN(zconf.max_results, max_results);
 	SET_IF_GIVEN(zconf.rate, rate);
 	SET_IF_GIVEN(zconf.packet_streams, probes);
-	SET_BOOL(zconf.dryrun, dryrun);
-	SET_BOOL(zconf.quiet, quiet);
-	SET_BOOL(zconf.summary, summary);
-	zconf.cooldown_secs = args.cooldown_time_arg;
-	zconf.senders = args.sender_threads_arg;
-	zconf.log_level = args.verbosity_arg;
-
 	
 
 	if (zconf.probe_module->port_args) {

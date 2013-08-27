@@ -53,6 +53,7 @@ static int LogLogVA(enum LogLevel level, const char *loggerName,
 		if (loggerName || logMessage) {
 			fputs("\n", log_output_stream);
 		}
+		fflush(log_output_stream);
 	}
 	return 0;
 }

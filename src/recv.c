@@ -101,7 +101,7 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 	fs_add_system_fields(fs, is_repeat, zsend.complete);
 	int success_index = zconf.fsconf.success_index;
 	assert(success_index < fs->len);
-	int is_success = fs_get_uint64_byindex(success_index);
+	int is_success = fs_get_uint64_by_index(fs, success_index);
 	
 	if (is_success) {
 		zrecv.success_total++;
@@ -119,12 +119,13 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 	} else {
 		zrecv.failure_total++;
 	}
-	//if (zconf.output_module && zconf.output_module->process_record) {
-	//	//zconf.output_module->success_ip(
-	//	//		ip_hdr->saddr, ip_hdr->daddr,
-	//	//		r->name, is_repeat, zsend.complete, bytes, buflen);
-	//}
 
+	// we need to translate the data provided by the probe module
+	// into a fieldset that can be used by the output module
+
+	if (zconf.output_module && zconf.output_module->process_ip) {
+		zconf.output_module->process_ip(fs);
+	}
 	if (zconf.output_module && zconf.output_module->update
 			&& !(zrecv.success_unique % zconf.output_module->update_interval)) {
 		zconf.output_module->update(&zconf, &zsend, &zrecv);

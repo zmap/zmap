@@ -10,35 +10,31 @@
 #define HEADER_OUTPUT_MODULES_H
 
 #include "../state.h"
+#include "../fieldset.h"
 
 // called at scanner initialization
-typedef int (*output_init_cb)(struct state_conf *);
+typedef int (*output_init_cb)(struct state_conf *, fielddefset_t *fds);
 
 // called on packet receipt
-typedef int (*output_packet_cb)(ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
-				const char* response_type,
-				int is_repeat, int in_cooldown,
-				const u_char* packetbuf, size_t buflen);
+typedef int (*output_packet_cb)(fieldset_t *fs);
 
 // called periodically during the scan
-typedef int (*output_update_cb)(struct state_conf*, struct state_send*, struct state_recv*);
-
+typedef int (*output_update_cb)(struct state_conf*, 
+		struct state_send*, struct state_recv*);
 
 typedef struct output_module {
 	const char *name;
 	unsigned update_interval;
-
 	output_init_cb init;
 	output_update_cb start;
 	output_update_cb update;
 	output_update_cb close;
-	output_packet_cb success_ip;
-	output_packet_cb other_ip;
-
+	output_packet_cb process_ip;
 } output_module_t;
 
 
 output_module_t* get_output_module_by_name(const char*);
+
 void print_output_modules(void);
 
 #endif // HEADER_OUTPUT_MODULES_H

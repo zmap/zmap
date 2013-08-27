@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <time.h>
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -16,24 +17,26 @@
 #include <net/if.h>
 #include <linux/if_packet.h>
 
+#include "../../lib/logger.h"
 #include "../fieldset.h"
 #include "probe_modules.h"
 
 extern probe_module_t module_tcp_synscan;
 extern probe_module_t module_icmp_echo;
-extern probe_module_t module_udp;
+//extern probe_module_t module_udp;
 // ADD YOUR MODULE HERE
 
 probe_module_t* probe_modules[] = {
 	&module_tcp_synscan,
 	&module_icmp_echo,
-	&module_udp
+//	&module_udp
 	// ADD YOUR MODULE HERE
 };
 
 probe_module_t* get_probe_module_by_name(const char* name)
 {
-	for (int i=0; i < (int) (sizeof(probe_modules)/sizeof(probe_modules[0])); i++) {
+	int len = (int) (sizeof(probe_modules)/sizeof(probe_modules[0]));
+	for (int i=0; i < len; i++) {
 		if (!strcmp(probe_modules[i]->name, name)) {
 			return probe_modules[i];
 		}
@@ -43,15 +46,9 @@ probe_module_t* get_probe_module_by_name(const char* name)
 
 void print_probe_modules(void)
 {
-	for (int i=0; i < (int) (sizeof(probe_modules)/sizeof(probe_modules[0])); i++) {
+	int len = (int) (sizeof(probe_modules)/sizeof(probe_modules[0]));
+	for (int i=0; i < len; i++) {
 		printf("%s\n", probe_modules[i]->name);
-	}
-}
-
-void print_probe_module_fields(probe_module_t *p)
-{
-	for (int i=0; i < (int) (sizeof(p->fields)/sizeof(p->fields[0])); i++) {
-
 	}
 }
 
@@ -66,20 +63,6 @@ char *make_ip_str(uint32_t ip)
 	return retv;
 }
 
-fielddef_t ip_fields[] = {
-	{.name="saddr", .type="string", .desc="source IP address of response"},
-	{.name="daddr", .type="string", .desc="destination IP address of response"},
-	{.name="ipid", .type="int", .desc="IP identification number of response"},
-	{.name="ttl", .type="int", .desc="time-to-live of response packet"}
-}
-
-fielddef_t sys_fields[] = {
-	{.name="repeat", .type="int", .desc="Is response a repeat response from host"},
-	{.name="cooldown", .type="int", .desc="Was response received during the cooldown period"},
-
-	{.name="timestamp-str", .type="string", .desc="timestamp of when response arrived in ISO8601 format."}
-}
-
 void fs_add_ip_fields(fieldset_t *fs, struct iphdr *ip)
 {
 	fs_add_string(fs, "saddr", make_ip_str(ip->saddr), 1);
@@ -88,8 +71,33 @@ void fs_add_ip_fields(fieldset_t *fs, struct iphdr *ip)
 	fs_add_uint64(fs, "ttl", ntohl(ip->ttl));
 }
 
+#define TIMESTR_LEN 50
+
 void fs_add_system_fields(fieldset_t *fs, int is_repeat, int in_cooldown)
 {
+	fs_add_uint64(fs, "repeat", is_repeat);
+	fs_add_uint64(fs, "cooldown", in_cooldown);
 
+	char *timestr = malloc(TIMESTR_LEN+1);
+	if (!timestr) {
+		log_fatal("recv", "unable to allocate memory for "
+				  "timestamp string in fieldset.");
+	}
+	time_t now = time(0);
+	strftime(timestr, TIMESTR_LEN, "%Y-%m-%dT%H:%M:%S%z",
+			localtime(&now));
+	fs_add_string(fs, "timestamp-str", timestr, 1);
 }
 
+fielddef_t ip_fields[] = {
+	{.name="saddr", .type="string", .desc="source IP address of response"},
+	{.name="daddr", .type="string", .desc="destination IP address of response"},
+	{.name="ipid", .type="int", .desc="IP identification number of response"},
+	{.name="ttl", .type="int", .desc="time-to-live of response packet"}
+};
+
+fielddef_t sys_fields[] = {
+	{.name="repeat", .type="int", .desc="Is response a repeat response from host"},
+	{.name="cooldown", .type="int", .desc="Was response received during the cooldown period"},
+	{.name="timestamp-str", .type="string", .desc="timestamp of when response arrived in ISO8601 format."}
+};

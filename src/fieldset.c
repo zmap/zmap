@@ -7,7 +7,7 @@
 
 #include "../lib/logger.h"
 
-void gen_fielddef_set(fielddefset_t *fds, fieldset_t fs[], int len)
+void gen_fielddef_set(fielddefset_t *fds, fielddef_t fs[], int len)
 {
 	if (fds->len + len > MAX_FIELDS) {
 		log_fatal("fieldset", "out of room in field def set");
@@ -60,12 +60,12 @@ void fs_add_binary(fieldset_t *fs, const char *name, size_t len,
 
 uint64_t fs_get_uint64_by_index(fieldset_t *fs, int index)
 {
-	return (uint64_t) fs->fields[i].value;
+	return (uint64_t) fs->fields[index].value;
 }
 
 char* fs_get_string_by_index(fieldset_t *fs, int index)
 {
-	return (char*) fs->fields[i].value;
+	return (char*) fs->fields[index].value;
 }
 
 int fds_get_index_by_name(fielddefset_t *fds, char *name)
@@ -79,6 +79,7 @@ int fds_get_index_by_name(fielddefset_t *fds, char *name)
 }
 
 void fs_free(fieldset_t *fs)
+{
 	for (int i=0; i < fs->len; i++) {
 		field_t *f = &(fs->fields[i]);
 		if (f->free_) {

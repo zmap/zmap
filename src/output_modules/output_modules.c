@@ -12,20 +12,21 @@
 
 #include "output_modules.h"
 
-extern output_module_t module_simple_file;
-extern output_module_t module_extended_file;
+//extern output_module_t module_simple_file;
+//extern output_module_t module_extended_file;
+extern output_module_t module_csv_file;
 // ADD YOUR MODULE HERE
 
 #ifdef REDIS
 extern output_module_t module_redis;
 #endif
 
-
 output_module_t* output_modules[] = {
-	&module_simple_file,
-	&module_extended_file,
+	&module_csv_file
+	//&module_simple_file,
+	//&module_extended_file,
 #ifdef REDIS
-	&module_redis,
+	//&module_redis,
 #endif
 	// ADD YOUR MODULE HERE
 };
@@ -50,3 +51,4 @@ void print_output_modules(void)
 		printf("%s\n", output_modules[i]->name);
 	}
 }
+
