@@ -35,13 +35,14 @@ int csv_init(struct state_conf *conf, fielddefset_t *fds)
 			}
 		}
 	}
-	// add output headers
-	for (int i=0; i < fds->len; i++) {
-		if (i) {
-			fprintf(file, ", ");
-		}
-		fprintf(file, "%s", fds->fielddefs[i].name);
-	}	
+	//// add output headers
+	(void)fds;
+	//for (int i=0; i < fds->len; i++) {
+	//	if (i) {
+	//		fprintf(file, ", ");
+	//	}
+	//	fprintf(file, "%s", fds->fielddefs[i].name);
+	//}	
 	return EXIT_SUCCESS;
 }
 
@@ -76,7 +77,9 @@ int csv_process(fieldset_t *fs)
 			fprintf(file, "%lu", (uint64_t) f->value); 
 		} else if (f->type == FS_BINARY) {
 			hex_encode(file, (unsigned char*) f->value, f->len);
-		} 
+		} else {
+			log_fatal("csv", "received unknown output type");
+		}
 	}
 	fprintf(file, "\n");
 	return EXIT_SUCCESS;

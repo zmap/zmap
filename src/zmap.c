@@ -44,7 +44,7 @@ pthread_mutex_t recv_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 // splits comma delimited string into char*[]. Does not handle
 // escaping or complicated setups: designed to process a set
 // of fields that the user wants output 
-static void fs_split_string(char* in, int *len, char***results)
+static void split_string(char* in, int *len, char***results)
 {
         char** fields = calloc(MAX_FIELDS, sizeof(char*));
         memset(fields, 0, sizeof(fields));
@@ -114,7 +114,7 @@ static void *start_mon(__attribute__((unused)) void *arg)
 #define SI(w,x,y) printf("%s\t%s\t%i\n", w, x, y);
 #define SD(w,x,y) printf("%s\t%s\t%f\n", w, x, y);
 #define SU(w,x,y) printf("%s\t%s\t%u\n", w, x, y);
-#define SLU(w,x,y) printf("%s\t%s\t%lu\n", w, x, (long unsigned int)y);
+#define SLU(w,x,y) printf("%s\t%s\t%lu\n", w, x, (long unsigned int) y);
 #define SS(w,x,y) printf("%s\t%s\t%s\n", w, x, y);
 #define STRTIME_LEN 1024
 
@@ -333,7 +333,6 @@ int parse_mac(macaddr_t *out, char *in)
 
 int main(int argc, char *argv[])
 {
-
 	struct gengetopt_args_info args;
 	struct cmdline_parser_params *params;
 	params = cmdline_parser_params_create();
@@ -341,16 +340,9 @@ int main(int argc, char *argv[])
 	params->override = 0;
 	params->check_required = 0;
 
-	SET_BOOL(zconf.dryrun, dryrun);
-	SET_BOOL(zconf.quiet, quiet);
-	SET_BOOL(zconf.summary, summary);
-	zconf.cooldown_secs = args.cooldown_time_arg;
-	zconf.senders = args.sender_threads_arg;
 	zconf.log_level = args.verbosity_arg;
-
 	log_init(stderr, zconf.log_level);
 	log_trace("zmap", "zmap main thread started");
-
 
 	if (cmdline_parser_ext(argc, argv, &args, params) != 0) {
 		exit(EXIT_SUCCESS);
@@ -416,7 +408,6 @@ int main(int argc, char *argv[])
 		}
 		exit(EXIT_SUCCESS);
 	}
-
 	// find the fields we need for the framework
 	zconf.fsconf.success_index =
 			fds_get_index_by_name(fds, (char*) "success");	
@@ -436,7 +427,7 @@ int main(int argc, char *argv[])
 	} else {
 		zconf.raw_output_fields = (char*) "saddr";
 	}	
-	fs_split_string(zconf.raw_output_fields, &(zconf.output_fields_len),
+	split_string(zconf.raw_output_fields, &(zconf.output_fields_len),
 			&(zconf.output_fields));
 	for (int i=0; i < zconf.output_fields_len; i++) {
 		log_debug("zmap", "requested output field (%i): %s",
@@ -445,7 +436,15 @@ int main(int argc, char *argv[])
 	}
 	// generate a translation that can be used to convert output
 	// from a probe module to the input for an output module
+	fs_generate_fieldset_translation(&zconf.fsconf.translation,
+			&zconf.fsconf.defs, zconf.output_fields,
+			zconf.output_fields_len);
 
+	SET_BOOL(zconf.dryrun, dryrun);
+	SET_BOOL(zconf.quiet, quiet);
+	SET_BOOL(zconf.summary, summary);
+	zconf.cooldown_secs = args.cooldown_time_arg;
+	zconf.senders = args.sender_threads_arg;
 	SET_IF_GIVEN(zconf.output_filename, output_file);
 	SET_IF_GIVEN(zconf.blacklist_filename, blacklist_file);
 	SET_IF_GIVEN(zconf.whitelist_filename, whitelist_file);

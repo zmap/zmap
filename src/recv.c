@@ -122,10 +122,12 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 
 	// we need to translate the data provided by the probe module
 	// into a fieldset that can be used by the output module
-
+	fieldset_t *o = translate_fieldset(fs, &zconf.fsconf.translation); 
 	if (zconf.output_module && zconf.output_module->process_ip) {
-		zconf.output_module->process_ip(fs);
+		zconf.output_module->process_ip(o);
 	}
+	fs_free(fs);
+	free(o);	
 	if (zconf.output_module && zconf.output_module->update
 			&& !(zrecv.success_unique % zconf.output_module->update_interval)) {
 		zconf.output_module->update(&zconf, &zsend, &zrecv);

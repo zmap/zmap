@@ -27,8 +27,7 @@ struct output_module;
 struct fieldset_conf {
 	fielddefset_t defs;
 	fielddefset_t outdefs;
-	int *translation;
-	int translation_len;
+	translation_t translation;
 	int success_index;
 	int classification_index;
 };

@@ -56,7 +56,7 @@ const char *gengetopt_args_info_help[] = {
   "  -i, --interface=name          Specify network interface to use",
   "\nAdvanced options:",
   "  -M, --probe-module=name       Select probe module  (default=`tcp_synscan')",
-  "  -O, --output-module=name      Select output module  (default=`simple_file')",
+  "  -O, --output-module=name      Select output module  (default=`csv')",
   "      --probe-args=args         Arguments to pass to probe module",
   "      --output-args=args        Arguments to pass to output module",
   "      --list-output-modules     List available output modules",
@@ -189,7 +189,7 @@ void clear_args (struct gengetopt_args_info *args_info)
   args_info->interface_orig = NULL;
   args_info->probe_module_arg = gengetopt_strdup ("tcp_synscan");
   args_info->probe_module_orig = NULL;
-  args_info->output_module_arg = gengetopt_strdup ("simple_file");
+  args_info->output_module_arg = gengetopt_strdup ("csv");
   args_info->output_module_orig = NULL;
   args_info->probe_args_arg = NULL;
   args_info->probe_args_orig = NULL;

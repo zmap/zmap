@@ -49,7 +49,7 @@ void fs_add_string(fieldset_t *fs, const char *name, char *value, int free_)
 
 void fs_add_uint64(fieldset_t *fs, const char *name, uint64_t value)
 {
-	fs_add_word(fs, name, FS_STRING, 0, sizeof(uint64_t), (void*) value);
+	fs_add_word(fs, name, FS_UINT64, 0, sizeof(uint64_t), (void*) value);
 }
 
 void fs_add_binary(fieldset_t *fs, const char *name, size_t len,
@@ -89,9 +89,22 @@ void fs_free(fieldset_t *fs)
 	free(fs);
 }
 
-translation_t *fs_generate_fieldset_translation()
+void fs_generate_fieldset_translation(translation_t *t, 
+		fielddefset_t *avail, char** req, int reqlen)
 {
-	return NULL;
+	memset(t, 0, sizeof(translation_t));
+	if (!t) {
+		log_fatal("fieldset", "unable to allocate memory for translation");
+	}
+	for (int i=0; i < reqlen; i++) {
+		int l = fds_get_index_by_name(avail, req[i]);
+		if (l < 0) {
+			log_fatal("fieldset", "specified field (%s) not "
+					      "available in selected "
+					      "probe module.", req[i]);
+		} 
+		t->translation[t->len++] = l;
+	}
 }
 
 fieldset_t *translate_fieldset(fieldset_t *fs, translation_t *t)
