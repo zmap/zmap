@@ -23,7 +23,7 @@ GCCWARNINGS = -Wall -Wformat=2 -Wno-format-nonliteral\
 GCCHARDENING=-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-all -fwrapv -fPIC --param ssp-buffer-size=1
 LDHARDENING=-z relro -z now
 
-EXTRACFLAGS=-std=gnu99 -g -O2 $(EXTRA_CFLAGS) $(GCCHARDENING) $(GCCWARNINGS) -Werror
+EXTRACFLAGS=-std=gnu99 -g -O2 $(GCCHARDENING) $(GCCWARNINGS) $(EXTRA_CFLAGS) -Werror
 EXTRALDFLAGS= $(LDHARDENING)
 
 CFLAGS+=$(INCLUDE) $(EXTRACFLAGS)
