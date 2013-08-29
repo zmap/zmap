@@ -6,8 +6,8 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#ifndef _VALIDATE_H
-#define _VALIDATE_H
+#ifndef VALIDATE_H
+#define VALIDATE_H
 
 #define VALIDATE_BYTES 16
 

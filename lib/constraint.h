@@ -1,5 +1,5 @@
-#ifndef _CONSTRAINT_H
-#define _CONSTRAINT_H
+#ifndef CONSTRAINT_H
+#define CONSTRAINT_H
 
 typedef struct _constraint constraint_t;
 typedef int value_t;

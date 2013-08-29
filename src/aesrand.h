@@ -8,8 +8,8 @@
 
 #include <stdint.h>
 
-#ifndef _AESRAND_H
-#define _AESRAND_H
+#ifndef AESRAND_H
+#define AESRAND_H
 
 void aesrand_init(uint32_t seed);
 

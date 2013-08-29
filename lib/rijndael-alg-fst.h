@@ -23,8 +23,8 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef __RIJNDAEL_ALG_FST_H
-#define __RIJNDAEL_ALG_FST_H
+#ifndef RIJNDAEL_ALG_FST_H
+#define RIJNDAEL_ALG_FST_H
 
 #define MAXKC	(256/32)
 #define MAXKB	(256/8)
@@ -44,4 +44,4 @@ void rijndaelEncryptRound(const u32 rk[/*4*(Nr + 1)*/], int Nr, u8 block[16], in
 void rijndaelDecryptRound(const u32 rk[/*4*(Nr + 1)*/], int Nr, u8 block[16], int rounds);
 #endif /* INTERMEDIATE_VALUE_KAT */
 
-#endif /* __RIJNDAEL_ALG_FST_H */
+#endif /* RIJNDAEL_ALG_FST_H */

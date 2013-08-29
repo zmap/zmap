@@ -6,8 +6,8 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#ifndef _SEND_H
-#define _SEND_H
+#ifndef SEND_H
+#define SEND_H
 
 int send_init(void);
 int send_run(void);

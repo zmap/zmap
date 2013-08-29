@@ -6,8 +6,8 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#ifndef HEADER_OUTPUT_MODULES_H
-#define HEADER_OUTPUT_MODULES_H
+#ifndef OUTPUT_MODULES_H
+#define OUTPUT_MODULES_H
 
 #include "../state.h"
 #include "../fieldset.h"
