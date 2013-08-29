@@ -30,7 +30,7 @@ OPTIONS:
 -format            Format to output banner responses. One of 'hex', 'ascii',
                    or 'base64'. Default: ascii.
 
---data             Optional data file. This data will be sent to each host
+-data              Optional data file. This data will be sent to each host
                    upon successful connection. Occurrences of the
                    string '%s' will be replaced with the current
                    target host's address.
