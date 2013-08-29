@@ -41,7 +41,7 @@ typedef struct field {
 	int type;
 	int free_;
 	size_t len;
-	void *value;
+	uint64_t value;
 } field_t;
 
 // data structure that is populated by the probe module

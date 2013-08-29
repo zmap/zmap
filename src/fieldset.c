@@ -38,7 +38,7 @@ static inline void fs_add_word(fieldset_t *fs, const char *name, int type,
 	f->type = type;
 	f->name = name;
 	f->len = len;
-	f->value = value;
+	f->value = (uint64_t) value;
 	f->free_ = free_;
 }
 
@@ -86,7 +86,7 @@ void fs_free(fieldset_t *fs)
 	for (int i=0; i < fs->len; i++) {
 		field_t *f = &(fs->fields[i]);
 		if (f->free_) {
-			free(f->value);
+			free((void*) f->value);
 		}
 	}
 	free(fs);
