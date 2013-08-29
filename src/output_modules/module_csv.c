@@ -22,7 +22,7 @@
 
 static FILE *file = NULL;
 
-int csv_init(struct state_conf *conf, fielddefset_t *fds)
+int csv_init(struct state_conf *conf, char **fields, int fieldlens)
 {
 	assert(conf);
 	if (conf->output_filename) {
@@ -34,15 +34,18 @@ int csv_init(struct state_conf *conf, fielddefset_t *fds)
 					conf->output_filename);
 			}
 		}
+	} else {
+		log_warn("csv", "no output file selected. "
+				   "no results will be provided.");
 	}
-	//// add output headers
-	(void)fds;
-	//for (int i=0; i < fds->len; i++) {
-	//	if (i) {
-	//		fprintf(file, ", ");
-	//	}
-	//	fprintf(file, "%s", fds->fielddefs[i].name);
-	//}	
+	if (fieldlens > 1 && file) {
+		for (int i=0; i < fieldlens; i++) {
+			if (i) {
+				fprintf(file, ", ");
+			}
+			fprintf(file, "%s", fields[i]);
+		}	
+	}
 	return EXIT_SUCCESS;
 }
 
@@ -66,6 +69,9 @@ static void hex_encode(FILE *f, unsigned char* readbuf, size_t len)
 
 int csv_process(fieldset_t *fs)
 {
+	if (!file) {
+		return EXIT_SUCCESS;
+	}
 	for (int i=0; i < fs->len; i++) {
 		field_t *f = &(fs->fields[i]);
 		if (i) {

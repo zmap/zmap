@@ -44,6 +44,8 @@ struct state_conf zconf = {
 	.dryrun = 0,
 	.quiet = 0,
 	.summary = 0,
+	.filter_duplicates = 0,
+	.filter_unsuccessful = 0,
 	.recv_ready = 0,
 };
 

@@ -211,7 +211,8 @@ static void start_zmap(void)
 
 	// initialization
 	if (zconf.output_module && zconf.output_module->init) {
-		zconf.output_module->init(&zconf, &zconf.fsconf.outdefs);
+		zconf.output_module->init(&zconf, zconf.output_fields,
+				zconf.output_fields_len);
 	}
 	if (send_init()) {
 		exit(EXIT_FAILURE);
@@ -376,11 +377,38 @@ int main(int argc, char *argv[])
 	}
 	// parse the provided probe and output module s.t. that we can support
 	// other command-line helpers (e.g. probe help)
-	zconf.output_module = get_output_module_by_name(args.output_module_arg);
-	if (!zconf.output_module) {
-	  fprintf(stderr, "%s: specified output module (%s) does not exist\n",
-		  CMDLINE_PARSER_PACKAGE, args.output_module_arg);
-	  exit(EXIT_FAILURE);
+	if (!args.output_module_given) {
+		zconf.output_module = get_output_module_by_name("csv");
+		zconf.raw_output_fields = (char*) "saddr";
+		zconf.filter_duplicates = 1;
+		zconf.filter_unsuccessful = 1;
+	} else if (!strcmp(args.output_module_arg, "simple_file")) {
+		log_warn("zmap", "the simple_file output interface has been deprecated and "
+                                 "will be removed in the future. Users should use the csv "
+				 "output module. Newer scan options such as output-fields "
+				 "are not supported with this output module."); 
+		zconf.output_module = get_output_module_by_name("csv");
+		zconf.raw_output_fields = (char*) "saddr";
+		zconf.filter_duplicates = 1;
+		zconf.filter_unsuccessful = 1;
+	} else if (!strcmp(args.output_module_arg, "extended_file")) {
+		log_warn("zmap", "the extended_file output interface has been deprecated and "
+                                 "will be removed in the future. Users should use the csv "
+				 "output module. Newer scan options such as output-fields "
+				 "are not supported with this output module."); 
+		zconf.output_module = get_output_module_by_name("csv");
+		zconf.raw_output_fields = (char*) "classification, saddr, "
+						  "daddr, sport, dport, "
+						  "seqnum, acknum, cooldown, "
+						  "repeat, timstamp-str";
+		zconf.filter_duplicates = 0;
+	} else {
+		zconf.output_module = get_output_module_by_name(args.output_module_arg);
+		if (!zconf.output_module) {
+		  fprintf(stderr, "%s: specified output module (%s) does not exist\n",
+			  CMDLINE_PARSER_PACKAGE, args.output_module_arg);
+		  exit(EXIT_FAILURE);
+		}
 	}
 	zconf.probe_module = get_probe_module_by_name(args.probe_module_arg);
 	if (!zconf.probe_module) {
@@ -424,7 +452,7 @@ int main(int argc, char *argv[])
 	// process the list of requested output fields.
 	if (args.output_fields_given) {
 		zconf.raw_output_fields = args.output_fields_arg;
-	} else {
+	} else if (!zconf.raw_output_fields) {
 		zconf.raw_output_fields = (char*) "saddr";
 	}	
 	split_string(zconf.raw_output_fields, &(zconf.output_fields_len),

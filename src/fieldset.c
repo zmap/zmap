@@ -80,6 +80,9 @@ int fds_get_index_by_name(fielddefset_t *fds, char *name)
 
 void fs_free(fieldset_t *fs)
 {
+	if (!fs) {
+		return;
+	}
 	for (int i=0; i < fs->len; i++) {
 		field_t *f = &(fs->fields[i]);
 		if (f->free_) {

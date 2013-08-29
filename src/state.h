@@ -83,6 +83,8 @@ struct state_conf {
 	int dryrun;
 	int summary;
 	int quiet;
+	int filter_duplicates;
+	int filter_unsuccessful;
 	int recv_ready;
 };
 extern struct state_conf zconf;

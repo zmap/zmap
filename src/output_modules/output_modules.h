@@ -13,7 +13,7 @@
 #include "../fieldset.h"
 
 // called at scanner initialization
-typedef int (*output_init_cb)(struct state_conf *, fielddefset_t *fds);
+typedef int (*output_init_cb)(struct state_conf *, char **fields, int fieldslen);
 
 // called on packet receipt
 typedef int (*output_packet_cb)(fieldset_t *fs);
