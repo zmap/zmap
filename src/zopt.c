@@ -37,6 +37,7 @@ const char *gengetopt_args_info_help[] = {
   "  -o, --output-file=name        Output file",
   "  -b, --blacklist-file=path     File of subnets to exclude, in CIDR notation, \n                                  e.g. 192.168.0.0/16",
   "  -w, --whitelist-file=path     File of subnets to constrain scan to, in CIDR \n                                  notation, e.g. 192.168.0.0/16",
+  "  -f, --output-fields=fields    Fields that should be output in result set",
   "\nScan options:",
   "  -n, --max-targets=n           Cap number of targets to probe (as a number or \n                                  a percentage of the address space)",
   "  -N, --max-results=n           Cap number of results to return",
@@ -55,11 +56,12 @@ const char *gengetopt_args_info_help[] = {
   "  -i, --interface=name          Specify network interface to use",
   "\nAdvanced options:",
   "  -M, --probe-module=name       Select probe module  (default=`tcp_synscan')",
-  "  -O, --output-module=name      Select output module  (default=`simple_file')",
+  "  -O, --output-module=name      Select output module  (default=`csv')",
   "      --probe-args=args         Arguments to pass to probe module",
   "      --output-args=args        Arguments to pass to output module",
   "      --list-output-modules     List available output modules",
   "      --list-probe-modules      List available probe modules",
+  "      --list-output-fields      List all fields that can be output by selected \n                                  probe module",
   "\nAdditional options:",
   "  -C, --config=filename         Read a configuration file, which can specify \n                                  any of these options  \n                                  (default=`/etc/zmap/zmap.conf')",
   "  -q, --quiet                   Do not print status updates",
@@ -120,6 +122,7 @@ void clear_given (struct gengetopt_args_info *args_info)
   args_info->output_file_given = 0 ;
   args_info->blacklist_file_given = 0 ;
   args_info->whitelist_file_given = 0 ;
+  args_info->output_fields_given = 0 ;
   args_info->max_targets_given = 0 ;
   args_info->max_results_given = 0 ;
   args_info->max_runtime_given = 0 ;
@@ -140,6 +143,7 @@ void clear_given (struct gengetopt_args_info *args_info)
   args_info->output_args_given = 0 ;
   args_info->list_output_modules_given = 0 ;
   args_info->list_probe_modules_given = 0 ;
+  args_info->list_output_fields_given = 0 ;
   args_info->config_given = 0 ;
   args_info->quiet_given = 0 ;
   args_info->summary_given = 0 ;
@@ -159,6 +163,8 @@ void clear_args (struct gengetopt_args_info *args_info)
   args_info->blacklist_file_orig = NULL;
   args_info->whitelist_file_arg = NULL;
   args_info->whitelist_file_orig = NULL;
+  args_info->output_fields_arg = NULL;
+  args_info->output_fields_orig = NULL;
   args_info->max_targets_arg = NULL;
   args_info->max_targets_orig = NULL;
   args_info->max_results_orig = NULL;
@@ -183,7 +189,7 @@ void clear_args (struct gengetopt_args_info *args_info)
   args_info->interface_orig = NULL;
   args_info->probe_module_arg = gengetopt_strdup ("tcp_synscan");
   args_info->probe_module_orig = NULL;
-  args_info->output_module_arg = gengetopt_strdup ("simple_file");
+  args_info->output_module_arg = gengetopt_strdup ("csv");
   args_info->output_module_orig = NULL;
   args_info->probe_args_arg = NULL;
   args_info->probe_args_orig = NULL;
@@ -205,32 +211,34 @@ void init_args_info(struct gengetopt_args_info *args_info)
   args_info->output_file_help = gengetopt_args_info_help[2] ;
   args_info->blacklist_file_help = gengetopt_args_info_help[3] ;
   args_info->whitelist_file_help = gengetopt_args_info_help[4] ;
-  args_info->max_targets_help = gengetopt_args_info_help[6] ;
-  args_info->max_results_help = gengetopt_args_info_help[7] ;
-  args_info->max_runtime_help = gengetopt_args_info_help[8] ;
-  args_info->rate_help = gengetopt_args_info_help[9] ;
-  args_info->bandwidth_help = gengetopt_args_info_help[10] ;
-  args_info->cooldown_time_help = gengetopt_args_info_help[11] ;
-  args_info->seed_help = gengetopt_args_info_help[12] ;
-  args_info->sender_threads_help = gengetopt_args_info_help[13] ;
-  args_info->probes_help = gengetopt_args_info_help[14] ;
-  args_info->dryrun_help = gengetopt_args_info_help[15] ;
-  args_info->source_port_help = gengetopt_args_info_help[17] ;
-  args_info->source_ip_help = gengetopt_args_info_help[18] ;
-  args_info->gateway_mac_help = gengetopt_args_info_help[19] ;
-  args_info->interface_help = gengetopt_args_info_help[20] ;
-  args_info->probe_module_help = gengetopt_args_info_help[22] ;
-  args_info->output_module_help = gengetopt_args_info_help[23] ;
-  args_info->probe_args_help = gengetopt_args_info_help[24] ;
-  args_info->output_args_help = gengetopt_args_info_help[25] ;
-  args_info->list_output_modules_help = gengetopt_args_info_help[26] ;
-  args_info->list_probe_modules_help = gengetopt_args_info_help[27] ;
-  args_info->config_help = gengetopt_args_info_help[29] ;
-  args_info->quiet_help = gengetopt_args_info_help[30] ;
-  args_info->summary_help = gengetopt_args_info_help[31] ;
-  args_info->verbosity_help = gengetopt_args_info_help[32] ;
-  args_info->help_help = gengetopt_args_info_help[33] ;
-  args_info->version_help = gengetopt_args_info_help[34] ;
+  args_info->output_fields_help = gengetopt_args_info_help[5] ;
+  args_info->max_targets_help = gengetopt_args_info_help[7] ;
+  args_info->max_results_help = gengetopt_args_info_help[8] ;
+  args_info->max_runtime_help = gengetopt_args_info_help[9] ;
+  args_info->rate_help = gengetopt_args_info_help[10] ;
+  args_info->bandwidth_help = gengetopt_args_info_help[11] ;
+  args_info->cooldown_time_help = gengetopt_args_info_help[12] ;
+  args_info->seed_help = gengetopt_args_info_help[13] ;
+  args_info->sender_threads_help = gengetopt_args_info_help[14] ;
+  args_info->probes_help = gengetopt_args_info_help[15] ;
+  args_info->dryrun_help = gengetopt_args_info_help[16] ;
+  args_info->source_port_help = gengetopt_args_info_help[18] ;
+  args_info->source_ip_help = gengetopt_args_info_help[19] ;
+  args_info->gateway_mac_help = gengetopt_args_info_help[20] ;
+  args_info->interface_help = gengetopt_args_info_help[21] ;
+  args_info->probe_module_help = gengetopt_args_info_help[23] ;
+  args_info->output_module_help = gengetopt_args_info_help[24] ;
+  args_info->probe_args_help = gengetopt_args_info_help[25] ;
+  args_info->output_args_help = gengetopt_args_info_help[26] ;
+  args_info->list_output_modules_help = gengetopt_args_info_help[27] ;
+  args_info->list_probe_modules_help = gengetopt_args_info_help[28] ;
+  args_info->list_output_fields_help = gengetopt_args_info_help[29] ;
+  args_info->config_help = gengetopt_args_info_help[31] ;
+  args_info->quiet_help = gengetopt_args_info_help[32] ;
+  args_info->summary_help = gengetopt_args_info_help[33] ;
+  args_info->verbosity_help = gengetopt_args_info_help[34] ;
+  args_info->help_help = gengetopt_args_info_help[35] ;
+  args_info->version_help = gengetopt_args_info_help[36] ;
   
 }
 
@@ -318,6 +326,8 @@ cmdline_parser_release (struct gengetopt_args_info *args_info)
   free_string_field (&(args_info->blacklist_file_orig));
   free_string_field (&(args_info->whitelist_file_arg));
   free_string_field (&(args_info->whitelist_file_orig));
+  free_string_field (&(args_info->output_fields_arg));
+  free_string_field (&(args_info->output_fields_orig));
   free_string_field (&(args_info->max_targets_arg));
   free_string_field (&(args_info->max_targets_orig));
   free_string_field (&(args_info->max_results_orig));
@@ -386,6 +396,8 @@ cmdline_parser_dump(FILE *outfile, struct gengetopt_args_info *args_info)
     write_into_file(outfile, "blacklist-file", args_info->blacklist_file_orig, 0);
   if (args_info->whitelist_file_given)
     write_into_file(outfile, "whitelist-file", args_info->whitelist_file_orig, 0);
+  if (args_info->output_fields_given)
+    write_into_file(outfile, "output-fields", args_info->output_fields_orig, 0);
   if (args_info->max_targets_given)
     write_into_file(outfile, "max-targets", args_info->max_targets_orig, 0);
   if (args_info->max_results_given)
@@ -426,6 +438,8 @@ cmdline_parser_dump(FILE *outfile, struct gengetopt_args_info *args_info)
     write_into_file(outfile, "list-output-modules", 0, 0 );
   if (args_info->list_probe_modules_given)
     write_into_file(outfile, "list-probe-modules", 0, 0 );
+  if (args_info->list_output_fields_given)
+    write_into_file(outfile, "list-output-fields", 0, 0 );
   if (args_info->config_given)
     write_into_file(outfile, "config", args_info->config_orig, 0);
   if (args_info->quiet_given)
@@ -692,6 +706,7 @@ cmdline_parser_internal (
         { "output-file",	1, NULL, 'o' },
         { "blacklist-file",	1, NULL, 'b' },
         { "whitelist-file",	1, NULL, 'w' },
+        { "output-fields",	1, NULL, 'f' },
         { "max-targets",	1, NULL, 'n' },
         { "max-results",	1, NULL, 'N' },
         { "max-runtime",	1, NULL, 't' },
@@ -712,6 +727,7 @@ cmdline_parser_internal (
         { "output-args",	1, NULL, 0 },
         { "list-output-modules",	0, NULL, 0 },
         { "list-probe-modules",	0, NULL, 0 },
+        { "list-output-fields",	0, NULL, 0 },
         { "config",	1, NULL, 'C' },
         { "quiet",	0, NULL, 'q' },
         { "summary",	0, NULL, 'g' },
@@ -721,7 +737,7 @@ cmdline_parser_internal (
         { 0,  0, 0, 0 }
       };
 
-      c = getopt_long (argc, argv, "p:o:b:w:n:N:t:r:B:c:e:T:P:ds:S:G:i:M:O:C:qgv:hV", long_options, &option_index);
+      c = getopt_long (argc, argv, "p:o:b:w:f:n:N:t:r:B:c:e:T:P:ds:S:G:i:M:O:C:qgv:hV", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -771,6 +787,18 @@ cmdline_parser_internal (
               &(local_args_info.whitelist_file_given), optarg, 0, 0, ARG_STRING,
               check_ambiguity, override, 0, 0,
               "whitelist-file", 'w',
+              additional_error))
+            goto failure;
+        
+          break;
+        case 'f':	/* Fields that should be output in result set.  */
+        
+        
+          if (update_arg( (void *)&(args_info->output_fields_arg), 
+               &(args_info->output_fields_orig), &(args_info->output_fields_given),
+              &(local_args_info.output_fields_given), optarg, 0, 0, ARG_STRING,
+              check_ambiguity, override, 0, 0,
+              "output-fields", 'f',
               additional_error))
             goto failure;
         
@@ -1093,6 +1121,20 @@ cmdline_parser_internal (
                 &(local_args_info.list_probe_modules_given), optarg, 0, 0, ARG_NO,
                 check_ambiguity, override, 0, 0,
                 "list-probe-modules", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* List all fields that can be output by selected probe module.  */
+          else if (strcmp (long_options[option_index].name, "list-output-fields") == 0)
+          {
+          
+          
+            if (update_arg( 0 , 
+                 0 , &(args_info->list_output_fields_given),
+                &(local_args_info.list_output_fields_given), optarg, 0, 0, ARG_NO,
+                check_ambiguity, override, 0, 0,
+                "list-output-fields", '-',
                 additional_error))
               goto failure;
           

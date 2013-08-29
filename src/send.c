@@ -142,6 +142,21 @@ static int get_socket(void)
 	return sock;
 }
 
+static int get_dryrun_socket(void)
+{
+	// we need a socket in order to gather details about the system
+	// such as source MAC address and IP address. However, because
+	// we don't want to require root access in order to run dryrun,
+	// we just create a TCP socket.
+	int sock = socket(AF_INET, SOCK_STREAM, 0);
+	if (sock <= 0) {
+		log_fatal("send", "couldn't create socket. "
+			  "Error: %s\n", strerror(errno));
+	}
+	return sock;
+
+}
+
 static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
 {
 	if (srcip_first == srcip_last) {
@@ -156,7 +171,12 @@ int send_run(void)
 {
 	log_debug("send", "thread started");
 	pthread_mutex_lock(&send_mutex);
-	int sock = get_socket();
+	int sock;
+	if (zconf.dryrun) {
+		sock = get_dryrun_socket();
+	} else {
+		sock = get_socket();
+	}
 	struct sockaddr_ll sockaddr;
 	// get source interface index
 	struct ifreq if_idx;

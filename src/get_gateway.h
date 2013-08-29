@@ -6,8 +6,8 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#ifndef _GET_GATEWAY_H
-#define _GET_GATEWAY_H
+#ifndef GET_GATEWAY_H
+#define GET_GATEWAY_H
 
 #include <netinet/in.h>
 

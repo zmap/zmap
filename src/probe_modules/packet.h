@@ -6,8 +6,8 @@
 #include <netinet/ip_icmp.h>
 #include <netinet/udp.h>
 
-#ifndef HEADER_ZMAP_PACKET_H
-#define HEADER_ZMAP_PACKET_H
+#ifndef PACKET_H
+#define PACKET_H
 
 #define MAX_PACKET_SIZE 4096
 
@@ -20,6 +20,8 @@ void make_tcp_header(struct tcphdr*, port_h_t);
 void make_icmp_header(struct icmp *);
 void make_udp_header(struct udphdr *udp_header, port_h_t dest_port,
 				uint16_t len);
+void fprintf_ip_header(FILE *fp, struct iphdr *iph);
+void fprintf_eth_header(FILE *fp, struct ethhdr *ethh);
 
 static inline unsigned short in_checksum(unsigned short *ip_pkt, int len)
 {
@@ -77,6 +79,27 @@ static __attribute__((unused)) uint16_t tcp_checksum(unsigned short len_tcp,
 	sum += (sum >> 16);
 	// Take the one's complement of sum
 	return (unsigned short) (~sum);
+}
+
+// Returns 0 if dst_port is outside the expected valid range, non-zero otherwise
+static __attribute__((unused)) inline int check_dst_port(uint16_t port,
+				int num_ports, uint32_t *validation)
+{
+	if (port > zconf.source_port_last 
+					|| port < zconf.source_port_first) {
+		return -1;
+	}
+	int32_t to_validate = port - zconf.source_port_first;
+	int32_t min = validation[1] % num_ports;
+	int32_t max = (validation[1] + zconf.packet_streams - 1) % num_ports;
+
+	return (((max - min) % num_ports) >= ((to_validate - min) % num_ports));
+}
+
+static __attribute__((unused)) inline uint16_t get_src_port(int num_ports, 
+				int probe_num, uint32_t *validation)
+{
+	return zconf.source_port_first + ((validation[1] + probe_num) % num_ports);
 }
 
 #endif

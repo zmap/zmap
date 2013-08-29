@@ -29,3 +29,4 @@ followed by:
 Redis support is not enabled by default.  If you are want to use ZMap
 with Redis, you will first need to install Hiredis.  Then, rebuild
 ZMap with the command "make REDIS=true".
+

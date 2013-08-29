@@ -2,8 +2,8 @@
 #include <unistd.h>
 #include <hiredis/hiredis.h>
 
-#ifndef _REDIS_ZHELPERS_H
-#define _REDIS_ZHELPERS_H
+#ifndef REDIS_ZHELPERS_H
+#define REDIS_ZHELPERS_H
 
 int redis_init(void);
 

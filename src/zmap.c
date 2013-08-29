@@ -10,18 +10,19 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-
+#include <string.h>
+#include <unistd.h>
 #include <assert.h>
 #include <sched.h>
-#include <unistd.h>
 #include <errno.h>
-#include <string.h>
+
 #include <net/if.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
 #include <pcap/pcap.h>
+
 #include <pthread.h>
 
 #include "../lib/logger.h"
@@ -32,12 +33,44 @@
 #include "recv.h"
 #include "state.h"
 #include "monitor.h"
+#include "get_gateway.h"
+
 #include "output_modules/output_modules.h"
 #include "probe_modules/probe_modules.h"
-#include "get_gateway.h"
 
 pthread_mutex_t cpu_affinity_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t recv_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+// splits comma delimited string into char*[]. Does not handle
+// escaping or complicated setups: designed to process a set
+// of fields that the user wants output 
+static void split_string(char* in, int *len, char***results)
+{
+        char** fields = calloc(MAX_FIELDS, sizeof(char*));
+        memset(fields, 0, sizeof(fields));
+        int retvlen = 0;
+        char *currloc = in; 
+        // parse csv into a set of strings
+        while (1) {
+                size_t len = strcspn(currloc, ", ");    
+                if (len == 0) {
+                        currloc++;
+                } else {
+                        char *new = malloc(len+1);
+			assert(new);
+                        strncpy(new, currloc, len);
+                        new[len] = '\0';             
+                        fields[retvlen++] = new;
+			assert(fields[retvlen-1]);
+                }   
+		if (len == strlen(currloc)) {
+			break;
+		}
+                currloc += len;
+        }
+        *results = fields;
+        *len = retvlen;
+}
 
 static void set_cpu(void)
 {
@@ -81,7 +114,7 @@ static void *start_mon(__attribute__((unused)) void *arg)
 #define SI(w,x,y) printf("%s\t%s\t%i\n", w, x, y);
 #define SD(w,x,y) printf("%s\t%s\t%f\n", w, x, y);
 #define SU(w,x,y) printf("%s\t%s\t%u\n", w, x, y);
-#define SLU(w,x,y) printf("%s\t%s\t%lu\n", w, x, (long unsigned int)y);
+#define SLU(w,x,y) printf("%s\t%s\t%lu\n", w, x, (long unsigned int) y);
 #define SS(w,x,y) printf("%s\t%s\t%s\n", w, x, y);
 #define STRTIME_LEN 1024
 
@@ -131,7 +164,6 @@ static void summary(void)
 
 static void start_zmap(void)
 {
-	log_init(stderr, zconf.log_level);
 	log_info("zmap", "started");
 
 	// finish setting up configuration
@@ -179,7 +211,8 @@ static void start_zmap(void)
 
 	// initialization
 	if (zconf.output_module && zconf.output_module->init) {
-		zconf.output_module->init(&zconf);
+		zconf.output_module->init(&zconf, zconf.output_fields,
+				zconf.output_fields_len);
 	}
 	if (send_init()) {
 		exit(EXIT_FAILURE);
@@ -187,7 +220,6 @@ static void start_zmap(void)
 	if (zconf.output_module && zconf.output_module->start) {
 		zconf.output_module->start(&zconf, &zsend, &zrecv);
 	}
-
 	// start threads
 	pthread_t *tsend, trecv, tmon;
 	int r = pthread_create(&trecv, NULL, start_recv, NULL);
@@ -206,14 +238,14 @@ static void start_zmap(void)
 	assert(tsend);
 	log_debug("zmap", "using %d sender threads", zconf.senders);
 	for (int i=0; i < zconf.senders; i++) {
-		r = pthread_create(&tsend[i], NULL, start_send, NULL);
+		int r = pthread_create(&tsend[i], NULL, start_send, NULL);
 		if (r != 0) {
 			log_fatal("zmap", "unable to create send thread");
 			exit(EXIT_FAILURE);
 		}
 	}
 	if (!zconf.quiet) {
-		r = pthread_create(&tmon, NULL, start_mon, NULL);
+		int r = pthread_create(&tmon, NULL, start_mon, NULL);
 		if (r != 0) {
 			log_fatal("zmap", "unable to create monitor thread");
 			exit(EXIT_FAILURE);
@@ -222,14 +254,14 @@ static void start_zmap(void)
 
 	// wait for completion
 	for (int i=0; i < zconf.senders; i++) {
-		pthread_join(tsend[i], NULL);
+		int r = pthread_join(tsend[i], NULL);
 		if (r != 0) {
 			log_fatal("zmap", "unable to join send thread");
 			exit(EXIT_FAILURE);
 		}
 	}
 	log_debug("zmap", "senders finished");
-	pthread_join(trecv, NULL);
+	r = pthread_join(trecv, NULL);
 	if (r != 0) {
 		log_fatal("zmap", "unable to join recv thread");
 		exit(EXIT_FAILURE);
@@ -308,6 +340,11 @@ int main(int argc, char *argv[])
 	params->initialize = 1;
 	params->override = 0;
 	params->check_required = 0;
+
+	zconf.log_level = args.verbosity_arg;
+	log_init(stderr, zconf.log_level);
+	log_trace("zmap", "zmap main thread started");
+
 	if (cmdline_parser_ext(argc, argv, &args, params) != 0) {
 		exit(EXIT_SUCCESS);
 	}
@@ -338,7 +375,104 @@ int main(int argc, char *argv[])
 	if (cmdline_parser_required(&args, CMDLINE_PARSER_PACKAGE) != 0) {
 		exit(EXIT_FAILURE);
 	}
+	// parse the provided probe and output module s.t. that we can support
+	// other command-line helpers (e.g. probe help)
+	if (!args.output_module_given) {
+		zconf.output_module = get_output_module_by_name("csv");
+		zconf.raw_output_fields = (char*) "saddr";
+		zconf.filter_duplicates = 1;
+		zconf.filter_unsuccessful = 1;
+	} else if (!strcmp(args.output_module_arg, "simple_file")) {
+		log_warn("zmap", "the simple_file output interface has been deprecated and "
+                                 "will be removed in the future. Users should use the csv "
+				 "output module. Newer scan options such as output-fields "
+				 "are not supported with this output module."); 
+		zconf.output_module = get_output_module_by_name("csv");
+		zconf.raw_output_fields = (char*) "saddr";
+		zconf.filter_duplicates = 1;
+		zconf.filter_unsuccessful = 1;
+	} else if (!strcmp(args.output_module_arg, "extended_file")) {
+		log_warn("zmap", "the extended_file output interface has been deprecated and "
+                                 "will be removed in the future. Users should use the csv "
+				 "output module. Newer scan options such as output-fields "
+				 "are not supported with this output module."); 
+		zconf.output_module = get_output_module_by_name("csv");
+		zconf.raw_output_fields = (char*) "classification, saddr, "
+						  "daddr, sport, dport, "
+						  "seqnum, acknum, cooldown, "
+						  "repeat, timestamp-str";
+		zconf.filter_duplicates = 0;
+	} else {
+		zconf.output_module = get_output_module_by_name(args.output_module_arg);
+		if (!zconf.output_module) {
+		  fprintf(stderr, "%s: specified output module (%s) does not exist\n",
+			  CMDLINE_PARSER_PACKAGE, args.output_module_arg);
+		  exit(EXIT_FAILURE);
+		}
+	}
+	zconf.probe_module = get_probe_module_by_name(args.probe_module_arg);
+	if (!zconf.probe_module) {
+		fprintf(stderr, "%s: specified probe module (%s) does not exist\n",
+				CMDLINE_PARSER_PACKAGE, args.probe_module_arg);
+	  exit(EXIT_FAILURE);
+	}
 
+	// now that we know the probe module, let's find what it supports
+	memset(&zconf.fsconf, 0, sizeof(struct fieldset_conf));
+	// the set of fields made available to a user is constructed
+	// of IP header fields + probe module fields + system fields
+	fielddefset_t *fds = &(zconf.fsconf.defs);
+	gen_fielddef_set(fds, (fielddef_t*) &(ip_fields),
+		4);
+	gen_fielddef_set(fds, zconf.probe_module->fields,
+		zconf.probe_module->numfields);
+	gen_fielddef_set(fds, (fielddef_t*) &(sys_fields),
+		3);
+	if (args.list_output_fields_given) {
+		for (int i = 0; i < fds->len; i++) {
+			printf("%s (%s): %s\n", fds->fielddefs[i].name,
+				fds->fielddefs[i].type,
+				fds->fielddefs[i].desc);
+		}
+		exit(EXIT_SUCCESS);
+	}
+	// find the fields we need for the framework
+	zconf.fsconf.success_index =
+			fds_get_index_by_name(fds, (char*) "success");	
+	if (zconf.fsconf.success_index < 0) {
+		log_fatal("fieldset", "probe module does not supply "
+				      "required success field.");
+	}
+	zconf.fsconf.classification_index =
+			fds_get_index_by_name(fds, (char*) "classification");
+	if (zconf.fsconf.classification_index < 0) {
+		log_fatal("fieldset", "probe module does not supply "
+				      "required packet classification field.");
+	}
+	// process the list of requested output fields.
+	if (args.output_fields_given) {
+		zconf.raw_output_fields = args.output_fields_arg;
+	} else if (!zconf.raw_output_fields) {
+		zconf.raw_output_fields = (char*) "saddr";
+	}	
+	split_string(zconf.raw_output_fields, &(zconf.output_fields_len),
+			&(zconf.output_fields));
+	for (int i=0; i < zconf.output_fields_len; i++) {
+		log_debug("zmap", "requested output field (%i): %s",
+				i,
+				zconf.output_fields[i]);
+	}
+	// generate a translation that can be used to convert output
+	// from a probe module to the input for an output module
+	fs_generate_fieldset_translation(&zconf.fsconf.translation,
+			&zconf.fsconf.defs, zconf.output_fields,
+			zconf.output_fields_len);
+
+	SET_BOOL(zconf.dryrun, dryrun);
+	SET_BOOL(zconf.quiet, quiet);
+	SET_BOOL(zconf.summary, summary);
+	zconf.cooldown_secs = args.cooldown_time_arg;
+	zconf.senders = args.sender_threads_arg;
 	SET_IF_GIVEN(zconf.output_filename, output_file);
 	SET_IF_GIVEN(zconf.blacklist_filename, blacklist_file);
 	SET_IF_GIVEN(zconf.whitelist_filename, whitelist_file);
@@ -349,25 +483,8 @@ int main(int argc, char *argv[])
 	SET_IF_GIVEN(zconf.max_results, max_results);
 	SET_IF_GIVEN(zconf.rate, rate);
 	SET_IF_GIVEN(zconf.packet_streams, probes);
-	SET_BOOL(zconf.dryrun, dryrun);
-	SET_BOOL(zconf.quiet, quiet);
-	SET_BOOL(zconf.summary, summary);
-	zconf.cooldown_secs = args.cooldown_time_arg;
-	zconf.senders = args.sender_threads_arg;
-	zconf.log_level = args.verbosity_arg;
+	
 
-	zconf.output_module = get_output_module_by_name(args.output_module_arg);
-	if (!zconf.output_module) {
-	  fprintf(stderr, "%s: specified output module (%s) does not exist\n",
-		  CMDLINE_PARSER_PACKAGE, args.output_module_arg);
-	  exit(EXIT_FAILURE);
-	}
-	zconf.probe_module = get_probe_module_by_name(args.probe_module_arg);
-	if (!zconf.probe_module) {
-		fprintf(stderr, "%s: specified probe module (%s) does not exist\n",
-				CMDLINE_PARSER_PACKAGE, args.probe_module_arg);
-	  exit(EXIT_FAILURE);
-	}
 	if (zconf.probe_module->port_args) {
 		if (args.source_port_given) {
 			char *dash = strchr(args.source_port_arg, '-');

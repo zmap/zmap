@@ -6,7 +6,6 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-
 #include "packet.h"
 
 #include <stdlib.h>
@@ -34,6 +33,41 @@ void print_macaddr(struct ifreq* i)
 			(int) ((unsigned char *) &i->ifr_hwaddr.sa_data)[3],
 			(int) ((unsigned char *) &i->ifr_hwaddr.sa_data)[4],
 			(int) ((unsigned char *) &i->ifr_hwaddr.sa_data)[5]);
+}
+
+void fprintf_ip_header(FILE *fp, struct iphdr *iph)
+{
+	struct in_addr *s = (struct in_addr *) &(iph->saddr);
+	struct in_addr *d = (struct in_addr *) &(iph->daddr);
+	char srcip[20];
+	char dstip[20];
+	// inet_ntoa is a const char * so we if just call it in
+	// fprintf, you'll get back wrong results since we're
+	// calling it twice.
+	strncpy(srcip, inet_ntoa(*s), 19);
+	strncpy(dstip, inet_ntoa(*d), 19);
+	fprintf(fp, "ip { saddr: %s | daddr: %s | checksum: %u }\n",
+			srcip,
+			dstip,
+			ntohl(iph->check));
+}
+
+void fprintf_eth_header(FILE *fp, struct ethhdr *ethh)
+{
+	fprintf(fp, "eth { shost: %02x:%02x:%02x:%02x:%02x:%02x | "
+			"dhost: %02x:%02x:%02x:%02x:%02x:%02x }\n",
+			(int) ((unsigned char *) ethh->h_source)[0],
+			(int) ((unsigned char *) ethh->h_source)[1],
+			(int) ((unsigned char *) ethh->h_source)[2],
+			(int) ((unsigned char *) ethh->h_source)[3],
+			(int) ((unsigned char *) ethh->h_source)[4],
+			(int) ((unsigned char *) ethh->h_source)[5],
+			(int) ((unsigned char *) ethh->h_dest)[0],
+			(int) ((unsigned char *) ethh->h_dest)[1],
+			(int) ((unsigned char *) ethh->h_dest)[2],
+			(int) ((unsigned char *) ethh->h_dest)[3],
+			(int) ((unsigned char *) ethh->h_dest)[4],
+			(int) ((unsigned char *) ethh->h_dest)[5]);
 }
 
 void make_eth_header(struct ethhdr *ethh, macaddr_t *src, macaddr_t *dst)

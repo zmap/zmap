@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#ifndef _LOGGER_H
-#define _LOGGER_H
+#ifndef LOGGER_H
+#define LOGGER_H
 
 enum LogLevel { LOG_FATAL, LOG_ERROR, LOG_WARN, LOG_INFO, LOG_DEBUG, LOG_TRACE,
 					NUM_LOGLEVELS };

@@ -34,25 +34,26 @@ int udp_send_msg_len = 0;
 
 const char *udp_send_msg_default = "GET / HTTP/1.1\r\nHost: www\r\n\r\n"; 
 
-static int num_ports = 1;
+static int num_ports;
 
 probe_module_t module_udp;
 
-
-int udp_global_initialize(struct state_conf * zconf) {
+int udp_global_initialize(struct state_conf *conf) {
 	char *args, *c;
 	int i;
 	unsigned int n;
 
 	FILE *inp;
 
+	num_ports = conf->source_port_last - conf->source_port_first + 1;
+
 	udp_send_msg = strdup(udp_send_msg_default);
 	udp_send_msg_len = strlen(udp_send_msg);
 
-	if (! (zconf->probe_args && strlen(zconf->probe_args) > 0)) 
+	if (!(conf->probe_args && strlen(conf->probe_args) > 0)) 
 		return(0);
 	
-	args = strdup(zconf->probe_args);
+	args = strdup(conf->probe_args);
 	if (! args) exit(1);
 
 	c = strchr(args, ':');
@@ -108,14 +109,17 @@ int udp_global_initialize(struct state_conf * zconf) {
 			udp_send_msg[i] = (n & 0xff);
 		}
 	} else {
-		log_fatal("udp", "unknown UDP probe specification (expected file:/path, text:STRING, or hex:01020304)");
+		log_fatal("udp", "unknown UDP probe specification "
+				 "(expected file:/path, text:STRING, "
+				 "or hex:01020304)");
 		free(udp_send_msg);
 		free(args);
 		exit(1);
 	}
 
 	if (udp_send_msg_len > MAX_UDP_PAYLOAD_LEN) {
-		log_warn("udp", "warning: reducing UDP payload to %d bytes (from %d) to fit on the wire\n", 
+		log_warn("udp", "warning: reducing UDP payload to %d "
+			        "bytes (from %d) to fit on the wire\n", 
 				MAX_UDP_PAYLOAD_LEN, udp_send_msg_len);
 		udp_send_msg_len = MAX_UDP_PAYLOAD_LEN;
 	}
@@ -130,7 +134,6 @@ int udp_global_cleanup(__attribute__((unused)) struct state_conf *zconf,
 	udp_send_msg = NULL;
 	return(0);
 }
-
 
 int udp_init_perthread(void* buf, macaddr_t *src,
 		macaddr_t *gw, __attribute__((unused)) port_h_t dst_port)
@@ -154,8 +157,6 @@ int udp_init_perthread(void* buf, macaddr_t *src,
 
 	memcpy(payload, udp_send_msg, udp_send_msg_len);
 
-	num_ports = zconf.source_port_last - zconf.source_port_first + 1;
-
 	return EXIT_SUCCESS;
 }
 
@@ -165,12 +166,11 @@ int udp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 	struct ethhdr *eth_header = (struct ethhdr *)buf;
 	struct iphdr *ip_header = (struct iphdr*)(&eth_header[1]);
 	struct udphdr *udp_header = (struct udphdr*)(&ip_header[1]);
-	uint16_t src_port = zconf.source_port_first
-					+ ((validation[1] + probe_num) % num_ports);
 
 	ip_header->saddr = src_ip;
 	ip_header->daddr = dst_ip;
-	udp_header->source = src_port;
+	udp_header->source = get_src_port(num_ports, probe_num,
+					validation);
 
 	ip_header->check = 0;
 	ip_header->check = ip_checksum((unsigned short *) ip_header);
@@ -187,37 +187,10 @@ void udp_print_packet(FILE *fp, void* packet)
 			ntohs(udph->source),
 			ntohs(udph->dest),
 			ntohl(udph->check));
-	//ip_header = (struct iphdr*)(&eth_header[1])
-	struct in_addr *s = (struct in_addr *) &(iph->saddr);
-	struct in_addr *d = (struct in_addr *) &(iph->daddr);
-	char srcip[20];
-	char dstip[20];
-	// inet_ntoa is a const char * so we if just call it in
-	// fprintf, you'll get back wrong results since we're
-	// calling it twice.
-	strncpy(srcip, inet_ntoa(*s), 19);
-	strncpy(dstip, inet_ntoa(*d), 19);
-	fprintf(fp, "ip { saddr: %s | daddr: %s | checksum: %u }\n",
-			srcip,
-			dstip,
-			ntohl(iph->check));
-	fprintf(fp, "eth { shost: %02x:%02x:%02x:%02x:%02x:%02x | "
-			"dhost: %02x:%02x:%02x:%02x:%02x:%02x }\n",
-			(int) ((unsigned char *) ethh->h_source)[0],
-			(int) ((unsigned char *) ethh->h_source)[1],
-			(int) ((unsigned char *) ethh->h_source)[2],
-			(int) ((unsigned char *) ethh->h_source)[3],
-			(int) ((unsigned char *) ethh->h_source)[4],
-			(int) ((unsigned char *) ethh->h_source)[5],
-			(int) ((unsigned char *) ethh->h_dest)[0],
-			(int) ((unsigned char *) ethh->h_dest)[1],
-			(int) ((unsigned char *) ethh->h_dest)[2],
-			(int) ((unsigned char *) ethh->h_dest)[3],
-			(int) ((unsigned char *) ethh->h_dest)[4],
-			(int) ((unsigned char *) ethh->h_dest)[5]);
+	fprintf_ip_header(fp, iph);
+	fprintf_eth_header(fp, ethh);
 	fprintf(fp, "------------------------------------------------------\n");
 }
-
 
 response_type_t* udp_classify_packet(const u_char *packet, uint32_t len)
 {
@@ -230,20 +203,6 @@ response_type_t* udp_classify_packet(const u_char *packet, uint32_t len)
 	} else {
 		return &(module_udp.responses[2]);
 	}
-}
-
-// Returns 0 if dst_port is outside the expected valid range, non-zero otherwise
-static inline int check_dst_port(uint16_t port, uint32_t *validation)
-{
-	if (port > zconf.source_port_last 
-					|| port < zconf.source_port_first) {
-		return EXIT_FAILURE;
-	}
-	int32_t to_validate = port - zconf.source_port_first;
-	int32_t min = validation[1] % num_ports;
-	int32_t max = (validation[1] + zconf.packet_streams - 1) % num_ports;
-
-	return (((max - min) % num_ports) >= ((to_validate - min) % num_ports));
 }
 
 int udp_validate_packet(const struct iphdr *ip_hdr, uint32_t len, 
@@ -290,7 +249,7 @@ int udp_validate_packet(const struct iphdr *ip_hdr, uint32_t len,
 	if (dport != zconf.target_port) {
 		return 0;
 	}
-	if (!check_dst_port(sport, validation)) {
+	if (!check_dst_port(sport, num_ports, validation)) {
 		return 0;
 	}
 	return 1;

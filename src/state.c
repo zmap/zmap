@@ -38,9 +38,14 @@ struct state_conf zconf = {
 	.gw_mac_set = 0,
 	.source_ip_first = NULL,
 	.source_ip_last = NULL,
+	.raw_output_fields = NULL,
+	.output_fields = NULL,
+	.output_fields_len = 0,
 	.dryrun = 0,
 	.quiet = 0,
 	.summary = 0,
+	.filter_duplicates = 0,
+	.filter_unsuccessful = 0,
 	.recv_ready = 0,
 };
 

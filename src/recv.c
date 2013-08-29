@@ -27,11 +27,13 @@
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <net/if.h>
+#include <assert.h>
 
 #include "../lib/logger.h"
 
 #include "state.h"
 #include "validate.h"
+#include "fieldset.h"
 #include "probe_modules/probe_modules.h"
 #include "output_modules/output_modules.h"
 
@@ -92,9 +94,16 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 	}
 
 	int is_repeat = check_ip(src_ip);
-	response_type_t *r = zconf.probe_module->classify_packet(bytes, buflen);
 
-	if (r->is_success) {
+	fieldset_t *fs = fs_new_fieldset();
+	fs_add_ip_fields(fs, ip_hdr);
+	zconf.probe_module->process_packet(bytes, buflen, fs);
+	fs_add_system_fields(fs, is_repeat, zsend.complete);
+	int success_index = zconf.fsconf.success_index;
+	assert(success_index < fs->len);
+	int is_success = fs_get_uint64_by_index(fs, success_index);
+	
+	if (is_success) {
 		zrecv.success_total++;
 		if (!is_repeat) {
 			zrecv.success_unique++;
@@ -106,20 +115,26 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 				zrecv.cooldown_unique++;
 			}
 		}
-		if (zconf.output_module && zconf.output_module->success_ip) {
-			zconf.output_module->success_ip(
-					ip_hdr->saddr, ip_hdr->daddr,
-					r->name, is_repeat, zsend.complete, bytes, buflen);
-		}
+		
 	} else {
 		zrecv.failure_total++;
-		if (zconf.output_module && zconf.output_module->other_ip) {
-			zconf.output_module->other_ip(
-					ip_hdr->saddr, ip_hdr->daddr,
-					r->name, is_repeat,	zsend.complete, bytes, buflen);
-		}
 	}
-
+	fieldset_t *o = NULL;
+	// we need to translate the data provided by the probe module
+	// into a fieldset that can be used by the output module
+	if (!is_success && zconf.filter_unsuccessful) {
+		goto cleanup;	
+	}
+	if (is_repeat && zconf.filter_duplicates) {
+		goto cleanup;
+	}
+	o = translate_fieldset(fs, &zconf.fsconf.translation); 
+	if (zconf.output_module && zconf.output_module->process_ip) {
+		zconf.output_module->process_ip(o);
+	}
+cleanup:
+	fs_free(fs);
+	free(o);	
 	if (zconf.output_module && zconf.output_module->update
 			&& !(zrecv.success_unique % zconf.output_module->update_interval)) {
 		zconf.output_module->update(&zconf, &zsend, &zrecv);
@@ -150,24 +165,37 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 	num_src_ports = zconf.source_port_last - zconf.source_port_first + 1;
 	ip_seen = calloc(IP_SEEN_SIZE, sizeof(uint64_t));
 	if (!ip_seen) {
-		log_fatal("recv", "couldn't allocate address bitmap");
+		log_fatal("recv", "could not allocate address bitmap");
 	}
 	log_debug("recv", "using dev %s", zconf.iface);
-	char errbuf[PCAP_ERRBUF_SIZE];
-	pc = pcap_open_live(zconf.iface, zconf.probe_module->pcap_snaplen,
-					PCAP_PROMISC, PCAP_TIMEOUT, errbuf);
-	if (pc == NULL) {
-		log_fatal("recv", "couldn't open device %s: %s",
-						zconf.iface, errbuf);
-	}
-	struct bpf_program bpf;
-	if (pcap_compile(pc, &bpf, zconf.probe_module->pcap_filter, 1, 0) < 0) {
-		log_fatal("recv", "couldn't compile filter");
-	}
-	if (pcap_setfilter(pc, &bpf) < 0) {
-		log_fatal("recv", "couldn't install filter");
+	if (!zconf.dryrun) {
+		char errbuf[PCAP_ERRBUF_SIZE];
+		pc = pcap_open_live(zconf.iface, zconf.probe_module->pcap_snaplen,
+						PCAP_PROMISC, PCAP_TIMEOUT, errbuf);
+		if (pc == NULL) {
+			log_fatal("recv", "could not open device %s: %s",
+							zconf.iface, errbuf);
+		}
+		struct bpf_program bpf;
+		if (pcap_compile(pc, &bpf, zconf.probe_module->pcap_filter, 1, 0) < 0) {
+			log_fatal("recv", "couldn't compile filter");
+		}
+		if (pcap_setfilter(pc, &bpf) < 0) {
+			log_fatal("recv", "couldn't install filter");
+		}
 	}
 	log_debug("recv", "receiver ready");
+	if (zconf.filter_duplicates) {
+		log_debug("recv", "duplicate responses will be excluded from output"); 
+	} else {
+		log_debug("recv", "duplicate responses will be included in output"); 
+	}
+	if (zconf.filter_unsuccessful) {
+		log_debug("recv", "unsuccessful responses will be excluded from output"); 
+	} else {
+		log_debug("recv", "unsuccessful responses will be included in output"); 
+	}
+	
 	pthread_mutex_lock(recv_ready_mutex);
 	zconf.recv_ready = 1;
 	pthread_mutex_unlock(recv_ready_mutex);
@@ -176,12 +204,16 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 		zconf.max_results = -1;
 	}
 	do {
-		if (pcap_dispatch(pc, 0, packet_cb, NULL) == -1) {
-			log_fatal("recv", "pcap_dispatch error");
-		}
-		if (zconf.max_results && zrecv.success_unique >= zconf.max_results) {
-			zsend.complete = 1;
-			break;
+		if (zconf.dryrun) {
+			sleep(1);
+		} else {
+			if (pcap_dispatch(pc, 0, packet_cb, NULL) == -1) {
+				log_fatal("recv", "pcap_dispatch error");
+			}
+			if (zconf.max_results && zrecv.success_unique >= zconf.max_results) {
+				zsend.complete = 1;
+				break;
+			}
 		}
 	} while (!(zsend.complete && (now()-zsend.finish > zconf.cooldown_secs)));
 	zrecv.finish = now();

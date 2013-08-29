@@ -49,6 +49,9 @@ struct gengetopt_args_info
   char * whitelist_file_arg;	/**< @brief File of subnets to constrain scan to, in CIDR notation, e.g. 192.168.0.0/16.  */
   char * whitelist_file_orig;	/**< @brief File of subnets to constrain scan to, in CIDR notation, e.g. 192.168.0.0/16 original value given at command line.  */
   const char *whitelist_file_help; /**< @brief File of subnets to constrain scan to, in CIDR notation, e.g. 192.168.0.0/16 help description.  */
+  char * output_fields_arg;	/**< @brief Fields that should be output in result set.  */
+  char * output_fields_orig;	/**< @brief Fields that should be output in result set original value given at command line.  */
+  const char *output_fields_help; /**< @brief Fields that should be output in result set help description.  */
   char * max_targets_arg;	/**< @brief Cap number of targets to probe (as a number or a percentage of the address space).  */
   char * max_targets_orig;	/**< @brief Cap number of targets to probe (as a number or a percentage of the address space) original value given at command line.  */
   const char *max_targets_help; /**< @brief Cap number of targets to probe (as a number or a percentage of the address space) help description.  */
@@ -103,6 +106,7 @@ struct gengetopt_args_info
   const char *output_args_help; /**< @brief Arguments to pass to output module help description.  */
   const char *list_output_modules_help; /**< @brief List available output modules help description.  */
   const char *list_probe_modules_help; /**< @brief List available probe modules help description.  */
+  const char *list_output_fields_help; /**< @brief List all fields that can be output by selected probe module help description.  */
   char * config_arg;	/**< @brief Read a configuration file, which can specify any of these options (default='/etc/zmap/zmap.conf').  */
   char * config_orig;	/**< @brief Read a configuration file, which can specify any of these options original value given at command line.  */
   const char *config_help; /**< @brief Read a configuration file, which can specify any of these options help description.  */
@@ -118,6 +122,7 @@ struct gengetopt_args_info
   unsigned int output_file_given ;	/**< @brief Whether output-file was given.  */
   unsigned int blacklist_file_given ;	/**< @brief Whether blacklist-file was given.  */
   unsigned int whitelist_file_given ;	/**< @brief Whether whitelist-file was given.  */
+  unsigned int output_fields_given ;	/**< @brief Whether output-fields was given.  */
   unsigned int max_targets_given ;	/**< @brief Whether max-targets was given.  */
   unsigned int max_results_given ;	/**< @brief Whether max-results was given.  */
   unsigned int max_runtime_given ;	/**< @brief Whether max-runtime was given.  */
@@ -138,6 +143,7 @@ struct gengetopt_args_info
   unsigned int output_args_given ;	/**< @brief Whether output-args was given.  */
   unsigned int list_output_modules_given ;	/**< @brief Whether list-output-modules was given.  */
   unsigned int list_probe_modules_given ;	/**< @brief Whether list-probe-modules was given.  */
+  unsigned int list_output_fields_given ;	/**< @brief Whether list-output-fields was given.  */
   unsigned int config_given ;	/**< @brief Whether config was given.  */
   unsigned int quiet_given ;	/**< @brief Whether quiet was given.  */
   unsigned int summary_given ;	/**< @brief Whether summary was given.  */

@@ -7,7 +7,7 @@ PREFIX=/usr/local
 
 INSTALL=install
 INSTALLDATA=install -m 644
-mandir=/usr/share/man/man1/
+mandir=$(PREFIX)/man/man1/
 bindir=$(PREFIX)/sbin
 
 # Hardening and warnings for building with gcc
@@ -23,15 +23,16 @@ GCCWARNINGS = -Wall -Wformat=2 -Wno-format-nonliteral\
 GCCHARDENING=-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-all -fwrapv -fPIC --param ssp-buffer-size=1
 LDHARDENING=-z relro -z now
 
-EXTRACFLAGS=-std=gnu99 -g -O2 $(EXTRA_CFLAGS) $(GCCHARDENING) $(GCCWARNINGS) -Werror
+EXTRACFLAGS=-std=gnu99 -g -O2 $(GCCHARDENING) $(GCCWARNINGS) $(EXTRA_CFLAGS) -Werror
 EXTRALDFLAGS= $(LDHARDENING)
 
 CFLAGS+=$(INCLUDE) $(EXTRACFLAGS)
 LDFLAGS+=$(EXTRALDFLAGS)
 
-modules=module_tcp_synscan.o module_icmp_echo.o module_udp.o #ADD YOUR MODULE HERE
+probemodules=module_tcp_synscan.o module_icmp_echo.o #module_udp.o #ADD YOUR PROBE MODULE HERE
+outputmodules= module_csv.o #ADD YOUR OUTPUT MODULE HERE
 
-objects=constraint.o blacklist.o cyclic.o logger.o send.o recv.o state.o monitor.o zopt_compat.o zmap.o random.o output_modules.o module_simple_file.o module_extended_file.o packet.o probe_modules.o ${modules} validate.o rijndael-alg-fst.o get_gateway.o aesrand.o
+objects=constraint.o blacklist.o cyclic.o logger.o send.o recv.o state.o monitor.o zopt_compat.o zmap.o random.o output_modules.o packet.o probe_modules.o ${probemodules} ${outputmodules} validate.o rijndael-alg-fst.o get_gateway.o aesrand.o fieldset.o
 redis_objects=module_redis.o redis.o
 
 ifeq ($(REDIS), true)
@@ -55,6 +56,7 @@ zopt.c zopt.h: zopt.ggo
 install: zmap
 	$(INSTALL) zmap $(bindir)/zmap
 	test -d /etc/zmap || (mkdir /etc/zmap && $(INSTALLDATA) ../conf/* /etc/zmap/)
+	test -d $(mandir) || mkdir -p $(mandir)
 	$(INSTALLDATA) ./zmap.1 $(mandir)
 	@echo "\n**************\nSuccess! ZMap is installed. Try running (as root):\nzmap -p 80 -N 10 -B 1M -o -\n**************"
 

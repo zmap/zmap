@@ -24,6 +24,7 @@
 #include <arpa/inet.h>
 
 #include "probe_modules.h"
+#include "../fieldset.h"
 #include "packet.h"
 #include "validate.h"
 
@@ -81,59 +82,15 @@ void icmp_echo_print_packet(FILE *fp, void* packet)
 			ntohs(icmp_header->icmp_cksum),
 			ntohs(icmp_header->icmp_id),
 			ntohs(icmp_header->icmp_seq));
-	struct in_addr *s = (struct in_addr *) &(iph->saddr);
-	struct in_addr *d = (struct in_addr *) &(iph->daddr);
-	char srcip[20];
-	char dstip[20];
-	// inet_ntoa is a const char * so we if just call it in
-	// fprintf, you'll get back wrong results since we're
-	// calling it twice.
-	strncpy(srcip, inet_ntoa(*s), 19);
-	strncpy(dstip, inet_ntoa(*d), 19);
-	fprintf(fp, "ip { saddr: %s | daddr: %s | checksum: %u }\n",
-			srcip,
-			dstip,
-			ntohl(iph->check));
-	fprintf(fp, "eth { shost: %02x:%02x:%02x:%02x:%02x:%02x | "
-			"dhost: %02x:%02x:%02x:%02x:%02x:%02x }\n",
-			(int) ((unsigned char *) ethh->h_source)[0],
-			(int) ((unsigned char *) ethh->h_source)[1],
-			(int) ((unsigned char *) ethh->h_source)[2],
-			(int) ((unsigned char *) ethh->h_source)[3],
-			(int) ((unsigned char *) ethh->h_source)[4],
-			(int) ((unsigned char *) ethh->h_source)[5],
-			(int) ((unsigned char *) ethh->h_dest)[0],
-			(int) ((unsigned char *) ethh->h_dest)[1],
-			(int) ((unsigned char *) ethh->h_dest)[2],
-			(int) ((unsigned char *) ethh->h_dest)[3],
-			(int) ((unsigned char *) ethh->h_dest)[4],
-			(int) ((unsigned char *) ethh->h_dest)[5]);
+	fprintf_ip_header(fp, iph);
+	fprintf_eth_header(fp, ethh);
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
-response_type_t* icmp_echo_classify_packet(const u_char *packet, uint32_t len)
-{
-	(void)len;
-	struct iphdr *ip_hdr = (struct iphdr *)&packet[sizeof(struct ethhdr)];
-	struct icmp *icmp_hdr = (struct icmp*)((char *)ip_hdr
-					+ sizeof(struct iphdr)); 
-	switch (icmp_hdr->icmp_type) {
-		case ICMP_ECHOREPLY:
-			return &(module_icmp_echo.responses[0]);
-		case ICMP_UNREACH: 
-			return &(module_icmp_echo.responses[1]);
-		case ICMP_SOURCEQUENCH:
-			return &(module_icmp_echo.responses[2]);
-		case ICMP_REDIRECT:
-			return &(module_icmp_echo.responses[3]);
-		case ICMP_TIMXCEED:
-			return &(module_icmp_echo.responses[4]);
-		default:
-			return &(module_icmp_echo.responses[5]);
-	}
-}
 
-int icmp_validate_packet(const struct iphdr *ip_hdr, uint32_t len, uint32_t *src_ip, uint32_t *validation)
+
+int icmp_validate_packet(const struct iphdr *ip_hdr, 
+		uint32_t len, uint32_t *src_ip, uint32_t *validation)
 {
 	if (ip_hdr->protocol != IPPROTO_ICMP) {
 		return 0;
@@ -175,32 +132,46 @@ int icmp_validate_packet(const struct iphdr *ip_hdr, uint32_t len, uint32_t *src
 	return 1;
 }
 
-static response_type_t responses[] = {
-	{
-		.name = "echoreply",
-		.is_success = 1	
-	},
-	{
-		.name = "unreach",
-		.is_success = 0
-	},
-	{
-		.name = "sourcequench",
-		.is_success = 0
-	},
-	{
-		.name = "redirect",
-		.is_success = 0
-	},
-	{
-		.name = "timxceed",
-		.is_success = 0
-	},
-	{
-		.name = "other",
-		.is_success = 0
+void icmp_echo_process_packet(const u_char *packet,
+		__attribute__((unused)) uint32_t len, fieldset_t *fs)
+{
+	struct iphdr *ip_hdr = (struct iphdr *)&packet[sizeof(struct ethhdr)];
+	struct icmphdr *icmp_hdr = (struct icmphdr*)((char *)ip_hdr + 4 *ip_hdr->ihl);
+	fs_add_uint64(fs, "type", ntohs(icmp_hdr->type));
+	fs_add_uint64(fs, "code", ntohs(icmp_hdr->code));
+	fs_add_uint64(fs, "icmp-id", ntohs(icmp_hdr->un.echo.id));
+	fs_add_uint64(fs, "seq", ntohs(icmp_hdr->un.echo.sequence));
+	switch (icmp_hdr->type) {
+		case ICMP_ECHOREPLY:
+			fs_add_string(fs, "classification", (char*) "echoreply", 0); 
+			fs_add_uint64(fs, "success", 1); 
+		case ICMP_UNREACH: 
+			fs_add_string(fs, "classification", (char*) "unreach", 0); 
+			fs_add_uint64(fs, "success", 0); 
+		case ICMP_SOURCEQUENCH:
+			fs_add_string(fs, "classification", (char*) "sourcequench", 0); 
+			fs_add_uint64(fs, "success", 0); 
+		case ICMP_REDIRECT:
+			fs_add_string(fs, "classification", (char*) "redirect", 0); 
+			fs_add_uint64(fs, "success", 0); 
+		case ICMP_TIMXCEED:
+			fs_add_string(fs, "classification", (char*) "timxceed", 0); 
+			fs_add_uint64(fs, "success", 0); 
+		default:
+			fs_add_string(fs, "classification", (char*) "other", 0); 
+			fs_add_uint64(fs, "success", 0); 
 	}
+}
+
+fielddef_t fields[] = {
+	{.name="type", .type="int", .desc="icmp message type"},
+	{.name="code", .type="int", .desc="icmp message sub type code"},
+	{.name="icmp-id", .type="int", .desc="icmp id number"},
+	{.name="seq", .type="int", .desc="icmp sequence number"},
+	{.name="classification", .type="string", .desc="probe module classification"},
+	{.name="success", .type="int", .desc="did probe module classify response as success"}
 };
+
 
 probe_module_t module_icmp_echo = {
 	.name = "icmp_echoscan",
@@ -211,9 +182,9 @@ probe_module_t module_icmp_echo = {
 	.thread_initialize = &icmp_echo_init_perthread,
 	.make_packet = &icmp_echo_make_packet,
 	.print_packet = &icmp_echo_print_packet,
-	.classify_packet = &icmp_echo_classify_packet,
+	.process_packet = &icmp_echo_process_packet,
 	.validate_packet = &icmp_validate_packet,
 	.close = NULL,
-	.responses = responses
-};
+	.fields = fields,
+	.numfields = 6};
 

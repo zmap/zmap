@@ -1,7 +1,7 @@
 #include <stdint.h>
 
-#ifndef _BLACKLIST_H
-#define _BLACKLIST_H
+#ifndef BLACKLIST_H
+#define BLACKLIST_H
 
 int blacklist_is_allowed(uint32_t s_addr);
 void blacklist_prefix(char *ip, int prefix_len);
