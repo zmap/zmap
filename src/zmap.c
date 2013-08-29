@@ -222,30 +222,32 @@ static void start_zmap(void)
 	}
 	// start threads
 	pthread_t *tsend, trecv, tmon;
-	int r = pthread_create(&trecv, NULL, start_recv, NULL);
-	if (r != 0) {
-		log_fatal("zmap", "unable to create recv thread");
-		exit(EXIT_FAILURE);
-	}
-	for (;;) {
-		pthread_mutex_lock(&recv_ready_mutex);
-		if (zconf.recv_ready) {
-			break;
+	if (!zconf.dryrun) {
+		int r = pthread_create(&trecv, NULL, start_recv, NULL);
+		if (r != 0) {
+			log_fatal("zmap", "unable to create recv thread");
+			exit(EXIT_FAILURE);
 		}
-		pthread_mutex_unlock(&recv_ready_mutex);
+		for (;;) {
+			pthread_mutex_lock(&recv_ready_mutex);
+			if (zconf.recv_ready) {
+				break;
+			}
+			pthread_mutex_unlock(&recv_ready_mutex);
+		}
 	}
 	tsend = malloc(zconf.senders * sizeof(pthread_t));
 	assert(tsend);
 	log_debug("zmap", "using %d sender threads", zconf.senders);
 	for (int i=0; i < zconf.senders; i++) {
-		r = pthread_create(&tsend[i], NULL, start_send, NULL);
+		int r = pthread_create(&tsend[i], NULL, start_send, NULL);
 		if (r != 0) {
 			log_fatal("zmap", "unable to create send thread");
 			exit(EXIT_FAILURE);
 		}
 	}
 	if (!zconf.quiet) {
-		r = pthread_create(&tmon, NULL, start_mon, NULL);
+		int r = pthread_create(&tmon, NULL, start_mon, NULL);
 		if (r != 0) {
 			log_fatal("zmap", "unable to create monitor thread");
 			exit(EXIT_FAILURE);
@@ -254,14 +256,14 @@ static void start_zmap(void)
 
 	// wait for completion
 	for (int i=0; i < zconf.senders; i++) {
-		pthread_join(tsend[i], NULL);
+		int r = pthread_join(tsend[i], NULL);
 		if (r != 0) {
 			log_fatal("zmap", "unable to join send thread");
 			exit(EXIT_FAILURE);
 		}
 	}
 	log_debug("zmap", "senders finished");
-	pthread_join(trecv, NULL);
+	int r = pthread_join(trecv, NULL);
 	if (r != 0) {
 		log_fatal("zmap", "unable to join recv thread");
 		exit(EXIT_FAILURE);

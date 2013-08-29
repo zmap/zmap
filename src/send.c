@@ -142,6 +142,11 @@ static int get_socket(void)
 	return sock;
 }
 
+static int get_dryrun_socket(void)
+{
+	return socket(AF_INET, SOCK_STREAM, 0);
+}
+
 static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
 {
 	if (srcip_first == srcip_last) {
@@ -156,7 +161,12 @@ int send_run(void)
 {
 	log_debug("send", "thread started");
 	pthread_mutex_lock(&send_mutex);
-	int sock = get_socket();
+	int sock;
+	if (zconf.dryrun) {
+		sock = get_dryrun_socket();
+	} else {
+		sock = get_socket();
+	}
 	struct sockaddr_ll sockaddr;
 	// get source interface index
 	struct ifreq if_idx;
