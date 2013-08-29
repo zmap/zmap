@@ -168,19 +168,21 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 		log_fatal("recv", "could not allocate address bitmap");
 	}
 	log_debug("recv", "using dev %s", zconf.iface);
-	char errbuf[PCAP_ERRBUF_SIZE];
-	pc = pcap_open_live(zconf.iface, zconf.probe_module->pcap_snaplen,
-					PCAP_PROMISC, PCAP_TIMEOUT, errbuf);
-	if (pc == NULL) {
-		log_fatal("recv", "could not open device %s: %s",
-						zconf.iface, errbuf);
-	}
-	struct bpf_program bpf;
-	if (pcap_compile(pc, &bpf, zconf.probe_module->pcap_filter, 1, 0) < 0) {
-		log_fatal("recv", "couldn't compile filter");
-	}
-	if (pcap_setfilter(pc, &bpf) < 0) {
-		log_fatal("recv", "couldn't install filter");
+	if (!zconf.dryrun) {
+		char errbuf[PCAP_ERRBUF_SIZE];
+		pc = pcap_open_live(zconf.iface, zconf.probe_module->pcap_snaplen,
+						PCAP_PROMISC, PCAP_TIMEOUT, errbuf);
+		if (pc == NULL) {
+			log_fatal("recv", "could not open device %s: %s",
+							zconf.iface, errbuf);
+		}
+		struct bpf_program bpf;
+		if (pcap_compile(pc, &bpf, zconf.probe_module->pcap_filter, 1, 0) < 0) {
+			log_fatal("recv", "couldn't compile filter");
+		}
+		if (pcap_setfilter(pc, &bpf) < 0) {
+			log_fatal("recv", "couldn't install filter");
+		}
 	}
 	log_debug("recv", "receiver ready");
 	if (zconf.filter_duplicates) {
@@ -202,12 +204,16 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 		zconf.max_results = -1;
 	}
 	do {
-		if (pcap_dispatch(pc, 0, packet_cb, NULL) == -1) {
-			log_fatal("recv", "pcap_dispatch error");
-		}
-		if (zconf.max_results && zrecv.success_unique >= zconf.max_results) {
-			zsend.complete = 1;
-			break;
+		if (zconf.dryrun) {
+			sleep(1);
+		} else {
+			if (pcap_dispatch(pc, 0, packet_cb, NULL) == -1) {
+				log_fatal("recv", "pcap_dispatch error");
+			}
+			if (zconf.max_results && zrecv.success_unique >= zconf.max_results) {
+				zsend.complete = 1;
+				break;
+			}
 		}
 	} while (!(zsend.complete && (now()-zsend.finish > zconf.cooldown_secs)));
 	zrecv.finish = now();

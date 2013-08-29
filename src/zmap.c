@@ -222,19 +222,17 @@ static void start_zmap(void)
 	}
 	// start threads
 	pthread_t *tsend, trecv, tmon;
-	if (!zconf.dryrun) {
-		int r = pthread_create(&trecv, NULL, start_recv, NULL);
-		if (r != 0) {
-			log_fatal("zmap", "unable to create recv thread");
-			exit(EXIT_FAILURE);
+	int r = pthread_create(&trecv, NULL, start_recv, NULL);
+	if (r != 0) {
+		log_fatal("zmap", "unable to create recv thread");
+		exit(EXIT_FAILURE);
+	}
+	for (;;) {
+		pthread_mutex_lock(&recv_ready_mutex);
+		if (zconf.recv_ready) {
+			break;
 		}
-		for (;;) {
-			pthread_mutex_lock(&recv_ready_mutex);
-			if (zconf.recv_ready) {
-				break;
-			}
-			pthread_mutex_unlock(&recv_ready_mutex);
-		}
+		pthread_mutex_unlock(&recv_ready_mutex);
 	}
 	tsend = malloc(zconf.senders * sizeof(pthread_t));
 	assert(tsend);
@@ -263,7 +261,7 @@ static void start_zmap(void)
 		}
 	}
 	log_debug("zmap", "senders finished");
-	int r = pthread_join(trecv, NULL);
+	r = pthread_join(trecv, NULL);
 	if (r != 0) {
 		log_fatal("zmap", "unable to join recv thread");
 		exit(EXIT_FAILURE);
@@ -402,7 +400,7 @@ int main(int argc, char *argv[])
 		zconf.raw_output_fields = (char*) "classification, saddr, "
 						  "daddr, sport, dport, "
 						  "seqnum, acknum, cooldown, "
-						  "repeat, timstamp-str";
+						  "repeat, timestamp-str";
 		zconf.filter_duplicates = 0;
 	} else {
 		zconf.output_module = get_output_module_by_name(args.output_module_arg);

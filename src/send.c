@@ -144,7 +144,17 @@ static int get_socket(void)
 
 static int get_dryrun_socket(void)
 {
-	return socket(AF_INET, SOCK_STREAM, 0);
+	// we need a socket in order to gather details about the system
+	// such as source MAC address and IP address. However, because
+	// we don't want to require root access in order to run dryrun,
+	// we just create a TCP socket.
+	int sock = socket(AF_INET, SOCK_STREAM, 0);
+	if (sock <= 0) {
+		log_fatal("send", "couldn't create socket. "
+			  "Error: %s\n", strerror(errno));
+	}
+	return sock;
+
 }
 
 static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
