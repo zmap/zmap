@@ -1,10 +1,10 @@
 TCP banner grabber implemented in Go  (experimental)
 ======
 
-This program will make TCP connections to IP addresses provide on
-stdin, optionally send them a short message, and wait for their
-responses. Each response is printed to stdout, along with the
-responding host's IP address. Status messages appear on stderr.
+This program will make TCP connections to IP addresses provided on
+stdin, optionally send a short message, and wait for responses. Each
+response is printed to stdout, along with the responding host's IP
+address. Status messages appear on stderr.
 
 USING:
 -----

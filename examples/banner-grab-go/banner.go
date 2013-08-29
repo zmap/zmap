@@ -1,21 +1,13 @@
 /*
 TCP banner grabber, implemented in go
 
-This program will make TCP connections to IP addresses provide on
-stdin, optionally send them a short message, and wait for their
-responses. Each response is printed to stdout, along with the
-responding host's IP address. Status messages appear on stderr.
+This program will make TCP connections to IP addresses provided on
+stdin, optionally send a short message, and wait for responses. Each
+response is printed to stdout, along with the responding host's IP
+address. Status messages appear on stderr.
 */
 
 package main
-
-/*
- * banner.go Copyright 2013 Regents of the University of Michigan
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy
- * of the License at http://www.apache.org/licenses/LICENSE-2.0
- */
 
 import (
 	"bufio"
