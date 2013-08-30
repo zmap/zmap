@@ -199,7 +199,7 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 	if (ip_hdr->protocol == IPPROTO_UDP) {
 		struct udphdr *udp = (struct udphdr *)((char *)ip_hdr + ip_hdr->ihl * 4);
 		fs_add_string(fs, "classification", (char*) "udp", 0);
-		fs_add_uint64(fs, "is_success", 1);
+		fs_add_uint64(fs, "success", 1);
 		fs_add_uint64(fs, "sport", ntohs(udp->source));
 		fs_add_uint64(fs, "dport", ntohs(udp->dest));
 		fs_add_null(fs, "icmp_type");
@@ -207,14 +207,14 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 	} else if (ip_hdr->protocol == IPPROTO_ICMP) {
 		struct icmphdr *icmp = (struct icmphdr *)((char *)ip_hdr + ip_hdr->ihl * 4);
 		fs_add_string(fs, "classification", (char*) "icmp-unreach", 0);
-		fs_add_uint64(fs, "is_success", 0);
+		fs_add_uint64(fs, "success", 0);
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");
 		fs_add_uint64(fs, "icmp_type", ntohs(icmp->type));
 		fs_add_uint64(fs, "icmp_code", ntohs(icmp->code));
 	} else {
 		fs_add_string(fs, "classification", (char*) "other", 0);
-		fs_add_uint64(fs, "is_success", 0);
+		fs_add_uint64(fs, "success", 0);
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");
 		fs_add_null(fs, "icmp_type");
