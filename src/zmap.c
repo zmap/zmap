@@ -90,10 +90,12 @@ static void set_cpu(void)
 	pthread_mutex_unlock(&cpu_affinity_mutex);
 }	
 
-static void* start_send(__attribute__((unused)) void *arg)
+static void* start_send(void *arg)
 {
+	uintptr_t v = (uintptr_t) arg;
+	int sock = (int) v & 0xFFFF;
 	set_cpu();
-	send_run();
+	send_run(sock);
 	return NULL;
 }
 
@@ -238,7 +240,14 @@ static void start_zmap(void)
 	assert(tsend);
 	log_debug("zmap", "using %d sender threads", zconf.senders);
 	for (int i=0; i < zconf.senders; i++) {
-		int r = pthread_create(&tsend[i], NULL, start_send, NULL);
+	uintptr_t sock;
+		if (zconf.dryrun) {
+			sock = get_dryrun_socket();
+		} else {
+			sock = get_socket();
+		}
+		
+		int r = pthread_create(&tsend[i], NULL, start_send, (void*) sock);
 		if (r != 0) {
 			log_fatal("zmap", "unable to create send thread");
 			exit(EXIT_FAILURE);

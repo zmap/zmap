@@ -132,7 +132,7 @@ int send_init(void)
 	return EXIT_SUCCESS;
 }
 
-static int get_socket(void)
+int get_socket(void)
 {
 	int sock = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (sock <= 0) {
@@ -142,7 +142,7 @@ static int get_socket(void)
 	return sock;
 }
 
-static int get_dryrun_socket(void)
+int get_dryrun_socket(void)
 {
 	// we need a socket in order to gather details about the system
 	// such as source MAC address and IP address. However, because
@@ -167,16 +167,11 @@ static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
 }
 
 // one sender thread
-int send_run(void)
+int send_run(int sock)
 {
 	log_debug("send", "thread started");
 	pthread_mutex_lock(&send_mutex);
-	int sock;
-	if (zconf.dryrun) {
-		sock = get_dryrun_socket();
-	} else {
-		sock = get_socket();
-	}
+	
 	struct sockaddr_ll sockaddr;
 	// get source interface index
 	struct ifreq if_idx;

@@ -9,7 +9,9 @@
 #ifndef SEND_H
 #define SEND_H
 
+int get_socket(void);
+int get_dryrun_socket(void);
 int send_init(void);
-int send_run(void);
+int send_run(int);
 
-#endif //_SEND_H
+#endif //SEND_H
