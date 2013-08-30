@@ -30,7 +30,7 @@ EXTRALDFLAGS= $(LDHARDENING)
 CFLAGS+=$(INCLUDE) $(EXTRACFLAGS)
 LDFLAGS+=$(EXTRALDFLAGS)
 
-probemodules=module_tcp_synscan.o module_icmp_echo.o #module_udp.o #ADD YOUR PROBE MODULE HERE
+probemodules=module_tcp_synscan.o module_icmp_echo.o module_udp.o #ADD YOUR PROBE MODULE HERE
 outputmodules= module_csv.o #ADD YOUR OUTPUT MODULE HERE
 
 objects=constraint.o blacklist.o cyclic.o logger.o send.o recv.o state.o monitor.o zopt_compat.o zmap.o random.o output_modules.o packet.o probe_modules.o ${probemodules} ${outputmodules} validate.o rijndael-alg-fst.o get_gateway.o aesrand.o fieldset.o

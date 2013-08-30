@@ -20,6 +20,7 @@
 #define FS_STRING 0
 #define FS_UINT64 1
 #define FS_BINARY 2
+#define FS_NULL 3
 
 // definition of a field that's provided by a probe module
 // these are used so that users can ask at the command-line
@@ -81,6 +82,8 @@ void fs_add_binary(fieldset_t *fs, const char *name, size_t len,
 		void *value, int free_);
 
 uint64_t fs_get_uint64_by_index(fieldset_t *fs, int index);
+
+void fs_add_null(fieldset_t *fs, const char *name);
 
 void fs_free(fieldset_t *fs);
 

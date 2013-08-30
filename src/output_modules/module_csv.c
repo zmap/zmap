@@ -83,6 +83,8 @@ int csv_process(fieldset_t *fs)
 			fprintf(file, "%lu", (uint64_t) f->value); 
 		} else if (f->type == FS_BINARY) {
 			hex_encode(file, (unsigned char*) f->value, f->len);
+		} else if (f->type == FS_NULL) {
+			// do nothing
 		} else {
 			log_fatal("csv", "received unknown output type");
 		}

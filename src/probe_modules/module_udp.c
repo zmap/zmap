@@ -6,7 +6,7 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-/* send module for performing TCP SYN scans */
+/* send module for performing arbitrary UDP scans */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -18,6 +18,7 @@
 #include <netinet/udp.h>
 #include <netinet/ip.h>
 #include <netinet/ether.h>
+#include <netinet/ip_icmp.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -28,6 +29,7 @@
 #include "logger.h"
 
 #define MAX_UDP_PAYLOAD_LEN 1472
+#define UNUSED __attribute__((unused))
 
 char *udp_send_msg = NULL;
 int udp_send_msg_len = 0;
@@ -171,7 +173,6 @@ int udp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 	ip_header->daddr = dst_ip;
 	udp_header->source = get_src_port(num_ports, probe_num,
 					validation);
-
 	ip_header->check = 0;
 	ip_header->check = ip_checksum((unsigned short *) ip_header);
 
@@ -192,16 +193,32 @@ void udp_print_packet(FILE *fp, void* packet)
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
-response_type_t* udp_classify_packet(const u_char *packet, uint32_t len)
+void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *fs)
 {
-	(void)len;
 	struct iphdr *ip_hdr = (struct iphdr *)&packet[sizeof(struct ethhdr)];
 	if (ip_hdr->protocol == IPPROTO_UDP) {
-		return &(module_udp.responses[0]);
+		struct udphdr *udp = (struct udphdr *)((char *)ip_hdr + ip_hdr->ihl * 4);
+		fs_add_string(fs, "classification", (char*) "udp", 0);
+		fs_add_uint64(fs, "is_success", 1);
+		fs_add_uint64(fs, "sport", ntohs(udp->source));
+		fs_add_uint64(fs, "dport", ntohs(udp->dest));
+		fs_add_null(fs, "icmp_type");
+		fs_add_null(fs, "icmp_code");
 	} else if (ip_hdr->protocol == IPPROTO_ICMP) {
-		return &(module_udp.responses[1]);
+		struct icmphdr *icmp = (struct icmphdr *)((char *)ip_hdr + ip_hdr->ihl * 4);
+		fs_add_string(fs, "classification", (char*) "icmp-unreach", 0);
+		fs_add_uint64(fs, "is_success", 0);
+		fs_add_null(fs, "sport");
+		fs_add_null(fs, "dport");
+		fs_add_uint64(fs, "icmp_type", ntohs(icmp->type));
+		fs_add_uint64(fs, "icmp_code", ntohs(icmp->code));
 	} else {
-		return &(module_udp.responses[2]);
+		fs_add_string(fs, "classification", (char*) "other", 0);
+		fs_add_uint64(fs, "is_success", 0);
+		fs_add_null(fs, "sport");
+		fs_add_null(fs, "dport");
+		fs_add_null(fs, "icmp_type");
+		fs_add_null(fs, "icmp_code");
 	}
 }
 
@@ -255,19 +272,13 @@ int udp_validate_packet(const struct iphdr *ip_hdr, uint32_t len,
 	return 1;
 }
 
-static response_type_t responses[] = {
-	{
-		.is_success = 1,
-		.name = "data"
-	},
-	{
-		.is_success = 0,
-		.name = "port-unreach"
-	},
-	{
-		.is_success = 0,
-		.name = "invalid"
-	}
+static fielddef_t fields[] = {
+	{.name = "classification", .type="string", .desc = "packet classification"},
+	{.name = "success", .type="int", .desc = "is response considered success"},
+	{.name = "sport",  .type = "int", .desc = "UDP source port"},
+	{.name = "dport",  .type = "int", .desc = "UDP destination port"},
+	{.name = "icmp_type", .type = "int", .desc = "icmp message type"},
+	{.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"}
 };
 
 probe_module_t module_udp = {
@@ -281,8 +292,9 @@ probe_module_t module_udp = {
 	.make_packet = &udp_make_packet,
 	.print_packet = &udp_print_packet,
 	.validate_packet = &udp_validate_packet,
-	.classify_packet = &udp_classify_packet,
+	.process_packet = &udp_process_packet,
 	.close = &udp_global_cleanup,
-	.responses = responses
+	.fields = fields,
+	.numfields = 6 
 };
 

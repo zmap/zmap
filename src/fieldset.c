@@ -50,6 +50,11 @@ static inline void fs_add_word(fieldset_t *fs, const char *name, int type,
 	f->free_ = free_;
 }
 
+void fs_add_null(fieldset_t *fs, const char *name)
+{
+	fs_add_word(fs, name, FS_NULL, 0, 0, NULL);
+}
+
 void fs_add_string(fieldset_t *fs, const char *name, char *value, int free_)
 {
 	fs_add_word(fs, name, FS_STRING, free_, strlen(value), (void*) value);
