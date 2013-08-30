@@ -427,7 +427,7 @@ int main(int argc, char *argv[])
 	gen_fielddef_set(fds, zconf.probe_module->fields,
 		zconf.probe_module->numfields);
 	gen_fielddef_set(fds, (fielddef_t*) &(sys_fields),
-		3);
+		5);
 	if (args.list_output_fields_given) {
 		for (int i = 0; i < fds->len; i++) {
 			printf("%s (%s): %s\n", fds->fielddefs[i].name,

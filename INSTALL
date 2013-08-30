@@ -30,3 +30,9 @@ Redis support is not enabled by default.  If you are want to use ZMap
 with Redis, you will first need to install Hiredis.  Then, rebuild
 ZMap with the command "make REDIS=true".
 
+JSON support is not enabled by default.  If you are want to use ZMap
+with JSON output, you will first need to install json-c.  Then, rebuild
+ZMap with the command "make JSON=true".
+
+Installing json-c requires git and autotools to be available. For more
+information on how to install json-c, please see http://github.com/json-c/json-c

@@ -10,6 +10,7 @@
 #include <string.h>
 #include <assert.h>
 #include <time.h>
+#include <sys/time.h>
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -83,10 +84,13 @@ void fs_add_system_fields(fieldset_t *fs, int is_repeat, int in_cooldown)
 		log_fatal("recv", "unable to allocate memory for "
 				  "timestamp string in fieldset.");
 	}
-	time_t now = time(0);
-	strftime(timestr, TIMESTR_LEN, "%Y-%m-%dT%H:%M:%S%z",
-			localtime(&now));
+	struct timeval t;
+	gettimeofday(&t, NULL);
+	struct tm *ptm = localtime(&t.tv_sec);
+	strftime(timestr, TIMESTR_LEN, "%Y-%m-%dT%H:%M:%S%z", ptm);
 	fs_add_string(fs, "timestamp-str", timestr, 1);
+	fs_add_uint64(fs, "timestamp-ts", (uint64_t) t.tv_sec);
+	fs_add_uint64(fs, "timestamp-us", (uint64_t) t.tv_usec);
 }
 
 fielddef_t ip_fields[] = {
@@ -99,5 +103,8 @@ fielddef_t ip_fields[] = {
 fielddef_t sys_fields[] = {
 	{.name="repeat", .type="int", .desc="Is response a repeat response from host"},
 	{.name="cooldown", .type="int", .desc="Was response received during the cooldown period"},
-	{.name="timestamp-str", .type="string", .desc="timestamp of when response arrived in ISO8601 format."}
+	{.name="timestamp-str", .type="string", .desc="timestamp of when response arrived in ISO8601 format."},
+	{.name="timestamp-ts", .type="int", .desc="timestamp of when response arrived in seconds since Epoch"},
+	{.name="timestamp-us", .type="int", .desc="timestamp of when response arrive in microseconds since Epoch"}
 };
+
