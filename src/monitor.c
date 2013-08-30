@@ -176,6 +176,12 @@ static void monitor_update(void)
 			number_string((zsend.sent - last_sent)/delta,
 							send_rate, sizeof(send_rate));
 			number_string((zsend.sent/age), send_avg, sizeof(send_avg));
+			float hits;
+			if (!zsend.sent) {
+				hits = 0;
+			} else {
+				hits = zrecv.success_unique*100./zsend.sent;
+			}
 			fprintf(stderr,
 					"%5s %0.0f%%%s; send: %u %sp/s (%sp/s avg); "
 					"recv: %u %sp/s (%sp/s avg); "
@@ -192,7 +198,7 @@ static void monitor_update(void)
 					recv_avg,
 					pcap_drop,
 					pcap_drop_avg,
-					zrecv.success_unique*100./zsend.sent);
+					hits);
 		} else {
 		  	// alternate display (during cooldown)
 			number_string((zsend.sent/(zsend.finish - zsend.start)), send_avg, sizeof(send_avg));
