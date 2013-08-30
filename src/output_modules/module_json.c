@@ -30,7 +30,7 @@
 static FILE *file = NULL;
 #define UNUSED __attribute__((unused))
 
-int json_output_file_init(struct state_conf *conf)
+int json_output_file_init(struct state_conf *conf, UNUSED char **fields, UNUSED int fieldlens)
 {
 	int i;
 	char mac_buf[ (IFHWADDRLEN * 2) + (IFHWADDRLEN - 1) + 1 ];
@@ -65,7 +65,7 @@ int json_output_file_init(struct state_conf *conf)
 		}
 		json_object_object_add(obj, "rate", json_object_new_int(conf->rate));
 
-		json_object_object_add(obj, "bandwidth", json_object_new_int64(conf->bandwidth));
+		json_object_object_add(obj, "bandwidth", json_object_new_int(conf->bandwidth));
 		json_object_object_add(obj, "cooldown_secs", json_object_new_int(conf->cooldown_secs));
 		json_object_object_add(obj, "senders", json_object_new_int(conf->senders));
 		json_object_object_add(obj, "use_seed", json_object_new_int(conf->use_seed));
@@ -185,6 +185,6 @@ output_module_t module_json_file = {
 	.update = NULL,
 	.update_interval = 0,
 	.close = &json_output_file_close,
-	.success_ip = &json_output_file_ip,
+	.process_ip = &json_output_file_ip,
 };
 

@@ -23,12 +23,12 @@ extern output_module_t module_json_file;
 #endif
 
 output_module_t* output_modules[] = {
-	&module_csv_file
+	&module_csv_file,
 #ifdef REDIS
 	//&module_redis,
 #endif
 #ifdef JSON
-	&module_json_file,
+	&module_json_file
 #endif
 	// ADD YOUR MODULE HERE
 };
