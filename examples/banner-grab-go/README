@@ -1,0 +1,36 @@
+TCP banner grabber implemented in Go  (experimental)
+======
+
+This program will make TCP connections to IP addresses provided on
+stdin, optionally send a short message, and wait for responses. Each
+response is printed to stdout, along with the responding host's IP
+address. Status messages appear on stderr.
+
+USING:
+-----
+go build banner.go
+zmap -p 80 -N 1000 -o - | ./banner -port 80 -concurrent 100 -data http-req > banners.out
+
+
+OPTIONS:
+-----
+-concurrent        Number of connections that can be going on at once.
+                   This, combined with timeouts, will decide the maximum
+                   rate at which banners are grabbed. If this value
+                   is set higher than 1000, you should use 
+                   `ulimit -SHn 1000000` and `ulimit -SSn 1000000` to
+                   avoid running out of file descriptors (typically capped
+                   at 1024). Default: 100.
+
+-port              The port which to connect to hosts on. Default: 80.
+
+-timeout           Connection timeout (seconds). Give up on a host if grabber
+                   has not completed by this time. Default: 4 seconds.
+
+-format            Format to output banner responses. One of 'hex', 'ascii',
+                   or 'base64'. Default: ascii.
+
+-data              Optional data file. This data will be sent to each host
+                   upon successful connection. Occurrences of the
+                   string '%s' will be replaced with the current
+                   target host's address.

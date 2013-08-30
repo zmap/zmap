@@ -341,13 +341,14 @@ int main(int argc, char *argv[])
 	params->override = 0;
 	params->check_required = 0;
 
+	if (cmdline_parser_ext(argc, argv, &args, params) != 0) {
+		exit(EXIT_SUCCESS);
+	}
+
 	zconf.log_level = args.verbosity_arg;
 	log_init(stderr, zconf.log_level);
 	log_trace("zmap", "zmap main thread started");
 
-	if (cmdline_parser_ext(argc, argv, &args, params) != 0) {
-		exit(EXIT_SUCCESS);
-	}
 	if (args.help_given) {
 		cmdline_parser_print_help();
 		exit(EXIT_SUCCESS);

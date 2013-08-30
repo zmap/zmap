@@ -8,6 +8,7 @@ PREFIX=/usr/local
 INSTALL=install
 INSTALLDATA=install -m 644
 mandir=$(PREFIX)/man/man1/
+oldmanfile=/usr/share/man/man1/zmap.1
 bindir=$(PREFIX)/sbin
 
 # Hardening and warnings for building with gcc
@@ -62,6 +63,7 @@ zopt.c zopt.h: zopt.ggo
 install: zmap
 	$(INSTALL) zmap $(bindir)/zmap
 	test -d /etc/zmap || (mkdir /etc/zmap && $(INSTALLDATA) ../conf/* /etc/zmap/)
+	test -f $(oldmanfile) && rm -f $(oldmanfile) && mandb -f $(oldmanfile) || /bin/true # remove old man page if it's there
 	test -d $(mandir) || mkdir -p $(mandir)
 	$(INSTALLDATA) ./zmap.1 $(mandir)
 	@echo "\n**************\nSuccess! ZMap is installed. Try running (as root):\nzmap -p 80 -N 10 -B 1M -o -\n**************"
