@@ -84,6 +84,12 @@ Ethernet address.
 .TP
 .B \-i, --interface=name
 Specify network interface to use.
+.TP
+.B \-X, --vpn
+If using ZMap through a VPN, use this option. Instead of sending
+raw Ethernet frames, ZMap will send IP packets. When using this
+option, it is generally also necessary to provide the interface
+(through the -i flag).
 
 .SS "Advanced options"
 .TP
