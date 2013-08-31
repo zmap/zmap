@@ -196,11 +196,11 @@ int get_default_gw(struct in_addr *gw, char *iface)
 		int has_gw = 0;
 
 		rt_msg = (struct rtmsg *) NLMSG_DATA(nlhdr);
-		
+
 		if ((rt_msg->rtm_family != AF_INET) || (rt_msg->rtm_table != RT_TABLE_MAIN)) {
 			return -1;
 		}
-	
+
 		rt_attr = (struct rtattr *) RTM_RTA(rt_msg);
 		rt_len = RTM_PAYLOAD(nlhdr);
 		while (RTA_OK(rt_attr, rt_len)) {
