@@ -96,7 +96,7 @@ struct gengetopt_args_info
   char * probe_module_arg;	/**< @brief Select probe module (default='tcp_synscan').  */
   char * probe_module_orig;	/**< @brief Select probe module original value given at command line.  */
   const char *probe_module_help; /**< @brief Select probe module help description.  */
-  char * output_module_arg;	/**< @brief Select output module (default='csv').  */
+  char * output_module_arg;	/**< @brief Select output module (default='simple_file').  */
   char * output_module_orig;	/**< @brief Select output module original value given at command line.  */
   const char *output_module_help; /**< @brief Select output module help description.  */
   char * probe_args_arg;	/**< @brief Arguments to pass to probe module.  */

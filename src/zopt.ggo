@@ -86,7 +86,7 @@ option "probe-module"		M "Select probe module"
 	   optional string
 option "output-module"		O "Select output module"
 	   typestr="name"
-	   default="csv"
+	   default="simple_file"
 	   optional string
 option "probe-args"		- "Arguments to pass to probe module"
 	   typestr="args"

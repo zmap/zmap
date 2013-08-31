@@ -57,7 +57,7 @@ const char *gengetopt_args_info_help[] = {
   "  -X, --vpn                     Sends IP packets instead of Ethernet (for VPNs)",
   "\nAdvanced options:",
   "  -M, --probe-module=name       Select probe module  (default=`tcp_synscan')",
-  "  -O, --output-module=name      Select output module  (default=`csv')",
+  "  -O, --output-module=name      Select output module  (default=`simple_file')",
   "      --probe-args=args         Arguments to pass to probe module",
   "      --output-args=args        Arguments to pass to output module",
   "      --list-output-modules     List available output modules",
@@ -191,7 +191,7 @@ void clear_args (struct gengetopt_args_info *args_info)
   args_info->interface_orig = NULL;
   args_info->probe_module_arg = gengetopt_strdup ("tcp_synscan");
   args_info->probe_module_orig = NULL;
-  args_info->output_module_arg = gengetopt_strdup ("csv");
+  args_info->output_module_arg = gengetopt_strdup ("simple_file");
   args_info->output_module_orig = NULL;
   args_info->probe_args_arg = NULL;
   args_info->probe_args_orig = NULL;
@@ -1006,7 +1006,7 @@ cmdline_parser_internal (
         
           if (update_arg( (void *)&(args_info->output_module_arg), 
                &(args_info->output_module_orig), &(args_info->output_module_given),
-              &(local_args_info.output_module_given), optarg, 0, "csv", ARG_STRING,
+              &(local_args_info.output_module_given), optarg, 0, "simple_file", ARG_STRING,
               check_ambiguity, override, 0, 0,
               "output-module", 'O',
               additional_error))
