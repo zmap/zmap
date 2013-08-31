@@ -54,6 +54,7 @@ const char *gengetopt_args_info_help[] = {
   "  -S, --source-ip=ip|range      Source address(es) for scan packets",
   "  -G, --gateway-mac=addr        Specify gateway MAC address",
   "  -i, --interface=name          Specify network interface to use",
+  "  -X, --vpn                     Sends IP packets instead of Ethernet (for VPNs)",
   "\nAdvanced options:",
   "  -M, --probe-module=name       Select probe module  (default=`tcp_synscan')",
   "  -O, --output-module=name      Select output module  (default=`csv')",
@@ -137,6 +138,7 @@ void clear_given (struct gengetopt_args_info *args_info)
   args_info->source_ip_given = 0 ;
   args_info->gateway_mac_given = 0 ;
   args_info->interface_given = 0 ;
+  args_info->vpn_given = 0 ;
   args_info->probe_module_given = 0 ;
   args_info->output_module_given = 0 ;
   args_info->probe_args_given = 0 ;
@@ -226,19 +228,20 @@ void init_args_info(struct gengetopt_args_info *args_info)
   args_info->source_ip_help = gengetopt_args_info_help[19] ;
   args_info->gateway_mac_help = gengetopt_args_info_help[20] ;
   args_info->interface_help = gengetopt_args_info_help[21] ;
-  args_info->probe_module_help = gengetopt_args_info_help[23] ;
-  args_info->output_module_help = gengetopt_args_info_help[24] ;
-  args_info->probe_args_help = gengetopt_args_info_help[25] ;
-  args_info->output_args_help = gengetopt_args_info_help[26] ;
-  args_info->list_output_modules_help = gengetopt_args_info_help[27] ;
-  args_info->list_probe_modules_help = gengetopt_args_info_help[28] ;
-  args_info->list_output_fields_help = gengetopt_args_info_help[29] ;
-  args_info->config_help = gengetopt_args_info_help[31] ;
-  args_info->quiet_help = gengetopt_args_info_help[32] ;
-  args_info->summary_help = gengetopt_args_info_help[33] ;
-  args_info->verbosity_help = gengetopt_args_info_help[34] ;
-  args_info->help_help = gengetopt_args_info_help[35] ;
-  args_info->version_help = gengetopt_args_info_help[36] ;
+  args_info->vpn_help = gengetopt_args_info_help[22] ;
+  args_info->probe_module_help = gengetopt_args_info_help[24] ;
+  args_info->output_module_help = gengetopt_args_info_help[25] ;
+  args_info->probe_args_help = gengetopt_args_info_help[26] ;
+  args_info->output_args_help = gengetopt_args_info_help[27] ;
+  args_info->list_output_modules_help = gengetopt_args_info_help[28] ;
+  args_info->list_probe_modules_help = gengetopt_args_info_help[29] ;
+  args_info->list_output_fields_help = gengetopt_args_info_help[30] ;
+  args_info->config_help = gengetopt_args_info_help[32] ;
+  args_info->quiet_help = gengetopt_args_info_help[33] ;
+  args_info->summary_help = gengetopt_args_info_help[34] ;
+  args_info->verbosity_help = gengetopt_args_info_help[35] ;
+  args_info->help_help = gengetopt_args_info_help[36] ;
+  args_info->version_help = gengetopt_args_info_help[37] ;
   
 }
 
@@ -426,6 +429,8 @@ cmdline_parser_dump(FILE *outfile, struct gengetopt_args_info *args_info)
     write_into_file(outfile, "gateway-mac", args_info->gateway_mac_orig, 0);
   if (args_info->interface_given)
     write_into_file(outfile, "interface", args_info->interface_orig, 0);
+  if (args_info->vpn_given)
+    write_into_file(outfile, "vpn", 0, 0 );
   if (args_info->probe_module_given)
     write_into_file(outfile, "probe-module", args_info->probe_module_orig, 0);
   if (args_info->output_module_given)
@@ -721,6 +726,7 @@ cmdline_parser_internal (
         { "source-ip",	1, NULL, 'S' },
         { "gateway-mac",	1, NULL, 'G' },
         { "interface",	1, NULL, 'i' },
+        { "vpn",	0, NULL, 'X' },
         { "probe-module",	1, NULL, 'M' },
         { "output-module",	1, NULL, 'O' },
         { "probe-args",	1, NULL, 0 },
@@ -737,7 +743,7 @@ cmdline_parser_internal (
         { 0,  0, 0, 0 }
       };
 
-      c = getopt_long (argc, argv, "p:o:b:w:f:n:N:t:r:B:c:e:T:P:ds:S:G:i:M:O:C:qgv:hV", long_options, &option_index);
+      c = getopt_long (argc, argv, "p:o:b:w:f:n:N:t:r:B:c:e:T:P:ds:S:G:i:XM:O:C:qgv:hV", long_options, &option_index);
 
       if (c == -1) break;	/* Exit from `while (1)' loop.  */
 
@@ -971,6 +977,18 @@ cmdline_parser_internal (
             goto failure;
         
           break;
+        case 'X':	/* Sends IP packets instead of Ethernet (for VPNs).  */
+        
+        
+          if (update_arg( 0 , 
+               0 , &(args_info->vpn_given),
+              &(local_args_info.vpn_given), optarg, 0, 0, ARG_NO,
+              check_ambiguity, override, 0, 0,
+              "vpn", 'X',
+              additional_error))
+            goto failure;
+        
+          break;
         case 'M':	/* Select probe module.  */
         
         
@@ -988,7 +1006,7 @@ cmdline_parser_internal (
         
           if (update_arg( (void *)&(args_info->output_module_arg), 
                &(args_info->output_module_orig), &(args_info->output_module_given),
-              &(local_args_info.output_module_given), optarg, 0, "simple_file", ARG_STRING,
+              &(local_args_info.output_module_given), optarg, 0, "csv", ARG_STRING,
               check_ambiguity, override, 0, 0,
               "output-module", 'O',
               additional_error))

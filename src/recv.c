@@ -74,13 +74,13 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 	// length of entire packet captured by libpcap
 	uint32_t buflen = (uint32_t) p->caplen;
 
-	if ((sizeof(struct iphdr) + sizeof(struct ethhdr)) > buflen) {
+	if ((sizeof(struct iphdr) + (zconf.send_ip_pkts ? 0 : sizeof(struct ethhdr))) > buflen) {
 		// buffer not large enough to contain ethernet
 		// and ip headers. further action would overrun buf
 		return;
 	}
-	struct iphdr *ip_hdr = (struct iphdr *)&bytes[sizeof(struct ethhdr)];
-	
+	struct iphdr *ip_hdr = (struct iphdr *)&bytes[(zconf.send_ip_pkts ? 0 : sizeof(struct ethhdr))];
+
 	uint32_t src_ip = ip_hdr->saddr;
 
 	uint32_t validation[VALIDATE_BYTES/sizeof(uint8_t)];
@@ -88,7 +88,7 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 	// and we must calculate off potential payload message instead
 	validate_gen(ip_hdr->daddr, ip_hdr->saddr, (uint8_t *)validation);
 
-	if (!zconf.probe_module->validate_packet(ip_hdr, buflen - sizeof(struct ethhdr),
+	if (!zconf.probe_module->validate_packet(ip_hdr, buflen - (zconf.send_ip_pkts ? 0 : sizeof(struct ethhdr)),
 				&src_ip, validation)) {
 		return;
 	}
@@ -97,25 +97,35 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 
 	fieldset_t *fs = fs_new_fieldset();
 	fs_add_ip_fields(fs, ip_hdr);
-	zconf.probe_module->process_packet(bytes, buflen, fs);
+    // HACK !!! FIXME !!! TODO !!! BAD BAD BAD
+    // probe modules for whatever reason expect the full ethernet frame
+    // in process_packet. For VPN, we only get back an IP frame
+    // so we COULD malloc a fake ethernet frame and copy over this payload
+    // but waaaaaaahhhh performanceeee.
+    // so instead, we will ASSUME (!) that the probe module will only care about
+    // the IP header, and do ip_hdr = &packet[sizeof(struct ethhdr)] the first thing
+    // in their function (tcp, icmp and udp probe modules all do).
+    //
+    // !!!IF YOUR PROBE MODULE USES THE ETH PACKET, AND YOU USE THE --vpn OPTION, YOU _WILL_ BE OWNED!!!!
+    //
+	zconf.probe_module->process_packet(bytes - (zconf.send_ip_pkts * sizeof(struct ethhdr)), buflen + (zconf.send_ip_pkts * sizeof(struct ethhdr)), fs);
 	fs_add_system_fields(fs, is_repeat, zsend.complete);
 	int success_index = zconf.fsconf.success_index;
 	assert(success_index < fs->len);
 	int is_success = fs_get_uint64_by_index(fs, success_index);
-	
+
 	if (is_success) {
 		zrecv.success_total++;
 		if (!is_repeat) {
 			zrecv.success_unique++;
 			set_ip(src_ip);
 		}
-		if (zsend.complete) { 
+		if (zsend.complete) {
 			zrecv.cooldown_total++;
 			if (!is_repeat) {
 				zrecv.cooldown_unique++;
 			}
 		}
-		
 	} else {
 		zrecv.failure_total++;
 	}
