@@ -121,21 +121,33 @@ int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
 		int correct_ip = 0;
 
 		rt_msg = (struct rtmsg *) NLMSG_DATA(nlhdr);
-		
+
 		if ((rt_msg->rtm_family != AF_INET)) {
 			return -1;
 		}
-	
+
 		rt_attr = (struct rtattr *) RTM_RTA(rt_msg);
 		rt_len = RTM_PAYLOAD(nlhdr);
 		while (RTA_OK(rt_attr, rt_len)) {
 			switch (rt_attr->rta_type) {
-			case NDA_LLADDR: 
-				assert(RTA_PAYLOAD(rt_attr) == IFHWADDRLEN);
+			case NDA_LLADDR:
+				if (RTA_PAYLOAD(rt_attr) != IFHWADDRLEN) {
+					// could be using a VPN
+					log_fatal("get_gateway", "Unexpected hardware address length (%d).\n\n" \
+						"    If you are using a VPN, supply the --vpn flag (and provide an interface via -i)",
+						RTA_PAYLOAD(rt_attr));
+					exit(1);
+				}
 				memcpy(mac, RTA_DATA(rt_attr), IFHWADDRLEN);
 				break;
 			case NDA_DST:
-				assert(RTA_PAYLOAD(rt_attr) == sizeof(dst_ip));
+				if (RTA_PAYLOAD(rt_attr) != sizeof(dst_ip)) {
+					// could be using a VPN
+					log_fatal("get_gateway", "Unexpected IP address length (%d).\n" \
+						"    If you are using a VPN, supply the --vpn flag (and provide an interface via -i)",
+						RTA_PAYLOAD(rt_attr));
+					exit(1);
+				}
 				memcpy(&dst_ip, RTA_DATA(rt_attr), sizeof(dst_ip));
 				if (memcmp(&dst_ip, gw_ip, sizeof(dst_ip)) == 0) {
 					correct_ip = 1;
