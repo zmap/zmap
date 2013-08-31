@@ -59,6 +59,8 @@ static inline void set_ip(uint32_t ip)
 	ip_seen[ip >> 6] |= (uint64_t)1 << (ip & 0x3F);
 }
 
+static u_char fake_eth_hdr[65535];
+
 void packet_cb(u_char __attribute__((__unused__)) *user,
 		const struct pcap_pkthdr *p, const u_char *bytes)
 {
@@ -97,18 +99,19 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 
 	fieldset_t *fs = fs_new_fieldset();
 	fs_add_ip_fields(fs, ip_hdr);
-    // HACK !!! FIXME !!! TODO !!! BAD BAD BAD
-    // probe modules for whatever reason expect the full ethernet frame
-    // in process_packet. For VPN, we only get back an IP frame
-    // so we COULD malloc a fake ethernet frame and copy over this payload
-    // but waaaaaaahhhh performanceeee.
-    // so instead, we will ASSUME (!) that the probe module will only care about
-    // the IP header, and do ip_hdr = &packet[sizeof(struct ethhdr)] the first thing
-    // in their function (tcp, icmp and udp probe modules all do).
-    //
-    // !!!IF YOUR PROBE MODULE USES THE ETH PACKET, AND YOU USE THE --vpn OPTION, YOU _WILL_ BE OWNED!!!!
-    //
-	zconf.probe_module->process_packet(bytes - (zconf.send_ip_pkts * sizeof(struct ethhdr)), buflen + (zconf.send_ip_pkts * sizeof(struct ethhdr)), fs);
+	// HACK:
+	// probe modules (for whatever reason) expect the full ethernet frame
+	// in process_packet. For VPN, we only get back an IP frame.
+	// Here, we fake an ethernet frame (which is initialized to
+	// have ETH_P_IP proto and 00s for dest/src).
+	if (zconf.send_ip_pkts) {
+		if (buflen > sizeof(fake_eth_hdr)) {
+			buflen = sizeof(fake_eth_hdr);
+		}
+		memcpy(&fake_eth_hdr[sizeof(struct ethhdr)], bytes, buflen);
+		bytes = fake_eth_hdr;
+	}
+	zconf.probe_module->process_packet(bytes, buflen, fs);
 	fs_add_system_fields(fs, is_repeat, zsend.complete);
 	int success_index = zconf.fsconf.success_index;
 	assert(success_index < fs->len);
@@ -133,18 +136,18 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 	// we need to translate the data provided by the probe module
 	// into a fieldset that can be used by the output module
 	if (!is_success && zconf.filter_unsuccessful) {
-		goto cleanup;	
+		goto cleanup;
 	}
 	if (is_repeat && zconf.filter_duplicates) {
 		goto cleanup;
 	}
-	o = translate_fieldset(fs, &zconf.fsconf.translation); 
+	o = translate_fieldset(fs, &zconf.fsconf.translation);
 	if (zconf.output_module && zconf.output_module->process_ip) {
 		zconf.output_module->process_ip(o);
 	}
 cleanup:
 	fs_free(fs);
-	free(o);	
+	free(o);
 	if (zconf.output_module && zconf.output_module->update
 			&& !(zrecv.success_unique % zconf.output_module->update_interval)) {
 		zconf.output_module->update(&zconf, &zsend, &zrecv);
@@ -193,6 +196,11 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 		if (pcap_setfilter(pc, &bpf) < 0) {
 			log_fatal("recv", "couldn't install filter");
 		}
+	}
+	if (zconf.send_ip_pkts) {
+		struct ethhdr *eth = (struct ethhdr *)fake_eth_hdr;
+		memset(fake_eth_hdr, 0, sizeof(fake_eth_hdr));
+		eth->h_proto = htons(ETH_P_IP);
 	}
 	log_debug("recv", "receiver ready");
 	if (zconf.filter_duplicates) {
