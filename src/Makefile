@@ -43,8 +43,8 @@ ifeq ($(REDIS), true)
 endif
 
 ifeq ($(JSON), true)
-	LDLIBS+=-ljson -ljson-c
-	CFLAGS+=-DJSON -I/usr/local/include/json/
+	LDLIBS+=-L/usr/local/lib -ljson-c
+	CFLAGS+=-DJSON -I/usr/local/include/json-c
 	objects+=module_json.o
 endif
 
