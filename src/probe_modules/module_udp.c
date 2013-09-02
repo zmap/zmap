@@ -207,6 +207,10 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 		fs_add_binary(fs, "data", (ntohs(udp->len) - sizeof(struct udphdr)), (void*) &udp[1], 0);
 	} else if (ip_hdr->protocol == IPPROTO_ICMP) {
 		struct icmphdr *icmp = (struct icmphdr *)((char *)ip_hdr + ip_hdr->ihl * 4);
+		struct iphdr *ip_inner = (struct iphdr*)&icmp[1];
+		// ICMP unreach comes from another server (not the one we sent a probe to);
+		// But we will fix up saddr to be who we sent the probe to, in case you care.
+		fs_modify_string(fs, "saddr", make_ip_str(ip_inner->daddr), 1);
 		fs_add_string(fs, "classification", (char*) "icmp-unreach", 0);
 		fs_add_uint64(fs, "success", 0);
 		fs_add_null(fs, "sport");
