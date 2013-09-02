@@ -14,7 +14,7 @@
 struct state_conf zconf = {
 	.log_level = LOG_INFO,
 	.source_port_first = 32768, // (these are the default
-	.source_port_last = 61000,  //   ephemeral range on Linux)
+	.source_port_last = 61000,	//	 ephemeral range on Linux)
 	.output_filename = NULL,
 	.blacklist_filename = NULL,
 	.whitelist_filename = NULL,
@@ -36,6 +36,7 @@ struct state_conf zconf = {
 	.probe_args = NULL,
 	.gw_mac = {0},
 	.gw_mac_set = 0,
+	.send_ip_pkts = 0,
 	.source_ip_first = NULL,
 	.source_ip_last = NULL,
 	.raw_output_fields = NULL,

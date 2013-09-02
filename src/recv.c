@@ -59,6 +59,8 @@ static inline void set_ip(uint32_t ip)
 	ip_seen[ip >> 6] |= (uint64_t)1 << (ip & 0x3F);
 }
 
+static u_char fake_eth_hdr[65535];
+
 void packet_cb(u_char __attribute__((__unused__)) *user,
 		const struct pcap_pkthdr *p, const u_char *bytes)
 {
@@ -74,13 +76,13 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 	// length of entire packet captured by libpcap
 	uint32_t buflen = (uint32_t) p->caplen;
 
-	if ((sizeof(struct iphdr) + sizeof(struct ethhdr)) > buflen) {
+	if ((sizeof(struct iphdr) + (zconf.send_ip_pkts ? 0 : sizeof(struct ethhdr))) > buflen) {
 		// buffer not large enough to contain ethernet
 		// and ip headers. further action would overrun buf
 		return;
 	}
-	struct iphdr *ip_hdr = (struct iphdr *)&bytes[sizeof(struct ethhdr)];
-	
+	struct iphdr *ip_hdr = (struct iphdr *)&bytes[(zconf.send_ip_pkts ? 0 : sizeof(struct ethhdr))];
+
 	uint32_t src_ip = ip_hdr->saddr;
 
 	uint32_t validation[VALIDATE_BYTES/sizeof(uint8_t)];
@@ -88,7 +90,7 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 	// and we must calculate off potential payload message instead
 	validate_gen(ip_hdr->daddr, ip_hdr->saddr, (uint8_t *)validation);
 
-	if (!zconf.probe_module->validate_packet(ip_hdr, buflen - sizeof(struct ethhdr),
+	if (!zconf.probe_module->validate_packet(ip_hdr, buflen - (zconf.send_ip_pkts ? 0 : sizeof(struct ethhdr)),
 				&src_ip, validation)) {
 		return;
 	}
@@ -97,25 +99,36 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 
 	fieldset_t *fs = fs_new_fieldset();
 	fs_add_ip_fields(fs, ip_hdr);
+	// HACK:
+	// probe modules (for whatever reason) expect the full ethernet frame
+	// in process_packet. For VPN, we only get back an IP frame.
+	// Here, we fake an ethernet frame (which is initialized to
+	// have ETH_P_IP proto and 00s for dest/src).
+	if (zconf.send_ip_pkts) {
+		if (buflen > sizeof(fake_eth_hdr)) {
+			buflen = sizeof(fake_eth_hdr);
+		}
+		memcpy(&fake_eth_hdr[sizeof(struct ethhdr)], bytes, buflen);
+		bytes = fake_eth_hdr;
+	}
 	zconf.probe_module->process_packet(bytes, buflen, fs);
 	fs_add_system_fields(fs, is_repeat, zsend.complete);
 	int success_index = zconf.fsconf.success_index;
 	assert(success_index < fs->len);
 	int is_success = fs_get_uint64_by_index(fs, success_index);
-	
+
 	if (is_success) {
 		zrecv.success_total++;
 		if (!is_repeat) {
 			zrecv.success_unique++;
 			set_ip(src_ip);
 		}
-		if (zsend.complete) { 
+		if (zsend.complete) {
 			zrecv.cooldown_total++;
 			if (!is_repeat) {
 				zrecv.cooldown_unique++;
 			}
 		}
-		
 	} else {
 		zrecv.failure_total++;
 	}
@@ -123,18 +136,18 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 	// we need to translate the data provided by the probe module
 	// into a fieldset that can be used by the output module
 	if (!is_success && zconf.filter_unsuccessful) {
-		goto cleanup;	
+		goto cleanup;
 	}
 	if (is_repeat && zconf.filter_duplicates) {
 		goto cleanup;
 	}
-	o = translate_fieldset(fs, &zconf.fsconf.translation); 
+	o = translate_fieldset(fs, &zconf.fsconf.translation);
 	if (zconf.output_module && zconf.output_module->process_ip) {
 		zconf.output_module->process_ip(o);
 	}
 cleanup:
 	fs_free(fs);
-	free(o);	
+	free(o);
 	if (zconf.output_module && zconf.output_module->update
 			&& !(zrecv.success_unique % zconf.output_module->update_interval)) {
 		zconf.output_module->update(&zconf, &zsend, &zrecv);
@@ -183,6 +196,11 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 		if (pcap_setfilter(pc, &bpf) < 0) {
 			log_fatal("recv", "couldn't install filter");
 		}
+	}
+	if (zconf.send_ip_pkts) {
+		struct ethhdr *eth = (struct ethhdr *)fake_eth_hdr;
+		memset(fake_eth_hdr, 0, sizeof(fake_eth_hdr));
+		eth->h_proto = htons(ETH_P_IP);
 	}
 	log_debug("recv", "receiver ready");
 	if (zconf.filter_duplicates) {

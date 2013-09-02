@@ -159,7 +159,7 @@ int json_output_file_ip(fieldset_t *fs)
 		} else if (f->type == FS_NULL) {
 			// do nothing
 		} else {
-			log_fatal("csv", "received unknown output type");
+			log_fatal("json", "received unknown output type");
 		}
 	}
 

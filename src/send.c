@@ -288,7 +288,7 @@ int send_run(int sock)
 				zconf.probe_module->print_packet(stdout, buf);
 			} else {
 					int l = zconf.probe_module->packet_length;
-					int rc = sendto(sock, buf, 
+					int rc = sendto(sock, buf + zconf.send_ip_pkts*sizeof(struct ethhdr),
 							l, 0,
 							(struct sockaddr *)&sockaddr,
 							sizeof(struct sockaddr_ll));

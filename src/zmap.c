@@ -16,10 +16,12 @@
 #include <sched.h>
 #include <errno.h>
 
+#include <pwd.h>
 #include <net/if.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sys/types.h>
 
 #include <pcap/pcap.h>
 
@@ -104,6 +106,17 @@ static void* start_recv(__attribute__((unused)) void *arg)
 	set_cpu();
 	recv_run(&recv_ready_mutex);
 	return NULL;
+}
+
+static void drop_privs()
+{
+	struct passwd *pw;
+	if ((pw = getpwnam("nobody")) != NULL) {
+		if (setuid(pw->pw_uid) == 0) {
+			return; // success
+		}
+	}
+	log_fatal("zmap", "Couldn't change UID to 'nobody'");		
 }
 
 static void *start_mon(__attribute__((unused)) void *arg)
@@ -261,6 +274,8 @@ static void start_zmap(void)
 		}
 	}
 
+	drop_privs();
+
 	// wait for completion
 	for (int i=0; i < zconf.senders; i++) {
 		int r = pthread_join(tsend[i], NULL);
@@ -381,6 +396,11 @@ int main(int argc, char *argv[])
 				!= 0) {
 			exit(EXIT_FAILURE);
 		}
+	}
+	if (args.vpn_given) {
+		zconf.send_ip_pkts = 1;
+		zconf.gw_mac_set = 1;
+		memset(zconf.gw_mac, 0, IFHWADDRLEN);
 	}
 	if (cmdline_parser_required(&args, CMDLINE_PARSER_PACKAGE) != 0) {
 		exit(EXIT_FAILURE);

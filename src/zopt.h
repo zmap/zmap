@@ -92,6 +92,7 @@ struct gengetopt_args_info
   char * interface_arg;	/**< @brief Specify network interface to use.  */
   char * interface_orig;	/**< @brief Specify network interface to use original value given at command line.  */
   const char *interface_help; /**< @brief Specify network interface to use help description.  */
+  const char *vpn_help; /**< @brief Sends IP packets instead of Ethernet (for VPNs) help description.  */
   char * probe_module_arg;	/**< @brief Select probe module (default='tcp_synscan').  */
   char * probe_module_orig;	/**< @brief Select probe module original value given at command line.  */
   const char *probe_module_help; /**< @brief Select probe module help description.  */
@@ -137,6 +138,7 @@ struct gengetopt_args_info
   unsigned int source_ip_given ;	/**< @brief Whether source-ip was given.  */
   unsigned int gateway_mac_given ;	/**< @brief Whether gateway-mac was given.  */
   unsigned int interface_given ;	/**< @brief Whether interface was given.  */
+  unsigned int vpn_given ;	/**< @brief Whether vpn was given.  */
   unsigned int probe_module_given ;	/**< @brief Whether probe-module was given.  */
   unsigned int output_module_given ;	/**< @brief Whether output-module was given.  */
   unsigned int probe_args_given ;	/**< @brief Whether probe-args was given.  */

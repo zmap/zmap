@@ -68,6 +68,12 @@ install: zmap
 	$(INSTALLDATA) ./zmap.1 $(mandir)
 	@echo "\n**************\nSuccess! ZMap is installed. Try running (as root):\nzmap -p 80 -N 10 -B 1M -o -\n**************"
 
+uninstall:
+	test -f $(oldmanfile) && rm -f $(oldmanfile) && mandb -f $(oldmanfile) || /bin/true # remove old man page if it's there
+	test -f $(mandir)/zmap.1 && rm -f $(mandir)/zmap.1 && mandb -f $(mandir)/zmap.1 || /bin/true # remove current man page if it's there
+	rm -f $(bindir)/zmap
+
+
 clean:
 	-rm -f $(objects) $(redis_objects) $(TARGETS)
 

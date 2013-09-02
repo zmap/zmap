@@ -75,6 +75,8 @@ option "gateway-mac"		G "Specify gateway MAC address"
 option "interface"		i "Specify network interface to use"
 	   typestr="name"
 	   optional string
+option "vpn"		X "Sends IP packets instead of Ethernet (for VPNs)"
+	   optional
 
 section "Advanced options"
 
