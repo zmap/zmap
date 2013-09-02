@@ -299,6 +299,6 @@ probe_module_t module_udp = {
 	.process_packet = &udp_process_packet,
 	.close = &udp_global_cleanup,
 	.fields = fields,
-	.numfields = 6 
+	.numfields = sizeof(fields)/sizeof(fields[0]) 
 };
 
