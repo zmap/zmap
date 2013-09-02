@@ -460,7 +460,7 @@ int main(int argc, char *argv[])
 		5);
 	if (args.list_output_fields_given) {
 		for (int i = 0; i < fds->len; i++) {
-			printf("%s (%s): %s\n", fds->fielddefs[i].name,
+			printf("%-15s %6s: %s\n", fds->fielddefs[i].name,
 				fds->fielddefs[i].type,
 				fds->fielddefs[i].desc);
 		}
