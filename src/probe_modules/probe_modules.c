@@ -68,8 +68,8 @@ void fs_add_ip_fields(fieldset_t *fs, struct iphdr *ip)
 {
 	fs_add_string(fs, "saddr", make_ip_str(ip->saddr), 1);
 	fs_add_string(fs, "daddr", make_ip_str(ip->daddr), 1);
-	fs_add_uint64(fs, "ipid", ntohl(ip->id));
-	fs_add_uint64(fs, "ttl", ntohl(ip->ttl));
+	fs_add_uint64(fs, "ipid", ntohs(ip->id));
+	fs_add_uint64(fs, "ttl", ip->ttl);
 }
 
 #define TIMESTR_LEN 50
