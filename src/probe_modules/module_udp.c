@@ -210,8 +210,8 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 		fs_add_uint64(fs, "success", 0);
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");
-		fs_add_uint64(fs, "icmp_type", ntohs(icmp->type));
-		fs_add_uint64(fs, "icmp_code", ntohs(icmp->code));
+		fs_add_uint64(fs, "icmp_type", icmp->type);
+		fs_add_uint64(fs, "icmp_code", icmp->code);
 	} else {
 		fs_add_string(fs, "classification", (char*) "other", 0);
 		fs_add_uint64(fs, "success", 0);
@@ -278,7 +278,8 @@ static fielddef_t fields[] = {
 	{.name = "sport",  .type = "int", .desc = "UDP source port"},
 	{.name = "dport",  .type = "int", .desc = "UDP destination port"},
 	{.name = "icmp_type", .type = "int", .desc = "icmp message type"},
-	{.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"}
+	{.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
+	{.name = "data", .type="binary", .desc = "UDP payload"}
 };
 
 probe_module_t module_udp = {
