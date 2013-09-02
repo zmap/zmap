@@ -47,7 +47,7 @@ pthread_mutex_t recv_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 static void split_string(char* in, int *len, char***results)
 {
         char** fields = calloc(MAX_FIELDS, sizeof(char*));
-        memset(fields, 0, sizeof(fields));
+        memset(fields, 0, MAX_FIELDS*sizeof(fields));
         int retvlen = 0;
         char *currloc = in; 
         // parse csv into a set of strings
