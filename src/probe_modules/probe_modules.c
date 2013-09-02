@@ -72,7 +72,7 @@ void fs_add_ip_fields(fieldset_t *fs, struct iphdr *ip)
 	fs_add_uint64(fs, "ttl", ip->ttl);
 }
 
-#define TIMESTR_LEN 50
+#define TIMESTR_LEN 55
 
 void fs_add_system_fields(fieldset_t *fs, int is_repeat, int in_cooldown)
 {
@@ -80,15 +80,18 @@ void fs_add_system_fields(fieldset_t *fs, int is_repeat, int in_cooldown)
 	fs_add_uint64(fs, "cooldown", in_cooldown);
 
 	char *timestr = malloc(TIMESTR_LEN+1);
-	if (!timestr) {
+	char *timestr_ms = malloc(TIMESTR_LEN+1);
+	if (!timestr || !timestr_ms) {
 		log_fatal("recv", "unable to allocate memory for "
 				  "timestamp string in fieldset.");
 	}
 	struct timeval t;
 	gettimeofday(&t, NULL);
 	struct tm *ptm = localtime(&t.tv_sec);
-	strftime(timestr, TIMESTR_LEN, "%Y-%m-%dT%H:%M:%S%z", ptm);
-	fs_add_string(fs, "timestamp-str", timestr, 1);
+	strftime(timestr, TIMESTR_LEN, "%Y-%m-%dT%H:%M:%S.%%03d%z", ptm);
+	snprintf(timestr_ms, TIMESTR_LEN, timestr, t.tv_usec/1000);
+	free(timestr);
+	fs_add_string(fs, "timestamp-str", timestr_ms, 1);
 	fs_add_uint64(fs, "timestamp-ts", (uint64_t) t.tv_sec);
 	fs_add_uint64(fs, "timestamp-us", (uint64_t) t.tv_usec);
 }
@@ -105,6 +108,6 @@ fielddef_t sys_fields[] = {
 	{.name="cooldown", .type="int", .desc="Was response received during the cooldown period"},
 	{.name="timestamp-str", .type="string", .desc="timestamp of when response arrived in ISO8601 format."},
 	{.name="timestamp-ts", .type="int", .desc="timestamp of when response arrived in seconds since Epoch"},
-	{.name="timestamp-us", .type="int", .desc="timestamp of when response arrive in microseconds since Epoch"}
+	{.name="timestamp-us", .type="int", .desc="microsecond part of timestamp (e.g. microseconds since 'timestamp-ts')"}
 };
 
