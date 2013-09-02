@@ -44,7 +44,8 @@ int csv_init(struct state_conf *conf, char **fields, int fieldlens)
 				fprintf(file, ", ");
 			}
 			fprintf(file, "%s", fields[i]);
-		}	
+		}
+        fprintf(file, "\n");
 	}
 	return EXIT_SUCCESS;
 }
