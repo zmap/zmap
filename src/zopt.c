@@ -27,7 +27,7 @@
 
 const char *gengetopt_args_info_purpose = "A fast Internet-wide scanner.";
 
-const char *gengetopt_args_info_usage = "Usage: zmap [OPTIONS]...";
+const char *gengetopt_args_info_usage = "Usage: zmap [OPTIONS] [A.B.C.D/M]";
 
 const char *gengetopt_args_info_description = "";
 
@@ -69,7 +69,7 @@ const char *gengetopt_args_info_help[] = {
   "  -v, --verbosity=n             Level of log detail (0-5)  (default=`3')",
   "  -h, --help                    Print help and exit",
   "  -V, --version                 Print version and exit",
-  "\nExamples:\n     zmap -p 443  (scans the whole Internet for hosts with port 443 open)\n     zmap -N 5 -B 10M -p 80 -o -  (find 5 HTTP servers, scanning at 10 Mb/s)",
+  "\nExamples:\n     zmap -p 443  (scans the whole Internet for hosts with port 443 open)\n     zmap -p 80 192.168.0.0/16 (scan only the specified subnet)\n     zmap -N 5 -B 10M -p 80 -o -  (find 5 HTTP servers, scanning at 10 Mb/s)",
     0
 };
 
@@ -150,6 +150,7 @@ void clear_given (struct gengetopt_args_info *args_info)
   args_info->verbosity_given = 0 ;
   args_info->help_given = 0 ;
   args_info->version_given = 0 ;
+  args_info->subnet_given = 0 ;
 }
 
 static
@@ -199,6 +200,7 @@ void clear_args (struct gengetopt_args_info *args_info)
   args_info->config_orig = NULL;
   args_info->verbosity_arg = 3;
   args_info->verbosity_orig = NULL;
+  args_info->subnet_arg = NULL;
   
 }
 
@@ -1151,7 +1153,16 @@ cmdline_parser_internal (
         } /* switch */
     } /* while */
 
+  argc -= optind;
+  argv += optind;
 
+  /* Scan a particular subnet instead of the entire Internet (0/0) */
+  if (argc > 0) {
+          if (update_arg( (void *)&(args_info->subnet_arg), 
+              NULL, &(args_info->subnet_given), NULL, argv[0],
+	      0, 0, ARG_STRING, 0, 0, 0, 0, NULL, 0, additional_error))
+            goto failure;
+  }
 
 
   cmdline_parser_release (&local_args_info);

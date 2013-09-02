@@ -86,6 +86,8 @@ struct state_conf {
 	int filter_duplicates;
 	int filter_unsuccessful;
 	int recv_ready;
+	uint32_t startaddr;
+	unsigned int nbits;
 };
 extern struct state_conf zconf;
 

@@ -20,9 +20,6 @@
 #include "constraint.h"
 #include "logger.h"
 
-#define ADDR_DISALLOWED 0
-#define ADDR_ALLOWED 1
-
 static constraint_t *constraint = NULL;
 
 // check whether a single IP address is allowed to be scanned.
@@ -104,26 +101,35 @@ uint64_t blacklist_count_not_allowed()
 }
 
 
-// Initialize address constraints from whitelist and blacklist files.
+// Load whitelist and blacklist file data into address constraints.
 // Either can be set to NULL to omit.
-int blacklist_init_from_files(char *whitelist_filename, char *blacklist_filename)
+int blacklist_load_from_files(char *whitelist_filename, char *blacklist_filename)
 {
-	assert(!constraint);
+	assert(constraint);
 	if (whitelist_filename) {
-		// using a whitelist, so default to allowing nothing
-		constraint = constraint_init(ADDR_DISALLOWED);
 		log_trace("whitelist", "blacklisting 0.0.0.0/0");
 		init(whitelist_filename, "whitelist", ADDR_ALLOWED);
-	} else {
-		// no whitelist, so default to allowing everything
-		constraint = constraint_init(ADDR_ALLOWED);
 	}
 	if (blacklist_filename) {
 		init(blacklist_filename, "blacklist", ADDR_DISALLOWED);
 	}
-	constraint_optimize(constraint);
 	uint64_t allowed = blacklist_count_allowed();
 	log_debug("blacklist", "%lu addresses allowed to be scanned (%0.0f%% of address space)", 
 			  allowed, allowed*100./((long long int)1 << 32));
 	return 0;
+}
+
+void blacklist_init(int value)
+{
+	constraint = constraint_init(value);
+}
+
+void blacklist_optimize(void)
+{
+	constraint_optimize(constraint);
+}
+
+void blacklist_free(void)
+{
+	constraint_free(constraint);
 }

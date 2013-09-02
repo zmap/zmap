@@ -48,12 +48,13 @@ static in_addr_t srcip_last;
 // offset send addresses according to a random chosen per scan execution
 // in order to help prevent cross-scan interference
 static uint32_t srcip_offset;
+static cyclic_t *cyclic;
 
 // global sender initialize (not thread specific)
 int send_init(void)
 {
 	// generate a new primitive root and starting position
-	cyclic_init(0, 0);
+	cyclic = cyclic_init(0, 0);
 	zsend.first_scanned = cyclic_get_curr_ip();
 
 	// compute number of targets
@@ -270,7 +271,7 @@ int send_run(int sock)
 			pthread_mutex_unlock(&send_mutex);
 			break;
 		}
-		uint32_t curr = cyclic_get_next_ip();
+		uint32_t curr = cyclic_get_next_ip(cyclic);
 		if (curr == zsend.first_scanned) {
 			zsend.complete = 1;
 			zsend.finish = now();
