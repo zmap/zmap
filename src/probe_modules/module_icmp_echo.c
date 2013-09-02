@@ -137,8 +137,8 @@ void icmp_echo_process_packet(const u_char *packet,
 {
 	struct iphdr *ip_hdr = (struct iphdr *)&packet[sizeof(struct ethhdr)];
 	struct icmphdr *icmp_hdr = (struct icmphdr*)((char *)ip_hdr + 4 *ip_hdr->ihl);
-	fs_add_uint64(fs, "type", ntohs(icmp_hdr->type));
-	fs_add_uint64(fs, "code", ntohs(icmp_hdr->code));
+	fs_add_uint64(fs, "type", icmp_hdr->type);
+	fs_add_uint64(fs, "code", icmp_hdr->code);
 	fs_add_uint64(fs, "icmp-id", ntohs(icmp_hdr->un.echo.id));
 	fs_add_uint64(fs, "seq", ntohs(icmp_hdr->un.echo.sequence));
 	switch (icmp_hdr->type) {

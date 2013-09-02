@@ -278,8 +278,8 @@ static fielddef_t fields[] = {
 	{.name = "sport",  .type = "int", .desc = "UDP source port"},
 	{.name = "dport",  .type = "int", .desc = "UDP destination port"},
 	{.name = "icmp_type", .type = "int", .desc = "icmp message type"},
-	{.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
-	{.name = "data", .type="binary", .desc = "UDP payload"}
+	{.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"}//,
+	//{.name = "data", .type="binary", .desc = "UDP payload"}
 };
 
 probe_module_t module_udp = {
