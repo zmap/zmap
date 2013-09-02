@@ -127,7 +127,7 @@ void synscan_process_packet(const u_char *packet,
 
 	fs_add_uint64(fs, "sport", (uint64_t) ntohs(tcp->source)); 
 	fs_add_uint64(fs, "dport", (uint64_t) ntohs(tcp->dest));
-	fs_add_uint64(fs, "seqnum", (uint64_t) ntohs(tcp->seq));
+	fs_add_uint64(fs, "seqnum", (uint64_t) ntohl(tcp->seq));
 	fs_add_uint64(fs, "acknum", (uint64_t) ntohl(tcp->ack_seq));
 	fs_add_uint64(fs, "window", (uint64_t) ntohs(tcp->window));
 
