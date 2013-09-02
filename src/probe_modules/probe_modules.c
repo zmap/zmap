@@ -21,6 +21,7 @@
 #include "../../lib/logger.h"
 #include "../fieldset.h"
 #include "probe_modules.h"
+#include "packet.h"
 
 extern probe_module_t module_tcp_synscan;
 extern probe_module_t module_icmp_echo;
@@ -51,17 +52,6 @@ void print_probe_modules(void)
 	for (int i=0; i < len; i++) {
 		printf("%s\n", probe_modules[i]->name);
 	}
-}
-
-char *make_ip_str(uint32_t ip)
-{
-	struct in_addr t;
-	t.s_addr = ip;
-	const char *temp = inet_ntoa(t);
-	char *retv = malloc(strlen(temp)+1);
-	assert (retv);
-	strcpy(retv, temp);
-	return retv;
 }
 
 void fs_add_ip_fields(fieldset_t *fs, struct iphdr *ip)
