@@ -36,6 +36,24 @@ int udp_send_msg_len = 0;
 
 const char *udp_send_msg_default = "GET / HTTP/1.1\r\nHost: www\r\n\r\n"; 
 
+const char *udp_unreach_strings[] = {
+"network unreachable",
+"host unreachable",
+"protocol unreachable",
+"port unreachable",
+"fragments required",
+"source route failed",
+"network unknown",
+"host unknown",
+"source host isolated",
+"network admin. prohibited",
+"host admin. prohibited",
+"network unreachable TOS",
+"host unreachable TOS",
+"communication admin. prohibited",
+"host presdence violation",
+"precedence cutoff"};
+
 static int num_ports;
 
 probe_module_t module_udp;
@@ -205,6 +223,7 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 		fs_add_null(fs, "icmp_responder");
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
+		fs_add_null(fs, "icmp_unreach_str");
 		fs_add_binary(fs, "data", (ntohs(udp->len) - sizeof(struct udphdr)), (void*) &udp[1], 0);
 	} else if (ip_hdr->protocol == IPPROTO_ICMP) {
 		struct icmphdr *icmp = (struct icmphdr *)((char *)ip_hdr + ip_hdr->ihl * 4);
@@ -219,6 +238,11 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 		fs_add_string(fs, "icmp_responder", make_ip_str(ip_hdr->saddr), 1);
 		fs_add_uint64(fs, "icmp_type", icmp->type);
 		fs_add_uint64(fs, "icmp_code", icmp->code);
+		if (icmp->code <= ICMP_PREC_CUTOFF) {
+			fs_add_string(fs, "icmp_unreach_str", (char *)udp_unreach_strings[icmp->code], 0);
+		} else {
+			fs_add_string(fs, "icmp_unreach_str", (char *)"unknown", 0);
+		}
 		fs_add_null(fs, "data");
 	} else {
 		fs_add_string(fs, "classification", (char*) "other", 0);
@@ -228,6 +252,7 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 		fs_add_null(fs, "icmp_responder");
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
+		fs_add_null(fs, "icmp_unreach_str");
 		fs_add_null(fs, "data");
 	}
 }
@@ -290,6 +315,7 @@ static fielddef_t fields[] = {
 	{.name = "icmp_responder", .type = "string", .desc = "Source IP of ICMP_UNREACH message"},
 	{.name = "icmp_type", .type = "int", .desc = "icmp message type"},
 	{.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
+	{.name = "icmp_unreach_str", .type = "string", .desc = "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"},
 	{.name = "data", .type="binary", .desc = "UDP payload"}
 };
 
@@ -307,6 +333,6 @@ probe_module_t module_udp = {
 	.process_packet = &udp_process_packet,
 	.close = &udp_global_cleanup,
 	.fields = fields,
-	.numfields = sizeof(fields)/sizeof(fields[0]) 
+	.numfields = sizeof(fields)/sizeof(fields[0])
 };
 
