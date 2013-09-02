@@ -202,6 +202,7 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 		fs_add_uint64(fs, "success", 1);
 		fs_add_uint64(fs, "sport", ntohs(udp->source));
 		fs_add_uint64(fs, "dport", ntohs(udp->dest));
+		fs_add_null(fs, "icmp_responder");
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
 		fs_add_binary(fs, "data", (ntohs(udp->len) - sizeof(struct udphdr)), (void*) &udp[1], 0);
@@ -215,6 +216,7 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 		fs_add_uint64(fs, "success", 0);
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");
+		fs_add_string(fs, "icmp_responder", make_ip_str(ip_hdr->saddr), 1);
 		fs_add_uint64(fs, "icmp_type", icmp->type);
 		fs_add_uint64(fs, "icmp_code", icmp->code);
 		fs_add_null(fs, "data");
@@ -223,6 +225,7 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 		fs_add_uint64(fs, "success", 0);
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");
+		fs_add_null(fs, "icmp_responder");
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "data");
@@ -256,7 +259,7 @@ int udp_validate_packet(const struct iphdr *ip_hdr, uint32_t len,
 		if (icmp->type != ICMP_DEST_UNREACH) {
 			return 0;
 		}
-		
+
 		struct iphdr *ip_inner = (struct iphdr*)&icmp[1];
 		// Now we know the actual inner ip length, we should recheck the buffer
 		if (len < 4*ip_inner->ihl - sizeof(struct iphdr) + min_len) {
@@ -266,7 +269,7 @@ int udp_validate_packet(const struct iphdr *ip_hdr, uint32_t len,
 		struct udphdr *udp = (struct udphdr *)((char*)ip_inner + 4*ip_inner->ihl);
 
 		sport = ntohs(udp->source);
-		dport = ntohs(udp->dest);	
+		dport = ntohs(udp->dest);
 	} else {
 		return 0;
 	}
@@ -284,6 +287,7 @@ static fielddef_t fields[] = {
 	{.name = "success", .type="int", .desc = "is response considered success"},
 	{.name = "sport",  .type = "int", .desc = "UDP source port"},
 	{.name = "dport",  .type = "int", .desc = "UDP destination port"},
+	{.name = "icmp_responder", .type = "string", .desc = "Source IP of ICMP_UNREACH message"},
 	{.name = "icmp_type", .type = "int", .desc = "icmp message type"},
 	{.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
 	{.name = "data", .type="binary", .desc = "UDP payload"}
