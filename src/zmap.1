@@ -24,7 +24,7 @@ File of subnets to exclude, in CIDR notation (e.g. 192.168.0.0/16),
 one-per line. It is recommended you use this to exclude RFC 1918
 addresses, multicast, IANA reserved space, and other IANA
 special-purpose addresses. An example blacklist file is provided in
-.B conf/blacklist.example
+.B conf/blacklist.conf
 for this purpose.
 .TP
 .B  -w, --whitelist-file=path
@@ -99,6 +99,11 @@ Select probe module  (default=tcp_synscan)
 .B \-O, --output-module=name
 Select output module  (default=simple_file)
 .TP
+.B \-f, --output-fields=fields
+Fields that should be output in result set; see
+.B --list-output-fields
+
+.TP
 .B --probe-args=args
 Arguments to pass to probe module
 .TP
@@ -110,12 +115,18 @@ List available output modules
 .TP
 .B --list-probe-modules
 List available probe modules
+.TP
+.B --list-output-fields
+List all fields that can be output (using
+.B --output-fields
+)
+by selected probe module
 
 .SS "Additional options"
 .TP
 .B \-C, --config=filename
 Read a configuration file, which can specify 
-any of these options  (default=zmap.conf)
+any of these options  (default=/etc/zmap/zmap.conf)
 .TP
 .B \-q, --quiet
 Do not print status updates
