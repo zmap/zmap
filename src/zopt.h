@@ -118,6 +118,7 @@ struct gengetopt_args_info
   const char *verbosity_help; /**< @brief Level of log detail (0-5) help description.  */
   const char *help_help; /**< @brief Print help and exit help description.  */
   const char *version_help; /**< @brief Print version and exit help description.  */
+  char *subnet_arg; /**< @brief Netblock to scan. */
   
   unsigned int target_port_given ;	/**< @brief Whether target-port was given.  */
   unsigned int output_file_given ;	/**< @brief Whether output-file was given.  */
@@ -152,7 +153,7 @@ struct gengetopt_args_info
   unsigned int verbosity_given ;	/**< @brief Whether verbosity was given.  */
   unsigned int help_given ;	/**< @brief Whether help was given.  */
   unsigned int version_given ;	/**< @brief Whether version was given.  */
-
+  unsigned int subnet_given ;	/**< @brief Whether subnet was given. */
 } ;
 
 /** @brief The additional parameters to pass to parser functions */

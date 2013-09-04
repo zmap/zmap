@@ -48,6 +48,8 @@ struct state_conf zconf = {
 	.filter_duplicates = 0,
 	.filter_unsuccessful = 0,
 	.recv_ready = 0,
+	.startaddr = 0,
+	.nbits = 0,
 };
 
 // global sender stats and defaults

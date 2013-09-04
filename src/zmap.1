@@ -6,9 +6,12 @@ zmap \- A fast Internet-wide scanner
 [ 
 .I "OPTIONS \&..."
 ] 
+[ 
+.I "A.B.C.D/M"
+] 
 .SH DESCRIPTION
 .I ZMap 
-is a network tool for scanning the entire Internet (or large samples).
+is a network tool for scanning arbitrary subsets of the Internet address space.
 .SH OPTIONS
 .SS "Basic options"
 .TP
@@ -148,6 +151,11 @@ Scan the whole Internet for hosts with port 443 open (results discarded):
 .PP
 .\" -p: example of
 .B zmap \-p 443
+.PP
+Scan a specific subnet for hosts with port 80 open, write results to file:
+.PP
+.\" -p: example of
+.B zmap -p 80 -o scan.out 192.168.0.0/16
 .PP
 Find 5 HTTP servers (port 80), scanning at 10 Mb/s, print the results to stdout:
 .PP

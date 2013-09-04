@@ -27,6 +27,7 @@
 
 #include <pthread.h>
 
+#include "../lib/blacklist.h"
 #include "../lib/logger.h"
 #include "../lib/random.h"
 
@@ -620,9 +621,44 @@ int main(int argc, char *argv[])
 			zconf.max_targets = v;
 		}
 	}
+	if (args.subnet_given) {
+		char ip[16];
+		struct in_addr saddr;
+		int mask;
+
+                if (sscanf(args.subnet_arg, "%15[^/]/%d", ip, &mask) != 2 ||
+                    inet_aton((const char *)ip, &saddr) == 0 ||
+                    mask < 0 || mask > 32) {
+			fprintf(stderr, "%s: can't parse CIDR `%s'\n",
+				CMDLINE_PARSER_PACKAGE, args.subnet_arg);
+			exit(EXIT_FAILURE);
+		}
+
+		blacklist_init(ADDR_DISALLOWED);
+		whitelist_prefix(inet_ntoa(saddr), mask);
+
+		zconf.startaddr = ntohl(saddr.s_addr);
+		zconf.nbits = mask;
+	} else {
+		if (zconf.whitelist_filename != NULL) {
+			// using a whitelist, so default to allowing nothing
+			blacklist_init(ADDR_DISALLOWED);
+		} else {
+			// no whitelist, so default to allowing everything
+			blacklist_init(ADDR_ALLOWED);
+		}
+	}
+
+	if (blacklist_load_from_files(zconf.whitelist_filename,
+	    zconf.blacklist_filename)) {
+		exit(EXIT_FAILURE);
+	}
+
+	blacklist_optimize();
 
 	start_zmap();
 
+	blacklist_free();
 	cmdline_parser_free(&args);
 	free(params);
 	return EXIT_SUCCESS;
