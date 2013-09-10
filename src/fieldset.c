@@ -50,6 +50,26 @@ static inline void fs_add_word(fieldset_t *fs, const char *name, int type,
 	f->free_ = free_;
 }
 
+static void fs_modify_word(fieldset_t *fs, const char *name, int type,
+		int free_, size_t len, void *value)
+{
+	int i;
+	for (i=0; i<fs->len; i++) {
+		if (!strcmp(fs->fields[i].name, name)) {
+			if (fs->fields[i].free_) {
+				free((void*)fs->fields[i].value);
+				fs->fields[i].value = 0;
+			}
+			fs->fields[i].type = type;
+			fs->fields[i].free_ = free_;
+			fs->fields[i].len = len;
+			fs->fields[i].value = (uint64_t)value;
+			return;
+		}
+	}
+	fs_add_word(fs, name, type, free_, len, value);
+}
+
 void fs_add_null(fieldset_t *fs, const char *name)
 {
 	fs_add_word(fs, name, FS_NULL, 0, 0, NULL);
@@ -69,6 +89,28 @@ void fs_add_binary(fieldset_t *fs, const char *name, size_t len,
 		void *value, int free_)
 {
 	fs_add_word(fs, name, FS_BINARY, free_, len, value);
+}
+
+// Modify
+void fs_modify_null(fieldset_t *fs, const char *name)
+{
+	fs_modify_word(fs, name, FS_NULL, 0, 0, NULL);
+}
+
+void fs_modify_string(fieldset_t *fs, const char *name, char *value, int free_)
+{
+	fs_modify_word(fs, name, FS_STRING, free_, strlen(value), (void*) value);
+}
+
+void fs_modify_uint64(fieldset_t *fs, const char *name, uint64_t value)
+{
+	fs_modify_word(fs, name, FS_UINT64, 0, sizeof(uint64_t), (void*) value);
+}
+
+void fs_modify_binary(fieldset_t *fs, const char *name, size_t len,
+		void *value, int free_)
+{
+	fs_modify_word(fs, name, FS_BINARY, free_, len, value);
 }
 
 uint64_t fs_get_uint64_by_index(fieldset_t *fs, int index)

@@ -20,6 +20,7 @@
 
 #include <net/if.h>
 #include <arpa/inet.h>
+#include <assert.h>
 
 #include "state.h"
 
@@ -120,4 +121,17 @@ void make_udp_header(struct udphdr *udp_header, port_h_t dest_port,
 	// checksum ignored in IPv4 if 0
 	udp_header->check = 0;
 }
+
+// Note: caller must free return value
+char *make_ip_str(uint32_t ip)
+{
+	struct in_addr t;
+	t.s_addr = ip;
+	const char *temp = inet_ntoa(t);
+	char *retv = malloc(strlen(temp)+1);
+	assert (retv);
+	strcpy(retv, temp);
+	return retv;
+}
+
 

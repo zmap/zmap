@@ -102,4 +102,7 @@ static __attribute__((unused)) inline uint16_t get_src_port(int num_ports,
 	return zconf.source_port_first + ((validation[1] + probe_num) % num_ports);
 }
 
+// Note: caller must free return value
+char *make_ip_str(uint32_t ip);
+
 #endif
