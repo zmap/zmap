@@ -1,0 +1,7 @@
+make
+
+./text
+
+Example Input:
+
+(ipaddr = 8 && herp = 6) || (field = value && yolo = swag)
