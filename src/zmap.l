@@ -1,6 +1,6 @@
 %{
 #include <string.h>
-#include "y.tab.h"
+#include "zmap.tab.h"
 %}
 
 %%

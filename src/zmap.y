@@ -1,7 +1,7 @@
 %{
 #include <stdio.h>
 #include <string.h>
-#include "tree.h"
+#include "expression.h"
  
 void yyerror(const char *str)
 {
@@ -12,12 +12,7 @@ void yyerror(const char *str)
 int yywrap()
 {
 	return 1;
-} 
-  
-int main()
-{
-	yyparse();
-} 
+}
 
 %}
 
