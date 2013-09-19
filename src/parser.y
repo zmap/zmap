@@ -2,7 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "expression.h"
- 
+#include "lexer.h"
+#include "filter.h"
+
 void yyerror(const char *str)
 {
 	fprintf(stderr,"error: %s\n",str);
@@ -13,6 +15,8 @@ int yywrap()
 {
 	return 1;
 }
+
+extern node_t *zfilter;
 
 %}
 
@@ -38,22 +42,24 @@ int yywrap()
 
 %%
 
+expression: filter_expr
+	{
+		zfilter = $1;
+	}
+
+
 filter_expr:
 	filter_expr T_OR filter_expr
 		{
 			$$ = make_op_node(OR);
 			$$->left_child = $1;
 			$$->right_child = $3;
-			print_expression($$);
-			printf("%s\n", "");
 		}
 	| filter_expr T_AND filter_expr
 		{
 			$$ = make_op_node(AND);
 			$$->left_child = $1;
 			$$->right_child = $3;
-			print_expression($$);
-			printf("%s\n", "");
 		}
 	| '(' filter_expr ')'
 		{
@@ -77,7 +83,6 @@ filter: number_filter
 
 number_filter: T_FIELD '=' T_NUMBER
 		{
-			printf("number_filter: %s = %d\n", $1, $3);
 			$$ = make_op_node(EQ);
 			$$->left_child = make_field_node($1);
 			$$->right_child = make_int_node($3);
@@ -85,7 +90,6 @@ number_filter: T_FIELD '=' T_NUMBER
 	| 
 	T_FIELD '>' T_NUMBER
 		{
-			printf("number_filter: %s > %d\n", $1, $3);
 			$$ = make_op_node(GT);
 			$$->left_child = make_field_node($1);
 			$$->right_child = make_int_node($3);
@@ -93,34 +97,46 @@ number_filter: T_FIELD '=' T_NUMBER
 	|
 	T_FIELD '<' T_NUMBER
 		{
-			printf("number_filter: %s < %d\n", $1, $3);			
+			$$ = make_op_node(LT);
+			$$->left_child = make_field_node($1);
+			$$->right_child = make_int_node($3);
 		}
 	|
 	T_FIELD T_NOT_EQ T_NUMBER
 		{
-			printf("number_filter: %s != %d\n", $1, $3);
+			$$ = make_op_node(NEQ);
+			$$->left_child = make_field_node($1);
+			$$->right_child = make_int_node($3);
 		}
 	|
 	T_FIELD T_GT_EQ T_NUMBER
 		{
-			printf("number_filter: %s >= %d\n", $1, $3);
+			$$ = make_op_node(GT_EQ);
+			$$->left_child = make_field_node($1);
+			$$->right_child = make_int_node($3);
 		}
 	|
 	T_FIELD T_LT_EQ T_NUMBER
 		{
-			printf("number_filter: %s <= %d\n", $1, $3);
+			$$ = make_op_node(LT_EQ);
+			$$->left_child = make_field_node($1);
+			$$->right_child = make_int_node($3);
 		}
 	;
 
 string_filter:
 	T_FIELD '=' T_FIELD
 		{
-			printf("string_filter %s = %s\n", $1, $3);
+			$$ = make_op_node(EQ);
+			$$->left_child = make_field_node($1);
+			$$->right_child = make_field_node($3);
 		}
 	|
 	T_FIELD T_NOT_EQ T_FIELD
 		{
-			printf("string_filter: %s != %s\n", $1, $3);
+			$$ = make_op_node(NEQ);
+			$$->left_child = make_field_node($1);
+			$$->right_child = make_field_node($3);
 		}
 	;
 

@@ -1,8 +1,11 @@
 %{
 #include <string.h>
-#include "zmap.tab.h"
+#include "y.tab.h"
+
 %}
 
+%option noinput
+%option nounput
 %%
 [0-9]+               yylval.int_literal = atoi(yytext); return T_NUMBER;
 \n                   /* Ignore end of line */

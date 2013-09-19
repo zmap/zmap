@@ -1,8 +1,10 @@
-#include "tree.h"
+#include "expression.h"
+
+#include "../lib/xalloc.h"
 
 node_t* alloc_node() 
 {
-	node_t *node = (node_t*) malloc(sizeof(node_t));
+	node_t *node = xmalloc(sizeof(node_t));
 	memset(node, 0, sizeof(node_t));
 	return node;
 }
@@ -40,6 +42,7 @@ node_t* make_int_node(int literal)
 }
 
 int evaluate_expression(node_t *root) {
+	if (!root) return 0;
 	int result = 1;
 	return result;
 }
