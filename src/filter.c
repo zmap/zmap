@@ -8,18 +8,19 @@ extern int yyparse();
 
 node_t *zfilter;
 
-void parse_filter_string(char *filter)
+int parse_filter_string(char *filter)
 {
 	YY_BUFFER_STATE buffer_state = yy_scan_string(filter);
 	int status = yyparse();
 	yy_delete_buffer(buffer_state);
 	if (status) {
 		// Error
-		log_fatal("zmap", "Unable to parse filter");
+		log_error("zmap", "Unable to parse filter string: '%s'", filter);
+		return 0;
 	}
 	zconf.filter.expression = zfilter;
 	print_expression(zfilter);
 	printf("%s\n", "");
 	fflush(stdout);
-	return;
+	return 1;
 }

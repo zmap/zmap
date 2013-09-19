@@ -2,12 +2,19 @@
 
 #include "../lib/xalloc.h"
 
-node_t* alloc_node() 
+/* Static helper functions */
+
+static node_t* alloc_node();
+static int eval_single_node(node_t* node);
+
+static node_t* alloc_node() 
 {
 	node_t *node = xmalloc(sizeof(node_t));
 	memset(node, 0, sizeof(node_t));
 	return node;
 }
+
+/* Exposed functions */
 
 node_t* make_op_node(enum operation op) 
 {
@@ -21,7 +28,7 @@ node_t* make_field_node(char *fieldname)
 {
 	node_t *node = alloc_node();
 	node->type = FIELD;
-	node->value.fieldname = fieldname;
+	node->value.field.fieldname = fieldname;
 	return node;
 }
 
@@ -56,7 +63,7 @@ void print_expression(node_t *root) {
 			printf(" %i ", root->value.op);
 			break;
 		case FIELD:
-			printf(" (%s", root->value.fieldname);
+			printf(" (%s", root->value.field.fieldname);
 			break;
 		case STRING:
 			printf("%s) ", root->value.string_literal);

@@ -13,11 +13,16 @@ enum node_type {
 	OP, FIELD, STRING, INT
 };
 
-union node_value {
-	enum operation op;
+struct field_id {
+	int index;
 	char *fieldname;
+};
+
+union node_value {
+	struct field_id field; 
 	char *string_literal;
 	int int_literal;
+	enum operation op;
 };
 
 typedef struct node {
@@ -26,8 +31,6 @@ typedef struct node {
 	enum node_type type;
 	union node_value value;
 } node_t;
-
-node_t* alloc_node();
 
 node_t* make_op_node(enum operation op);
 

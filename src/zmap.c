@@ -501,7 +501,9 @@ int main(int argc, char *argv[])
 
 	// Parse and validate the output filter, if any
 	if (args.output_filter_arg) {
-		parse_filter_string(args.output_filter_arg);
+		if (!parse_filter_string(args.output_filter_arg)) {
+			log_fatal("zmap", "Unable to parse filter expression");
+		}
 	}
 
 	SET_BOOL(zconf.dryrun, dryrun);
