@@ -4,3 +4,7 @@
 *~
 \#*
 src/zmap
+CMakeFiles
+*.cmake
+Makefile
+CMakeCache.txt
