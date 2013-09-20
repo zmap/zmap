@@ -501,8 +501,14 @@ int main(int argc, char *argv[])
 
 	// Parse and validate the output filter, if any
 	if (args.output_filter_arg) {
+		// Run it through yyparse to build the expression tree
 		if (!parse_filter_string(args.output_filter_arg)) {
 			log_fatal("zmap", "Unable to parse filter expression");
+		}
+
+		// Check the fields used against the fieldset in use
+		if (!validate_filter(zconf.filter.expression, &zconf.fsconf.defs)) {
+			log_fatal("zmap", "Field does not exist");
 		}
 	}
 

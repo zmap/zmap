@@ -7,7 +7,7 @@
 %option noinput
 %option nounput
 %%
-[0-9]+               yylval.int_literal = atoi(yytext); return T_NUMBER;
+[0-9]+               yylval.int_literal = (uint64_t) atoll(yytext); return T_NUMBER;
 \n                   /* Ignore end of line */
 [ \t]+               /* Ignore whitespace */
 !=                   return T_NOT_EQ;

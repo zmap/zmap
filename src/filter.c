@@ -4,9 +4,31 @@
 #include "y.tab.h"
 #include "../lib/logger.h"
 
+#include <string.h>
+
 extern int yyparse();
 
 node_t *zfilter;
+
+static int validate_node(node_t *node, fielddefset_t *fields)
+{
+	int i;
+	if (node->type != FIELD) {
+		return 1;
+	}
+
+	for (i = 0; i < MAX_FIELDS; i++) {
+		if (fields->fielddefs[i].name) {
+			if (strcmp(fields->fielddefs[i].name, node->value.field.fieldname) == 0) {
+				node->value.field.index = i;
+				return 1;
+			}
+		}
+	}
+	// Didn't find it
+	return 0;
+
+}
 
 int parse_filter_string(char *filter)
 {
@@ -23,4 +45,18 @@ int parse_filter_string(char *filter)
 	printf("%s\n", "");
 	fflush(stdout);
 	return 1;
+}
+
+int validate_filter(node_t *root, fielddefset_t *fields)
+{
+	int valid;
+	if (!root) {
+		return 1;
+	}
+	valid = validate_node(root, fields);
+	if (!valid) {
+		return 0;
+	}
+	return (validate_filter(root->left_child, fields) && validate_filter(root->right_child, fields));
+
 }

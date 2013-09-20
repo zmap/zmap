@@ -745,7 +745,7 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 YY_RULE_SETUP
 #line 10 "lexer.l"
-yylval.int_literal = atoi(yytext); return T_NUMBER;
+yylval.int_literal = (uint64_t) atoll(yytext); return T_NUMBER;
 	YY_BREAK
 case 2:
 /* rule 2 can match eol */
