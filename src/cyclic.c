@@ -67,8 +67,10 @@ static const uint64_t psub1_f[] = { 2, 3, 5, 131, 364289 };
 static uint64_t primroot = 0;
 static uint64_t current = 0;
 
+static uint64_t num_addrs = 0;
+
 #define COPRIME 1
-#define NOT_COPRIME 0 
+#define NOT_COPRIME 0
 
 // check whether two integers are coprime
 static int check_coprime(uint64_t check)
@@ -145,6 +147,7 @@ int cyclic_init(uint32_t primroot_, uint32_t current_)
 	  return -1;
 	}
 
+	num_addrs = blacklist_count_allowed();
 	// make sure current is an allowed ip
 	cyclic_get_next_ip();
 
@@ -153,7 +156,7 @@ int cyclic_init(uint32_t primroot_, uint32_t current_)
 
 uint32_t cyclic_get_curr_ip(void)
 {
-	return (uint32_t) current;
+	return (uint32_t) blacklist_lookup_index(current);
 }
 
 uint32_t cyclic_get_primroot(void)
@@ -174,11 +177,10 @@ uint32_t cyclic_get_next_ip(void)
 {
 	while (1) {
 		uint32_t candidate = cyclic_get_next_elem();
-		if (!blacklist_is_allowed(candidate)) {
-			zsend.blacklisted++;
-		} else {
-			return candidate;
+		if (candidate < num_addrs) {
+			return blacklist_lookup_index(candidate);
 		}
+		zsend.blacklisted++;
 	}
 }
 
