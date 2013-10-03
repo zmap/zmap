@@ -3,6 +3,7 @@
 #ifndef _BLACKLIST_H
 #define _BLACKLIST_H
 
+uint32_t blacklist_lookup_index(uint64_t index);
 int blacklist_is_allowed(uint32_t s_addr);
 void blacklist_prefix(char *ip, int prefix_len);
 void whitelist_prefix(char *ip, int prefix_len);
