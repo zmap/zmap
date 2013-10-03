@@ -295,7 +295,7 @@ static node_t* _lookup_node(node_t *root, uint32_t prefix, int len)
 void constraint_paint_value(constraint_t *con, value_t value)
 {
 	assert(con);
-	log_info("constraint", "Painting value %lu", value);
+	log_trace("constraint", "Painting value %lu", value);
 
 	// Paint everything except what we will put in radix
 	_count_ips_recurse(con->root, value, (uint64_t)1 << 32, 1, 1);
@@ -311,7 +311,7 @@ void constraint_paint_value(constraint_t *con, value_t value)
 			con->radix[con->radix_len++] = prefix;
 		}
 	}
-	log_info("constraint", "%lu IPs in radix array, %lu IPs in tree",
+	log_debug("constraint", "%lu IPs in radix array, %lu IPs in tree",
 			con->radix_len * (1 << (32 - RADIX_LENGTH)), con->root->count);
 	con->painted = 1;
 	con->paint_value = value;
