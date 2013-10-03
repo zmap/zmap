@@ -26,7 +26,7 @@
 static constraint_t *constraint = NULL;
 
 uint32_t blacklist_lookup_index(uint64_t index) {
-	return constraint_lookup_index(constraint, index, ADDR_ALLOWED);
+	return ntohl(constraint_lookup_index(constraint, index, ADDR_ALLOWED));
 }
 
 // check whether a single IP address is allowed to be scanned.
