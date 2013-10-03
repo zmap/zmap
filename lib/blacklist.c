@@ -25,6 +25,10 @@
 
 static constraint_t *constraint = NULL;
 
+uint32_t blacklist_lookup_index(uint64_t index) {
+	return constraint_lookup_index(constraint, index, ADDR_ALLOWED);
+}
+
 // check whether a single IP address is allowed to be scanned.
 //		1 => is allowed
 //		0 => is not allowed
@@ -121,7 +125,7 @@ int blacklist_init_from_files(char *whitelist_filename, char *blacklist_filename
 	if (blacklist_filename) {
 		init(blacklist_filename, "blacklist", ADDR_DISALLOWED);
 	}
-	constraint_optimize(constraint);
+	constraint_paint_value(constraint, ADDR_ALLOWED);
 	uint64_t allowed = blacklist_count_allowed();
 	log_debug("blacklist", "%lu addresses allowed to be scanned (%0.0f%% of address space)", 
 			  allowed, allowed*100./((long long int)1 << 32));

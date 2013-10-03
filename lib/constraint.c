@@ -55,13 +55,13 @@ typedef struct node {
 
 // As an optimization, we precompute lookups for every prefix of this
 // length:
-#define RADIX_LENGTH 16
+#define RADIX_LENGTH 20
 
 struct _constraint {
-	node_t *root;   // root node of the tree
-	node_t **radix; // array of nodes for every RADIX_LENGTH prefix
-	int optimized;  // is radix populated and up-to-date?
-	int painted;    // have we precomputed counts for each node?
+	node_t *root;     // root node of the tree
+	uint32_t *radix;  // array of prefixes (/RADIX_LENGTH) that are painted paint_value
+	size_t radix_len; // number of prefixes in radix array
+	int painted;      // have we precomputed counts for each node?
 	value_t paint_value; // value for which we precomputed counts
 };
 
@@ -153,7 +153,7 @@ void constraint_set(constraint_t *con, uint32_t prefix, int len, value_t value)
 {
 	assert(con);
 	_set_recurse(con->root, prefix, len, value);
-	con->optimized = 0;
+	con->painted = 0;
 }
 
 // Return the value pertaining to an address, according to the tree
@@ -182,18 +182,7 @@ static int _lookup_ip(node_t *root, uint32_t address)
 value_t constraint_lookup_ip(constraint_t *con, uint32_t address)
 {
 	assert(con);
-	if (con->optimized) {
-		// Use radix optimization
-		node_t *node = con->radix[address >> (32 - RADIX_LENGTH)];
-		if (IS_LEAF(node)) {
-			return node->value;
-		}
-		return _lookup_ip(node, address << RADIX_LENGTH);
-	} else {
-		// Do a full lookup using the tree
-		log_trace("constraint", "Unoptimized lookup");
-		return _lookup_ip(con->root, address);
-	}
+	return _lookup_ip(con->root, address);
 }
 
 // Return the nth painted IP address.
@@ -228,82 +217,50 @@ uint32_t constraint_lookup_index(constraint_t *con, uint64_t index, value_t valu
 	if (!con->painted || con->paint_value != value) {
 		constraint_paint_value(con, value);
 	}
-	if (con->optimized) {
-		// TK TK TK
+
+	uint64_t radix_idx = index / (1 << (32 - RADIX_LENGTH));
+	if (radix_idx < con->radix_len) {
+		// Radix lookup
+		uint32_t radix_offset = index % (1 << (32 - RADIX_LENGTH));	// TODO: bitwise maths
+		return con->radix[radix_idx] | radix_offset;
 	}
 
+	// Otherwise, do the "slow" lookup in tree.
+	// Note that tree counts do NOT include things in the radix,
+	// so we subtract these off here.
+	index -= con->radix_len * (1 << (32 - RADIX_LENGTH));
 	assert(index < con->root->count);
 	return _lookup_index(con->root, index);
 }
-
 
 // Implement count_ips by recursing on halves of the tree.  Size represents
 // the number of addresses in a prefix at the current level of the tree.
 // If paint is specified, each node will have its count set to the number of
 // leaves under it set to value.
-static uint64_t _count_ips_recurse(node_t *node, value_t value, uint64_t size, int paint)
+// If exclude_radix is specified, the number of addresses will exlcude prefixes
+// that are a /RADIX_LENGTH or larger
+static uint64_t _count_ips_recurse(node_t *node, value_t value, uint64_t size, int paint, int exclude_radix)
 {
 	assert(node);
 	uint64_t n;
 	if (IS_LEAF(node)) {
 		if (node->value == value) {
 			n = size;
+			// Exclude prefixes already included in the radix
+			if (exclude_radix && size >= (1 << (32 -RADIX_LENGTH))) {
+				n = 0;
+			}
 		} else {
 			n = 0;
 		}
 	} else {
-		n = _count_ips_recurse(node->l, value, size >> 1, paint) +
-			_count_ips_recurse(node->r, value, size >> 1, paint);
+		n = _count_ips_recurse(node->l, value, size >> 1, paint, exclude_radix) +
+			_count_ips_recurse(node->r, value, size >> 1, paint, exclude_radix);
 	}
 	if (paint) {
 		node->count = n;
 	}
 	return n;
-}
-
-// For each node, precompute the count of leaves beneath it set to value.
-// Note that the tree can be painted for only one value at a time.
-void constraint_paint_value(constraint_t *con, value_t value)
-{
-	assert(con);
-	log_info("constraint", "Painting value %lu", value);
-	_count_ips_recurse(con->root, value, (uint64_t)1 << 32, 1);
-	con->painted = 1;
-	con->paint_value = value;
-}
-
-// Return the number of addresses that have a given value.
-uint64_t constraint_count_ips(constraint_t *con, value_t value)
-{
-	assert(con);
-	if (con->painted && con->paint_value == value) {
-		return con->root->count;
-	} else {
-		return _count_ips_recurse(con->root, value, (uint64_t)1 << 32, 0);
-	}
-}
-
-// Initialize the tree.
-// All addresses will initally have the given value.
-constraint_t* constraint_init(value_t value)
-{
-	log_trace("constraint", "Initializing");
-	constraint_t* con = malloc(sizeof(constraint_t));
-	con->root = _create_leaf(value);
-	con->radix = calloc(sizeof(node_t *), 1 << RADIX_LENGTH);
-	assert(con->radix);
-	con->optimized = 0;
-	return con;
-}
-
-// Deinitialize and free the tree.
-void constraint_free(constraint_t *con)
-{
-	assert(con);
-	log_trace("constraint", "Cleaning up");
-	_destroy_subtree(con->root);
-	free(con->radix);
-	free(con);
 }
 
 // Return a node that determines the values for the addresses with
@@ -317,8 +274,9 @@ static node_t* _lookup_node(node_t *root, uint32_t prefix, int len)
 
 	node_t *node = root;
 	uint32_t mask = 0x80000000;
+	int i;
 
-	for (int i=0; i < len; i++) {
+	for (i=0; i < len; i++) {
 		if (IS_LEAF(node)) {
 			return node;
 		}
@@ -332,21 +290,66 @@ static node_t* _lookup_node(node_t *root, uint32_t prefix, int len)
 	return node;
 }
 
-// After values have been set, precompute prefix lookups.
-void constraint_optimize(constraint_t *con)
+// For each node, precompute the count of leaves beneath it set to value.
+// Note that the tree can be painted for only one value at a time.
+void constraint_paint_value(constraint_t *con, value_t value)
 {
 	assert(con);
-	if (con->optimized) {
-		return;
-	}
-	log_trace("constraint", "Optimizing constraints");
-	for (uint32_t i=0; i < (1 << RADIX_LENGTH); i++) {
+	log_info("constraint", "Painting value %lu", value);
+
+	// Paint everything except what we will put in radix
+	_count_ips_recurse(con->root, value, (uint64_t)1 << 32, 1, 1);
+
+	// Fill in the radix array with a list of addresses
+	uint32_t i;
+	con->radix_len = 0;
+	for (i=0; i < (1 << RADIX_LENGTH); i++) {
 		uint32_t prefix = i << (32 - RADIX_LENGTH);
-		con->radix[i] = _lookup_node(con->root, prefix, RADIX_LENGTH);
+		node_t *node = _lookup_node(con->root, prefix, RADIX_LENGTH);
+		if (IS_LEAF(node) && node->value == value) {
+			// Add this prefix to the radix
+			con->radix[con->radix_len++] = prefix;
+		}
 	}
-	con->optimized = 1;
+	log_info("constraint", "%lu IPs in radix array, %lu IPs in tree",
+			con->radix_len * (1 << (32 - RADIX_LENGTH)), con->root->count);
+	con->painted = 1;
+	con->paint_value = value;
 }
 
+// Return the number of addresses that have a given value.
+uint64_t constraint_count_ips(constraint_t *con, value_t value)
+{
+	assert(con);
+	if (con->painted && con->paint_value == value) {
+		return con->root->count + con->radix_len * (1 << (32 - RADIX_LENGTH));
+	} else {
+		return _count_ips_recurse(con->root, value, (uint64_t)1 << 32, 0, 0);
+	}
+}
+
+// Initialize the tree.
+// All addresses will initally have the given value.
+constraint_t* constraint_init(value_t value)
+{
+	log_trace("constraint", "Initializing");
+	constraint_t* con = malloc(sizeof(constraint_t));
+	con->root = _create_leaf(value);
+	con->radix = calloc(sizeof(uint32_t), 1 << RADIX_LENGTH);
+	assert(con->radix);
+	con->painted = 0;
+	return con;
+}
+
+// Deinitialize and free the tree.
+void constraint_free(constraint_t *con)
+{
+	assert(con);
+	log_trace("constraint", "Cleaning up");
+	_destroy_subtree(con->root);
+	free(con->radix);
+	free(con);
+}
 
 /*
 int main(void)
@@ -384,68 +387,3 @@ int main(void)
 }
 */
 
-/*
-static int init(constraint_t *con, char *file, const char *name, value_t value)
-{
-	FILE *fp;
-	char line[1000];
-	int blocked = 0;
-
-	fp = fopen(file, "r");
-	if (fp == NULL) {
-		log_fatal(name, "Unable to open %s file: %s: %s", 
-				name, file, strerror(errno));
-	}
-
-	while (fgets(line, sizeof(line), fp) != NULL) {
-		char *comment = strchr(line, '#');
-		if (comment) {
-			*comment = '\0';
-		}
-		char ip[33];
-		if ((sscanf(line, "%32s", ip)) == EOF) {
-			continue;
-		}
-		int prefix_len;
-		char *slash = strchr(ip, '/');
-		if (slash == NULL) {
-			log_fatal(name,
-		"Unable to parse %s file: %s",
-		name, file);
-		}
-		// split apart network and prefix length 
-		*slash = '\0';
-		prefix_len = atoi(&slash[1]);
-		constraint_set(con, ntohl(inet_addr(ip)), prefix_len, value);
-
-		blocked++;
-	}
-	fclose(fp);
-	return 0;
-}
-
-
-
-void main()
-{
-	log_init(stderr, LOG_TRACE);
-
-	constraint_t *con = constraint_init(1);
-	init(con, "blacklist.prefixes", "blacklist", 0);
-	//constraint_optimize(con);
-
-	printf("count(0)=%lu\n", constraint_count_ips(con, 0));
-	printf("count(1)=%lu\n", constraint_count_ips(con, 1));
-
-	uint32_t i=0, count=0;
-	do {
-		if (constraint_lookup_ip(con, i))
-			count++;
-	} while (++i != 0);
-	printf("derived count(1)=%u\n", count);
-
-	constraint_free(con);
-
-}
-
- */
