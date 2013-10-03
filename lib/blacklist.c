@@ -25,6 +25,10 @@
 
 static constraint_t *constraint = NULL;
 
+uint32_t blacklist_lookup_index(uint64_t index) {
+	return ntohl(constraint_lookup_index(constraint, index, ADDR_ALLOWED));
+}
+
 // check whether a single IP address is allowed to be scanned.
 //		1 => is allowed
 //		0 => is not allowed
@@ -121,9 +125,24 @@ int blacklist_init_from_files(char *whitelist_filename, char *blacklist_filename
 	if (blacklist_filename) {
 		init(blacklist_filename, "blacklist", ADDR_DISALLOWED);
 	}
-	constraint_optimize(constraint);
+	constraint_paint_value(constraint, ADDR_ALLOWED);
 	uint64_t allowed = blacklist_count_allowed();
 	log_debug("blacklist", "%lu addresses allowed to be scanned (%0.0f%% of address space)", 
 			  allowed, allowed*100./((long long int)1 << 32));
+
+	/*
+	// test
+	log_debug("blacklist", "testing started");
+	uint64_t count = constraint_count_ips(constraint, ADDR_ALLOWED);
+	for (unsigned int i=0; i < count; i++) {
+		int ip = constraint_lookup_index(constraint, i, ADDR_ALLOWED);
+		if ((i & 0xFFFFFF) == 0)
+			log_info("blacklist", "%x", i & 0xFF000000);
+		if (constraint_lookup_ip(constraint, ip) != ADDR_ALLOWED) {
+			log_error("blacklist", "test failed for index %d", i);
+		}
+	}
+	log_debug("blacklist", "testing complete");
+	*/
 	return 0;
 }
