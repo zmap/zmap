@@ -1,7 +1,8 @@
 #include "filter.h"
 #include "state.h"
 #include "lexer.h"
-#include "y.tab.h"
+#include "parser.h"
+#include "expression.h"
 #include "../lib/logger.h"
 
 #include <string.h>

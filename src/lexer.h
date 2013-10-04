@@ -2,7 +2,9 @@
 #define yyHEADER_H 1
 #define yyIN_HEADER 1
 
-#line 6 "lexer.h"
+#line 6 "/home/david/mac/SourceCode/zmap/src/lexer.h"
+
+#line 8 "/home/david/mac/SourceCode/zmap/src/lexer.h"
 
 #define  YY_INT_ALIGNED short int
 
@@ -325,6 +327,6 @@ extern int yylex (void);
 #line 25 "lexer.l"
 
 
-#line 329 "lexer.h"
+#line 331 "/home/david/mac/SourceCode/zmap/src/lexer.h"
 #undef yyIN_HEADER
 #endif /* yyHEADER_H */

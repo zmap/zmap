@@ -1,5 +1,6 @@
+#line 2 "/home/david/mac/SourceCode/zmap/src/lexer.c"
 
-#line 3 "<stdout>"
+#line 4 "/home/david/mac/SourceCode/zmap/src/lexer.c"
 
 #define  YY_INT_ALIGNED short int
 
@@ -469,10 +470,10 @@ char *yytext;
 #line 1 "lexer.l"
 #line 2 "lexer.l"
 #include <string.h>
-#include "y.tab.h"
+#include "parser.h"
 
 #define YY_NO_INPUT 1
-#line 476 "<stdout>"
+#line 477 "/home/david/mac/SourceCode/zmap/src/lexer.c"
 
 #define INITIAL 0
 
@@ -659,7 +660,7 @@ YY_DECL
     
 #line 9 "lexer.l"
 
-#line 663 "<stdout>"
+#line 664 "/home/david/mac/SourceCode/zmap/src/lexer.c"
 
 	if ( !(yy_init) )
 		{
@@ -818,7 +819,7 @@ YY_RULE_SETUP
 #line 25 "lexer.l"
 ECHO;
 	YY_BREAK
-#line 822 "<stdout>"
+#line 823 "/home/david/mac/SourceCode/zmap/src/lexer.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 

@@ -49,7 +49,7 @@ typedef union {
 	struct node *expr; 
 } YYSTYPE;
 #endif /* !YYSTYPE_IS_DECLARED */
-#line 52 "y.tab.c"
+#line 52 "parser.c"
 
 /* compatibility with bison */
 #ifdef YYPARSE_PARAM
@@ -250,7 +250,7 @@ static YYSTACKDATA yystack;
 #line 144 "parser.y"
 
 
-#line 253 "y.tab.c"
+#line 253 "parser.c"
 
 #if YYDEBUG
 #include <stdio.h>		/* needed for printf */
@@ -566,7 +566,7 @@ case 15:
 			yyval.expr->right_child = make_field_node(yystack.l_mark[0].string_literal);
 		}
 break;
-#line 569 "y.tab.c"
+#line 569 "parser.c"
     }
     yystack.s_mark -= yym;
     yystate = *yystack.s_mark;
