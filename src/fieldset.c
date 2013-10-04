@@ -32,11 +32,11 @@ fieldset_t *fs_new_fieldset(void)
 		log_fatal("fieldset", "unable to allocate new fieldset");
 	}
 	memset(f, 0, sizeof(fieldset_t));
-	return f;	
+	return f;
 }
 
 static inline void fs_add_word(fieldset_t *fs, const char *name, int type,
-		int free_, size_t len, void *value)
+		int free_, size_t len, field_val_t value)
 {
 	if (fs->len + 1 >= MAX_FIELDS) {
 		log_fatal("fieldset", "out of room in fieldset");
@@ -46,24 +46,24 @@ static inline void fs_add_word(fieldset_t *fs, const char *name, int type,
 	f->type = type;
 	f->name = name;
 	f->len = len;
-	f->value = (uint64_t) value;
+	f->value = value;
 	f->free_ = free_;
 }
 
 static void fs_modify_word(fieldset_t *fs, const char *name, int type,
-		int free_, size_t len, void *value)
+		int free_, size_t len, field_val_t value)
 {
 	int i;
 	for (i=0; i<fs->len; i++) {
 		if (!strcmp(fs->fields[i].name, name)) {
 			if (fs->fields[i].free_) {
-				free((void*)fs->fields[i].value);
-				fs->fields[i].value = 0;
+				free(fs->fields[i].value.ptr);
+				fs->fields[i].value.ptr = NULL;
 			}
 			fs->fields[i].type = type;
 			fs->fields[i].free_ = free_;
 			fs->fields[i].len = len;
-			fs->fields[i].value = (uint64_t)value;
+			fs->fields[i].value = value;
 			return;
 		}
 	}
@@ -72,55 +72,63 @@ static void fs_modify_word(fieldset_t *fs, const char *name, int type,
 
 void fs_add_null(fieldset_t *fs, const char *name)
 {
-	fs_add_word(fs, name, FS_NULL, 0, 0, NULL);
+	field_val_t val = { .ptr = NULL };
+	fs_add_word(fs, name, FS_NULL, 0, 0, val);
 }
 
 void fs_add_string(fieldset_t *fs, const char *name, char *value, int free_)
 {
-	fs_add_word(fs, name, FS_STRING, free_, strlen(value), (void*) value);
+	field_val_t val = { .ptr = value };
+	fs_add_word(fs, name, FS_STRING, free_, strlen(value), val);
 }
 
 void fs_add_uint64(fieldset_t *fs, const char *name, uint64_t value)
 {
-	fs_add_word(fs, name, FS_UINT64, 0, sizeof(uint64_t), (void*) value);
+	field_val_t val = { .num = value };
+	fs_add_word(fs, name, FS_UINT64, 0, sizeof(uint64_t), val);
 }
 
 void fs_add_binary(fieldset_t *fs, const char *name, size_t len,
 		void *value, int free_)
 {
-	fs_add_word(fs, name, FS_BINARY, free_, len, value);
+	field_val_t val = { .ptr = value };
+	fs_add_word(fs, name, FS_BINARY, free_, len, val);
 }
 
 // Modify
 void fs_modify_null(fieldset_t *fs, const char *name)
 {
-	fs_modify_word(fs, name, FS_NULL, 0, 0, NULL);
+	field_val_t val = { .ptr = NULL };
+	fs_modify_word(fs, name, FS_NULL, 0, 0, val);
 }
 
 void fs_modify_string(fieldset_t *fs, const char *name, char *value, int free_)
 {
-	fs_modify_word(fs, name, FS_STRING, free_, strlen(value), (void*) value);
+	field_val_t val = { .ptr = value };
+	fs_modify_word(fs, name, FS_STRING, free_, strlen(value), val);
 }
 
 void fs_modify_uint64(fieldset_t *fs, const char *name, uint64_t value)
 {
-	fs_modify_word(fs, name, FS_UINT64, 0, sizeof(uint64_t), (void*) value);
+	field_val_t val = { .num = value };
+	fs_modify_word(fs, name, FS_UINT64, 0, sizeof(uint64_t), val);
 }
 
 void fs_modify_binary(fieldset_t *fs, const char *name, size_t len,
 		void *value, int free_)
 {
-	fs_modify_word(fs, name, FS_BINARY, free_, len, value);
+	field_val_t val = { .ptr = value };
+	fs_modify_word(fs, name, FS_BINARY, free_, len, val);
 }
 
 uint64_t fs_get_uint64_by_index(fieldset_t *fs, int index)
 {
-	return (uint64_t) fs->fields[index].value;
+	return (uint64_t) fs->fields[index].value.num;
 }
 
 char* fs_get_string_by_index(fieldset_t *fs, int index)
 {
-	return (char*) fs->fields[index].value;
+	return (char*) fs->fields[index].value.ptr;
 }
 
 int fds_get_index_by_name(fielddefset_t *fds, char *name)
@@ -141,7 +149,7 @@ void fs_free(fieldset_t *fs)
 	for (int i=0; i < fs->len; i++) {
 		field_t *f = &(fs->fields[i]);
 		if (f->free_) {
-			free((void*) f->value);
+			free(f->value.ptr);
 		}
 	}
 	free(fs);
@@ -160,7 +168,7 @@ void fs_generate_fieldset_translation(translation_t *t,
 			log_fatal("fieldset", "specified field (%s) not "
 					      "available in selected "
 					      "probe module.", req[i]);
-		} 
+		}
 		t->translation[t->len++] = l;
 	}
 }

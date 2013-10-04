@@ -79,11 +79,11 @@ int csv_process(fieldset_t *fs)
 			fprintf(file, ", ");
 		}
 		if (f->type == FS_STRING) {
-			fprintf(file, "%s", (char*) f->value); 
+			fprintf(file, "%s", (char*) f->value.ptr);
 		} else if (f->type == FS_UINT64) {
-			fprintf(file, "%lu", (uint64_t) f->value); 
+			fprintf(file, "%llu", (uint64_t) f->value.num);
 		} else if (f->type == FS_BINARY) {
-			hex_encode(file, (unsigned char*) f->value, f->len);
+			hex_encode(file, (unsigned char*) f->value.ptr, f->len);
 		} else if (f->type == FS_NULL) {
 			// do nothing
 		} else {

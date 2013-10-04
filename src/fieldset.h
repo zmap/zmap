@@ -36,13 +36,18 @@ typedef struct fielddef_set {
 	int len;
 } fielddefset_t;
 
+typedef union field_val {
+	void	  *ptr;
+	uint64_t   num;
+} field_val_t;
+
 // the internal field type used by fieldset
 typedef struct field {
 	const char *name;
 	int type;
 	int free_;
 	size_t len;
-	uint64_t value;
+	union field_val value;
 } field_t;
 
 // data structure that is populated by the probe module
