@@ -14,6 +14,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <assert.h>
+#include <inttypes.h>
 
 #include "../../lib/logger.h"
 #include "../fieldset.h"
@@ -81,7 +82,7 @@ int csv_process(fieldset_t *fs)
 		if (f->type == FS_STRING) {
 			fprintf(file, "%s", (char*) f->value.ptr);
 		} else if (f->type == FS_UINT64) {
-			fprintf(file, "%llu", (uint64_t) f->value.num);
+			fprintf(file, "%" PRIu64, (uint64_t) f->value.num);
 		} else if (f->type == FS_BINARY) {
 			hex_encode(file, (unsigned char*) f->value.ptr, f->len);
 		} else if (f->type == FS_NULL) {
