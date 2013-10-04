@@ -19,8 +19,9 @@ or on RHEL- and Fedora-based systems by running:
 Once these prerequisites have been installed, ZMap can be installed
  by running:
 
-  cd src
+  cmake ./
   make
+  sudo make install
 
 followed by:
 
