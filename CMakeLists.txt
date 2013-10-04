@@ -18,6 +18,7 @@ if(ENABLE_DEVELOPMENT)
 		"-Wmissing-noreturn -Wnormalized=id"
 		"-Wstack-protector"
 		"-Werror"
+		"-m32"
 		)
 
 	# Fix line breaks
