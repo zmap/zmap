@@ -4,7 +4,7 @@ project (ZMAP C)
 option(WITH_REDIS "Build with support for Redis DB" OFF)
 option(WITH_JSON "Build with support for JSON" OFF)
 option(ENABLE_DEVELOPMENT "Enable development specific compiler and linker flags" OFF)
-option(ENABLE_HARDENING "Add hardening specific compiler and linker flags" OFF)
+option(ENABLE_HARDENING "Add hardening specific compiler and linker flags" ON)
 
 if(ENABLE_DEVELOPMENT)
 	# Hardening and warnings for building with gcc
