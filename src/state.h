@@ -77,6 +77,8 @@ struct state_conf {
 	char *output_filename;
 	char *blacklist_filename;
 	char *whitelist_filename;
+	char **destination_cidrs;
+	int destination_cidrs_len;
 	char *raw_output_fields;
 	char **output_fields;
 	struct fieldset_conf fsconf;

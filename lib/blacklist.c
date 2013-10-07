@@ -51,7 +51,38 @@ void whitelist_prefix(char *ip, int prefix_len)
 	constraint_set(constraint, ntohl(inet_addr(ip)), prefix_len, ADDR_ALLOWED);
 }
 
-static int init(char *file, const char *name, int value)
+static int init_from_string(char *ip, int value)
+{
+	int prefix_len = 32;
+	char *slash = strchr(ip, '/');
+	if (slash) {  // split apart network and prefix length 
+		*slash = '\0';
+		char *end;
+		char *len = slash+1;
+		errno = 0;			
+		prefix_len = strtol(len, &end, 10);
+		if (end == len || errno != 0 || prefix_len < 0 || prefix_len > 32) {
+			log_fatal("constraint", "'%s' is not a valid prefix length", len);
+			return -1;
+		}
+	}
+	struct in_addr addr;
+	if (inet_aton(ip, &addr) == 0) {
+		log_error("constraint", "'%s' is not a valid IP address", ip);
+		return -1;
+	}
+	constraint_set(constraint, ntohl(addr.s_addr), prefix_len, value);
+	char *name;
+	if (value == ADDR_DISALLOWED)
+		name = "blacklisting";
+	else
+		name = "whitelisting";
+	log_trace(name, "%s %s/%i",
+			  name, ip, prefix_len);
+}
+
+
+static int init_from_file(char *file, const char *name, int value)
 {
 	FILE *fp;
 	char line[1000];
@@ -70,29 +101,20 @@ static int init(char *file, const char *name, int value)
 		if ((sscanf(line, "%32s", ip)) == EOF) {
 			continue;
 		}
-		int prefix_len = 32;
-		char *slash = strchr(ip, '/');
-		if (slash) {  // split apart network and prefix length 
-			*slash = '\0';
-			char *end;
-			char *len = slash+1;
-			errno = 0;			
-			prefix_len = strtol(len, &end, 10);
-			if (end == len || errno != 0 || prefix_len < 0 || prefix_len > 32) {
-				log_fatal(name, "Unable to parse %s file: %s ('%s' is not a valid prefix length)",  name, file, len);
-			}
+		if (init_from_string(ip, value)) {
+			log_fatal(name, "unable to parse %s file: %s", name, file);
 		}
-		struct in_addr addr;
-		if (inet_aton(ip, &addr) == 0) {
-			log_fatal(name,  "Unable to parse %s file: %s ('%s' is not a valid IP address)",  name, file, ip);
-		}
-		constraint_set(constraint, ntohl(addr.s_addr), prefix_len, value);
-		log_trace(name, "%sing %s/%i",
-				  name, ip, prefix_len);
 	}
 	fclose(fp);
 
 	return 0;
+}
+
+void static init_from_array(char **cidrs, size_t len, int value)
+{
+	for (int i=0; i < (int) len; i++) {
+		init_from_string(cidrs[i], value);
+	}
 }
 
 uint64_t blacklist_count_allowed()
@@ -107,42 +129,43 @@ uint64_t blacklist_count_not_allowed()
 	return constraint_count_ips(constraint, ADDR_DISALLOWED);
 }
 
-
 // Initialize address constraints from whitelist and blacklist files.
 // Either can be set to NULL to omit.
-int blacklist_init_from_files(char *whitelist_filename, char *blacklist_filename)
+int blacklist_init(char *whitelist_filename, char *blacklist_filename,
+		char **whitelist_entries, size_t whitelist_entries_len,
+		char **blacklist_entries, size_t blacklist_entries_len)
 {
 	assert(!constraint);
-	if (whitelist_filename) {
+	if (whitelist_filename && whitelist_entries) {
+		log_warn("whitelist", "both a whitelist file and destination addresses "
+					"were specified. The union of these two sources "
+					"will be utilized.");
+	}
+	if (whitelist_filename || whitelist_entries) {
 		// using a whitelist, so default to allowing nothing
 		constraint = constraint_init(ADDR_DISALLOWED);
 		log_trace("whitelist", "blacklisting 0.0.0.0/0");
-		init(whitelist_filename, "whitelist", ADDR_ALLOWED);
+		if (whitelist_filename) {
+			init_from_file(whitelist_filename, "whitelist", ADDR_ALLOWED);
+		}
+		if (whitelist_entries) {
+			init_from_array(whitelist_entries,
+					whitelist_entries_len, ADDR_ALLOWED);
+		}
 	} else {
 		// no whitelist, so default to allowing everything
 		constraint = constraint_init(ADDR_ALLOWED);
 	}
 	if (blacklist_filename) {
-		init(blacklist_filename, "blacklist", ADDR_DISALLOWED);
+		init_from_file(blacklist_filename, "blacklist", ADDR_DISALLOWED);
+	}
+	if (blacklist_entries) {
+		init_from_array(blacklist_entries, blacklist_entries_len, ADDR_DISALLOWED);
 	}
 	constraint_paint_value(constraint, ADDR_ALLOWED);
 	uint64_t allowed = blacklist_count_allowed();
 	log_debug("blacklist", "%lu addresses allowed to be scanned (%0.0f%% of address space)", 
 			  allowed, allowed*100./((long long int)1 << 32));
-
-	/*
-	// test
-	log_debug("blacklist", "testing started");
-	uint64_t count = constraint_count_ips(constraint, ADDR_ALLOWED);
-	for (unsigned int i=0; i < count; i++) {
-		int ip = constraint_lookup_index(constraint, i, ADDR_ALLOWED);
-		if ((i & 0xFFFFFF) == 0)
-			log_info("blacklist", "%x", i & 0xFF000000);
-		if (constraint_lookup_ip(constraint, ip) != ADDR_ALLOWED) {
-			log_error("blacklist", "test failed for index %d", i);
-		}
-	}
-	log_debug("blacklist", "testing complete");
-	*/
-	return 0;
+	return EXIT_SUCCESS;
 }
+

@@ -122,5 +122,6 @@ option "version"   		V "Print version and exit"
 
 text "\nExamples:\n\
      zmap -p 443  (scans the whole Internet for hosts with port 443 open)\n\
-     zmap -N 5 -B 10M -p 80 -o -  (find 5 HTTP servers, scanning at 10 Mb/s)"
-
+     zmap -N 5 -B 10M -p 80 -o -  (find 5 HTTP servers, scanning at 10 Mb/s)\n
+     zmap -p 80 10.0.0.0/8 192.168.0.0/16 -o (scan 10.0.0.0/8 and 192.168.0.0/16 on port 80)\n
+     zmap -p 80 192.168.1.2 192.168.1.3 (scan 192.168.1.2 and 192.168.1.3 on port 80)"

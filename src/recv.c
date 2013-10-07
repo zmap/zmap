@@ -30,6 +30,7 @@
 #include <assert.h>
 
 #include "../lib/logger.h"
+#include "../lib/pbm.h"
 
 #include "state.h"
 #include "validate.h"
@@ -44,20 +45,7 @@ static uint32_t num_src_ports;
 static pcap_t *pc = NULL;
 
 // bitmap of observed IP addresses
-static uint64_t *ip_seen = NULL;
-static const int IP_SEEN_SIZE = 0x4000000; // == 2^32/64
-
-// check if we've received a response from this address previously
-static inline int check_ip(uint32_t ip)
-{
-	return (ip_seen[ip >> 6] >> (ip & 0x3F)) & 1;
-}
-
-// set that we've received a response from the address
-static inline void set_ip(uint32_t ip)
-{
-	ip_seen[ip >> 6] |= (uint64_t)1 << (ip & 0x3F);
-}
+static uint64_t **seen = NULL;
 
 static u_char fake_eth_hdr[65535];
 
@@ -95,7 +83,7 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 		return;
 	}
 
-	int is_repeat = check_ip(src_ip);
+	int is_repeat = pbm_check(seen, ntohl(src_ip));
 
 	fieldset_t *fs = fs_new_fieldset();
 	fs_add_ip_fields(fs, ip_hdr);
@@ -121,7 +109,7 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 		zrecv.success_total++;
 		if (!is_repeat) {
 			zrecv.success_unique++;
-			set_ip(src_ip);
+			pbm_set(seen, ntohl(src_ip));
 		}
 		if (zsend.complete) {
 			zrecv.cooldown_total++;
@@ -176,10 +164,6 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 {
 	log_debug("recv", "thread started");
 	num_src_ports = zconf.source_port_last - zconf.source_port_first + 1;
-	ip_seen = calloc(IP_SEEN_SIZE, sizeof(uint64_t));
-	if (!ip_seen) {
-		log_fatal("recv", "could not allocate address bitmap");
-	}
 	log_debug("recv", "using dev %s", zconf.iface);
 	if (!zconf.dryrun) {
 		char errbuf[PCAP_ERRBUF_SIZE];
@@ -202,6 +186,8 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 		memset(fake_eth_hdr, 0, sizeof(fake_eth_hdr));
 		eth->h_proto = htons(ETH_P_IP);
 	}
+	// initialize paged bitmap
+	seen = pbm_init();
 	log_debug("recv", "receiver ready");
 	if (zconf.filter_duplicates) {
 		log_debug("recv", "duplicate responses will be excluded from output"); 
