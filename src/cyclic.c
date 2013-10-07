@@ -148,17 +148,25 @@ static uint64_t find_primroot(const cyclic_group_t *group)
 int cyclic_init(uint32_t primroot_, uint32_t current_)
 {
 	assert(!(!primroot_ && current_));
-
 	// Initialize blacklist
-	if (blacklist_init_from_files(zconf.whitelist_filename,
-							zconf.blacklist_filename)) {
+	if (blacklist_init(zconf.whitelist_filename, zconf.blacklist_filename,
+			zconf.destination_cidrs, zconf.destination_cidrs_len,
+			NULL, 0)) {
 		return -1;
 	}
 	num_addrs = blacklist_count_allowed();
+	if (!num_addrs) {
+		log_error("blacklist", "no addresses are eligible to be scanned in the "
+				"current configuration. This may be because the "
+				"blacklist being used by ZMap (%s) prevents "
+				"any addresses from receiving probe packets.",
+				zconf.blacklist_filename
+			);
+		exit(EXIT_FAILURE);
+	}
 
-	uint32_t i;
 	const cyclic_group_t *cur_group = NULL;
-	for (i=0; i<sizeof(groups)/sizeof(groups[0]); i++) {
+	for (uint32_t i=0; i<sizeof(groups)/sizeof(groups[0]); i++) {
 		if (groups[i].prime > num_addrs) {
 			cur_group = &groups[i];
 			log_debug("cyclic", "using prime %lu, known_primroot %lu", cur_group->prime, cur_group->known_primroot);
