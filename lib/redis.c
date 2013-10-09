@@ -6,16 +6,18 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
  
-#include <string.h>
 #include "redis.h"
+
+#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "assert.h"
-#include "logger.h"
 #include <stdint.h>
+#include <assert.h>
+
 #include <hiredis/hiredis.h>
 
-#define REDIS_UNIX_PATH "/tmp/redis.sock"
+#include "logger.h"
+
 #define REDIS_TIMEOUT 2
 
 #undef  MIN
@@ -23,13 +25,83 @@
 
 static redisContext *rctx;
 
-static redisContext* redis_connect(void)
+#define T_TCP 0
+#define T_LOCAL 1
+
+typedef struct redisconf {
+	int type;
+	char *path;
+	char *server;
+	uint16_t port;
+	char *list_name;
+} redisconf_t;
+
+static redisconf_t *redis_parse_connstr(char *connstr)
 {
+	redisconf_t *retv = malloc(sizeof(redisconf_t));
+	if (strcmp("tcp://", connstr) == 6) {
+		char *servername = malloc(strlen(connstr));
+		assert(servername);
+		char *list_name = malloc(strlen(connstr));
+		assert(list_name);
+		uint16_t port;
+		if (scanf(connstr, "tcp://%s:%u/%s", servername,
+						port, list_name) != 3) {
+			log_fatal("redis", "unable to parse redis connection string. This "
+					"should be of the form tcp://server:port/list-name "
+					"for TCP connections. All fields are required.");
+		}
+		retv->type = T_TCP;
+		retv->server = servername;
+		retv->port = port;
+		retv->list_name = list_name;
+		retv->path = NULL;
+	} else if (strcmp("local://", connstr) == 8) {
+		char *path = malloc(strlen(connstr));
+		assert(path);
+		char *list_name = malloc(strlen(connstr));
+		assert(list_name);
+		if (scanf(connstr, "local://%s/%s", path,
+						list_name) != 3) {
+			log_fatal("redis", "unable to parse redis connection string. This "
+					"should be of the form tcp://server:port/list-name "
+					"for TCP connections. All fields are required.");
+		}
+		retv->type = T_LOCAL;
+		retv->list_name = list_name;
+		retv->path = path;
+		retv->server = NULL;
+		retv->port = 0;
+	} else {
+		log_fatal("redis", "unable to parse connection string. does not begin with "
+			"unix:// or tcp:// as expected");
+	}
+}
+
+static redisContext* redis_connect(char *connstr)
+{
+	redisconf_t *c;
+	// handle old behavior where we only connected to a specific
+	// socket that we #defined.
+	if (!connstr) {
+		c = malloc(sizeof(redisconf_t));
+		assert(c);
+		c->type = T_LOCAL;
+		c->path = "/tmp/redis.sock";
+	} else {
+		c = redis_parse_connstr(connstr);
+		assert(c);
+	}
 	struct timeval timeout;
 	timeout.tv_sec = REDIS_TIMEOUT;
 	timeout.tv_usec = 0;
-	return (redisContext*) redisConnectUnixWithTimeout(REDIS_UNIX_PATH,
+	if (c->type == T_LOCAL) {
+		return (redisContext*) redisConnectUnixWithTimeout(c->path,
 			timeout);
+	} else {
+		return (redisContext*) redisConnectWithTimeout(c->server,
+			c->port, timeout);
+	}
 }
 
 static int chkerr(redisReply *reply)
@@ -47,9 +119,9 @@ static int chkerr(redisReply *reply)
 	return 0;
 }
 
-int redis_init(void)
+int redis_init(char *connstr)
 {
-	rctx = redis_connect();
+	rctx = redis_connect(connstr);
 	if (!rctx) {
 		return -1;
 	}

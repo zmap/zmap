@@ -429,6 +429,14 @@ int main(int argc, char *argv[])
 						  "seqnum, acknum, cooldown, "
 						  "repeat, timestamp-str";
 		zconf.filter_duplicates = 0;
+	} else if (!strcmp(args.output_module_arg, "redis")) {
+		log_warn("zmap", "the redis output interface has been deprecated and "
+                                 "will be removed in the future. Users should "
+				 "either use redis-packed or redis-json in the "
+				 "future.");
+		zconf.output_module = get_output_module_by_name("redis-packed");
+		zconf.raw_output_fields = (char*) "saddr";
+		zconf.filter_duplicates = 1;
 	} else {
 		zconf.output_module = get_output_module_by_name(args.output_module_arg);
 		if (!zconf.output_module) {

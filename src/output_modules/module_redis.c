@@ -22,55 +22,46 @@
 
 #define UNUSED __attribute__((unused))
 
-typedef struct scannable_t {
-	in_addr_t ip_address;
-	uint8_t source;
-} scannable_t;
-
-#define QUEUE_NAME "zmap_results"
 #define BUFFER_SIZE 500
 #define SOURCE_ZMAP 0
 
-static scannable_t* buffer;
+static uint32_t *buffer;
 static int buffer_fill = 0;
+static char *queue_name = NULL;
 
-int redismodule_init(UNUSED struct state_conf *conf)
+static int redismodule_init(struct state_conf *conf, char **fields, int fieldlens)
 {
-	buffer = calloc(BUFFER_SIZE, sizeof(scannable_t));
+	assert(fieldlens == 1);
+	buffer = calloc(BUFFER_SIZE, sizeof(uint32_t));
 	assert(buffer);
 	buffer_fill = 0;
-	return redis_init();
+	return redis_init(conf->output_args);
 }
 
-int redismodule_flush(void)
+static int redismodule_flush(void)
 {
-	if (redis_lpush((char *)QUEUE_NAME, buffer,
-			buffer_fill, sizeof(scannable_t))) {
+	if (redis_lpush((char *)queue_name, buffer,
+			buffer_fill, sizeof(uint32_t))) {
 		return EXIT_FAILURE;
 	}
 	buffer_fill = 0;
 	return EXIT_SUCCESS;
 }
 
-int redismodule_newip(ipaddr_n_t saddr, UNUSED ipaddr_n_t daddr,
-        UNUSED const char *response_type, int is_repeat,
-        UNUSED int in_cooldown, UNUSED const u_char *packet, UNUSED size_t len)
+static int redismodule_process(fieldset_t *fs)
 {
-	if (!is_repeat) {
-		buffer[buffer_fill].ip_address = saddr;
-		buffer[buffer_fill].source = SOURCE_ZMAP;
-
-		if (++buffer_fill == BUFFER_SIZE) {
-			if (redismodule_flush()) {
-				return EXIT_FAILURE;
-			}
+	field_t *f = &(fs->fields[0]);
+	buffer[buffer_fill] = (uint32_t) f->value.num;
+	if (++buffer_fill == BUFFER_SIZE) {
+		if (redismodule_flush()) {
+			return EXIT_FAILURE;
 		}
 	}
 	return EXIT_SUCCESS;
 }
 
-int redismodule_close(UNUSED struct state_conf* c, 
-        UNUSED struct state_send* s,
+static int redismodule_close(UNUSED struct state_conf* c, 
+		UNUSED struct state_send* s,
 		UNUSED struct state_recv* r)
 {
 	if (redismodule_flush()) {
@@ -83,13 +74,12 @@ int redismodule_close(UNUSED struct state_conf* c,
 }
 
 output_module_t module_redis = {
-	.name = "redis",
+	.name = "redis-packed",
 	.init = &redismodule_init,
 	.start = NULL,
 	.update = NULL,
 	.update_interval = 0,
 	.close = &redismodule_close,
-	.success_ip = &redismodule_newip,
-	.other_ip = NULL
+	.process_ip = &redismodule_process
 };
 

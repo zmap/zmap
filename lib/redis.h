@@ -5,7 +5,7 @@
 #ifndef REDIS_ZHELPERS_H
 #define REDIS_ZHELPERS_H
 
-int redis_init(void);
+int redis_init(char*);
 
 int redis_close(void);
 

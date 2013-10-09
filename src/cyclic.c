@@ -169,7 +169,8 @@ int cyclic_init(uint32_t primroot_, uint32_t current_)
 	for (uint32_t i=0; i<sizeof(groups)/sizeof(groups[0]); i++) {
 		if (groups[i].prime > num_addrs) {
 			cur_group = &groups[i];
-			log_debug("cyclic", "using prime %lu, known_primroot %lu", cur_group->prime, cur_group->known_primroot);
+			log_debug("cyclic", "using prime %lu, known_primroot %lu",
+					cur_group->prime, cur_group->known_primroot);
 			prime = groups[i].prime;
 			break;
 		}
