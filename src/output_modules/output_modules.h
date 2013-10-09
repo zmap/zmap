@@ -30,8 +30,8 @@ typedef struct output_module {
 	output_update_cb update;
 	output_update_cb close;
 	output_packet_cb process_ip;
+	const char *helptext;
 } output_module_t;
-
 
 output_module_t* get_output_module_by_name(const char*);
 

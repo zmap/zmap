@@ -369,39 +369,6 @@ int main(int argc, char *argv[])
 	zconf.log_level = args.verbosity_arg;
 	log_init(stderr, zconf.log_level);
 	log_trace("zmap", "zmap main thread started");
-
-	if (args.help_given) {
-		cmdline_parser_print_help();
-		exit(EXIT_SUCCESS);
-	}
-	if (args.version_given) {
-		cmdline_parser_print_version();
-		exit(EXIT_SUCCESS);
-	}
-	if (args.list_output_modules_given) {
-		print_output_modules();
-		exit(EXIT_SUCCESS);
-	}
-	if (args.list_probe_modules_given) {
-		print_probe_modules();
-		exit(EXIT_SUCCESS);
-	}
-	if (args.config_given || file_exists(args.config_arg)) {
-		params->initialize = 0;
-		params->override = 0;
-		if (cmdline_parser_config_file(args.config_arg, &args, params) 
-				!= 0) {
-			exit(EXIT_FAILURE);
-		}
-	}
-	if (args.vpn_given) {
-		zconf.send_ip_pkts = 1;
-		zconf.gw_mac_set = 1;
-		memset(zconf.gw_mac, 0, IFHWADDRLEN);
-	}
-	if (cmdline_parser_required(&args, CMDLINE_PARSER_PACKAGE) != 0) {
-		exit(EXIT_FAILURE);
-	}
 	// parse the provided probe and output module s.t. that we can support
 	// other command-line helpers (e.g. probe help)
 	if (!args.output_module_given) {
@@ -451,6 +418,51 @@ int main(int argc, char *argv[])
 				CMDLINE_PARSER_PACKAGE, args.probe_module_arg);
 	  exit(EXIT_FAILURE);
 	}
+	if (args.help_given) {
+		cmdline_parser_print_help();
+		printf("\nselected probe-module (%s) help\n", zconf.probe_module->name);
+		if (zconf.probe_module->helptext) {
+			printf("%s\n", zconf.probe_module->helptext);
+		} else {
+			printf("no help text available\n");
+		}
+		printf("\nselected output-module help\n");
+		if (zconf.output_module->helptext) {
+			printf("%s\n", zconf.output_module->helptext);
+		} else {
+			printf("no help text available\n");
+		}
+		exit(EXIT_SUCCESS);
+	}
+	if (args.version_given) {
+		cmdline_parser_print_version();
+		exit(EXIT_SUCCESS);
+	}
+	if (args.list_output_modules_given) {
+		print_output_modules();
+		exit(EXIT_SUCCESS);
+	}
+	if (args.list_probe_modules_given) {
+		print_probe_modules();
+		exit(EXIT_SUCCESS);
+	}
+	if (args.config_given || file_exists(args.config_arg)) {
+		params->initialize = 0;
+		params->override = 0;
+		if (cmdline_parser_config_file(args.config_arg, &args, params) 
+				!= 0) {
+			exit(EXIT_FAILURE);
+		}
+	}
+	if (args.vpn_given) {
+		zconf.send_ip_pkts = 1;
+		zconf.gw_mac_set = 1;
+		memset(zconf.gw_mac, 0, IFHWADDRLEN);
+	}
+	if (cmdline_parser_required(&args, CMDLINE_PARSER_PACKAGE) != 0) {
+		exit(EXIT_FAILURE);
+	}
+	
 	// now that we know the probe module, let's find what it supports
 	memset(&zconf.fsconf, 0, sizeof(struct fieldset_conf));
 	// the set of fields made available to a user is constructed

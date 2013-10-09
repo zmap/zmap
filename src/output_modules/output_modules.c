@@ -6,7 +6,6 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-
 #include <stdio.h>
 #include <string.h>
 
@@ -25,15 +24,13 @@ extern output_module_t module_json_file;
 output_module_t* output_modules[] = {
 	&module_csv_file,
 #ifdef REDIS
-	//&module_redis,
+	&module_redis,
 #endif
 #ifdef JSON
 	&module_json_file
 #endif
 	// ADD YOUR MODULE HERE
 };
-
-
 
 output_module_t* get_output_module_by_name(const char* name)
 {
