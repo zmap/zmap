@@ -426,7 +426,7 @@ int main(int argc, char *argv[])
 		} else {
 			printf("no help text available\n");
 		}
-		printf("\nselected output-module help\n");
+		printf("\nselected output-module (%s) help\n", zconf.output_module->name);
 		if (zconf.output_module->helptext) {
 			printf("%s\n", zconf.output_module->helptext);
 		} else {
