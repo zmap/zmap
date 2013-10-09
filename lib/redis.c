@@ -25,18 +25,7 @@
 
 static redisContext *rctx;
 
-#define T_TCP 0
-#define T_LOCAL 1
-
-typedef struct redisconf {
-	int type;
-	char *path;
-	char *server;
-	uint16_t port;
-	char *list_name;
-} redisconf_t;
-
-static redisconf_t *redis_parse_connstr(char *connstr)
+redisconf_t *redis_parse_connstr(char *connstr)
 {
 	redisconf_t *retv = malloc(sizeof(redisconf_t));
 	if (strcmp("tcp://", connstr) == 6) {

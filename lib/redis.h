@@ -5,6 +5,19 @@
 #ifndef REDIS_ZHELPERS_H
 #define REDIS_ZHELPERS_H
 
+#define T_TCP 0
+#define T_LOCAL 1
+
+typedef struct redisconf {
+	int type;
+	char *path;
+	char *server;
+	uint16_t port;
+	char *list_name;
+} redisconf_t;
+
+redisconf_t *redis_parse_connstr(char *connstr);
+
 int redis_init(char*);
 
 int redis_close(void);
