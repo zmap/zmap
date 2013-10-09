@@ -188,5 +188,6 @@ output_module_t module_json_file = {
 	.update_interval = 0,
 	.close = &json_output_file_close,
 	.process_ip = &json_output_file_ip,
+	.helptext = NULL
 };
 

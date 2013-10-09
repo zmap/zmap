@@ -35,6 +35,17 @@ static int redismodule_init(struct state_conf *conf, char **fields, int fieldlen
 	buffer = calloc(BUFFER_SIZE, sizeof(uint32_t));
 	assert(buffer);
 	buffer_fill = 0;
+
+	redisconf_t *rconf = redis_parse_connstr(conf->output_args);
+	if (rconf->type == T_TCP) {
+		log_info("redis-module", "{type: TCP, server: %s, "
+				"port %u, list %s", rconf->server, 
+				rconf->port, rconf->list_name);
+	} else {
+		log_info("redis-module", "{type: LOCAL, path: %s, "
+				"list %s", rconf->path, rconf->list_name);
+	}
+	queue_name = rconf->list_name;
 	return redis_init(conf->output_args);
 }
 
@@ -80,6 +91,7 @@ output_module_t module_redis = {
 	.update = NULL,
 	.update_interval = 0,
 	.close = &redismodule_close,
-	.process_ip = &redismodule_process
+	.process_ip = &redismodule_process,
+	.helptext = NULL
 };
 

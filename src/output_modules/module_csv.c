@@ -103,5 +103,6 @@ output_module_t module_csv_file = {
 	.update_interval = 0,
 	.close = &csv_close,
 	.process_ip = &csv_process,
+	.helptext = NULL
 };
 
