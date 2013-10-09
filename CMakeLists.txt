@@ -17,7 +17,7 @@ if(ENABLE_DEVELOPMENT)
 		"-Wnested-externs -Wbad-function-cast -Winit-self"
 		"-Wmissing-noreturn -Wnormalized=id"
 		"-Wstack-protector"
-		#"-Werror"
+		"-Werror"
 		)
 
 	# Fix line breaks
