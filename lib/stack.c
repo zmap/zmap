@@ -28,7 +28,7 @@ void push(stack_t* stack, void* elt)
 {
 	if (stack->cur_size == stack->max_size) {
 		stack->max_size *= 2;
-		xrealloc(stack->arr, stack->max_size);;
+		xrealloc(stack->arr, stack->max_size);
 	}
 	stack->arr[stack->cur_size++] = elt;
 }

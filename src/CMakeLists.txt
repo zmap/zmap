@@ -11,6 +11,7 @@ SET(LIB_SOURCES
 	${PROJECT_SOURCE_DIR}/lib/logger.c
 	${PROJECT_SOURCE_DIR}/lib/random.c
 	${PROJECT_SOURCE_DIR}/lib/rijndael-alg-fst.c
+	${PROJECT_SOURCE_DIR}/lib/stack.c
 	${PROJECT_SOURCE_DIR}/lib/xalloc.c
 )
 
@@ -49,7 +50,6 @@ SET(SOURCES
 	monitor.c
 	recv.c
 	send.c
-	stack.c
 	state.c
 	validate.c
 	zmap.c
