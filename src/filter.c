@@ -18,8 +18,9 @@ static int validate_node(node_t *node, fielddefset_t *fields)
 		return 1;
 	}
 
-	for (i = 0; i < MAX_FIELDS; i++) {
+	for (i = 0; i < fields->len; i++) {
 		if (fields->fielddefs[i].name) {
+			printf("Fields: %s, Looking for: %s\n", fields->fielddefs[i].name, node->value.field.fieldname);
 			if (strcmp(fields->fielddefs[i].name, node->value.field.fieldname) == 0) {
 				node->value.field.index = i;
 				return 1;
@@ -58,6 +59,6 @@ int validate_filter(node_t *root, fielddefset_t *fields)
 	if (!valid) {
 		return 0;
 	}
+	
 	return (validate_filter(root->left_child, fields) && validate_filter(root->right_child, fields));
-
 }

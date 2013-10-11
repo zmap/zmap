@@ -129,14 +129,14 @@ string_filter:
 		{
 			$$ = make_op_node(EQ);
 			$$->left_child = make_field_node($1);
-			$$->right_child = make_field_node($3);
+			$$->right_child = make_string_node($3);
 		}
 	|
 	T_FIELD T_NOT_EQ T_FIELD
 		{
 			$$ = make_op_node(NEQ);
 			$$->left_child = make_field_node($1);
-			$$->right_child = make_field_node($3);
+			$$->right_child = make_string_node($3);
 		}
 	;
 
