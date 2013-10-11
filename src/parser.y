@@ -7,8 +7,7 @@
 
 void yyerror(const char *str)
 {
-	fprintf(stderr,"error: %s\n",str);
-	fprintf(stderr, "%s\n", "YOLO");
+	fprintf(stderr,"Parse error: %s\n",str);
 }
  
 int yywrap()
