@@ -1,8 +1,6 @@
 #include "expression.h"
-#include "fieldset.h"
+#include "fieldset.H"
 
-
-#include "../lib/stack.h"
 #include "../lib/xalloc.h"
 
 /* Static helper functions */
@@ -85,7 +83,6 @@ node_t* make_field_node(char *fieldname)
 	node_t *node = alloc_node();
 	node->type = FIELD;
 	node->value.field.fieldname = fieldname;
-	node->result = 1;
 	return node;
 }
 
@@ -94,7 +91,6 @@ node_t* make_string_node(char *literal)
 	node_t *node = alloc_node();
 	node->type = STRING;
 	node->value.string_literal = literal;
-	node->result = 1;
 	return node;
 }
 
@@ -103,7 +99,6 @@ node_t* make_int_node(int literal)
 	node_t *node = alloc_node();
 	node->type = INT;
 	node->value.int_literal = literal;
-	node->result = 1;
 	return node;
 }
 
@@ -138,88 +133,6 @@ int evaluate_expression(node_t *root, fieldset_t *fields) {
 			|| evaluate_expression(root->right_child, fields));	
 	}
 	return 0;
-}
-
-int evaluate_expression_fast(node_t *root, fieldset_t *fields) {
-	stack_t* s;
-	node_t* node;
-	if (!root) return 1;
-	s = alloc_stack(16); /* XXX Find a way to guess/know this better */
-	root->evaluated = 0;
-	stack_push(s, root);
-	int result = 1;
-	while (!stack_is_empty(s) && result) {
-		node = (node_t *) stack_peek(s);
-		if (node->type != OP) {
-			continue;
-		}
-		if (node->value.op == AND) {
-			if (!node->right_child->evaluated) {
-				stack_push(s, node->right_child);
-			} 
-			if (!node->left_child->evaluated) {
-				stack_push(s, node->left_child);
-				continue;
-			}
-
-			stack_pop(s);
-			if (!(node->left_child->result && node->right_child->result)) {
-				node->evaluated = 1;
-				result = 0;
-			}
-			node->left_child->evaluated = 0;
-			node->right_child->evaluated = 0;
-		} else if (node->value.op == OR) {
-			if (!node->right_child->evaluated) {
-				stack_push(s, node->right_child);
-			}
-			if (!node->left_child->evaluated) {
-				stack_push(s, node->left_child);
-				continue;
-			}
-
-			stack_pop(s);
-			if (!(node->left_child->result || node->right_child->result)) {
-				node->evaluated = 1;
-				result = 0;
-			}
-			node->left_child->evaluated = 0;
-			node->right_child->evaluated = 0;
-
-		} else {
-			stack_pop(s);
-			switch (node->value.op) {
-			case GT:
-				node->result = eval_gt_node(node, fields);
-				break;
-			case LT:
-				node->result = eval_lt_node(node, fields);
-				break;
-			case EQ:
-				node->result = eval_eq_node(node, fields);
-				break;
-			case NEQ:
-				node->result = !(eval_eq_node(node, fields));
-				break;
-			case LT_EQ:
-				node->result = eval_lt_eq_node(node, fields);
-				break;
-			case GT_EQ:
-				node->result = eval_gt_eq_node(node, fields);
-				break;
-			default:
-				exit(-1);
-				break;
-			}
-			node->evaluated = 1;
-			if (stack_is_empty(s)) {
-				result = node->result;
-				node->evaluated = 0;
-			}
-		}
-	}
-	free_stack(s);
-	return result;
 }
 
 void print_expression(node_t *root) {

@@ -24,7 +24,7 @@ void free_stack(stack_t* stack)
 	xfree(stack);
 }
 
-void stack_push(stack_t* stack, void* elt)
+void push(stack_t* stack, void* elt)
 {
 	if (stack->cur_size == stack->max_size) {
 		stack->max_size *= 2;
@@ -33,17 +33,8 @@ void stack_push(stack_t* stack, void* elt)
 	stack->arr[stack->cur_size++] = elt;
 }
 
-void stack_pop(stack_t* stack)
+void* pop(stack_t* stack)
 {
-	--stack->cur_size;
-}
-
-void* stack_peek(stack_t* stack)
-{
-	return stack->arr[stack->cur_size - 1];
-}
-
-int stack_is_empty(stack_t* stack)
-{
-	return (stack->cur_size == 0);
+	void* res = stack->arr[--stack->cur_size];
+	return res;
 }
