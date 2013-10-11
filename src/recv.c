@@ -142,7 +142,7 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 	if (is_repeat && zconf.filter_duplicates) {
 		goto cleanup;
 	}
-	if (!evaluate_expression(zconf.filter.expression, fs)) {
+	if (!evaluate_expression_fast(zconf.filter.expression, fs)) {
 		goto cleanup;
 	}
 
