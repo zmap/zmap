@@ -23,8 +23,8 @@ struct field_id {
 
 union node_value {
 	struct field_id field; 
-	char *string_literal;
 	uint64_t int_literal;
+	char *string_literal;
 	enum operation op;
 };
 
@@ -33,6 +33,8 @@ typedef struct node {
 	struct node *right_child;
 	enum node_type type;
 	union node_value value;
+	int evaluated;
+	int result;
 } node_t;
 
 node_t* make_op_node(enum operation op);
@@ -44,6 +46,8 @@ node_t* make_string_node(char *literal);
 node_t* make_int_node(int literal);
 
 int evaluate_expression(node_t *root, fieldset_t *fields);
+
+int evaluate_expression_fast(node_t *root, fieldset_t *fields);
 
 void print_expression(node_t *root);
 
