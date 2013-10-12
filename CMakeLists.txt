@@ -64,9 +64,7 @@ set(CMAKE_C_FLAGS_RELEASE "-O2")
 add_subdirectory(src)
 
 # Install conf files
-FILE(GLOB CONF_FILES "conf/*")
-install(
-	FILES
-	${CONF_FILES}
-	DESTINATION "/etc/zmap/"
-	)
+FILE(GLOB CONF_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/conf" "conf/*")
+message(STATUS "${CONF_FILES}")
+configure_file(zmap_conf_install.cmake.in zmap_conf_install.cmake)
+install(SCRIPT zmap_conf_install.cmake)

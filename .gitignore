@@ -14,3 +14,4 @@ lexer.c
 lexer.h
 parser.c
 parser.h
+install_manifest.txt
