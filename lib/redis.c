@@ -66,6 +66,7 @@ redisconf_t *redis_parse_connstr(char *connstr)
 		log_fatal("redis", "unable to parse connection string. does not begin with "
 			"local:// or tcp:// as expected");
 	}
+	return retv;
 }
 
 static redisContext* redis_connect(char *connstr)
