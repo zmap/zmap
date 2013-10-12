@@ -72,13 +72,14 @@ static int init_from_string(char *ip, int value)
 		return -1;
 	}
 	constraint_set(constraint, ntohl(addr.s_addr), prefix_len, value);
-	char *name;
+	const char *name;
 	if (value == ADDR_DISALLOWED)
 		name = "blacklisting";
 	else
 		name = "whitelisting";
 	log_trace(name, "%s %s/%i",
 			  name, ip, prefix_len);
+	return 0;
 }
 
 
@@ -110,7 +111,7 @@ static int init_from_file(char *file, const char *name, int value)
 	return 0;
 }
 
-void static init_from_array(char **cidrs, size_t len, int value)
+static void init_from_array(char **cidrs, size_t len, int value)
 {
 	for (int i=0; i < (int) len; i++) {
 		init_from_string(cidrs[i], value);
