@@ -13,20 +13,55 @@ node_t *zfilter;
 
 static int validate_node(node_t *node, fielddefset_t *fields)
 {
-	int i;
-	if (node->type != FIELD) {
-		return 1;
-	}
-
-	for (i = 0; i < fields->len; i++) {
-		if (fields->fielddefs[i].name) {
-			if (strcmp(fields->fielddefs[i].name, node->value.field.fieldname) == 0) {
-				node->value.field.index = i;
-				return 1;
+	int index, found = 0;
+	if (node->type == OP) {
+		// These end up getting validated later
+		if (node->value.op == AND || node->value.op == OR) {
+			return 1;
+		}
+		// Comparison node (=, >, <, etc.)
+		// Validate that the field (left child) exists in the fieldset
+		for (index = 0; index < fields->len; index++) {
+			if (fields->fielddefs[index].name) {
+				if (strcmp(fields->fielddefs[index].name, 
+						node->left_child->value.field.fieldname) == 0) {
+					node->left_child->value.field.index = index;
+					found = 1;
+					break;
+				}
 			}
 		}
+		if (!found) {
+			fprintf(stderr, "Field '%s' does not exist\n", 
+					node->left_child->value.field.fieldname);
+			return 0;
+		}
+		// Fieldname is fine, match the type.
+		switch (node->right_child->type) {
+		case STRING:
+			if (strcmp(fields->fielddefs[index].type, "string") == 0) {
+				return 1;
+			} else {
+				fprintf(stderr, "Field '%s' is not of type 'string'\n", 
+						fields->fielddefs[index].name);
+				return 0;
+			}
+		case INT:
+			if (strcmp(fields->fielddefs[index].type, "int") == 0) {
+				return 1;
+			} else {
+				fprintf(stderr, "Field '%s' is not of type 'int'\n", 
+						fields->fielddefs[index].name);
+				return 0;
+			}
+		default:
+			return 0;
+		}
+	} else {
+		// All non-op nodes are valid
+		return 1;
 	}
-	// Didn't find it
+	// Didn't validate
 	return 0;
 
 }
@@ -45,6 +80,11 @@ int parse_filter_string(char *filter)
 	return 1;
 }
 
+/*
+ * 0     Valid
+ * -1    Invalid Field Name
+ * -2    Type Mismatch
+ */
 int validate_filter(node_t *root, fielddefset_t *fields)
 {
 	int valid;
@@ -55,6 +95,5 @@ int validate_filter(node_t *root, fielddefset_t *fields)
 	if (!valid) {
 		return 0;
 	}
-
 	return (validate_filter(root->left_child, fields) && validate_filter(root->right_child, fields));
 }

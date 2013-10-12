@@ -508,7 +508,7 @@ int main(int argc, char *argv[])
 
 		// Check the fields used against the fieldset in use
 		if (!validate_filter(zconf.filter.expression, &zconf.fsconf.defs)) {
-			log_fatal("zmap", "Field does not exist");
+			log_fatal("zmap", "Invalid filter");
 		}
 	}
 
