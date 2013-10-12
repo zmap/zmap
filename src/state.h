@@ -15,6 +15,7 @@
 
 #include "types.h"
 #include "fieldset.h"
+#include "filter.h"
 
 #ifndef STATE_H
 #define STATE_H
@@ -81,6 +82,7 @@ struct state_conf {
 	int destination_cidrs_len;
 	char *raw_output_fields;
 	char **output_fields;
+	struct output_filter filter;
 	struct fieldset_conf fsconf;
 	int output_fields_len;
 	int dryrun;

@@ -10,3 +10,7 @@ Makefile
 CMakeCache.txt
 src/zopt.h
 src/zopt.c
+lexer.c
+lexer.h
+parser.c
+parser.h
