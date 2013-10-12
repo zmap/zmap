@@ -1,5 +1,5 @@
 #include "expression.h"
-#include "fieldset.H"
+#include "fieldset.h"
 
 #include "../lib/xalloc.h"
 
