@@ -28,14 +28,14 @@ static redisContext *rctx;
 redisconf_t *redis_parse_connstr(char *connstr)
 {
 	redisconf_t *retv = malloc(sizeof(redisconf_t));
-	if (strcmp("tcp://", connstr) == 6) {
+	if (!strncmp("tcp://", connstr, 6)) {
 		char *servername = malloc(strlen(connstr));
 		assert(servername);
 		char *list_name = malloc(strlen(connstr));
 		assert(list_name);
-		uint16_t port;
-		if (scanf(connstr, "tcp://%s:%u/%s", servername,
-						port, list_name) != 3) {
+		uint32_t port;
+		if (sscanf(connstr, "tcp://%[^:]:%u/%s", servername,
+						&port, list_name) != 3) {
 			log_fatal("redis", "unable to parse redis connection string. This "
 					"should be of the form tcp://server:port/list-name "
 					"for TCP connections. All fields are required.");
@@ -45,17 +45,18 @@ redisconf_t *redis_parse_connstr(char *connstr)
 		retv->port = port;
 		retv->list_name = list_name;
 		retv->path = NULL;
-	} else if (strcmp("local://", connstr) == 8) {
+	} else if (!strncmp("local://", connstr, 8)) {
+		// looking for something along the lines of
+		// local:///tmp/redis.sock/list-name
 		char *path = malloc(strlen(connstr));
 		assert(path);
 		char *list_name = malloc(strlen(connstr));
 		assert(list_name);
-		if (scanf(connstr, "local://%s/%s", path,
-						list_name) != 3) {
-			log_fatal("redis", "unable to parse redis connection string. This "
-					"should be of the form tcp://server:port/list-name "
-					"for TCP connections. All fields are required.");
-		}
+		connstr = connstr + (size_t) 8;
+		char *listname = strrchr(connstr, '/') + (size_t) 1;
+		connstr[strrchr(connstr, '/') - connstr] = '\0';
+		strcpy(path, connstr);
+		strcpy(list_name, listname);
 		retv->type = T_LOCAL;
 		retv->list_name = list_name;
 		retv->path = path;
@@ -63,7 +64,7 @@ redisconf_t *redis_parse_connstr(char *connstr)
 		retv->port = 0;
 	} else {
 		log_fatal("redis", "unable to parse connection string. does not begin with "
-			"unix:// or tcp:// as expected");
+			"local:// or tcp:// as expected");
 	}
 }
 

@@ -23,7 +23,6 @@
 #define UNUSED __attribute__((unused))
 
 #define BUFFER_SIZE 500
-#define SOURCE_ZMAP 0
 
 static uint32_t *buffer;
 static int buffer_fill = 0;
@@ -36,16 +35,20 @@ static int redismodule_init(struct state_conf *conf, char **fields, int fieldlen
 	assert(buffer);
 	buffer_fill = 0;
 
-	redisconf_t *rconf = redis_parse_connstr(conf->output_args);
-	if (rconf->type == T_TCP) {
-		log_info("redis-module", "{type: TCP, server: %s, "
-				"port %u, list %s", rconf->server, 
-				rconf->port, rconf->list_name);
+	if (conf->output_args) { 
+		redisconf_t *rconf = redis_parse_connstr(conf->output_args);
+		if (rconf->type == T_TCP) {
+			log_info("redis-module", "{type: TCP, server: %s, "
+					"port: %u, list: %s}", rconf->server, 
+					rconf->port, rconf->list_name);
+		} else {
+			log_info("redis-module", "{type: LOCAL, path: %s, "
+					"list: %s}", rconf->path, rconf->list_name);
+		}
+		queue_name = rconf->list_name;
 	} else {
-		log_info("redis-module", "{type: LOCAL, path: %s, "
-				"list %s", rconf->path, rconf->list_name);
+		queue_name = "zmap_output";
 	}
-	queue_name = rconf->list_name;
 	return redis_init(conf->output_args);
 }
 
