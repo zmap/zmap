@@ -102,7 +102,8 @@ node_t* make_int_node(int literal)
 	return node;
 }
 
-int evaluate_expression(node_t *root, fieldset_t *fields) {
+int evaluate_expression(node_t *root, fieldset_t *fields)
+{
 	if (!root) return 1;
 	switch (root->type) { /* XXX Not sure if runs */
 	case FIELD:
@@ -135,7 +136,8 @@ int evaluate_expression(node_t *root, fieldset_t *fields) {
 	return 0;
 }
 
-void print_expression(node_t *root) {
+void print_expression(node_t *root)
+{
 	if (!root) return;
 	printf("%s", "( ");
 	print_expression(root->left_child);
