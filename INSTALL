@@ -1,25 +1,25 @@
 SYSTEM REQUIREMENTS
 
 ZMap is designed to run on GNU/Linux systems and can be built with
-most recent versions of gcc.  Currently, ZMap only supports 64-bit
-systems.  Running it requires at least 600 MB of free memory.
+most recent versions of gcc. Currently, ZMap only supports 64-bit
+systems. Running it requires at least 600 MB of free memory.
 
 BUILDING AND INSTALLING ZMAP
 
 ZMap requires GMP, a free library for arbitrary precision arithmetic,
-gengetopt, and libpcap.  These packages can be installed on
+gengetopt, and libpcap. These packages can be installed on
 Debian-based systems by running:
 
-  sudo apt-get install libgmp3-dev gengetopt libpcap-dev
+  sudo apt-get install libgmp3-dev gengetopt libpcap-dev bison
 
 or on RHEL- and Fedora-based systems by running:
 
-  sudo yum install gmp gmp-devel gengetopt libpcap-devel
+  sudo yum install gmp gmp-devel gengetopt libpcap-devel bison
 
 Once these prerequisites have been installed, ZMap can be installed
  by running:
 
-  cmake ./
+  cmake ./ [-DWITH_REDIS=ON] [-DWITH_JSON=ON] [-DENABLE_DEVELOPMENT=ON] [-DENABLE_HARDENING=ON]
   make
   sudo make install
 
@@ -27,13 +27,13 @@ followed by:
 
   sudo make install
 
-Redis support is not enabled by default.  If you are want to use ZMap
-with Redis, you will first need to install Hiredis.  Then, rebuild
-ZMap with the command "make REDIS=true".
+Redis support is not enabled by default. If you are want to use ZMap
+with Redis, you will first need to install Hiredis. Then run cmake with
+"-DWITH_REDIS=ON".
 
-JSON support is not enabled by default.  If you are want to use ZMap
-with JSON output, you will first need to install json-c.  Then, rebuild
-ZMap with the command "make JSON=true".
-
+JSON support is not enabled by default. If you are want to use ZMap
+with JSON output, you will first need to install json-c. Then, run cmake with
+"-DWITH_JSON=ON"
+ 
 Installing json-c requires git and autotools to be available. For more
 information on how to install json-c, please see http://github.com/json-c/json-c
