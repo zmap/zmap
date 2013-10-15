@@ -555,6 +555,7 @@ int main(int argc, char *argv[])
 				" trying to scan local networks, you can change the default blacklist by "
 				"editing the default ZMap configuration at /etc/zmap/zmap.conf.");
 	}
+	SET_IF_GIVEN(zconf.whitelist_filename, whitelist_file);
 	
 	if (zconf.probe_module->port_args) {
 		if (args.source_port_given) {

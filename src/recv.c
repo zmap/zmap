@@ -133,7 +133,6 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 	if (!evaluate_expression(zconf.filter.expression, fs)) {
 		goto cleanup;
 	}
-
 	o = translate_fieldset(fs, &zconf.fsconf.translation);
 	if (zconf.output_module && zconf.output_module->process_ip) {
 		zconf.output_module->process_ip(o);
