@@ -10,18 +10,17 @@ ZMap requires GMP, a free library for arbitrary precision arithmetic,
 gengetopt, and libpcap. These packages can be installed on
 Debian-based systems by running:
 
-  sudo apt-get install libgmp3-dev gengetopt libpcap-dev bison
+  sudo apt-get install libgmp3-dev gengetopt libpcap-dev flex byacc
 
 or on RHEL- and Fedora-based systems by running:
 
-  sudo yum install gmp gmp-devel gengetopt libpcap-devel bison
+  sudo yum install gmp gmp-devel gengetopt libpcap-devel flex byacc
 
 Once these prerequisites have been installed, ZMap can be installed
  by running:
 
-  cmake ./ [-DWITH_REDIS=ON] [-DWITH_JSON=ON] [-DENABLE_DEVELOPMENT=ON] [-DENABLE_HARDENING=ON]
+  cmake [-DWITH_REDIS=ON] [-DWITH_JSON=ON] [-DENABLE_DEVELOPMENT=ON] [-DENABLE_HARDENING=ON] ./
   make
-  sudo make install
 
 followed by:
 
