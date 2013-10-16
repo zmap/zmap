@@ -127,7 +127,6 @@ static uint64_t find_primroot(const cyclic_group_t *group)
 {
 	// what luck, rand() returns a uint32_t!
 	uint32_t candidate = (uint32_t) aesrand_getword() & 0xFFFFFFFF;
-	printf("Candidate: %u\n", (unsigned) candidate);
 	while(check_coprime(candidate, group) != COPRIME) {
 		++candidate;
 	}
