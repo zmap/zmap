@@ -94,15 +94,15 @@ option "probe-args"		- "Arguments to pass to probe module"
 option "output-args"		- "Arguments to pass to output module"
 	   typestr="args"
 	   optional string
-option "output-filter"          - "Read a file containing an output filter on the first line"
-	   typestr="filename"
+option "output-filter"          - "Specify a filter over the response fields to limit what responses get sent to the output module"
+	   typestr="filter"
 	   optional string
 option "list-output-modules"	- "List available output modules"
-           optional
+        optional
 option "list-probe-modules"	- "List available probe modules"
-           optional
+        optional
 option "list-output-fields" 	- "List all fields that can be output by selected probe module"
-	   optional
+		optional
 
 section "Additional options"
 
