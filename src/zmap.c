@@ -407,6 +407,11 @@ int main(int argc, char *argv[])
 				 "either use redis-packed or redis-json in the "
 				 "future.");
 		zconf.output_module = get_output_module_by_name("redis-packed");
+		if (!zconf.output_module) {
+		  fprintf(stderr, "%s: specified output module (%s) does not exist\n",
+			  CMDLINE_PARSER_PACKAGE, args.output_module_arg);
+		  exit(EXIT_FAILURE);
+		}
 		zconf.raw_output_fields = (char*) "saddr";
 		zconf.filter_duplicates = 1;
 	} else {
