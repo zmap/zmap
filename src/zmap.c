@@ -370,13 +370,22 @@ int main(int argc, char *argv[])
 	if (cmdline_parser_ext(argc, argv, &args, params) != 0) {
 		exit(EXIT_SUCCESS);
 	}
-
+	if (args.config_given || file_exists(args.config_arg)) {
+		params->initialize = 0;
+		params->override = 0;
+		if (cmdline_parser_config_file(args.config_arg, &args, params) 
+				!= 0) {
+			exit(EXIT_FAILURE);
+		}
+	}
 	zconf.log_level = args.verbosity_arg;
 	log_init(stderr, zconf.log_level);
 	log_trace("zmap", "zmap main thread started");
 	// parse the provided probe and output module s.t. that we can support
 	// other command-line helpers (e.g. probe help)
-	if (!args.output_module_given) {
+	log_trace("zmap", "requested ouput-module: %s\n", args.output_module_arg);
+	if (!strcmp(args.output_module_arg, "default")) {
+		log_debug("zmap", "no output module provided. will use csv.");
 		zconf.output_module = get_output_module_by_name("csv");
 		zconf.raw_output_fields = (char*) "saddr";
 		zconf.filter_duplicates = 1;
@@ -414,6 +423,7 @@ int main(int argc, char *argv[])
 		}
 		zconf.raw_output_fields = (char*) "saddr";
 		zconf.filter_duplicates = 1;
+		zconf.filter_unsuccessful = 1;
 	} else {
 		zconf.output_module = get_output_module_by_name(args.output_module_arg);
 		if (!zconf.output_module) {
@@ -456,14 +466,7 @@ int main(int argc, char *argv[])
 		print_probe_modules();
 		exit(EXIT_SUCCESS);
 	}
-	if (args.config_given || file_exists(args.config_arg)) {
-		params->initialize = 0;
-		params->override = 0;
-		if (cmdline_parser_config_file(args.config_arg, &args, params) 
-				!= 0) {
-			exit(EXIT_FAILURE);
-		}
-	}
+	
 	if (args.vpn_given) {
 		zconf.send_ip_pkts = 1;
 		zconf.gw_mac_set = 1;
