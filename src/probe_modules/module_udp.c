@@ -189,8 +189,8 @@ int udp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 
 	ip_header->saddr = src_ip;
 	ip_header->daddr = dst_ip;
-	udp_header->source = get_src_port(num_ports, probe_num,
-					validation);
+	udp_header->source = htons(get_src_port(num_ports, probe_num,
+					validation));
 	ip_header->check = 0;
 	ip_header->check = ip_checksum((unsigned short *) ip_header);
 
