@@ -466,7 +466,6 @@ int main(int argc, char *argv[])
 		print_probe_modules();
 		exit(EXIT_SUCCESS);
 	}
-	
 	if (args.vpn_given) {
 		zconf.send_ip_pkts = 1;
 		zconf.gw_mac_set = 1;
@@ -475,18 +474,15 @@ int main(int argc, char *argv[])
 	if (cmdline_parser_required(&args, CMDLINE_PARSER_PACKAGE) != 0) {
 		exit(EXIT_FAILURE);
 	}
-	
 	// now that we know the probe module, let's find what it supports
 	memset(&zconf.fsconf, 0, sizeof(struct fieldset_conf));
 	// the set of fields made available to a user is constructed
 	// of IP header fields + probe module fields + system fields
 	fielddefset_t *fds = &(zconf.fsconf.defs);
-	gen_fielddef_set(fds, (fielddef_t*) &(ip_fields),
-		4);
+	gen_fielddef_set(fds, (fielddef_t*) &(ip_fields), 4);
 	gen_fielddef_set(fds, zconf.probe_module->fields,
-		zconf.probe_module->numfields);
-	gen_fielddef_set(fds, (fielddef_t*) &(sys_fields),
-		5);
+			zconf.probe_module->numfields);
+	gen_fielddef_set(fds, (fielddef_t*) &(sys_fields), 5);
 	if (args.list_output_fields_given) {
 		for (int i = 0; i < fds->len; i++) {
 			printf("%-15s %6s: %s\n", fds->fielddefs[i].name,
@@ -514,19 +510,30 @@ int main(int argc, char *argv[])
 	} else if (!zconf.raw_output_fields) {
 		zconf.raw_output_fields = (char*) "saddr";
 	}	
-	split_string(zconf.raw_output_fields, &(zconf.output_fields_len),
-			&(zconf.output_fields));
-	for (int i=0; i < zconf.output_fields_len; i++) {
-		log_debug("zmap", "requested output field (%i): %s",
-				i,
-				zconf.output_fields[i]);
-	}
-	// generate a translation that can be used to convert output
-	// from a probe module to the input for an output module
-	fs_generate_fieldset_translation(&zconf.fsconf.translation,
-			&zconf.fsconf.defs, zconf.output_fields,
-			zconf.output_fields_len);
+	if (!strcmp(zconf.raw_output_fields, "*")) {
+		zconf.output_fields_len = zconf.fsconf.defs.len;
+		zconf.output_fields = calloc(zconf.fsconf.defs.len, sizeof(char*));
+		assert(zconf.output_fields);
+		for (int i=0; i < zconf.fsconf.defs.len; i++) {
+			zconf.output_fields[i] = (char*) zconf.fsconf.defs.fielddefs[i].name;
+		}
+		fs_generate_full_fieldset_translation(&zconf.fsconf.translation,
+				&zconf.fsconf.defs);
 
+		
+	} else {
+		split_string(zconf.raw_output_fields, &(zconf.output_fields_len),
+				&(zconf.output_fields));
+		for (int i=0; i < zconf.output_fields_len; i++) {
+			log_debug("zmap", "requested output field (%i): %s", i,
+					zconf.output_fields[i]);
+		}
+		// generate a translation that can be used to convert output
+		// from a probe module to the input for an output module
+		fs_generate_fieldset_translation(&zconf.fsconf.translation,
+				&zconf.fsconf.defs, zconf.output_fields,
+				zconf.output_fields_len);
+	}
 	// Parse and validate the output filter, if any
 	if (args.output_filter_arg) {
 		// Run it through yyparse to build the expression tree

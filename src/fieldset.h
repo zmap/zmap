@@ -107,5 +107,7 @@ void fs_generate_fieldset_translation(translation_t *t,
 
 fieldset_t *translate_fieldset(fieldset_t *fs, translation_t *t);
 
+void fs_generate_full_fieldset_translation(translation_t *t, fielddefset_t *avail);
+
 #endif // FIELDSET_H
 

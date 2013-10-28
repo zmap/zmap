@@ -53,8 +53,7 @@ static inline void fs_add_word(fieldset_t *fs, const char *name, int type,
 static void fs_modify_word(fieldset_t *fs, const char *name, int type,
 		int free_, size_t len, field_val_t value)
 {
-	int i;
-	for (i=0; i<fs->len; i++) {
+	for (int i=0; i<fs->len; i++) {
 		if (!strcmp(fs->fields[i].name, name)) {
 			if (fs->fields[i].free_) {
 				free(fs->fields[i].value.ptr);
@@ -170,6 +169,18 @@ void fs_generate_fieldset_translation(translation_t *t,
 					      "probe module.", req[i]);
 		}
 		t->translation[t->len++] = l;
+	}
+}
+
+void fs_generate_full_fieldset_translation(translation_t *t, fielddefset_t *avail)
+{
+	memset(t, 0, sizeof(translation_t));
+	if (!t) {
+		log_fatal("fieldset", "unable to allocate memory for translation");
+	}
+	t->len = avail->len;
+	for (int i=0; i < avail->len; i++) {
+		t->translation[i] = i;
 	}
 }
 
