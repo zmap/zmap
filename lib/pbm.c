@@ -42,11 +42,11 @@ void pbm_set(uint64_t **b, uint32_t v)
 	uint32_t top = v >> 16;
 	uint32_t bottom = v & PAGE_SIZE;
 	if (!b[top]) {
-		uint64_t *bm = malloc(PAGE_SIZE);
+		uint64_t *bm = malloc(PAGE_SIZE/8);
 		if (!bm) {
 			log_fatal("bpm", "unable to allocate memory for new bitmap page");
 		}
-		memset(bm, 0, PAGE_SIZE);
+		memset(bm, 0, PAGE_SIZE/8);
 		b[top] = bm;
 	}
 	bm_set(b[top], bottom);
