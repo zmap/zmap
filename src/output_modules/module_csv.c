@@ -39,7 +39,8 @@ int csv_init(struct state_conf *conf, char **fields, int fieldlens)
 		log_warn("csv", "no output file selected. "
 				   "no results will be provided.");
 	}
-	if (fieldlens > 1 && file) {
+	if (fieldlens > 0 && file) {
+		log_debug("csv", "more than one field, will add headers");
 		for (int i=0; i < fieldlens; i++) {
 			if (i) {
 				fprintf(file, ", ");

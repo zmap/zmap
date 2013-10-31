@@ -27,13 +27,22 @@
 static uint32_t *buffer;
 static int buffer_fill = 0;
 static char *queue_name = NULL;
+static int field_index = -1;
 
-static int redismodule_init(struct state_conf *conf, char **fields, int fieldlens)
+int redismodule_init(struct state_conf *conf, char **fields, int fieldlens)
 {
-	assert(fieldlens == 1);
 	buffer = calloc(BUFFER_SIZE, sizeof(uint32_t));
 	assert(buffer);
 	buffer_fill = 0;
+	for (int i=0; i < fieldlens; i++) {
+		if (!strcmp(fields[i], "saddr-raw")) {
+			field_index = i;
+			break;
+		}
+	}
+	if (field_index < 0) {
+		log_fatal("redis-module", "saddr-raw not included in output-fields");
+	}
 
 	if (conf->output_args) { 
 		redisconf_t *rconf = redis_parse_connstr(conf->output_args);
@@ -62,10 +71,15 @@ static int redismodule_flush(void)
 	return EXIT_SUCCESS;
 }
 
-static int redismodule_process(fieldset_t *fs)
+int redismodule_process(fieldset_t *fs)
 {
-	field_t *f = &(fs->fields[0]);
+	field_t *f = &(fs->fields[field_index]);
 	buffer[buffer_fill] = (uint32_t) f->value.num;
+	
+	struct in_addr in;
+	in.s_addr = (uint32_t) f->value.num;
+	printf("%s\n", inet_ntoa(in));
+
 	if (++buffer_fill == BUFFER_SIZE) {
 		if (redismodule_flush()) {
 			return EXIT_FAILURE;
@@ -74,7 +88,7 @@ static int redismodule_process(fieldset_t *fs)
 	return EXIT_SUCCESS;
 }
 
-static int redismodule_close(UNUSED struct state_conf* c, 
+int redismodule_close(UNUSED struct state_conf* c, 
 		UNUSED struct state_send* s,
 		UNUSED struct state_recv* r)
 {

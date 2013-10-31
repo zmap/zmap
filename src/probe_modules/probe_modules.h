@@ -55,6 +55,8 @@ void fs_add_ip_fields(fieldset_t *fs, struct iphdr *ip);
 void fs_add_system_fields(fieldset_t *fs, int is_repeat, int in_cooldown);
 void print_probe_modules(void);
 
+extern int ip_fields_len;
+extern int sys_fields_len;
 extern fielddef_t ip_fields[];
 extern fielddef_t sys_fields[];
 

@@ -15,6 +15,7 @@ extern output_module_t module_csv_file;
 
 #ifdef REDIS
 extern output_module_t module_redis;
+extern output_module_t module_csv_redis;
 #endif
 
 #ifdef JSON
@@ -25,6 +26,7 @@ output_module_t* output_modules[] = {
 	&module_csv_file,
 #ifdef REDIS
 	&module_redis,
+	&module_csv_redis,
 #endif
 #ifdef JSON
 	&module_json_file

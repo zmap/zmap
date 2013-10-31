@@ -23,7 +23,6 @@ SET(EXTRA_PROBE_MODULES
 
 # ADD YOUR OUTPUT MODULE HERE
 SET(EXTRA_OUTPUT_MODULES
-
 	)
 
 SET(OUTPUT_MODULE_SOURCES
@@ -68,7 +67,7 @@ if (WITH_JSON)
 endif()
 
 if (WITH_REDIS)
-	SET(SOURCES ${SOURCES} ${PROJECT_SOURCE_DIR}/lib/redis.c output_modules/module_redis.c)
+	SET(SOURCES ${SOURCES} ${PROJECT_SOURCE_DIR}/lib/redis.c output_modules/module_redis.c output_modules/module_csvredis.c)
 endif()
 
 add_custom_command(OUTPUT zopt.h

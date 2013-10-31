@@ -193,7 +193,8 @@ static void start_zmap(void)
 					"(e.g. eth0). Try running as root or setting"
 					" interface using -i flag.");
 		}
-		log_debug("zmap", "no interface provided. will use %s", iface);
+		log_debug("zmap", "no interface provided. will use default"
+				" interface (%s).", iface);
 		zconf.iface = iface;
 	}
 	if (zconf.source_ip_first == NULL) {
@@ -205,15 +206,16 @@ static void start_zmap(void)
 					" Try specifying a source address (-S).", zconf.iface);
 		}
 		inet_ntop(AF_INET, &default_ip, zconf.source_ip_first, INET_ADDRSTRLEN);
-		log_debug("zmap", "no source IP address given. will use %s",
+		log_debug("zmap", "no source IP address given. will use default address: %s.",
 				zconf.source_ip_first);
 	}
 	if (!zconf.gw_mac_set) {
 		struct in_addr gw_ip;
 		char iface[IF_NAMESIZE];
 		if (get_default_gw(&gw_ip, iface) < 0) {
-			log_fatal("zmap", "could not detect default gateway address for %i."
-					" Try setting default gateway mac address (-G).");
+			log_fatal("zmap", "could not detect default gateway address for %s."
+					" Try setting default gateway mac address (-G).",
+					zconf.iface);
 		}
 		log_debug("zmap", "found gateway IP %s on %s", inet_ntoa(gw_ip), iface); 
 		if (get_hw_addr(&gw_ip, iface, zconf.gw_mac) < 0) {
@@ -222,7 +224,7 @@ static void start_zmap(void)
 					inet_ntoa(gw_ip), zconf.iface);
 		}
 		zconf.gw_mac_set = 1;
-		log_debug("zmap", "using default gateway MAC %02x:%02x:%02x:%02x:%02x:%02x",
+		log_debug("zmap", "MAC address of selected gateway %02x:%02x:%02x:%02x:%02x:%02x",
 				  zconf.gw_mac[0], zconf.gw_mac[1], zconf.gw_mac[2],
 				  zconf.gw_mac[3], zconf.gw_mac[4], zconf.gw_mac[5]);
 	}
@@ -384,6 +386,16 @@ int main(int argc, char *argv[])
 	// parse the provided probe and output module s.t. that we can support
 	// other command-line helpers (e.g. probe help)
 	log_trace("zmap", "requested ouput-module: %s\n", args.output_module_arg);
+
+	// we changed output module setup after the original version of ZMap was
+	// made public. After this setup was removed, many of the original
+	// output modules became unnecessary. However, in order to support
+	// backwards compatibility, we still allows this output-modules to be
+	// specified and then map these into new-style output modules and warn
+	// users that they need to be switching to the new module interface.
+
+	// zmap's default behavior is to provide a simple file of the unique IP 
+	// addresses that responded successfully.
 	if (!strcmp(args.output_module_arg, "default")) {
 		log_debug("zmap", "no output module provided. will use csv.");
 		zconf.output_module = get_output_module_by_name("csv");
@@ -417,13 +429,34 @@ int main(int argc, char *argv[])
 				 "future.");
 		zconf.output_module = get_output_module_by_name("redis-packed");
 		if (!zconf.output_module) {
-		  fprintf(stderr, "%s: specified output module (%s) does not exist\n",
-			  CMDLINE_PARSER_PACKAGE, args.output_module_arg);
+			log_fatal("zmap", "%s: specified output module (%s) does not exist\n",
+					CMDLINE_PARSER_PACKAGE, args.output_module_arg);
 		  exit(EXIT_FAILURE);
 		}
 		zconf.raw_output_fields = (char*) "saddr";
 		zconf.filter_duplicates = 1;
 		zconf.filter_unsuccessful = 1;
+		if (args.output_fields_given) {
+			log_fatal("redis", "module does not support user defined "
+					"output fields");
+		}
+
+		if (args.output_filter_given) {
+			log_fatal("redis", "module does not support user defined "
+					"filters.");
+		}
+	} else if (!strcmp(args.output_module_arg, "csvredis"))  {
+		if (args.output_fields_given) {
+			log_fatal("csvredis", "module does not support user defined "
+					"output fields");
+		}
+		// output all available fields to the CSV file
+		zconf.raw_output_fields = (char*) "*";
+		// module does not support filtering
+		if (args.output_filter_given) {
+			log_fatal("csvredis", "module does not support user defined "
+					"filters.");
+		}
 	} else {
 		zconf.output_module = get_output_module_by_name(args.output_module_arg);
 		if (!zconf.output_module) {
@@ -479,10 +512,10 @@ int main(int argc, char *argv[])
 	// the set of fields made available to a user is constructed
 	// of IP header fields + probe module fields + system fields
 	fielddefset_t *fds = &(zconf.fsconf.defs);
-	gen_fielddef_set(fds, (fielddef_t*) &(ip_fields), 4);
+	gen_fielddef_set(fds, (fielddef_t*) &(ip_fields), ip_fields_len);
 	gen_fielddef_set(fds, zconf.probe_module->fields,
 			zconf.probe_module->numfields);
-	gen_fielddef_set(fds, (fielddef_t*) &(sys_fields), 5);
+	gen_fielddef_set(fds, (fielddef_t*) &(sys_fields), sys_fields_len);
 	if (args.list_output_fields_given) {
 		for (int i = 0; i < fds->len; i++) {
 			printf("%-15s %6s: %s\n", fds->fielddefs[i].name,

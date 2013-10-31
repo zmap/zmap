@@ -134,4 +134,3 @@ char *make_ip_str(uint32_t ip)
 	return retv;
 }
 
-
