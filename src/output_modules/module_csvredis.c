@@ -35,6 +35,8 @@ int csvredis_init(struct state_conf *conf, char **fields, int fieldlens)
 		log_fatal("csvredis", "success or repeat not included in fieldset");
 	}
 
+	log_info("csvredis", "output module successfully initialized");
+
 	return EXIT_SUCCESS;
 }
 

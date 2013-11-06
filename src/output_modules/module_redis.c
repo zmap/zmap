@@ -65,6 +65,7 @@ static int redismodule_flush(void)
 {
 	if (redis_lpush((char *)queue_name, buffer,
 			buffer_fill, sizeof(uint32_t))) {
+		printf("redis", "flushing results to redis queue failed");
 		return EXIT_FAILURE;
 	}
 	buffer_fill = 0;
@@ -75,11 +76,6 @@ int redismodule_process(fieldset_t *fs)
 {
 	field_t *f = &(fs->fields[field_index]);
 	buffer[buffer_fill] = (uint32_t) f->value.num;
-	
-	struct in_addr in;
-	in.s_addr = (uint32_t) f->value.num;
-	printf("%s\n", inet_ntoa(in));
-
 	if (++buffer_fill == BUFFER_SIZE) {
 		if (redismodule_flush()) {
 			return EXIT_FAILURE;

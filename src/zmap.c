@@ -229,6 +229,7 @@ static void start_zmap(void)
 				  zconf.gw_mac[3], zconf.gw_mac[4], zconf.gw_mac[5]);
 	}
 	// initialization
+	log_info("zmap", "zmap selected output module: %s", zconf.output_module->name);
 	if (zconf.output_module && zconf.output_module->init) {
 		zconf.output_module->init(&zconf, zconf.output_fields,
 				zconf.output_fields_len);
@@ -431,7 +432,6 @@ int main(int argc, char *argv[])
 		if (!zconf.output_module) {
 			log_fatal("zmap", "%s: specified output module (%s) does not exist\n",
 					CMDLINE_PARSER_PACKAGE, args.output_module_arg);
-		  exit(EXIT_FAILURE);
 		}
 		zconf.raw_output_fields = (char*) "saddr";
 		zconf.filter_duplicates = 1;
@@ -457,6 +457,7 @@ int main(int argc, char *argv[])
 			log_fatal("csvredis", "module does not support user defined "
 					"filters.");
 		}
+		zconf.output_module = get_output_module_by_name("csvredis");
 	} else {
 		zconf.output_module = get_output_module_by_name(args.output_module_arg);
 		if (!zconf.output_module) {
