@@ -78,7 +78,7 @@ static redisContext* redis_connect(char *connstr)
 		c = malloc(sizeof(redisconf_t));
 		assert(c);
 		c->type = T_LOCAL;
-		c->path = "/tmp/redis.sock";
+		c->path = strdup("/tmp/redis.sock");
 	} else {
 		c = redis_parse_connstr(connstr);
 		assert(c);
