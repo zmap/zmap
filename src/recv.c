@@ -184,6 +184,12 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 		if (pcap_setfilter(pc, &bpf) < 0) {
 			log_fatal("recv", "couldn't install filter");
 		}
+		// set pcap_dispatch to not hang if it never receives any packets
+		// this could occur if you ever scan a small number of hosts as
+		// documented in issue #74.
+		if (pcap_setnonblock (pc, 1, errbuf) == -1) {
+			log_fatal("recv", "pcap_setnonblock error:%s", errbuf);
+		}
 	}
 	if (zconf.send_ip_pkts) {
 		struct ethhdr *eth = (struct ethhdr *)fake_eth_hdr;
@@ -211,6 +217,7 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 	if (zconf.max_results == 0) {
 		zconf.max_results = -1;
 	}
+	
 	do {
 		if (zconf.dryrun) {
 			sleep(1);
