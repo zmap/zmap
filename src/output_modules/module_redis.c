@@ -56,7 +56,7 @@ int redismodule_init(struct state_conf *conf, char **fields, int fieldlens)
 		}
 		queue_name = rconf->list_name;
 	} else {
-		queue_name = "zmap_output";
+		queue_name = strdup("zmap_output");
 	}
 	return redis_init(conf->output_args);
 }
