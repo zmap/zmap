@@ -65,7 +65,6 @@ static int redismodule_flush(void)
 {
 	if (redis_lpush((char *)queue_name, buffer,
 			buffer_fill, sizeof(uint32_t))) {
-		printf("redis", "flushing results to redis queue failed");
 		return EXIT_FAILURE;
 	}
 	buffer_fill = 0;
