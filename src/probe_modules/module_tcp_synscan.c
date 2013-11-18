@@ -118,12 +118,11 @@ int synscan_validate_packet(const struct iphdr *ip_hdr, uint32_t len,
 	return 1;
 }
 
-void synscan_process_packet(const u_char *packet,
-		__attribute__((unused)) uint32_t len, fieldset_t *fs)
+void synscan_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs)
 {
 	struct iphdr *ip_hdr = (struct iphdr *)&packet[sizeof(struct ethhdr)];
 	struct tcphdr *tcp = (struct tcphdr*)((char *)ip_hdr 
-					+ (sizeof(struct iphdr)));
+					+ 4*ip_hdr->ihl);
 
 	fs_add_uint64(fs, "sport", (uint64_t) ntohs(tcp->source)); 
 	fs_add_uint64(fs, "dport", (uint64_t) ntohs(tcp->dest));
