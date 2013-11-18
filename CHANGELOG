@@ -3,7 +3,7 @@ Initial public release.
 
 1.0.1	2013-8-17
 BUGFIX 	Issue #4 "Missing module_ssldb? Redis module won't compile."
-	- removed dependencies on ssldb (zakir)
+	- removed dependencies on ssldb
 SUPPORT	Issue #3 "Error after running make"
 	- added documentation that zmap requires 64-bit system
 SUPPORT	Issue #1 "Failure at calloc for 'ip_seen' on KVM VPSs?"
@@ -17,3 +17,43 @@ BUGFIX	Issue #14 "gcc 4.7.2 -Wunprototyped-calls error with recv_run."
 BUGFIX	Issues 21,28 "fixed get_gateway malloc/memset errors"
 BUGFIX  Issue 24 "Makefile does not respect LDFLAGS"
 	- changed = to += for CFLAGS, LDFAGS, and LDLIBS
+
+
+1.1.0	2013-11-18
+FEATURE Updated probe and output module interface that allows arbitrary
+	data to be passed from the probe module (e.g. additional TCP fields)
+	that can then be output as requested.
+
+FEATURE	Replaced simple_file, and redis_file output modules with csv module
+	that allows user controlled output of what fields shoudl be output
+	to a csv file. As well, implemented --list-output-fields that allows
+	users to find what fields are available.	
+
+FEATURE	Added output-filters that allow users to control what types of packets
+	that want output (e.g. classification = "SYNACK" && is_repeat = 0)
+
+FEATURE	Drop root privileges after opening necessary sockets if run as
+	privileged user.
+
+FEATURE	Added paged bitmap for removing duplicate responses so that if small
+	subnets are scanned, large amount of memory is no longer required.
+
+FEATURE	Fast scanning of small subnets. Scanning small subnets no longer
+	requires iterating over the entire IPv4 address space, which allows
+	ZMap-like speed for all network sizes.
+
+FEATURE Scan CIDR blocks from the command-line instead of only through
+	whitelist file (e.g. zmap -p 443 192.168.0.0/16 10.0.0.0/8)
+
+FEATURE Redis output module now allows connecting to arbitrary redis servers
+	and lists from the command-line via output module parameter
+
+FEATURE JSON output module added
+
+FEATURE 32-bit support
+
+FEATURE UDP Packet Support
+
+BUGFIX	Source port in UDP module corrected to use network order instead of
+	host order
+
