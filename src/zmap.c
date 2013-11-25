@@ -339,7 +339,7 @@ int parse_mac(macaddr_t *out, char *in)
 {
 	if (strlen(in) < MAC_LEN*3-1)
 		return 0;
-	char octet[3];
+	char octet[4];
 	octet[2] = '\0';
 	for (int i=0; i < MAC_LEN; i++) {
 		if (i < MAC_LEN-1 && in[i*3+2] != ':') {
