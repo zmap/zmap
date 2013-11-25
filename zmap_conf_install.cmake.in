@@ -1,6 +1,6 @@
 foreach(conf_file ${CONF_FILES})
 	message(STATUS "${conf_file}")
 	if(NOT EXISTS "/etc/zmap/${conf_file}")
-		file(INSTALL "conf/${conf_file}" DESTINATION "/etc/zmap")
+		file(INSTALL "${CMAKE_CURRENT_SOURCE_DIR}/conf/${conf_file}" DESTINATION "/etc/zmap")
 	endif()
 endforeach()

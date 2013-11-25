@@ -75,11 +75,11 @@ add_custom_command(OUTPUT zopt.h
 	)
 
 add_custom_command(OUTPUT lexer.c
-	COMMAND flex -o "${CMAKE_CURRENT_BINARY_DIR}/lexer.c" --header-file="${CMAKE_CURRENT_BINARY_DIR}/lexer.h" lexer.l
+	COMMAND flex -o "${CMAKE_CURRENT_BINARY_DIR}/lexer.c" --header-file="${CMAKE_CURRENT_BINARY_DIR}/lexer.h" "${CMAKE_CURRENT_SOURCE_DIR}/lexer.l"
 	)
 
 add_custom_command(OUTPUT parser.c
-	COMMAND byacc -d -o parser.c parser.y
+	COMMAND byacc -d -o "${CMAKE_CURRENT_BINARY_DIR}/parser.c" "${CMAKE_CURRENT_SOURCE_DIR}/parser.y"
 	)
 
 add_executable(zmap ${SOURCES})
