@@ -14,6 +14,8 @@
 #include <assert.h>
 #include <string.h>
 
+#include <pcap/pcap.h>
+
 #include "../lib/includes.h"
 #include "../lib/logger.h"
 
