@@ -1,5 +1,7 @@
 %{
 #pragma GCC diagnostic ignored "-Wredundant-decls"
+#pragma GCC diagnostic ignored "-Wmissing-noreturn"
+
 #include <string.h>
 #include "parser.h"
 

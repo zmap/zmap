@@ -18,34 +18,44 @@
 #include <errno.h>
 #include <assert.h>
 
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <net/if.h>
-#include <linux/if_packet.h>
-
+#include "../lib/includes.h"
 #include "../lib/logger.h"
 #include "../lib/random.h"
 #include "../lib/blacklist.h"
 
 #include "cyclic.h"
+#include "get_gateway.h"
 #include "state.h"
 #include "probe_modules/packet.h"
 #include "probe_modules/probe_modules.h"
 #include "validate.h"
 
+// OS specific functions called by send_run
+static inline int send_packet(int fd, void *buf, int len);
+static inline int send_run_init(int sock);
 
-// lock to manage access to share send state (e.g. counters and cyclic)
+
+// Include the right implementations
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
+#include "send-bsd.h"
+#else /* LINUX */
+#include "send-linux.h"
+#endif /* __APPLE__ || __FreeBSD__ || __NetBSD__ */
+
+// Lock to manage access to share send state such as counters and 
+// cyclic group
 pthread_mutex_t send_mutex = PTHREAD_MUTEX_INITIALIZER;
-// lock to provide thread safety to the user provided send callback
+
+// Lock to provide thread safety to the user provided send callback
 pthread_mutex_t syncb_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-// globals to handle sending from multiple ip addresses (shared across threads)
+// Globals to handle sending from multiple IP addresses
 static uint16_t num_src_ports;
 static uint32_t num_addrs;
 static in_addr_t srcip_first;
 static in_addr_t srcip_last;
-// offset send addresses according to a random chosen per scan execution
+
+// Offset send addresses according to a random chose per scan execution
 // in order to help prevent cross-scan interference
 static uint32_t srcip_offset;
 
@@ -75,6 +85,8 @@ int send_init(void)
 				zconf.source_ip_first);
 	}
 	srcip_last = inet_addr(zconf.source_ip_last);
+	log_debug("send", "srcip_first: %u", srcip_first);
+	log_debug("send", "srcip_last: %u", srcip_last);
 	if (srcip_last == INADDR_NONE) {
 		log_fatal("send", "invalid end source ip address: `%s'",
 				zconf.source_ip_last);
@@ -132,14 +144,13 @@ int send_init(void)
 	return EXIT_SUCCESS;
 }
 
-int get_socket(void)
+static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
 {
-	int sock = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-	if (sock <= 0) {
-		log_fatal("send", "couldn't create socket. "
-			  "Are you root? Error: %s\n", strerror(errno));
+	if (srcip_first == srcip_last) {
+		return srcip_first;
 	}
-	return sock;
+	return htonl(((ntohl(dst) + srcip_offset + local_offset) 
+			% num_addrs)) + srcip_first;
 }
 
 int get_dryrun_socket(void)
@@ -154,16 +165,6 @@ int get_dryrun_socket(void)
 			  "Error: %s\n", strerror(errno));
 	}
 	return sock;
-
-}
-
-static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
-{
-	if (srcip_first == srcip_last) {
-		return srcip_first;
-	}
-	return htonl(((ntohl(dst) + srcip_offset + local_offset) 
-			% num_addrs)) + srcip_first;
 }
 
 // one sender thread
@@ -171,54 +172,30 @@ int send_run(int sock)
 {
 	log_debug("send", "thread started");
 	pthread_mutex_lock(&send_mutex);
-	
-	struct sockaddr_ll sockaddr;
-	// get source interface index
-	struct ifreq if_idx;
-	memset(&if_idx, 0, sizeof(struct ifreq));
-	if (strlen(zconf.iface) >= IFNAMSIZ) {
-		log_error("send", "device interface name (%s) too long\n",
-				zconf.iface);
-		return -1;
-	}
-	strncpy(if_idx.ifr_name, zconf.iface, IFNAMSIZ-1);
-	if (ioctl(sock, SIOCGIFINDEX, &if_idx) < 0) {
-		perror("SIOCGIFINDEX");
-		return -1;
-	}
-	int ifindex = if_idx.ifr_ifindex;
-	// get source interface mac
-	struct ifreq if_mac;
-	memset(&if_mac, 0, sizeof(struct ifreq));
-	strncpy(if_mac.ifr_name, zconf.iface, IFNAMSIZ-1);
-	if (ioctl(sock, SIOCGIFHWADDR, &if_mac) < 0) {
-		perror("SIOCGIFHWADDR");
-		return -1;
-	}
-	// find source IP address associated with the dev from which we're sending.
-	// while we won't use this address for sending packets, we need the address
-	// to set certain socket options and it's easiest to just use the primary
-	// address the OS believes is associated.
-	struct ifreq if_ip;
-	memset(&if_ip, 0, sizeof(struct ifreq));
-	strncpy(if_ip.ifr_name, zconf.iface, IFNAMSIZ-1);
-	if (ioctl(sock, SIOCGIFADDR, &if_ip) < 0) {
-		perror("SIOCGIFADDR");
-		return -1;
-	}
-	// destination address for the socket
-	memset((void*) &sockaddr, 0, sizeof(struct sockaddr_ll));
-	sockaddr.sll_ifindex = ifindex;
-	sockaddr.sll_halen = ETH_ALEN;
-	memcpy(sockaddr.sll_addr, zconf.gw_mac, ETH_ALEN);
 
+	// Allocate a buffer to hold the outgoing packet
 	char buf[MAX_PACKET_SIZE];
 	memset(buf, 0, MAX_PACKET_SIZE);
-	zconf.probe_module->thread_initialize(buf, 
-					(unsigned char *)if_mac.ifr_hwaddr.sa_data, 
-					zconf.gw_mac, zconf.target_port);	
+
+	// OS specific per-thread init
+	if (send_run_init(sock)) {
+		return -1;
+	}
+
+	// Get the source hardware address, and give it to the probe
+	// module
+	unsigned char hw_mac[ETHER_ADDR_LEN];
+	if (get_iface_hw_addr(zconf.iface, hw_mac)) {
+		log_fatal("send", "Couldn't get hardware address for"
+			  "interface: %s", zconf.iface);
+		return -1;
+	}
+
+	zconf.probe_module->thread_initialize(buf, hw_mac, zconf.gw_mac,
+					      zconf.target_port);
 	pthread_mutex_unlock(&send_mutex);
 
+	
 	// adaptive timing to hit target rate
 	uint32_t count = 0;
 	uint32_t last_count = count;
@@ -287,20 +264,18 @@ int send_run(int sock)
 			if (zconf.dryrun) {
 				zconf.probe_module->print_packet(stdout, buf);
 			} else {
-					int l = zconf.probe_module->packet_length;
-					int rc = sendto(sock, buf + zconf.send_ip_pkts*sizeof(struct ethhdr),
-							l, 0,
-							(struct sockaddr *)&sockaddr,
-							sizeof(struct sockaddr_ll));
-					if (rc < 0) {
-						struct in_addr addr;
-						addr.s_addr = curr;
-						log_debug("send", "sendto failed for %s. %s",
-								  inet_ntoa(addr), strerror(errno));
-						pthread_mutex_lock(&send_mutex);
-						zsend.sendto_failures++;
-						pthread_mutex_unlock(&send_mutex);
-					}
+				int length = zconf.probe_module->packet_length;
+				void *contents = buf + zconf.send_ip_pkts*sizeof(struct ether_header);
+				int rc = send_packet(sock, contents, length);
+				if (rc < 0) {
+					struct in_addr addr;
+					addr.s_addr = curr;
+					log_debug("send", "send_packet failed for %s. %s",
+							  inet_ntoa(addr), strerror(errno));
+					pthread_mutex_lock(&send_mutex);
+					zsend.sendto_failures++;
+					pthread_mutex_unlock(&send_mutex);
+				}
 			}
 		}
 	}

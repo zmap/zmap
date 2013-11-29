@@ -11,24 +11,12 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <assert.h>
 
 #include <pcap.h>
 #include <pcap/pcap.h>
 
-#include <netinet/tcp.h>
-#include <netinet/ip_icmp.h>
-#include <netinet/udp.h>
-#include <netinet/ip.h>
-#include <netinet/in.h>
-
-#include <linux/if_ether.h>
-#include <arpa/inet.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <net/if.h>
-#include <assert.h>
-
+#include "../lib/includes.h"
 #include "../lib/logger.h"
 #include "../lib/pbm.h"
 
@@ -65,21 +53,21 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 	// length of entire packet captured by libpcap
 	uint32_t buflen = (uint32_t) p->caplen;
 
-	if ((sizeof(struct iphdr) + (zconf.send_ip_pkts ? 0 : sizeof(struct ethhdr))) > buflen) {
+	if ((sizeof(struct ip) + (zconf.send_ip_pkts ? 0 : sizeof(struct ether_header))) > buflen) {
 		// buffer not large enough to contain ethernet
 		// and ip headers. further action would overrun buf
 		return;
 	}
-	struct iphdr *ip_hdr = (struct iphdr *)&bytes[(zconf.send_ip_pkts ? 0 : sizeof(struct ethhdr))];
+	struct ip *ip_hdr = (struct ip *) &bytes[(zconf.send_ip_pkts ? 0 : sizeof(struct ether_header))];
 
-	uint32_t src_ip = ip_hdr->saddr;
+	uint32_t src_ip = ip_hdr->ip_src.s_addr;
 
 	uint32_t validation[VALIDATE_BYTES/sizeof(uint8_t)];
 	// TODO: for TTL exceeded messages, ip_hdr->saddr is going to be different
 	// and we must calculate off potential payload message instead
-	validate_gen(ip_hdr->daddr, ip_hdr->saddr, (uint8_t *)validation);
+	validate_gen(ip_hdr->ip_dst.s_addr, ip_hdr->ip_src.s_addr, (uint8_t *) validation);
 
-	if (!zconf.probe_module->validate_packet(ip_hdr, buflen - (zconf.send_ip_pkts ? 0 : sizeof(struct ethhdr)),
+	if (!zconf.probe_module->validate_packet(ip_hdr, buflen - (zconf.send_ip_pkts ? 0 : sizeof(struct ether_header)),
 				&src_ip, validation)) {
 		return;
 	}
@@ -97,7 +85,7 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 		if (buflen > sizeof(fake_eth_hdr)) {
 			buflen = sizeof(fake_eth_hdr);
 		}
-		memcpy(&fake_eth_hdr[sizeof(struct ethhdr)], bytes, buflen);
+		memcpy(&fake_eth_hdr[sizeof(struct ether_header)], bytes, buflen);
 		bytes = fake_eth_hdr;
 	}
 	zconf.probe_module->process_packet(bytes, buflen, fs);
@@ -192,9 +180,9 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 		}
 	}
 	if (zconf.send_ip_pkts) {
-		struct ethhdr *eth = (struct ethhdr *)fake_eth_hdr;
+		struct ether_header *eth = (struct ether_header *) fake_eth_hdr;
 		memset(fake_eth_hdr, 0, sizeof(fake_eth_hdr));
-		eth->h_proto = htons(ETH_P_IP);
+		eth->ether_type = htons(ETHERTYPE_IP);
 	}
 	// initialize paged bitmap
 	seen = pbm_init();

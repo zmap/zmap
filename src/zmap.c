@@ -15,20 +15,19 @@
 #include <assert.h>
 #include <sched.h>
 #include <errno.h>
-
 #include <pwd.h>
-#include <net/if.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/types.h>
 
 #include <pcap/pcap.h>
 
 #include <pthread.h>
 
+#include "../lib/includes.h"
 #include "../lib/logger.h"
 #include "../lib/random.h"
+
+#ifndef __linux__
+#include <mach/thread_act.h>
+#endif
 
 #include "zopt.h"
 #include "send.h"
@@ -75,6 +74,30 @@ static void split_string(char* in, int *len, char***results)
         *len = retvlen;
 }
 
+//#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(__APPLE__)
+static void set_cpu(void)
+{
+	pthread_mutex_lock(&cpu_affinity_mutex);
+	static int core=0;
+	int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+
+	mach_port_t tid = pthread_mach_thread_np(pthread_self());
+	struct thread_affinity_policy policy;
+	policy.affinity_tag = core;
+	kern_return_t ret = thread_policy_set(tid,THREAD_AFFINITY_POLICY,
+					(thread_policy_t) &policy,THREAD_AFFINITY_POLICY_COUNT);
+	if (ret != KERN_SUCCESS) {
+		log_error("zmap", "can't set thread CPU affinity");
+	}
+	log_trace("zmap", "set thread %u affinity to core %d",
+			pthread_self(), core);
+	core = (core + 1) % num_cores;
+
+	pthread_mutex_unlock(&cpu_affinity_mutex);
+}
+
+#else
 static void set_cpu(void)
 {
 	pthread_mutex_lock(&cpu_affinity_mutex);
@@ -83,6 +106,7 @@ static void set_cpu(void)
 	cpu_set_t cpuset;	
 	CPU_ZERO(&cpuset);
 	CPU_SET(core, &cpuset);
+
 	if (pthread_setaffinity_np(pthread_self(),
 				sizeof(cpu_set_t), &cpuset) != 0) {
 		log_error("zmap", "can't set thread CPU affinity");
@@ -91,7 +115,8 @@ static void set_cpu(void)
 			pthread_self(), core);
 	core = (core + 1) % num_cores;
 	pthread_mutex_unlock(&cpu_affinity_mutex);
-}	
+}
+#endif
 
 static void* start_send(void *arg)
 {
@@ -186,16 +211,10 @@ static void start_zmap(void)
 {
 	log_info("zmap", "started");
 	if (zconf.iface == NULL) {
-		char errbuf[PCAP_ERRBUF_SIZE];
-		char *iface = pcap_lookupdev(errbuf);
-		if (iface == NULL) {
-			log_fatal("zmap", "could not detect default network interface "
-					"(e.g. eth0). Try running as root or setting"
-					" interface using -i flag.");
-		}
+		zconf.iface = get_default_iface();
+		assert(zconf.iface);
 		log_debug("zmap", "no interface provided. will use default"
-				" interface (%s).", iface);
-		zconf.iface = iface;
+				" interface (%s).", zconf.iface);
 	}
 	if (zconf.source_ip_first == NULL) {
 		struct in_addr default_ip;
@@ -211,14 +230,14 @@ static void start_zmap(void)
 	}
 	if (!zconf.gw_mac_set) {
 		struct in_addr gw_ip;
-		char iface[IF_NAMESIZE];
-		if (get_default_gw(&gw_ip, iface) < 0) {
+		if (get_default_gw(&gw_ip, zconf.iface) < 0) {
 			log_fatal("zmap", "could not detect default gateway address for %s."
 					" Try setting default gateway mac address (-G).",
 					zconf.iface);
 		}
-		log_debug("zmap", "found gateway IP %s on %s", inet_ntoa(gw_ip), iface); 
-		if (get_hw_addr(&gw_ip, iface, zconf.gw_mac) < 0) {
+		log_debug("zmap", "found gateway IP %s on %s", inet_ntoa(gw_ip), zconf.iface); 
+		
+		if (get_hw_addr(&gw_ip, zconf.gw_mac)) {
 			log_fatal("zmap", "could not detect GW MAC address for %s on %s."
 					" Try setting default gateway mac address (-G).",
 					inet_ntoa(gw_ip), zconf.iface);
@@ -334,7 +353,7 @@ static int file_exists(char *name)
 	return 1;
 }
 
-#define MAC_LEN IFHWADDRLEN
+#define MAC_LEN ETHER_ADDR_LEN
 int parse_mac(macaddr_t *out, char *in)
 {
 	if (strlen(in) < MAC_LEN*3-1)
@@ -503,7 +522,7 @@ int main(int argc, char *argv[])
 	if (args.vpn_given) {
 		zconf.send_ip_pkts = 1;
 		zconf.gw_mac_set = 1;
-		memset(zconf.gw_mac, 0, IFHWADDRLEN);
+		memset(zconf.gw_mac, 0, MAC_LEN);
 	}
 	if (cmdline_parser_required(&args, CMDLINE_PARSER_PACKAGE) != 0) {
 		exit(EXIT_FAILURE);

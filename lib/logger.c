@@ -34,7 +34,6 @@ static int LogLogVA(enum LogLevel level, const char *loggerName,
 	}
 	if (level <= log_output_level) {
 		const char *levelName = log_level_name[level];
-		assert(level < sizeof(log_level_name));
 
 		struct timeval now;
 		char timestamp[256];
@@ -43,7 +42,7 @@ static int LogLogVA(enum LogLevel level, const char *loggerName,
 		struct tm* ptm = localtime(&sec);
 		strftime(timestamp, 20, "%b %d %H:%M:%S", ptm);
 		fprintf(log_output_stream, "%s.%03ld [%s] ", 
-				timestamp, now.tv_usec/1000, levelName);
+				timestamp, (long) now.tv_usec/1000, levelName);
 		if (loggerName) {
 			fprintf(log_output_stream, "%s: ", loggerName);
 		}

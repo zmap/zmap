@@ -1,5 +1,5 @@
 #include "xalloc.h"
-#include "../lib/logger.h"
+#include "logger.h"
 
 #include <stdlib.h>
 

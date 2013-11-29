@@ -44,11 +44,9 @@
 #include <string.h>
 #include <math.h>
 
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-
 #include <gmp.h>
+
+#include "../lib/includes.h"
 
 #include "../lib/logger.h"
 #include "../lib/blacklist.h"
