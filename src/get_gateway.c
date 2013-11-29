@@ -17,6 +17,8 @@
 #include "../lib/includes.h"
 #include "../lib/logger.h"
 
+#include <sys/ioctl.h>
+
 #define ROUNDUP(a) ((a) > 0 ? (1 + (((a) - 1) | (sizeof(int) - 1))) : sizeof(int))
 
 #define UNUSED __attribute__((unused))
@@ -31,7 +33,7 @@ int get_hw_addr(struct in_addr *gw_ip, unsigned char *hw_mac)
 	}
 
 	if ((arp = arp_open()) == NULL) {
-		log_fatal("get_hw_addr", "failed to open arp table");
+		log_error("get_hw_addr", "failed to open arp table");
 		return EXIT_FAILURE;
 	}
 	
@@ -42,7 +44,8 @@ int get_hw_addr(struct in_addr *gw_ip, unsigned char *hw_mac)
 	entry.arp_pa.addr_ip = gw_ip->s_addr;
 	
 	if (arp_get(arp, &entry) < 0) {
-		log_fatal("get_hw_addr", "failed to fetch arp entry");
+		log_debug("get_hw_addr", "failed to fetch arp entry");
+		return EXIT_FAILURE;
 	} else {
 		log_debug("get_hw_addr", "found ip %s at hw_addr %s",
 			addr_ntoa(&entry.arp_pa),
@@ -51,23 +54,6 @@ int get_hw_addr(struct in_addr *gw_ip, unsigned char *hw_mac)
 	}
 	arp_close(arp);
 	return EXIT_SUCCESS;
-}
-
-int get_iface_hw_addr(char *iface, unsigned char *hw_mac)
-{
-	eth_t *e = eth_open(iface);
-	if (e) {
-		eth_addr_t eth_addr;
-		int res = eth_get(e, &eth_addr);
-		log_debug("gateway", "res: %d", res);
-		if (res == 0) {
-			memcpy(hw_mac, eth_addr.data, ETHER_ADDR_LEN);
-			return EXIT_SUCCESS;
-		}
-	} else {
-		fprintf(stderr, "%s\n", "#wat");
-	}
-	return EXIT_FAILURE;
 }
 
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
@@ -99,6 +85,23 @@ int get_iface_ip(char *iface, struct in_addr *ip)
     log_fatal("get-iface-ip", "specified interface does not"
                     " exist or have an IPv4 address"); 
     return EXIT_FAILURE;
+}
+
+int get_iface_hw_addr(char *iface, unsigned char *hw_mac)
+{
+        eth_t *e = eth_open(iface);
+        if (e) {
+                eth_addr_t eth_addr;
+                int res = eth_get(e, &eth_addr);
+                log_debug("gateway", "res: %d", res);
+                if (res == 0) {
+                        memcpy(hw_mac, eth_addr.data, ETHER_ADDR_LEN);
+                        return EXIT_SUCCESS;
+                }
+        } else {
+                fprintf(stderr, "%s\n", "#wat");
+        }
+        return EXIT_FAILURE;
 }
 
 int _get_default_gw(struct in_addr *gw, char **iface)
@@ -188,6 +191,7 @@ int get_default_gw(struct in_addr *gw, char *iface)
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 #include <arpa/inet.h>
+#include <pcap/pcap.h>
 
 char *get_default_iface(void)
 {
@@ -340,6 +344,26 @@ int get_iface_ip(char *iface, struct in_addr *ip)
 	}
 	ip->s_addr =  ((struct sockaddr_in*) &ifr.ifr_addr)->sin_addr.s_addr;
 	close(sock);
+	return EXIT_SUCCESS;
+}
+
+int get_iface_hw_addr(char *iface, unsigned char *hw_mac)
+{
+	int s;
+	struct ifreq buffer;
+
+	// Load the hwaddr from a dummy socket
+	s = socket(PF_INET, SOCK_DGRAM, 0);
+	if (s < 0) {
+		log_error("get_iface_hw_addr", "Unable to open socket: %s",
+			  strerror(errno));
+		return EXIT_FAILURE;
+	}
+	memset(&buffer, 0, sizeof(buffer));
+	strcpy(buffer.ifr_name, iface);
+	ioctl(s, SIOCGIFHWADDR, &buffer);
+	close(s);
+	memcpy(hw_mac, buffer.ifr_hwaddr.sa_data, 6);
 	return EXIT_SUCCESS;
 }
 
