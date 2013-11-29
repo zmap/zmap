@@ -10,11 +10,20 @@ ZMap requires GMP, a free library for arbitrary precision arithmetic,
 gengetopt, and libpcap. These packages can be installed on
 Debian-based systems by running:
 
-  sudo apt-get install libgmp3-dev gengetopt libpcap-dev flex byacc
+  sudo apt-get install libgmp3-dev gengetopt libpcap-dev flex byacc libdumbnet-dev
 
 or on RHEL- and Fedora-based systems by running:
 
-  sudo yum install gmp gmp-devel gengetopt libpcap-devel flex byacc
+  sudo yum install gmp gmp-devel gengetopt libpcap-devel flex byacc libdnet-devel
+
+
+or on Mac OS systems (brew):
+
+  brew install cmake gmp gengetopt json-c byacc libdnet
+  
+or
+
+  sudo port install gmp libdnet byacc flex gengetopt cmake
 
 Once these prerequisites have been installed, ZMap can be installed
 by running:
