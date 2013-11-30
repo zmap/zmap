@@ -17,6 +17,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netdb.h>
+
+
 #include "constraint.h"
 #include "logger.h"
 
@@ -51,6 +54,17 @@ void whitelist_prefix(char *ip, int prefix_len)
 	constraint_set(constraint, ntohl(inet_addr(ip)), prefix_len, ADDR_ALLOWED);
 }
 
+static void _add_constraint(struct in_addr addr, int prefix_len, char *ip, int value)
+{
+	constraint_set(constraint, ntohl(addr.s_addr), prefix_len, value);
+	const char *name;
+	if (value == ADDR_DISALLOWED)
+		name = "blacklisting";
+	else
+		name = "whitelisting";
+	log_trace(name, "%s %s/%i", name, ip, prefix_len);
+}
+
 static int init_from_string(char *ip, int value)
 {
 	int prefix_len = 32;
@@ -67,19 +81,35 @@ static int init_from_string(char *ip, int value)
 		}
 	}
 	struct in_addr addr;
+	int ret = -1;
 	if (inet_aton(ip, &addr) == 0) {
-		log_error("constraint", "'%s' is not a valid IP address", ip);
-		return -1;
+		// Not an IP and not a CIDR block, try dns resolution
+		struct addrinfo hint, *res;
+		memset(&hint, 0, sizeof(hint));
+		hint.ai_family = PF_INET;
+		int r = getaddrinfo(ip, NULL, &hint, &res);
+		if (r) {
+			log_error("constraint", "'%s' is not a valid IP "
+				  "address or hostname", ip);
+			return -1;
+		}
+		// Got some addrinfo, let's see what happens
+		for (struct addrinfo *aip = res; aip; aip = aip->ai_next) {
+			if (aip->ai_family != AF_INET) {
+				continue;
+			}
+			struct sockaddr_in *sa = (struct sockaddr_in *) aip->ai_addr;
+			memcpy(&addr, &sa->sin_addr, sizeof(addr));
+			log_debug("constraint", "Got %s by hostname\n",
+				  inet_ntoa(addr));
+			ret = 0;
+			_add_constraint(addr, prefix_len, ip, value);
+		}
+	} else {
+		_add_constraint(addr, prefix_len, ip, value);
+		return 0;
 	}
-	constraint_set(constraint, ntohl(addr.s_addr), prefix_len, value);
-	const char *name;
-	if (value == ADDR_DISALLOWED)
-		name = "blacklisting";
-	else
-		name = "whitelisting";
-	log_trace(name, "%s %s/%i",
-			  name, ip, prefix_len);
-	return 0;
+	return ret;
 }
 
 
