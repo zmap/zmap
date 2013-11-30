@@ -100,8 +100,6 @@ int get_iface_hw_addr(char *iface, unsigned char *hw_mac)
                         memcpy(hw_mac, eth_addr.data, ETHER_ADDR_LEN);
                         return EXIT_SUCCESS;
                 }
-        } else {
-                fprintf(stderr, "%s\n", "#wat");
         }
         return EXIT_FAILURE;
 }
