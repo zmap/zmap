@@ -7,46 +7,50 @@
 #include "logger.h"
 
 #define NUM_VALUES 0xFFFFFFFF
-#define PAGE_SIZE 0xFFFF
-#define NUM_PAGES (NUM_VALUES / PAGE_SIZE)
-#define SIZE (8*sizeof(uint64_t))
+#define PAGE_SIZE_IN_BITS 0xFFFF
+#define PAGE_SIZE_IN_BYTES (PAGE_SIZE_IN_BITS/8)
+#define NUM_PAGES (NUM_VALUES / PAGE_SIZE_IN_BITS)
 
-uint64_t** pbm_init(void)
+uint8_t** pbm_init(void)
 {
-	uint64_t** retv = calloc(NUM_PAGES, sizeof(void*));
+	uint8_t** retv = calloc(NUM_PAGES, sizeof(void*));
 	if (!retv) {
 		log_fatal("pbm", "unable to allocate memory for base page table");
 	}
 	return retv;
 }
 
-static int bm_check(uint64_t *bm, uint32_t v)
+static inline int bm_check(uint8_t *bm, uint16_t v)
 {
-	return bm[v/SIZE] & (1<< (v % SIZE));
+	uint8_t page_idx = (uint8_t) (v >> 3);
+	uint8_t bit_idx = (uint8_t) (v & 0x07);
+	return bm[page_idx] & (1 << bit_idx);
 }
 
-static void bm_set(uint64_t *bm, uint32_t v) 
+static inline void bm_set(uint8_t *bm, uint16_t v) 
 {
-	bm[v/SIZE] |= (1 << (v % SIZE));
+	uint8_t page_idx = (uint8_t) (v >> 3);
+	uint8_t bit_idx = (uint8_t) (v & 0x07);
+	bm[page_idx] |= (1 << bit_idx);
 }
 
-int pbm_check(uint64_t **b, uint32_t v)
+int pbm_check(uint8_t **b, uint32_t v)
 {
 	uint32_t top = v >> 16;
-	uint32_t bottom = v & PAGE_SIZE;
+	uint32_t bottom = v & PAGE_SIZE_IN_BITS;
 	return b[top] && bm_check(b[top], bottom);
 }
 
-void pbm_set(uint64_t **b, uint32_t v)
+void pbm_set(uint8_t **b, uint32_t v)
 {
-	uint32_t top = v >> 16;
-	uint32_t bottom = v & PAGE_SIZE;
+	uint16_t top = (uint16_t) (v >> 16);
+	uint16_t bottom = (uint16_t) (v & PAGE_SIZE_IN_BITS);
 	if (!b[top]) {
-		uint64_t *bm = malloc(PAGE_SIZE/8);
+		uint8_t *bm = malloc(PAGE_SIZE_IN_BYTES);
 		if (!bm) {
 			log_fatal("bpm", "unable to allocate memory for new bitmap page");
 		}
-		memset(bm, 0, PAGE_SIZE/8);
+		memset(bm, 0, PAGE_SIZE_IN_BYTES);
 		b[top] = bm;
 	}
 	bm_set(b[top], bottom);
