@@ -34,7 +34,7 @@ static uint32_t num_src_ports;
 static pcap_t *pc = NULL;
 
 // bitmap of observed IP addresses
-static uint64_t **seen = NULL;
+static uint8_t **seen = NULL;
 
 static u_char fake_eth_hdr[65535];
 
