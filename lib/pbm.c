@@ -22,14 +22,14 @@ uint8_t** pbm_init(void)
 
 static inline int bm_check(uint8_t *bm, uint16_t v)
 {
-	uint16_t page_idx = (uint8_t) (v >> 3);
+	uint16_t page_idx = (v >> 3);
 	uint8_t bit_idx = (uint8_t) (v & 0x07);
 	return bm[page_idx] & (1 << bit_idx);
 }
 
 static inline void bm_set(uint8_t *bm, uint16_t v) 
 {
-	uint16_t page_idx = (uint8_t) (v >> 3);
+	uint16_t page_idx = (v >> 3);
 	uint8_t bit_idx = (uint8_t) (v & 0x07);
 	bm[page_idx] |= (1 << bit_idx);
 }
