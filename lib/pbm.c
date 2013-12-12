@@ -7,9 +7,10 @@
 #include "logger.h"
 
 #define NUM_VALUES 0xFFFFFFFF
-#define PAGE_SIZE_IN_BITS 0xFFFF
+#define PAGE_SIZE_IN_BITS 0x10000
 #define PAGE_SIZE_IN_BYTES (PAGE_SIZE_IN_BITS/8)
-#define NUM_PAGES (NUM_VALUES / PAGE_SIZE_IN_BITS)
+#define NUM_PAGES 0x10000
+#define PAGE_MASK 0xFFFF
 
 uint8_t** pbm_init(void)
 {
@@ -44,7 +45,7 @@ int pbm_check(uint8_t **b, uint32_t v)
 void pbm_set(uint8_t **b, uint32_t v)
 {
 	uint16_t top = (uint16_t) (v >> 16);
-	uint16_t bottom = (uint16_t) (v & PAGE_SIZE_IN_BITS);
+	uint16_t bottom = (uint16_t) (v & PAGE_MASK);
 	if (!b[top]) {
 		uint8_t *bm = malloc(PAGE_SIZE_IN_BYTES);
 		if (!bm) {
