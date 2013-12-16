@@ -57,3 +57,7 @@ FEATURE UDP Packet Support
 BUGFIX	Source port in UDP module corrected to use network order instead of
 	host order
 
+1.1.1	2013-12-16
+BUGFIX	Fixed bit-map, which was incorrectly deduplicating responses
+
+BUGFIX	CMake correctly installs files into /etc/zmap
