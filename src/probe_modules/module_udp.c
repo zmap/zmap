@@ -23,10 +23,10 @@
 #define MAX_UDP_PAYLOAD_LEN 1472
 #define UNUSED __attribute__((unused))
 
-char *udp_send_msg = NULL;
-int udp_send_msg_len = 0;
+static char *udp_send_msg = NULL;
+static int udp_send_msg_len = 0;
 
-const char *udp_send_msg_default = "GET / HTTP/1.1\r\nHost: www\r\n\r\n"; 
+static const char *udp_send_msg_default = "GET / HTTP/1.1\r\nHost: www\r\n\r\n"; 
 
 const char *udp_unreach_strings[] = {
 	"network unreachable",
@@ -51,7 +51,12 @@ static int num_ports;
 
 probe_module_t module_udp;
 
-int udp_global_initialize(struct state_conf *conf) {
+void udp_set_num_ports(int x)
+{
+	num_ports = x;
+}
+
+static int udp_global_initialize(struct state_conf *conf) {
 	char *args, *c;
 	int i;
 	unsigned int n;
@@ -73,7 +78,8 @@ int udp_global_initialize(struct state_conf *conf) {
 	if (! c) {
 		free(args);
 		free(udp_send_msg);
-		log_fatal("udp", "unknown UDP probe specification (expected file:/path or text:STRING or hex:01020304)");
+		log_fatal("udp", "unknown UDP probe specification (expected "
+				"file:/path or text:STRING or hex:01020304)");
 		exit(1);
 	}
 
@@ -141,9 +147,12 @@ int udp_global_initialize(struct state_conf *conf) {
 }
 
 int udp_global_cleanup(__attribute__((unused)) struct state_conf *zconf,
-					   __attribute__((unused)) struct state_send *zsend,
-					   __attribute__((unused)) struct state_recv *zrecv) {
-	if (udp_send_msg) free(udp_send_msg);
+		__attribute__((unused)) struct state_send *zsend,
+		__attribute__((unused)) struct state_recv *zrecv)
+{
+	if (udp_send_msg) {
+		free(udp_send_msg);
+	}
 	udp_send_msg = NULL;
 	return EXIT_SUCCESS;
 }
@@ -178,7 +187,8 @@ int udp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 {
 	struct ether_header *eth_header = (struct ether_header *) buf;
 	struct ip *ip_header = (struct ip*) (&eth_header[1]);
-	struct udphdr *udp_header = (struct udphdr*) (&ip_header[1]);
+	struct udphdr *udp_header= (struct udphdr *) &ip_header[1];
+	//struct = (struct udphdr*) (&ip_header[1]);
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
@@ -232,7 +242,8 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 		fs_add_uint64(fs, "icmp_type", icmp->icmp_type);
 		fs_add_uint64(fs, "icmp_code", icmp->icmp_code);
 		if (icmp->icmp_code <= ICMP_UNREACH_PRECEDENCE_CUTOFF) {
-			fs_add_string(fs, "icmp_unreach_str", (char *) udp_unreach_strings[icmp->icmp_code], 0);
+			fs_add_string(fs, "icmp_unreach_str", 
+				(char *) udp_unreach_strings[icmp->icmp_code], 0);
 		} else {
 			fs_add_string(fs, "icmp_unreach_str", (char *) "unknown", 0);
 		}
