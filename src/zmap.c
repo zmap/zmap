@@ -48,31 +48,82 @@ pthread_mutex_t recv_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 // of fields that the user wants output 
 static void split_string(char* in, int *len, char***results)
 {
-        char** fields = calloc(MAX_FIELDS, sizeof(char*));
-        memset(fields, 0, MAX_FIELDS*sizeof(fields));
-        int retvlen = 0;
-        char *currloc = in; 
-        // parse csv into a set of strings
-        while (1) {
-                size_t len = strcspn(currloc, ", ");    
-                if (len == 0) {
-                        currloc++;
-                } else {
-                        char *new = malloc(len+1);
+	char** fields = calloc(MAX_FIELDS, sizeof(char*));
+	memset(fields, 0, MAX_FIELDS*sizeof(fields));
+	int retvlen = 0;
+	char *currloc = in; 
+	// parse csv into a set of strings
+	while (1) {
+		size_t len = strcspn(currloc, ", ");    
+		if (len == 0) {
+			currloc++;
+		} else {
+			char *new = malloc(len+1);
 			assert(new);
-                        strncpy(new, currloc, len);
-                        new[len] = '\0';             
-                        fields[retvlen++] = new;
+			strncpy(new, currloc, len);
+			new[len] = '\0';	     
+			fields[retvlen++] = new;
 			assert(fields[retvlen-1]);
-                }   
+		}   
 		if (len == strlen(currloc)) {
 			break;
 		}
-                currloc += len;
-        }
-        *results = fields;
-        *len = retvlen;
+		currloc += len;
+	}
+	*results = fields;
+	*len = retvlen;
 }
+
+// print a string using w length long lines
+// attempting to break on spaces.
+void fprintw(FILE *f, char *s, size_t w)
+{
+	if (strlen(s) <= w) {
+		fprintf(f, "%s", s); 
+		return;
+	}   
+	// process each line individually in order to
+	// respect existing line breaks in string.
+	char *news = strdup(s);
+	char *pch = strtok(news, "\n");
+	while (pch) {
+		if (strlen(pch) <= w) {
+			printf("strlen is less than w\n");
+			printf("%s\n", pch);
+			pch = strtok(NULL, "\n");
+			continue;
+		}   
+		char *t = pch;
+		while (strlen(t)) {
+			size_t numchars = 0; //number of chars to print
+			char *tmp = t;
+			while (1) {
+				size_t new = strcspn(tmp, " ") + 1;
+				if (new == strlen(tmp) || new > w) {
+					// there are no spaces in the string, so, just 
+					// print the entire thing on one line;
+					numchars += new;
+					break;
+				} else if (numchars + new > w) {
+					// if we added any more, we'd be over w chars so
+					// time to print the line and move on to the next.
+					break;
+				} else {
+					tmp += (size_t) new;
+					numchars += new;
+				}   
+			}   
+			fprintf(f, "%.*s\n", (int) numchars, t); 
+			t += (size_t) numchars;
+			if (t > pch + (size_t)strlen(pch)) {
+				break;
+			}   
+		}   
+		pch = strtok(NULL, "\n");
+	}   
+	free(news);
+}
+
 
 //#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
 #if defined(__APPLE__)
@@ -424,7 +475,7 @@ int main(int argc, char *argv[])
 		zconf.filter_unsuccessful = 1;
 	} else if (!strcmp(args.output_module_arg, "simple_file")) {
 		log_warn("zmap", "the simple_file output interface has been deprecated and "
-                                 "will be removed in the future. Users should use the csv "
+				 "will be removed in the future. Users should use the csv "
 				 "output module. Newer scan options such as output-fields "
 				 "are not supported with this output module."); 
 		zconf.output_module = get_output_module_by_name("csv");
@@ -433,7 +484,7 @@ int main(int argc, char *argv[])
 		zconf.filter_unsuccessful = 1;
 	} else if (!strcmp(args.output_module_arg, "extended_file")) {
 		log_warn("zmap", "the extended_file output interface has been deprecated and "
-                                 "will be removed in the future. Users should use the csv "
+				 "will be removed in the future. Users should use the csv "
 				 "output module. Newer scan options such as output-fields "
 				 "are not supported with this output module."); 
 		zconf.output_module = get_output_module_by_name("csv");
@@ -444,7 +495,7 @@ int main(int argc, char *argv[])
 		zconf.filter_duplicates = 0;
 	} else if (!strcmp(args.output_module_arg, "redis")) {
 		log_warn("zmap", "the redis output interface has been deprecated and "
-                                 "will be removed in the future. Users should "
+				 "will be removed in the future. Users should "
 				 "either use redis-packed or redis-json in the "
 				 "future.");
 		zconf.output_module = get_output_module_by_name("redis-packed");
@@ -493,15 +544,15 @@ int main(int argc, char *argv[])
 	}
 	if (args.help_given) {
 		cmdline_parser_print_help();
-		printf("\nselected probe-module (%s) help\n", zconf.probe_module->name);
+		printf("\nProbe-module (%s) Help:\n", zconf.probe_module->name);
 		if (zconf.probe_module->helptext) {
-			printf("%s\n", zconf.probe_module->helptext);
+			fprintw(stdout, (char*) zconf.probe_module->helptext, 80);
 		} else {
 			printf("no help text available\n");
 		}
-		printf("\nselected output-module (%s) help\n", zconf.output_module->name);
+		printf("\nOutput-module (%s) Help:\n", zconf.output_module->name);
 		if (zconf.output_module->helptext) {
-			printf("%s\n", zconf.output_module->helptext);
+			fprintw(stdout, (char*) zconf.output_module->helptext, 80);
 		} else {
 			printf("no help text available\n");
 		}
