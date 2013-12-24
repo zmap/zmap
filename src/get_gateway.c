@@ -25,6 +25,7 @@
 
 #define UNUSED __attribute__((unused))
 
+/*
 int get_hw_addr(struct in_addr *gw_ip, unsigned char *hw_mac)
 {
 	arp_t *arp;
@@ -57,6 +58,7 @@ int get_hw_addr(struct in_addr *gw_ip, unsigned char *hw_mac)
 	arp_close(arp);
 	return EXIT_SUCCESS;
 }
+*/
 
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
 
@@ -266,6 +268,83 @@ int send_nl_req(uint16_t msg_type, uint32_t seq,
 	}
 	free(nlmsg);
 	return sock;
+}
+
+int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
+{
+	char buf[8192];
+	struct ndmsg req;
+	struct nlmsghdr *nlhdr;
+
+	if (!gw_ip || !hw_mac) {
+		return -1;
+	}
+	// Send RTM_GETNEIGH request
+	req.ndm_family = AF_INET;
+	req.ndm_ifindex = if_nametoindex(iface);
+	req.ndm_state = NUD_REACHABLE;
+	req.ndm_type = NDA_LLADDR;
+
+	int sock = send_nl_req(RTM_GETNEIGH, 1, &req, sizeof(req));
+
+	// Read responses
+	unsigned nl_len = read_nl_sock(sock, buf, sizeof(buf));
+	if (nl_len <= 0) {
+		return -1;
+	}
+	// Parse responses
+	nlhdr = (struct nlmsghdr *)buf;
+	while (NLMSG_OK(nlhdr, nl_len)) {
+		struct rtattr *rt_attr;
+		struct rtmsg *rt_msg;
+		int rt_len;
+		unsigned char mac[6];
+		struct in_addr dst_ip;
+		int correct_ip = 0;
+
+		rt_msg = (struct rtmsg *) NLMSG_DATA(nlhdr);
+
+		if ((rt_msg->rtm_family != AF_INET)) {
+			return -1;
+		}
+
+		rt_attr = (struct rtattr *) RTM_RTA(rt_msg);
+		rt_len = RTM_PAYLOAD(nlhdr);
+		while (RTA_OK(rt_attr, rt_len)) {
+			switch (rt_attr->rta_type) {
+			case NDA_LLADDR:
+				if (RTA_PAYLOAD(rt_attr) != IFHWADDRLEN) {
+					// could be using a VPN
+					log_fatal("get_gateway", "Unexpected hardware address length (%d).\n\n" \
+						"    If you are using a VPN, supply the --vpn flag (and provide an interface via -i)",
+						RTA_PAYLOAD(rt_attr));
+					exit(1);
+				}
+				memcpy(mac, RTA_DATA(rt_attr), IFHWADDRLEN);
+				break;
+			case NDA_DST:
+				if (RTA_PAYLOAD(rt_attr) != sizeof(dst_ip)) {
+					// could be using a VPN
+					log_fatal("get_gateway", "Unexpected IP address length (%d).\n" \
+						"    If you are using a VPN, supply the --vpn flag (and provide an interface via -i)",
+						RTA_PAYLOAD(rt_attr));
+					exit(1);
+				}
+				memcpy(&dst_ip, RTA_DATA(rt_attr), sizeof(dst_ip));
+				if (memcmp(&dst_ip, gw_ip, sizeof(dst_ip)) == 0) {
+					correct_ip = 1;
+				}
+				break;
+			}
+			rt_attr = RTA_NEXT(rt_attr, rt_len);
+		}
+		if (correct_ip) {
+			memcpy(hw_mac, mac, IFHWADDRLEN);
+			return 0;
+		}
+		nlhdr = NLMSG_NEXT(nlhdr, nl_len);	
+	}
+	return -1;	
 }
 
 // gw and iface[IF_NAMESIZE] MUST be allocated

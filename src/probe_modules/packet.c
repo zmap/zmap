@@ -8,6 +8,13 @@
 
 #include "packet.h"
 
+#ifndef __FAVOR_BSD
+#error "flavorbsd"
+#endif
+#ifndef __USE_BSD
+#error "usebsd"
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -15,6 +22,13 @@
 
 #include "../../lib/includes.h"
 #include "../state.h"
+
+#ifndef __FAVOR_BSD
+#error "flavorbsd"
+#endif
+#ifndef __USE_BSD
+#error "usebsd"
+#endif
 
 #ifndef NDEBUG
 void print_macaddr(struct ifreq* i)
