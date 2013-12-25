@@ -95,7 +95,7 @@ add_executable(zmap ${SOURCES})
 if (APPLE)
 	set(DNET_LIBRARIES "dnet")
 else()
-	set(DNET_LIBRARIES "dumbnet")
+	set(DNET_LIBRARIES "")
 endif()
 
 target_link_libraries(
