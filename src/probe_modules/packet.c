@@ -6,29 +6,15 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#include "packet.h"
-
-#ifndef __FAVOR_BSD
-#error "flavorbsd"
-#endif
-#ifndef __USE_BSD
-#error "usebsd"
-#endif
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
 
 #include "../../lib/includes.h"
-#include "../state.h"
+#include "packet.h"
 
-#ifndef __FAVOR_BSD
-#error "flavorbsd"
-#endif
-#ifndef __USE_BSD
-#error "usebsd"
-#endif
+#include "../state.h"
 
 #ifndef NDEBUG
 void print_macaddr(struct ifreq* i)
