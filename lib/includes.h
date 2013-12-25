@@ -1,11 +1,6 @@
-/*
-#ifdef __linux__
-#include <dumbnet.h>
-#else
+#ifdef __APPLE__
 #include <dnet.h>
 #endif
-*/
-
 
 #ifndef __FAVOR_BSD
 #define __FAVOR_BSD 2

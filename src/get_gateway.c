@@ -25,7 +25,12 @@
 
 #define UNUSED __attribute__((unused))
 
-/*
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
+
+#include <net/route.h>
+#include <net/if.h>
+#include <net/if_dl.h>
+
 int get_hw_addr(struct in_addr *gw_ip, unsigned char *hw_mac)
 {
 	arp_t *arp;
@@ -58,13 +63,6 @@ int get_hw_addr(struct in_addr *gw_ip, unsigned char *hw_mac)
 	arp_close(arp);
 	return EXIT_SUCCESS;
 }
-*/
-
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
-
-#include <net/route.h>
-#include <net/if.h>
-#include <net/if_dl.h>
 
 int get_iface_ip(char *iface, struct in_addr *ip)
 {
