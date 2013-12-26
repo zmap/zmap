@@ -11,126 +11,128 @@ purpose "A fast Internet-wide scanner."
 section "Basic arguments"
 
 option "target-port"    	p "TCP port number to scan (for SYN scans)"
-	   typestr="port"
-	   optional int
+	typestr="port"
+	optional int
 option "output-file"  		o "Output file"
-	   typestr="name"
-	   optional string
+	typestr="name"
+	optional string
 option "blacklist-file"		b "File of subnets to exclude, in CIDR notation, e.g. 192.168.0.0/16"
-	   typestr="path"
-	   optional string
+	typestr="path"
+	optional string
 option "whitelist-file"		w "File of subnets to constrain scan to, in CIDR notation, e.g. 192.168.0.0/16"
-	   typestr="path"
-	   optional string
+	typestr="path"
+	optional string
 option "output-fields"		f "Fields that should be output in result set"
-	   typestr="fields"
-	   optional string
+	typestr="fields"
+	optional string
 
 section "Scan options"
 
 option "max-targets"		n "Cap number of targets to probe (as a number or a percentage of the address space)"
-	   typestr="n"
-	   optional string
+	typestr="n"
+	optional string
 option "max-results"		N "Cap number of results to return"
-	   typestr="n"
-	   optional int
+	typestr="n"
+	optional int
 option "max-runtime"		t "Cap length of time for sending packets"
-	   typestr="ses"
-	   optional int
+	typestr="ses"
+	optional int
 option "rate"           	r "Set send rate in packets/sec"
-	   typestr="pps"
-	   optional int
+	typestr="pps"
+	optional int
 option "bandwidth"			B "Set send rate in bits/second (supports suffixes G, M and K)"
-	   typestr="bps"
-	   optional string
+	typestr="bps"
+	optional string
 option "cooldown-time"  	c "How long to continue receiving after sending last probe"
-	   typestr="secs"
-	   default="8"
-	   optional int
+	typestr="secs"
+	default="8"
+	optional int
 option "seed"           	e "Seed used to select address permutation"
-	   typestr="n"
-	   optional int
+	typestr="n"
+	optional int
 option "sender-threads"		T "Threads used to send packets"
-	   typestr="n"
-	   default="1"
-	   optional int
+	typestr="n"
+	default="1"
+	optional int
 option "probes"			P "Number of probes to send to each IP"
-	   typestr="n"
-	   default="1"
-	   optional int
+	typestr="n"
+	default="1"
+	optional int
 option "dryrun"			d "Don't actually send packets"
-	   optional
+	optional
 option "shards"			- "Set the total number of shards"
-		optional int
-		default="1"
+	typestr="N"
+	optional int
+	default="1"
 option "shard"			- "Set which shard this scan is"
-		optional int
-		default ="1"
+	typestr="n"
+	optional int
+	default="1"
 
 section "Network options" 
 
 option "source-port"    	s "Source port(s) for scan packets"
-	   typestr="port|range"
-	   optional string
+	typestr="port|range"
+	optional string
 option "source-ip"		S "Source address(es) for scan packets"
-	   typestr="ip|range"
-	   optional string
+	typestr="ip|range"
+	optional string
 option "gateway-mac"		G "Specify gateway MAC address"
-	   typestr="addr"
-	   optional string
+	typestr="addr"
+	optional string
 option "interface"		i "Specify network interface to use"
-	   typestr="name"
-	   optional string
+	typestr="name"
+	optional string
 option "vpn"		X "Sends IP packets instead of Ethernet (for VPNs)"
-	   optional
+	optional
 
 section "Advanced options"
 
 option "probe-module"		M "Select probe module"
-	   typestr="name"
-	   default="tcp_synscan"
-	   optional string
+	typestr="name"
+	default="tcp_synscan"
+	optional string
 option "output-module"		O "Select output module"
-	   typestr="name"
-	   default="default"
-	   optional string
+	typestr="name"
+	default="default"
+	optional string
 option "probe-args"		- "Arguments to pass to probe module"
-	   typestr="args"
-	   optional string
+	typestr="args"
+	optional string
 option "output-args"		- "Arguments to pass to output module"
-	   typestr="args"
-	   optional string
+	typestr="args"
+	optional string
 option "output-filter"          - "Specify a filter over the response fields to limit what responses get sent to the output module"
-	   typestr="filter"
-	   optional string
+	typestr="filter"
+	optional string
 option "list-output-modules"	- "List available output modules"
         optional
 option "list-probe-modules"	- "List available probe modules"
         optional
 option "list-output-fields" 	- "List all fields that can be output by selected probe module"
-		optional
+	optional
 
 section "Additional options"
 
 option "config"			C "Read a configuration file, which can specify any of these options"
-	   typestr="filename"
-	   default="/etc/zmap/zmap.conf"
-	   optional string
+	typestr="filename"
+	default="/etc/zmap/zmap.conf"
+	optional string
 option "quiet"			q "Do not print status updates"
-       optional
+	optional
 option "summary"		g "Print configuration and summary at end of scan"
-       optional
+	optional
 option "verbosity"		v "Level of log detail (0-5)"
-	   typestr="n"
-	   default="3"
-	   optional int
+	typestr="n"
+	default="3"
+	optional int
 option "help"	   		h "Print help and exit"
-	   optional
+	optional
 option "version"   		V "Print version and exit"
-	   optional
+	optional
 
 text "\nExamples:\n\
-     zmap -p 443  (scans the whole Internet for hosts with port 443 open)\n\
-     zmap -N 5 -B 10M -p 80 -o -  (find 5 HTTP servers, scanning at 10 Mb/s)\n
-     zmap -p 80 10.0.0.0/8 192.168.0.0/16 -o (scan 10.0.0.0/8 and 192.168.0.0/16 on port 80)\n
-     zmap -p 80 192.168.1.2 192.168.1.3 (scan 192.168.1.2 and 192.168.1.3 on port 80)"
+	zmap -p 443  (scans the whole Internet for hosts with port 443 open)\n\
+	zmap -N 5 -B 10M -p 80 -o -  (find 5 HTTP servers, scanning at 10 Mb/s)\n
+	zmap -p 80 10.0.0.0/8 192.168.0.0/16 -o (scan 10.0.0.0/8 and 192.168.0.0/16 on port 80)\n
+	zmap -p 80 192.168.1.2 192.168.1.3 (scan 192.168.1.2 and 192.168.1.3 on port 80)"
