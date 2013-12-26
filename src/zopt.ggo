@@ -40,7 +40,7 @@ option "max-runtime"		t "Cap length of time for sending packets"
 option "rate"           	r "Set send rate in packets/sec"
 	typestr="pps"
 	optional int
-option "bandwidth"			B "Set send rate in bits/second (supports suffixes G, M and K)"
+option "bandwidth"		B "Set send rate in bits/second (supports suffixes G, M and K)"
 	typestr="bps"
 	optional string
 option "cooldown-time"  	c "How long to continue receiving after sending last probe"
