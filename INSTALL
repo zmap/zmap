@@ -4,7 +4,17 @@ ZMap is designed to run on GNU/Linux systems and can be built with
 most recent versions of gcc. Currently, ZMap only supports 64-bit
 systems. Running it requires at least 600 MB of free memory.
 
-BUILDING AND INSTALLING ZMAP
+INSTALLING ZMAP
+
+If you want to install it directly on Fedora 19+, just type
+
+  yum install zmap
+
+If you want to install it on Archlinux, please visit AUR link:
+
+  https://aur.archlinux.org/packages/zmap/
+
+BUILDING ZMAP
 
 ZMap requires GMP, a free library for arbitrary precision arithmetic,
 gengetopt, and libpcap. ZMap also uses flex and byacc to generate the code for
@@ -17,8 +27,7 @@ running:
 or on RHEL- and Fedora-based systems by running:
 
   sudo yum install gmp gmp-devel gengetopt libpcap-devel flex byacc
-
-
+  
 or on Mac OS systems (brew):
 
   brew install cmake gmp gengetopt json-c byacc libdnet
