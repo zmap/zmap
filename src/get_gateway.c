@@ -31,9 +31,7 @@
 #include <net/if.h>
 #include <net/if_dl.h>
 
-int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
-// int get_hw_addr(struct in_addr *gw_ip, unsigned char *hw_mac)
-// had wrong numer of Arguments, zconf.iface was passed insted of hw_mac
+int get_hw_addr(struct in_addr *gw_ip, UNUSED char *iface, unsigned char *hw_mac)
 {
 	arp_t *arp;
 	struct arp_entry entry;
@@ -58,11 +56,9 @@ int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
 		return EXIT_FAILURE;
 	} else {
 		log_debug("get_hw_addr", "found ip %s at hw_addr %s",
-			addr_ntoa(&entry.arp_pa),
-			addr_ntoa(&entry.arp_ha));
-		// memcpy(hw_mac, &entry.arp_ha.addr_eth, ETHER_ADDR_LEN);
-		// entry.arp_ha.addr_eth does not exist undxer OS X
-		memcpy(hw_mac, &entry.arp_ha.__addr_u.__eth, ETHER_ADDR_LEN);
+			   addr_ntoa(&entry.arp_pa),
+			   addr_ntoa(&entry.arp_ha));
+		memcpy(hw_mac, &entry.arp_ha.addr_eth, ETHER_ADDR_LEN);
 	}
 	arp_close(arp);
 	return EXIT_SUCCESS;
