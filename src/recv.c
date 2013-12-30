@@ -210,7 +210,7 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 		if (zconf.dryrun) {
 			sleep(1);
 		} else {
-			if (pcap_dispatch(pc, 0, packet_cb, NULL) == -1) {
+			if (pcap_dispatch(pc, -1, packet_cb, NULL) == -1) {
 				log_fatal("recv", "pcap_dispatch error");
 			}
 			if (zconf.max_results && zrecv.success_unique >= zconf.max_results) {
