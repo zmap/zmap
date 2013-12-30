@@ -52,7 +52,7 @@ endif()
 
 if(WITH_JSON)
 	include(FindPkgConfig)
-	pkg_check_modules(JSON json)
+	pkg_check_modules(JSON json-c)
 	if(JSON_FOUND)
 		include_directories(JSON_INCLUDE_DIRS)
 	else()
