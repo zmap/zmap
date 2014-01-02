@@ -12,6 +12,8 @@
 #include <time.h>
 #include <assert.h>
 
+#include "../../lib/includes.h"
+
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -29,11 +31,12 @@
 
 static FILE *file = NULL;
 #define UNUSED __attribute__((unused))
+#define MAC_ADDR_LEN 6
 
 int json_output_file_init(struct state_conf *conf, UNUSED char **fields, UNUSED int fieldlens)
 {
 	int i;
-	char mac_buf[ (IFHWADDRLEN * 2) + (IFHWADDRLEN - 1) + 1 ];
+	char mac_buf[ (MAC_ADDR_LEN * 2) + (MAC_ADDR_LEN - 1) + 1 ];
 	char *p;
 	json_object *obj = json_object_new_object();
 	assert(conf);
@@ -90,8 +93,8 @@ int json_output_file_init(struct state_conf *conf, UNUSED char **fields, UNUSED 
 		if (conf->gw_mac) {
 			memset(mac_buf, 0, sizeof(mac_buf));
 			p = mac_buf;
-			for(i=0; i < IFHWADDRLEN; i++) {
-				if (i == IFHWADDRLEN-1) {
+			for(i=0; i < MAC_ADDR_LEN; i++) {
+				if (i == MAC_ADDR_LEN-1) {
 					snprintf(p, 3, "%.2x", conf->gw_mac[i]);
 					p += 2;
 				} else {
