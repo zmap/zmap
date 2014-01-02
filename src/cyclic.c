@@ -79,6 +79,12 @@ struct cyclic_iterator {
 // entire Internet scan, this would be cyclic32
 // Note: this list should remain ordered by size (primes) ascending.
 static cyclic_group_t groups[] = {
+{ // 2^8 + 1
+	.prime = 256,
+	.known_primroot = 3,
+	.prime_factors = {2},
+	.num_prime_factors = 1
+},
 { // 2^16 + 1
 	.prime = 65537,
 	.known_primroot = 3,
