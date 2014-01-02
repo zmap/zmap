@@ -261,9 +261,11 @@ int send_run(int sock)
 			break;
 		}
 		uint32_t curr = cyclic_get_next_ip(c);
-		if (curr == zsend.first_scanned) {
+		if (curr == 0) {
 			zsend.complete = 1;
 			zsend.finish = now();
+			pthread_mutex_unlock(&send_mutex);
+			continue;
 		}
 		zsend.sent++;
 		pthread_mutex_unlock(&send_mutex);

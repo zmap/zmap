@@ -71,6 +71,7 @@ struct cyclic_iterator {
 	uint64_t current;
 	uint64_t start;
 	uint64_t stop;
+	uint64_t factor;
 };
 
 // We will pick the first cyclic group from this list that is
@@ -199,7 +200,7 @@ static uint64_t find_stop_exponent(__attribute__((unused)) uint64_t generator,
 
 // Given the first shard starts at begin, find the beginning of
 // shard_num (shards are 1-indexed)
-uint64_t find_start(uint64_t begin, uint64_t generator, uint64_t p,
+static uint64_t find_start(uint64_t begin, uint64_t generator, uint64_t p,
 		    uint64_t shard_num, 
 		    __attribute__((unused)) uint64_t num_shards)
 {
@@ -215,7 +216,7 @@ uint64_t find_start(uint64_t begin, uint64_t generator, uint64_t p,
 
 // Given the first shard starts at begin, find the last element of this
 // shard (shards are 1-indexed)
-uint64_t find_stop(uint64_t begin, uint64_t generator, uint64_t p,
+static uint64_t find_stop(uint64_t begin, uint64_t generator, uint64_t p,
 			  uint64_t shard_num, uint64_t num_shards)
 {
 	uint64_t stop = begin;
@@ -230,6 +231,22 @@ uint64_t find_stop(uint64_t begin, uint64_t generator, uint64_t p,
 		--stop_offset;
 	}
 	return stop;
+}
+
+static uint64_t find_factor(uint64_t generator, uint64_t prime, uint64_t num_shards)
+{
+	mpz_t base, power, mod, factor;
+	mpz_init_set_d(base, (double) generator);
+	mpz_init_set_d(power, (double) num_shards);
+	mpz_init_set_d(mod, (double) prime);
+	mpz_init(factor);
+	mpz_powm(factor, base, power, mod);
+	uint64_t retv = (uint64_t) mpz_get_ui(factor);
+	mpz_clear(base);
+	mpz_clear(power);
+	mpz_clear(mod);
+	mpz_clear(factor);
+	return retv;
 }
 
 cyclic_iterator_t* cyclic_init(uint32_t primroot_, uint32_t current_)
@@ -298,13 +315,15 @@ cyclic_iterator_t* cyclic_init(uint32_t primroot_, uint32_t current_)
 	zconf.generator = primroot;
 	// make sure current is an allowed ip
 	cyclic_iterator_t *cycle = xmalloc(sizeof(cyclic_iterator_t));
+	cycle->current = current;
 	cycle->group = cur_group;
 	cycle->prime = prime;
 	cycle->primroot = primroot;
 	cycle->num_addrs = num_addrs;
-	cycle->current = current;
+	cycle->start = find_start(current, zconf.generator, prime, zconf.shard_num, zconf.total_shards);
+	cycle->stop = find_stop(current, zconf.generator, prime, zconf.shard_num, zconf.total_shards);
+	cycle->factor = find_factor(zconf.generator, prime, zconf.total_shards);
 	cyclic_get_next_ip(cycle);
-
 	return cycle;
 }
 
@@ -321,7 +340,7 @@ uint32_t cyclic_get_primroot(cyclic_iterator_t *cycle)
 static inline uint32_t cyclic_get_next_elem(cyclic_iterator_t *cycle)
 {
 	do {
-		cycle->current *= cycle->primroot;
+		cycle->current *= cycle->factor;
 		cycle->current %= cycle->prime;
 	} while (cycle->current >= (1LL << 32));
 	return (uint32_t) cycle->current;
@@ -331,6 +350,9 @@ uint32_t cyclic_get_next_ip(cyclic_iterator_t *cycle)
 {
 	while (1) {
 		uint32_t candidate = cyclic_get_next_elem(cycle);
+		if (candidate == cycle->stop) {
+			return 0;
+		}
 		if (candidate-1 < cycle->num_addrs) {
 			return blacklist_lookup_index(candidate-1);
 		}
