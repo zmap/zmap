@@ -17,3 +17,4 @@ parser.c
 parser.h
 install_manifest.txt
 _CPack_Packages/*
+*.deb
