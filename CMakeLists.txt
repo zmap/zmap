@@ -1,5 +1,6 @@
 cmake_minimum_required (VERSION 2.6)
 project (ZMAP C)
+SET (VERSION 1.1.1)
 
 option(WITH_REDIS "Build with support for Redis DB" OFF)
 option(WITH_JSON "Build with support for JSON" OFF)
@@ -74,7 +75,37 @@ endif()
 add_subdirectory(src)
 
 # Install conf files
-FILE(GLOB CONF_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/conf" "conf/*")
-message(STATUS "${CONF_FILES}")
-configure_file(zmap_conf_install.cmake.in zmap_conf_install.cmake)
-install(SCRIPT "${PROJECT_SOURCE_DIR}/zmap_conf_install.cmake")
+#FILE(GLOB CONF_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/conf" "conf/*")
+#message(STATUS "${CONF_FILES}")
+#configure_file(zmap_conf_install.cmake.in zmap_conf_install.cmake)
+#install(SCRIPT "${PROJECT_SOURCE_DIR}/zmap_conf_install.cmake")
+
+FILE(GLOB CONF_FILES "conf/*")
+install(
+  FILES
+  ${CONF_FILES}
+  DESTINATION "/etc/zmap/"
+  )
+
+# Allow Debian Packaging
+INCLUDE (InstallRequiredSystemLibraries)
+
+SET (CPACK_SET_DESTDIR "on")
+SET (CPACK_PACKAGING_INSTALL_PREFIX "/tmp")
+SET (CPACK_GENERATOR "DEB")
+
+SET (${VERSION} CPACK_DEBIAN_PACKAGE_VERSION)
+SET (CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+SET (CPACK_DEBIAN_PACKAGE_SECTION "network")
+SET (CPACK_DEBIAN_ARCHITECTURE ${CMAKE_SYSTEM_PROCESSOR})
+SET (CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.1.3), libgmp3c2, libpcap0.8")
+
+SET (CPACK_PACKAGE_DESCRIPTION "Internet-scale network scanner")
+SET (CPACK_PACKAGE_DESCRIPTION_SUMMARY "ZMap is an open-source network scanner that enables researchers to easily perform Internet-wide network studies. With a single machine and a well provisioned network uplink, ZMap is capable of performing a complete scan of the IPv4 address space in under 45 minutes, approaching the theoretical limit of gigabit Ethernet. ZMap can be used to study protocol adoption over time, monitor service availability, and help us better understand large systems distributed across the Internet.")
+SET (CPACK_PACKAGE_CONTACT "Zakir Durumeric <zakird@gmail.com>")
+SET (CPACK_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}_${VERSION}_${CPACK_DEBIAN_ARCHITECTURE}")
+
+SET (CPACK_COMPONENTS_ALL Libraries ApplicationData)
+
+INCLUDE(CPack)
+
