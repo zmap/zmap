@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void die() __attribute__((noreturn));
+static void die() __attribute__((noreturn));
 
 void* xcalloc(size_t count, size_t size)
 {
