@@ -5,6 +5,7 @@ SET (VERSION 1.1.1)
 option(WITH_REDIS "Build with support for Redis DB" OFF)
 option(WITH_JSON "Build with support for JSON" OFF)
 option(ENABLE_DEVELOPMENT "Enable development specific compiler and linker flags" OFF)
+option(RESPECT_INSTALL_PREFIX_CONFIG "Respect CMAKE_INSTALL_PREFIX for /etc" OFF)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 	set(USING_CLANG "YES")
@@ -81,11 +82,17 @@ add_subdirectory(src)
 #install(SCRIPT "${PROJECT_SOURCE_DIR}/zmap_conf_install.cmake")
 
 FILE(GLOB CONF_FILES "conf/*")
+if (RESPECT_INSTALL_PREFIX_CONFIG)
+	set(CONFIG_DESTINATION "etc/zmap")
+else()
+	set(CONFIG_DESTINATION "/etc/zmap")
+endif()
+
 install(
-  FILES
-  ${CONF_FILES}
-  DESTINATION "/etc/zmap/"
-  )
+	FILES
+	${CONF_FILES}
+	DESTINATION ${CONFIG_DESTINATION}
+)
 
 # Allow Debian Packaging
 INCLUDE (InstallRequiredSystemLibraries)
