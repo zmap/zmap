@@ -1,0 +1,40 @@
+# -*- coding: utf-8; mode: tcl; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=tcl:et:sw=4:ts=4:sts=4
+# $Id$
+
+PortSystem          1.0
+PortGroup           cmake 1.0
+
+name                zmap
+version             v1.1.1.1
+fetch.type          git
+git.url             https://github.com/zmap/zmap.git
+git.branch          v1.1.1.1
+
+categories          net
+platforms           darwin
+license             apache-2
+maintainers         gmail.com:pat.pannuto \
+                    openmaintainer
+description         Internet scanner
+long_description    ZMap is a fast network scanner designed for Internet-wide network surveys.
+homepage            https://zmap.io/
+master_sites        https://github.com/zmap/zmap
+
+depends_build       port:cmake \
+                    port:byacc \
+                    port:flex \
+                    port:gengetopt
+
+depends_lib         port:gmp \
+                    port:libdnet \
+
+variant redis description {Add Redis support} {
+    depends_lib-append port:redis
+    depends_lib-append port:hiredis
+    configure.args-append -DWITH_REDIS=ON
+}
+
+variant json description {Add JSON support} {
+    depends_lib-append port:json-c
+    configure.args-append -DWITH_JSON=ON
+}
