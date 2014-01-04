@@ -176,7 +176,6 @@ static int _lookup_ip(node_t *root, uint32_t address)
 	}
 }
 
-
 // Return the value pertaining to an address.
 // (Note: address must be in host byte order.)
 value_t constraint_lookup_ip(constraint_t *con, uint32_t address)
@@ -239,7 +238,8 @@ uint32_t constraint_lookup_index(constraint_t *con, uint64_t index, value_t valu
 // leaves under it set to value.
 // If exclude_radix is specified, the number of addresses will exlcude prefixes
 // that are a /RADIX_LENGTH or larger
-static uint64_t _count_ips_recurse(node_t *node, value_t value, uint64_t size, int paint, int exclude_radix)
+static uint64_t _count_ips_recurse(node_t *node, value_t value,
+		uint64_t size, int paint, int exclude_radix)
 {
 	assert(node);
 	uint64_t n;

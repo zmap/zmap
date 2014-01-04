@@ -62,7 +62,7 @@ static void _add_constraint(struct in_addr addr, int prefix_len, char *ip, int v
 		name = "blacklisting";
 	else
 		name = "whitelisting";
-	log_trace(name, "%s %s/%i", name, ip, prefix_len);
+	log_debug("constraint", "%s %s/%i", name, ip, prefix_len);
 }
 
 static int init_from_string(char *ip, int value)
@@ -100,7 +100,7 @@ static int init_from_string(char *ip, int value)
 			}
 			struct sockaddr_in *sa = (struct sockaddr_in *) aip->ai_addr;
 			memcpy(&addr, &sa->sin_addr, sizeof(addr));
-			log_debug("constraint", "Got %s by hostname\n",
+			log_debug("constraint", "%s retrieved by hostname\n",
 				  inet_ntoa(addr));
 			ret = 0;
 			_add_constraint(addr, prefix_len, ip, value);
@@ -120,7 +120,8 @@ static int init_from_file(char *file, const char *name, int value)
 
 	fp = fopen(file, "r");
 	if (fp == NULL) {
-		log_fatal(name, "Unable to open %s file: %s: %s", name, file, strerror(errno));
+		log_fatal(name, "unable to open %s file: %s: %s",
+				name, file, strerror(errno));
 	}
 
 	while (fgets(line, sizeof(line), fp) != NULL) {
@@ -133,7 +134,8 @@ static int init_from_file(char *file, const char *name, int value)
 			continue;
 		}
 		if (init_from_string(ip, value)) {
-			log_fatal(name, "unable to parse %s file: %s", name, file);
+			log_fatal(name, "unable to parse %s file: %s",
+					name, file);
 		}
 	}
 	fclose(fp);
@@ -175,7 +177,7 @@ int blacklist_init(char *whitelist_filename, char *blacklist_filename,
 	if (whitelist_filename || whitelist_entries) {
 		// using a whitelist, so default to allowing nothing
 		constraint = constraint_init(ADDR_DISALLOWED);
-		log_trace("whitelist", "blacklisting 0.0.0.0/0");
+		log_debug("constraint", "blacklisting 0.0.0.0/0");
 		if (whitelist_filename) {
 			init_from_file(whitelist_filename, "whitelist", ADDR_ALLOWED);
 		}
@@ -191,12 +193,14 @@ int blacklist_init(char *whitelist_filename, char *blacklist_filename,
 		init_from_file(blacklist_filename, "blacklist", ADDR_DISALLOWED);
 	}
 	if (blacklist_entries) {
-		init_from_array(blacklist_entries, blacklist_entries_len, ADDR_DISALLOWED);
+		init_from_array(blacklist_entries,
+				blacklist_entries_len, ADDR_DISALLOWED);
 	}
 	constraint_paint_value(constraint, ADDR_ALLOWED);
 	uint64_t allowed = blacklist_count_allowed();
-	log_debug("blacklist", "%lu addresses allowed to be scanned (%0.0f%% of address space)", 
-			  allowed, allowed*100./((long long int)1 << 32));
+	log_debug("constraint", "%lu addresses (%0.0f%% of address "
+			"space) can be scanned", 
+			allowed, allowed*100./((long long int)1 << 32));
 	return EXIT_SUCCESS;
 }
 

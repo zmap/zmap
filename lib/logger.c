@@ -148,7 +148,6 @@ int log_init(FILE *stream, enum LogLevel level,
 	log_output_level = level;
 	if (syslog_enabled) {
 		openlog(appname, 0, LOG_USER); //no options
-		syslog(LOG_MAKEPRI(LOG_USER, LOG_DEBUG), "asdfasdfasdf");
 	}
 	return 0;
 }

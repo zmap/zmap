@@ -474,7 +474,6 @@ int main(int argc, char *argv[])
 		strftime(path, 100, "zmap-%Y-%m-%dT%H%M%S%z.log", local);
 		char *fullpath = malloc(strlen(zconf.log_directory) + strlen(path) + 2);
 		sprintf(fullpath, "%s/%s", zconf.log_directory, path);
-		printf("full path is %s\n", fullpath);
 		log_location = fopen(fullpath, "w");
 		
 	} else {
