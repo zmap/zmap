@@ -260,7 +260,6 @@ static void summary(void)
 
 static void start_zmap(void)
 {
-	log_info("zmap", "started");
 	if (zconf.iface == NULL) {
 		zconf.iface = get_default_iface();
 		assert(zconf.iface);
@@ -325,9 +324,8 @@ static void start_zmap(void)
 	}
 	tsend = malloc(zconf.senders * sizeof(pthread_t));
 	assert(tsend);
-	log_debug("zmap", "using %d sender threads", zconf.senders);
 	for (int i=0; i < zconf.senders; i++) {
-	uintptr_t sock;
+		uintptr_t sock;
 		if (zconf.dryrun) {
 			sock = get_dryrun_socket();
 		} else {
@@ -340,6 +338,7 @@ static void start_zmap(void)
 			exit(EXIT_FAILURE);
 		}
 	}
+	log_debug("zmap", "%d sender threads spawned", zconf.senders);
 	if (!zconf.quiet) {
 		int r = pthread_create(&tmon, NULL, start_mon, NULL);
 		if (r != 0) {
@@ -487,7 +486,7 @@ int main(int argc, char *argv[])
 	log_init(log_location, zconf.log_level, zconf.syslog, "zmap");
 	log_trace("zmap", "zmap main thread started");
 	if (zconf.syslog) {
-		log_info("zmap", "syslog support enabled");
+		log_debug("zmap", "syslog support enabled");
 	} else {
 		log_info("zmap", "syslog support disabled");
 	}

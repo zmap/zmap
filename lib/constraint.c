@@ -332,7 +332,6 @@ uint64_t constraint_count_ips(constraint_t *con, value_t value)
 // All addresses will initally have the given value.
 constraint_t* constraint_init(value_t value)
 {
-	log_trace("constraint", "Initializing");
 	constraint_t* con = malloc(sizeof(constraint_t));
 	con->root = _create_leaf(value);
 	con->radix = calloc(sizeof(uint32_t), 1 << RADIX_LENGTH);

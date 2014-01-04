@@ -172,7 +172,7 @@ int get_dryrun_socket(void)
 // one sender thread
 int send_run(int sock)
 {
-	log_debug("send", "thread started");
+	log_trace("send", "send thread started");
 	pthread_mutex_lock(&send_mutex);
 
 	// Allocate a buffer to hold the outgoing packet

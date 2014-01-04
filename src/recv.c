@@ -154,9 +154,9 @@ int recv_update_pcap_stats(void)
 
 int recv_run(pthread_mutex_t *recv_ready_mutex)
 {
-	log_debug("recv", "thread started");
+	log_trace("recv", "recv thread started");
 	num_src_ports = zconf.source_port_last - zconf.source_port_first + 1;
-	log_debug("recv", "using dev %s", zconf.iface);
+	log_debug("recv", "capturing responses on %s", zconf.iface);
 	if (!zconf.dryrun) {
 		char errbuf[PCAP_ERRBUF_SIZE];
 		pc = pcap_open_live(zconf.iface, zconf.probe_module->pcap_snaplen,
@@ -186,7 +186,6 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 	}
 	// initialize paged bitmap
 	seen = pbm_init();
-	log_debug("recv", "receiver ready");
 	if (zconf.filter_duplicates) {
 		log_debug("recv", "duplicate responses will be excluded from output"); 
 	} else {
