@@ -293,12 +293,13 @@ static void start_zmap(void)
 					inet_ntoa(gw_ip), zconf.iface);
 		}
 		zconf.gw_mac_set = 1;
-		log_debug("zmap", "MAC address of selected gateway %02x:%02x:%02x:%02x:%02x:%02x",
+	}
+	log_debug("send", "gateway MAC address %02x:%02x:%02x:%02x:%02x:%02x",
 				  zconf.gw_mac[0], zconf.gw_mac[1], zconf.gw_mac[2],
 				  zconf.gw_mac[3], zconf.gw_mac[4], zconf.gw_mac[5]);
-	}
+
 	// initialization
-	log_info("zmap", "zmap selected output module: %s", zconf.output_module->name);
+	log_info("zmap", "output module: %s", zconf.output_module->name);
 	if (zconf.output_module && zconf.output_module->init) {
 		zconf.output_module->init(&zconf, zconf.output_fields,
 				zconf.output_fields_len);
