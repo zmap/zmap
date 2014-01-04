@@ -12,14 +12,12 @@
 #include <assert.h>
 #include <sys/time.h>
 #include <time.h>
+#include <syslog.h>
 #include <math.h>
 
 #include "logger.h"
 
-#ifndef HEADER_ZUTIL_LOGGER_H
-#define HEADER_ZUTIL_LOGGER_H
-
-static enum LogLevel log_output_level = LOG_INFO;
+static enum LogLevel log_output_level = ZLOG_INFO;
 
 static FILE *log_output_stream = NULL;
 
@@ -58,51 +56,100 @@ static int LogLogVA(enum LogLevel level, const char *loggerName,
 }
 
 int log_fatal(const char *name, const char *message, ...) {
-	va_list va; va_start(va, message);
-	LogLogVA(LOG_FATAL, name, message, va);
+	va_list va;
+	va_start(va, message);
+	LogLogVA(ZLOG_FATAL, name, message, va);
 	va_end(va);
+
+	va_start(va, message);
+	vsyslog(LOG_MAKEPRI(LOG_USER, LOG_CRIT), message, va);
+	va_end(va);
+
 	exit(EXIT_FAILURE);
 }
 
 int log_error(const char *name, const char *message, ...) {
-	va_list va; va_start(va, message);
-	int ret = LogLogVA(LOG_ERROR, name, message, va);
+	va_list va;
+	va_start(va, message);
+	int ret = LogLogVA(ZLOG_ERROR, name, message, va);
 	va_end(va);
+
+	va_start(va, message);
+	vsyslog(LOG_MAKEPRI(LOG_USER, LOG_ERR), message, va);
+	va_end(va);
+
 	return ret;
 }
 
 int log_warn(const char *name, const char *message, ...) {
-	va_list va; va_start(va, message);
-	int ret = LogLogVA(LOG_WARN, name, message, va);
+	va_list va;
+	va_start(va, message);
+	int ret = LogLogVA(ZLOG_WARN, name, message, va);
 	va_end(va);
+	va_start(va, message);
+	vsyslog(LOG_MAKEPRI(LOG_USER, LOG_WARNING), message, va);
+	va_end(va);
+
 	return ret;
 }
 
 int log_info(const char *name, const char *message, ...) {
-	va_list va; va_start(va, message);
-	int ret = LogLogVA(LOG_INFO, name, message, va);
+	va_list va;
+	va_start(va, message);
+	int ret = LogLogVA(ZLOG_INFO, name, message, va);
 	va_end(va);
+
+	char *prefixed = malloc(strlen(name) + strlen(message) + 3);
+	strcpy(prefixed, name);
+	strcat(prefixed, ": ");
+	strcat(prefixed, message);
+
+	va_start(va, message);
+	vsyslog(LOG_MAKEPRI(LOG_USER, LOG_INFO), prefixed, va);
+	va_end(va);
+
+	free(prefixed);
+
 	return ret;
 }
 
 int log_debug(const char *name, const char *message, ...) {
-	va_list va; va_start(va, message);
-	int ret = LogLogVA(LOG_DEBUG, name, message, va);
+	va_list va;
+	va_start(va, message);
+	int ret = LogLogVA(ZLOG_DEBUG, name, message, va);
 	va_end(va);
+
+	char *prefixed = malloc(strlen(name) + strlen(message) + 3);
+	strcpy(prefixed, name);
+	strcat(prefixed, ": ");
+	strcat(prefixed, message);
+
+	va_start(va, message);
+	vsyslog(LOG_MAKEPRI(LOG_USER, LOG_DEBUG), prefixed, va);
+	va_end(va);
+
+	free(prefixed);
+
 	return ret;
 }
 
 extern int log_trace(const char *name, const char *message, ...) {
-	va_list va; va_start(va, message);
-	int ret = LogLogVA(LOG_TRACE, name, message, va);
+	va_list va;
+	va_start(va, message);
+	int ret = LogLogVA(ZLOG_TRACE, name, message, va);
 	va_end(va);
 	return ret;
 }
 
-int log_init(FILE *stream, enum LogLevel level)
+int log_init(FILE *stream, enum LogLevel level,
+		int syslog_enabled, const char *appname)
 {
 	log_output_stream = stream;
 	log_output_level = level;
+	if (syslog_enabled) {
+		openlog(appname, 0, LOG_USER); //no options
+		syslog(LOG_MAKEPRI(LOG_USER, LOG_DEBUG), "asdfasdfasdf");
+	}
 	return 0;
 }
 
@@ -123,4 +170,3 @@ size_t dstrftime(char *buf, size_t maxsize, const char *format, double tm)
 	return strftime(buf, maxsize, format, localtime((const time_t*) &tv));
 }
 
-#endif

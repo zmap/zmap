@@ -16,6 +16,7 @@
 #include <sched.h>
 #include <errno.h>
 #include <pwd.h>
+#include <time.h>
 
 #include <pcap/pcap.h>
 
@@ -88,7 +89,6 @@ void fprintw(FILE *f, char *s, size_t w)
 	char *pch = strtok(news, "\n");
 	while (pch) {
 		if (strlen(pch) <= w) {
-			printf("strlen is less than w\n");
 			printf("%s\n", pch);
 			pch = strtok(NULL, "\n");
 			continue;
@@ -305,7 +305,7 @@ static void start_zmap(void)
 				zconf.output_fields_len);
 	}
 	if (send_init()) {
-		exit(EXIT_FAILURE);
+		log_fatal("zmap", "unable to initialize sending component");
 	}
 	if (zconf.output_module && zconf.output_module->start) {
 		zconf.output_module->start(&zconf, &zsend, &zrecv);
@@ -315,7 +315,6 @@ static void start_zmap(void)
 	int r = pthread_create(&trecv, NULL, start_recv, NULL);
 	if (r != 0) {
 		log_fatal("zmap", "unable to create recv thread");
-		exit(EXIT_FAILURE);
 	}
 	for (;;) {
 		pthread_mutex_lock(&recv_ready_mutex);
@@ -389,9 +388,8 @@ static void start_zmap(void)
 static void enforce_range(const char *name, int v, int min, int max)
 {
 	if (v < min || v > max) {
-	  	fprintf(stderr, "%s: argument `%s' must be between %d and %d\n",
-			CMDLINE_PARSER_PACKAGE, name, min, max);
-		exit(EXIT_FAILURE);
+	  	log_fatal("zmap", "argument `%s' must be between %d and %d\n",
+			name, min, max);
 	}
 }
 
@@ -451,12 +449,52 @@ int main(int argc, char *argv[])
 			exit(EXIT_FAILURE);
 		}
 	}
+
+	// initialize logging. if no log file or log directory are specified
+	// default to using stderr.
 	zconf.log_level = args.verbosity_arg;
-	log_init(stderr, zconf.log_level);
+	zconf.log_file = args.log_file_arg;
+	zconf.log_directory = args.log_directory_arg;
+	if (args.disable_syslog_given) {
+		zconf.syslog = 0;
+	}
+	if (zconf.log_file && zconf.log_directory) {
+		log_init(stderr, zconf.log_level, zconf.syslog, "zmap");
+		log_fatal("zmap", "log-file and log-directory cannot "
+				"specified simultaneously.");
+	}
+	FILE *log_location = NULL;
+	if (zconf.log_file) {
+		log_location = fopen(zconf.log_file, "w");
+	} else if (zconf.log_directory) {
+		time_t now;
+    		time(&now);
+		struct tm *local = localtime(&now);
+		char path[100];
+		strftime(path, 100, "zmap-%Y-%m-%dT%H%M%S%z.log", local);
+		char *fullpath = malloc(strlen(zconf.log_directory) + strlen(path) + 2);
+		sprintf(fullpath, "%s/%s", zconf.log_directory, path);
+		printf("full path is %s\n", fullpath);
+		log_location = fopen(fullpath, "w");
+		
+	} else {
+		log_location = stderr;
+	}
+	if (!log_location) {
+		log_init(stderr, zconf.log_level, zconf.syslog, "zmap");
+		log_fatal("zmap", "unable to open specified log file: %s",
+				strerror(errno));
+	}
+	log_init(log_location, zconf.log_level, zconf.syslog, "zmap");
 	log_trace("zmap", "zmap main thread started");
+	if (zconf.syslog) {
+		log_info("zmap", "syslog support enabled");
+	} else {
+		log_info("zmap", "syslog support disabled");
+	}
 	// parse the provided probe and output module s.t. that we can support
 	// other command-line helpers (e.g. probe help)
-	log_trace("zmap", "requested ouput-module: %s\n", args.output_module_arg);
+	log_trace("zmap", "requested ouput-module: %s", args.output_module_arg);
 
 	// we changed output module setup after the original version of ZMap was
 	// made public. After this setup was removed, many of the original
@@ -531,15 +569,15 @@ int main(int argc, char *argv[])
 	} else {
 		zconf.output_module = get_output_module_by_name(args.output_module_arg);
 		if (!zconf.output_module) {
-		  fprintf(stderr, "%s: specified output module (%s) does not exist\n",
-			  CMDLINE_PARSER_PACKAGE, args.output_module_arg);
+		  log_fatal("zmap", "%s: specified output module (%s) does not exist\n",
+				args.output_module_arg);
 		  exit(EXIT_FAILURE);
 		}
 	}
 	zconf.probe_module = get_probe_module_by_name(args.probe_module_arg);
 	if (!zconf.probe_module) {
-		fprintf(stderr, "%s: specified probe module (%s) does not exist\n",
-				CMDLINE_PARSER_PACKAGE, args.probe_module_arg);
+		log_fatal("zmap", "specified probe module (%s) does not exist\n",
+				args.probe_module_arg);
 	  exit(EXIT_FAILURE);
 	}
 	if (args.help_given) {
@@ -703,9 +741,7 @@ int main(int argc, char *argv[])
 			}
 		}
 	  	if (!args.target_port_given) {
-			fprintf(stderr, "%s: target port is required for this type of probe\n",
-				CMDLINE_PARSER_PACKAGE);
-			exit(EXIT_FAILURE);
+			log_fatal("zmap", "target port (-p) is required for this type of probe");
 		}
 		enforce_range("target-port", args.target_port_arg, 0, 0xFFFF);
 		zconf.target_port = args.target_port_arg;

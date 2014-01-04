@@ -84,9 +84,12 @@ struct state_conf {
 	struct output_filter filter;
 	struct fieldset_conf fsconf;
 	int output_fields_len;
+	char *log_file;
+	char *log_directory;
 	int dryrun;
 	int summary;
 	int quiet;
+	int syslog;
 	int filter_duplicates;
 	int filter_unsuccessful;
 	int recv_ready;
