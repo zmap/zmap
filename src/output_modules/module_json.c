@@ -120,7 +120,6 @@ int json_output_file_init(struct state_conf *conf, UNUSED char **fields, UNUSED 
 		json_object_object_add(obj, "quiet", json_object_new_int(conf->quiet));
 		json_object_object_add(obj, "recv_ready", json_object_new_int(conf->recv_ready));
 
-
 		fprintf(file, "%s\n", json_object_to_json_string(obj));
 	}
 	return EXIT_SUCCESS;

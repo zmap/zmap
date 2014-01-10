@@ -119,7 +119,7 @@ option "config"			C "Read a configuration file, which can specify any of these o
 	default="/etc/zmap/zmap.conf"
 	optional string
 option "log-file"		l "Write log entries to file"
-	typestr="filename"
+	typestr="name"
 	optional string
 option "log-directory"		L "Write log entries to a timestamped file in this directory"
 	typestr="directory"
@@ -128,6 +128,9 @@ option "quiet"			q "Do not print status updates"
 	optional
 option "summary"		g "Print configuration and summary at end of scan"
 	optional
+option "metadata-file"		- "Output file for scan metadata (JSON)"
+	typestr="name"
+	optional string
 option "disable-syslog"		- "Disables logging messages to syslog"
 	optional
 option "verbosity"		v "Level of log detail (0-5)"

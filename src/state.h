@@ -77,6 +77,8 @@ struct state_conf {
 	char *output_filename;
 	char *blacklist_filename;
 	char *whitelist_filename;
+	char *metadata_filename;
+	FILE *metadata_file;
 	char **destination_cidrs;
 	int destination_cidrs_len;
 	char *raw_output_fields;

@@ -51,6 +51,8 @@ struct state_conf zconf = {
 	.filter_duplicates = 0,
 	.filter_unsuccessful = 0,
 	.recv_ready = 0,
+	.metadata_file = NULL,
+	.metadata_filename = NULL
 };
 
 // global sender stats and defaults

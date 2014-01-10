@@ -30,6 +30,10 @@
 #include <mach/thread_act.h>
 #endif
 
+#ifdef JSON
+#include <json.h>
+#endif
+
 #include "zopt.h"
 #include "send.h"
 #include "recv.h"
@@ -40,6 +44,8 @@
 
 #include "output_modules/output_modules.h"
 #include "probe_modules/probe_modules.h"
+
+#define MAC_ADDR_LEN 6
 
 pthread_mutex_t cpu_affinity_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t recv_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -258,6 +264,87 @@ static void summary(void)
 	SS("exc", "scan-type", zconf.probe_module->name);
 }
 
+#ifdef JSON
+static void json_metadata(FILE *file)
+{
+	json_object *obj = json_object_new_object();
+	
+	json_object_object_add(obj, "log_level", json_object_new_int(zconf.log_level));
+	json_object_object_add(obj, "target-port",
+			json_object_new_int(zconf.target_port));
+	json_object_object_add(obj, "source-port-first",
+			json_object_new_int(zconf.source_port_first));
+	json_object_object_add(obj, "source_port-last",
+			json_object_new_int(zconf.source_port_last));
+	json_object_object_add(obj, "max-targets", json_object_new_int(zconf.max_targets));
+	json_object_object_add(obj, "max-runtime", json_object_new_int(zconf.max_runtime));
+	json_object_object_add(obj, "max-results", json_object_new_int(zconf.max_results));
+	if (zconf.iface) {
+		json_object_object_add(obj, "iface", json_object_new_string(zconf.iface));
+	}
+	json_object_object_add(obj, "rate", json_object_new_int(zconf.rate));
+
+	json_object_object_add(obj, "bandwidth", json_object_new_int(zconf.bandwidth));
+	json_object_object_add(obj, "cooldown-secs", json_object_new_int(zconf.cooldown_secs));
+	json_object_object_add(obj, "senders", json_object_new_int(zconf.senders));
+	json_object_object_add(obj, "use-seed", json_object_new_int(zconf.use_seed));
+	json_object_object_add(obj, "seed", json_object_new_int(zconf.seed));
+	json_object_object_add(obj, "generator", json_object_new_int(zconf.generator));
+	json_object_object_add(obj, "packet-streams",
+			json_object_new_int(zconf.packet_streams));
+	json_object_object_add(obj, "probe-module",
+			json_object_new_string(((probe_module_t *)zconf.probe_module)->name));
+	json_object_object_add(obj, "output-module",
+			json_object_new_string(((output_module_t *)zconf.output_module)->name));
+	
+	if (zconf.probe_args) {
+		json_object_object_add(obj, "probe-args",
+			json_object_new_string(zconf.probe_args));
+	}
+	if (zconf.output_args) {
+		json_object_object_add(obj, "output-args",
+			json_object_new_string(zconf.output_args));
+	}
+
+	if (zconf.gw_mac) {
+		char mac_buf[ (MAC_ADDR_LEN * 2) + (MAC_ADDR_LEN - 1) + 1 ];
+		memset(mac_buf, 0, sizeof(mac_buf));
+		char *p = mac_buf;
+		for(int i=0; i < MAC_ADDR_LEN; i++) {
+			if (i == MAC_ADDR_LEN-1) {
+				snprintf(p, 3, "%.2x", zconf.gw_mac[i]);
+				p += 2;
+			} else {
+				snprintf(p, 4, "%.2x:", zconf.gw_mac[i]);
+				p += 3;
+			}
+		}
+		json_object_object_add(obj, "gateway", json_object_new_string(mac_buf));
+	}
+
+	json_object_object_add(obj, "source-ip-first",
+			json_object_new_string(zconf.source_ip_first));
+	json_object_object_add(obj, "source-ip-last",
+			json_object_new_string(zconf.source_ip_last));
+	json_object_object_add(obj, "output-filename",
+			json_object_new_string(zconf.output_filename));
+	if (zconf.blacklist_filename) json_object_object_add(obj,
+			"blacklist-filename", 
+			json_object_new_string(zconf.blacklist_filename));
+	if (zconf.whitelist_filename) json_object_object_add(obj,
+			"whitelist-filename",
+			json_object_new_string(zconf.whitelist_filename));
+	json_object_object_add(obj, "dryrun", json_object_new_int(zconf.dryrun));
+	json_object_object_add(obj, "summary", json_object_new_int(zconf.summary));
+	json_object_object_add(obj, "quiet", json_object_new_int(zconf.quiet));
+
+	//json_object_new_string(zconf.source_ip_first));
+	//json_object_object_add(obj, "dryrun", json_object_new_int(zconf.dryrun));
+	fprintf(file, "%s\n", json_object_to_json_string(obj));
+	json_object_put(obj);
+}
+#endif
+
 static void start_zmap(void)
 {
 	if (zconf.iface == NULL) {
@@ -310,6 +397,7 @@ static void start_zmap(void)
 	if (zconf.output_module && zconf.output_module->start) {
 		zconf.output_module->start(&zconf, &zsend, &zrecv);
 	}
+
 	// start threads
 	pthread_t *tsend, trecv, tmon;
 	int r = pthread_create(&trecv, NULL, start_recv, NULL);
@@ -376,6 +464,11 @@ static void start_zmap(void)
 	if (zconf.summary) {
 		summary();
 	}
+#ifdef JSON
+	if (zconf.metadata_filename) {
+		json_metadata(zconf.metadata_file);
+	}
+#endif
 	if (zconf.output_module && zconf.output_module->close) {
 		zconf.output_module->close(&zconf, &zsend, &zrecv);
 	}
@@ -702,6 +795,26 @@ int main(int argc, char *argv[])
 	SET_IF_GIVEN(zconf.max_results, max_results);
 	SET_IF_GIVEN(zconf.rate, rate);
 	SET_IF_GIVEN(zconf.packet_streams, probes);
+
+	if (args.metadata_file_arg) {
+#ifdef JSON
+		zconf.metadata_filename = args.metadata_file_arg;				
+		if (!strcmp(zconf.metadata_filename, "-")) {
+			zconf.metadata_file = stdout;
+		} else {
+			zconf.metadata_file = fopen(zconf.metadata_filename, "w");
+		}
+		if (!zconf.metadata_file) {
+			log_fatal("metadata", "unable to open metadata file");
+		}
+		log_trace("metadata", "metdata will be saved to %s",
+				zconf.metadata_filename);
+#else
+		log_fatal("zmap", "JSON support not compiled into ZMap. "
+				"Metadata output not supported.");
+#endif
+	}
+
 
 	// find if zmap wants any specific cidrs scanned instead
 	// of the entire Internet
