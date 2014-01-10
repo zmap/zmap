@@ -84,6 +84,7 @@ struct state_conf {
 	char *raw_output_fields;
 	char **output_fields;
 	struct output_filter filter;
+	char *output_filter_str;
 	struct fieldset_conf fsconf;
 	int output_fields_len;
 	char *log_file;

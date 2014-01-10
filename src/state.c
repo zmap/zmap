@@ -41,6 +41,7 @@ struct state_conf zconf = {
 	.source_ip_last = NULL,
 	.raw_output_fields = NULL,
 	.output_fields = NULL,
+	.output_filter_str = NULL,
 	.output_fields_len = 0,
 	.log_file = NULL,
 	.log_directory = NULL,
