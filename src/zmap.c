@@ -25,6 +25,7 @@
 #include "../lib/includes.h"
 #include "../lib/logger.h"
 #include "../lib/random.h"
+#include "../lib/blacklist.h"
 
 #ifndef __linux__
 #include <mach/thread_act.h>
@@ -338,7 +339,6 @@ static void json_metadata(FILE *file)
 	json_object_object_add(obj, "recv-end-time",
 			json_object_new_string(recv_end_time));
 
-
 	if (zconf.output_filter_str) {
 		json_object_object_add(obj, "output-filter", json_object_new_string(zconf.output_filter_str));
 	}
@@ -404,8 +404,19 @@ static void json_metadata(FILE *file)
 	json_object_object_add(obj, "summary", json_object_new_int(zconf.summary));
 	json_object_object_add(obj, "quiet", json_object_new_int(zconf.quiet));
 
-	//json_object_new_string(zconf.source_ip_first));
-	//json_object_object_add(obj, "dryrun", json_object_new_int(zconf.dryrun));
+	// add blacklisted and whitelisted CIDR blocks
+	bl_cidr_node_t *b = get_blacklisted_cidrs();
+	json_object *blacklisted_cidrs = json_object_new_array();
+	do {
+		char cidr[50];
+		struct in_addr addr;
+		addr.s_addr = b->ip_address;
+		sprintf(cidr, "%s/%i", inet_ntoa(addr), b->prefix_len);
+		json_object_array_add(blacklisted_cidrs,
+				json_object_new_string(cidr));
+	} while (b && (b = b->next));
+	json_object_object_add(obj, "blacklisted-networks", blacklisted_cidrs);
+
 	fprintf(file, "%s\n", json_object_to_json_string(obj));
 	json_object_put(obj);
 }

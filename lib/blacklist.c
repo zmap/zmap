@@ -19,14 +19,52 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
-
 #include "constraint.h"
 #include "logger.h"
 
 #define ADDR_DISALLOWED 0
 #define ADDR_ALLOWED 1
 
+typedef struct bl_linked_list {
+        bl_cidr_node_t *first;
+        bl_cidr_node_t *last;
+        uint32_t len;
+} bl_ll_t;
+
 static constraint_t *constraint = NULL;
+
+// keep track of the prefixes we've tried to BL/WL
+// for logging purposes
+static bl_ll_t *blacklisted_cidrs = NULL;
+static bl_ll_t *whitelisted_cidrs = NULL;
+
+void bl_ll_add(bl_ll_t *l, struct in_addr addr, uint16_t p)
+{
+	assert(l);
+        bl_cidr_node_t *new = malloc(sizeof(bl_cidr_node_t));
+        assert(new);
+        new->next = NULL;
+        new->ip_address = addr.s_addr;
+	new->prefix_len = p;
+        if (!l->first) {
+                l->first = new;
+        } else {
+                l->last->next = new;
+        }
+        l->last = new;
+        l->len++;
+}
+
+bl_cidr_node_t *get_blacklisted_cidrs(void)
+{
+	return blacklisted_cidrs->first;
+}
+
+bl_cidr_node_t *get_whitelisted_cidrs(void)
+{
+	return whitelisted_cidrs->first;
+}
+
 
 uint32_t blacklist_lookup_index(uint64_t index) {
 	return ntohl(constraint_lookup_index(constraint, index, ADDR_ALLOWED));
@@ -39,31 +77,40 @@ int blacklist_is_allowed(uint32_t s_addr) {
 	return constraint_lookup_ip(constraint, ntohl(s_addr)) == ADDR_ALLOWED;
 }
 
+static void _add_constraint(struct in_addr addr, int prefix_len, int value)
+{
+	constraint_set(constraint, ntohl(addr.s_addr), prefix_len, value);
+	const char *name = (value == ADDR_DISALLOWED) ? "blacklisting" : "whitelisting";
+	if (value == ADDR_ALLOWED) {
+		bl_ll_add(whitelisted_cidrs, addr, prefix_len); 
+	} else if (value == ADDR_DISALLOWED) {
+		bl_ll_add(blacklisted_cidrs, addr, prefix_len); 
+	} else {
+		log_fatal("blacklist", "unknown type of blacklist operation specified");
+	}
+	log_debug("constraint", "%s %s/%i", name, inet_ntoa(addr), prefix_len);
+}
+
 // blacklist a CIDR network allocation
 // e.g. blacklist_add("128.255.134.0", 24)
 void blacklist_prefix(char *ip, int prefix_len)
 {
-	assert(constraint);
-	constraint_set(constraint, ntohl(inet_addr(ip)), prefix_len, ADDR_DISALLOWED);
+	struct in_addr addr;
+	addr.s_addr = inet_addr(ip);
+	_add_constraint(addr, prefix_len, ADDR_DISALLOWED);
 }
 
 // whitelist a CIDR network allocation
 void whitelist_prefix(char *ip, int prefix_len)
 {
-	assert(constraint);
-	constraint_set(constraint, ntohl(inet_addr(ip)), prefix_len, ADDR_ALLOWED);
+	struct in_addr addr;
+	addr.s_addr = inet_addr(ip);
+	_add_constraint(addr, prefix_len, ADDR_ALLOWED);
+
 }
 
-static void _add_constraint(struct in_addr addr, int prefix_len, char *ip, int value)
-{
-	constraint_set(constraint, ntohl(addr.s_addr), prefix_len, value);
-	const char *name;
-	if (value == ADDR_DISALLOWED)
-		name = "blacklisting";
-	else
-		name = "whitelisting";
-	log_debug("constraint", "%s %s/%i", name, ip, prefix_len);
-}
+
+
 
 static int init_from_string(char *ip, int value)
 {
@@ -103,10 +150,10 @@ static int init_from_string(char *ip, int value)
 			log_debug("constraint", "%s retrieved by hostname\n",
 				  inet_ntoa(addr));
 			ret = 0;
-			_add_constraint(addr, prefix_len, ip, value);
+			_add_constraint(addr, prefix_len, value);
 		}
 	} else {
-		_add_constraint(addr, prefix_len, ip, value);
+		_add_constraint(addr, prefix_len, value);
 		return 0;
 	}
 	return ret;
@@ -169,6 +216,15 @@ int blacklist_init(char *whitelist_filename, char *blacklist_filename,
 		char **blacklist_entries, size_t blacklist_entries_len)
 {
 	assert(!constraint);
+
+	blacklisted_cidrs = malloc(sizeof(bl_ll_t));
+	assert(blacklisted_cidrs);
+	memset(blacklisted_cidrs, 0, sizeof(bl_ll_t));
+
+	whitelisted_cidrs = malloc(sizeof(bl_ll_t));
+	assert(whitelisted_cidrs);
+	memset(whitelisted_cidrs, 0, sizeof(bl_ll_t));
+
 	if (whitelist_filename && whitelist_entries) {
 		log_warn("whitelist", "both a whitelist file and destination addresses "
 					"were specified. The union of these two sources "

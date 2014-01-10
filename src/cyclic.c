@@ -238,10 +238,10 @@ cyclic_iterator_t* cyclic_init(uint32_t primroot_, uint32_t current_)
 	uint64_t num_addrs, primroot, prime = 0, current;
 	// Initialize blacklist
 	if (blacklist_init(zconf.whitelist_filename, zconf.blacklist_filename,
-			zconf.destination_cidrs, zconf.destination_cidrs_len,
-			NULL, 0)) {
-		return NULL;
-	}
+                        zconf.destination_cidrs, zconf.destination_cidrs_len,
+                        NULL, 0)) {
+                return NULL;
+        }
 	num_addrs = blacklist_count_allowed();
 	if (!num_addrs) {
 		log_error("blacklist", "no addresses are eligible to be scanned in the "
