@@ -268,7 +268,6 @@ static void summary(void)
 #ifdef JSON
 static void json_metadata(FILE *file)
 {
-
 	char send_start_time[STRTIME_LEN+1];
 	assert(dstrftime(send_start_time, STRTIME_LEN, "%c", zsend.start));
 	char send_end_time[STRTIME_LEN+1];
@@ -310,7 +309,6 @@ static void json_metadata(FILE *file)
 	json_object_object_add(obj, "pcap-recv", json_object_new_int(zrecv.pcap_recv));
 	json_object_object_add(obj, "pcap-drop", json_object_new_int(zrecv.pcap_drop));
 	json_object_object_add(obj, "pcap-ifdrop", json_object_new_int(zrecv.pcap_ifdrop));
-
 
 	json_object_object_add(obj, "blacklisted", json_object_new_int(zsend.blacklisted));
 	json_object_object_add(obj, "first-scanned", json_object_new_int(zsend.first_scanned));
@@ -406,16 +404,32 @@ static void json_metadata(FILE *file)
 
 	// add blacklisted and whitelisted CIDR blocks
 	bl_cidr_node_t *b = get_blacklisted_cidrs();
-	json_object *blacklisted_cidrs = json_object_new_array();
-	do {
-		char cidr[50];
-		struct in_addr addr;
-		addr.s_addr = b->ip_address;
-		sprintf(cidr, "%s/%i", inet_ntoa(addr), b->prefix_len);
-		json_object_array_add(blacklisted_cidrs,
-				json_object_new_string(cidr));
-	} while (b && (b = b->next));
-	json_object_object_add(obj, "blacklisted-networks", blacklisted_cidrs);
+	if (b) {
+		json_object *blacklisted_cidrs = json_object_new_array();
+		do {
+			char cidr[50];
+			struct in_addr addr;
+			addr.s_addr = b->ip_address;
+			sprintf(cidr, "%s/%i", inet_ntoa(addr), b->prefix_len);
+			json_object_array_add(blacklisted_cidrs,
+					json_object_new_string(cidr));
+		} while (b && (b = b->next));
+		json_object_object_add(obj, "blacklisted-networks", blacklisted_cidrs);
+	}
+
+	b = get_whitelisted_cidrs();
+	if (b) {
+		json_object *whitelisted_cidrs = json_object_new_array();
+		do {
+			char cidr[50];
+			struct in_addr addr;
+			addr.s_addr = b->ip_address;
+			sprintf(cidr, "%s/%i", inet_ntoa(addr), b->prefix_len);
+			json_object_array_add(whitelisted_cidrs,
+					json_object_new_string(cidr));
+		} while (b && (b = b->next));
+		json_object_object_add(obj, "whitelisted-networks", whitelisted_cidrs);
+	}
 
 	fprintf(file, "%s\n", json_object_to_json_string(obj));
 	json_object_put(obj);
