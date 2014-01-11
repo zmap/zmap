@@ -279,8 +279,22 @@ static void json_metadata(FILE *file)
 	double hitrate = ((double) 100 * zrecv.success_unique)/((double)zsend.sent);
 
 	json_object *obj = json_object_new_object();
+
+	// scanner host name
+	char hostname[1024];
+	if (gethostname(hostname, 1023) < 0) {
+		log_error("json-metadata", "unable to retrieve local hostname");
+	} else {
+		hostname[1023] = '\0';
+		json_object_object_add(obj, "local-hostname", json_object_new_string(hostname));
+		struct hostent* h = gethostbyname(hostname);
+		if (h) {
+			json_object_object_add(obj, "full-hostname", json_object_new_string(h->h_name));
+		} else {
+			log_error("json-metadata", "unable to retrieve complete hostname");
+		}
+	}
 	
-	json_object_object_add(obj, "log_level", json_object_new_int(zconf.log_level));
 	json_object_object_add(obj, "target-port",
 			json_object_new_int(zconf.target_port));
 	json_object_object_add(obj, "source-port-first",
@@ -420,7 +434,7 @@ static void json_metadata(FILE *file)
 	json_object_object_add(obj, "dryrun", json_object_new_int(zconf.dryrun));
 	json_object_object_add(obj, "summary", json_object_new_int(zconf.summary));
 	json_object_object_add(obj, "quiet", json_object_new_int(zconf.quiet));
-
+	json_object_object_add(obj, "log_level", json_object_new_int(zconf.log_level));
 	// add blacklisted and whitelisted CIDR blocks
 	bl_cidr_node_t *b = get_blacklisted_cidrs();
 	if (b) {
