@@ -377,7 +377,21 @@ static void json_metadata(FILE *file)
 				p += 3;
 			}
 		}
-		json_object_object_add(obj, "gateway", json_object_new_string(mac_buf));
+		json_object_object_add(obj, "gateway-mac", json_object_new_string(mac_buf));
+	}
+	if (zconf.hw_mac) {
+		char mac_buf[(ETHER_ADDR_LEN * 2) + (ETHER_ADDR_LEN - 1) + 1];
+		char *p = mac_buf;
+		for(int i=0; i < ETHER_ADDR_LEN; i++) {
+			if (i == ETHER_ADDR_LEN-1) {
+				snprintf(p, 3, "%.2x", zconf.hw_mac[i]);
+				p += 2;
+			} else {
+				snprintf(p, 4, "%.2x:", zconf.hw_mac[i]);
+				p += 3;
+			}
+		}
+		json_object_object_add(obj, "source-mac", json_object_new_string(mac_buf));
 	}
 
 	json_object_object_add(obj, "source-ip-first",

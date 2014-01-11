@@ -186,17 +186,28 @@ int send_run(int sock)
 
 	// Get the source hardware address, and give it to the probe
 	// module
-	unsigned char hw_mac[ETHER_ADDR_LEN];
-	if (get_iface_hw_addr(zconf.iface, hw_mac)) {
-		log_fatal("send", "Couldn't get hardware address for"
+	if (get_iface_hw_addr(zconf.iface, zconf.hw_mac)) {
+		log_fatal("send", "could not retrieve hardware address for"
 			  "interface: %s", zconf.iface);
 		return -1;
 	}
+	char mac_buf[(ETHER_ADDR_LEN * 2) + (ETHER_ADDR_LEN - 1) + 1];
+	char *p = mac_buf;
+	for(int i=0; i < ETHER_ADDR_LEN; i++) {
+		if (i == ETHER_ADDR_LEN-1) {
+			snprintf(p, 3, "%.2x", zconf.hw_mac[i]);
+			p += 2;
+		} else {
+			snprintf(p, 4, "%.2x:", zconf.hw_mac[i]);
+			p += 3;
+		}
+	}
+	log_debug("send", "source MAC address %s",
+			mac_buf);
 
-	zconf.probe_module->thread_initialize(buf, hw_mac, zconf.gw_mac,
+	zconf.probe_module->thread_initialize(buf, zconf.hw_mac, zconf.gw_mac,
 					      zconf.target_port);
 	pthread_mutex_unlock(&send_mutex);
-
 	
 	// adaptive timing to hit target rate
 	uint32_t count = 0;
