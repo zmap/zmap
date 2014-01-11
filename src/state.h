@@ -71,6 +71,7 @@ struct state_conf {
 	char *output_args;
 	macaddr_t gw_mac[MAC_ADDR_LEN_BYTES];
 	macaddr_t hw_mac[MAC_ADDR_LEN_BYTES];
+	uint32_t gw_ip;
 	int gw_mac_set;
 	int send_ip_pkts;
 	char *source_ip_first;

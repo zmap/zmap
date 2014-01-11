@@ -379,6 +379,11 @@ static void json_metadata(FILE *file)
 		}
 		json_object_object_add(obj, "gateway-mac", json_object_new_string(mac_buf));
 	}
+	if (zconf.gw_ip) {
+		struct in_addr addr;
+		addr.s_addr = zconf.gw_ip;
+		json_object_object_add(obj, "gateway-ip", json_object_new_string(inet_ntoa(addr)));
+	}
 	if (zconf.hw_mac) {
 		char mac_buf[(ETHER_ADDR_LEN * 2) + (ETHER_ADDR_LEN - 1) + 1];
 		char *p = mac_buf;
@@ -478,6 +483,7 @@ static void start_zmap(void)
 					zconf.iface);
 		}
 		log_debug("zmap", "found gateway IP %s on %s", inet_ntoa(gw_ip), zconf.iface); 
+		zconf.gw_ip = gw_ip.s_addr;
 		
 		if (get_hw_addr(&gw_ip, zconf.iface, zconf.gw_mac)) {
 			log_fatal("zmap", "could not detect GW MAC address for %s on %s."
