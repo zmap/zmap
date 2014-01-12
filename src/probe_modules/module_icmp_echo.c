@@ -21,6 +21,9 @@
 #include "packet.h"
 #include "validate.h"
 
+#define ICMP_SMALLEST_SIZE 5
+#define ICMP_TIMXCEED_UNREACH_HEADER_SIZE 8
+
 probe_module_t module_icmp_echo;
 
 int icmp_echo_init_perthread(void* buf, macaddr_t *src,
@@ -89,7 +92,7 @@ int icmp_validate_packet(const struct ip *ip_hdr,
 		return 0;
 	}
 	
-	if ((4*ip_hdr->ip_hl + sizeof(struct icmp)) > len) {
+	if (((uint32_t) 4 * ip_hdr->ip_hl + ICMP_SMALLEST_SIZE) > len) {
 		// buffer not large enough to contain expected icmp header 
 		return 0;
 	}
@@ -100,15 +103,20 @@ int icmp_validate_packet(const struct ip *ip_hdr,
 	// ICMP validation is tricky: for some packet types, we must look inside 
 	// the payload
 	if (icmp_h->icmp_type == ICMP_TIMXCEED || icmp_h->icmp_type == ICMP_UNREACH) {
-		if ((4*ip_hdr->ip_hl + sizeof(struct icmp) +
+
+		// Should have 16B TimeExceeded/Dest_Unreachable header + original IP header
+		// + 1st 8B of original ICMP frame
+		if ((4*ip_hdr->ip_hl + ICMP_TIMXCEED_UNREACH_HEADER_SIZE +
 			sizeof(struct ip)) > len) {
 			return 0;
 		}
+
 		struct ip *ip_inner = (struct ip *)(icmp_h + 1);
-		if ((4*ip_hdr->ip_hl + sizeof(struct icmp) +
-				4*ip_inner->ip_hl + sizeof(struct icmp)) > len) {
+		if (((uint32_t) 4 * ip_hdr->ip_hl + ICMP_TIMXCEED_UNREACH_HEADER_SIZE +
+				4*ip_inner->ip_hl + 8 /*1st 8 bytes of original*/ ) > len) {
 			return 0;
 		}
+
 		struct icmp *icmp_inner = (struct icmp *)((char *) ip_inner + 4*ip_hdr->ip_hl);
 
 		// Regenerate validation and icmp id based off inner payload
