@@ -23,9 +23,11 @@
 #include <pthread.h>
 
 #include "../lib/includes.h"
+#include "../lib/blacklist.h"
 #include "../lib/logger.h"
 #include "../lib/random.h"
-#include "../lib/blacklist.h"
+#include "../lib/xalloc.h"
+
 
 #ifndef __linux__
 #include <mach/thread_act.h>
@@ -35,6 +37,7 @@
 #include <json.h>
 #endif
 
+#include "aesrand.h"
 #include "zopt.h"
 #include "send.h"
 #include "recv.h"
@@ -176,12 +179,17 @@ static void set_cpu(void)
 }
 #endif
 
+typedef struct send_arg {
+	int sock;
+	shard_t *shard;
+} send_arg_t;
+
 static void* start_send(void *arg)
 {
-	uintptr_t v = (uintptr_t) arg;
-	int sock = (int) v & 0xFFFF;
+	send_arg_t *v = (send_arg_t *) arg;
 	set_cpu();
-	send_run(sock);
+	send_run(v->sock, v->shard);
+	free(v);
 	return NULL;
 }
 
@@ -507,16 +515,30 @@ static void start_zmap(void)
 		zconf.gw_mac_set = 1;
 	}
 	log_debug("send", "gateway MAC address %02x:%02x:%02x:%02x:%02x:%02x",
-				  zconf.gw_mac[0], zconf.gw_mac[1], zconf.gw_mac[2],
-				  zconf.gw_mac[3], zconf.gw_mac[4], zconf.gw_mac[5]);
+		  zconf.gw_mac[0], zconf.gw_mac[1], zconf.gw_mac[2],
+		  zconf.gw_mac[3], zconf.gw_mac[4], zconf.gw_mac[5]);
+	// Initialization
 
-	// initialization
+	// Seed the RNG
+	if (zconf.use_seed) {
+		aesrand_init(zconf.seed + 1);
+	} else {
+		aesrand_init(0);
+	}
+
 	log_info("zmap", "output module: %s", zconf.output_module->name);
 	if (zconf.output_module && zconf.output_module->init) {
 		zconf.output_module->init(&zconf, zconf.output_fields,
 				zconf.output_fields_len);
 	}
-	if (send_init()) {
+	// blacklist
+	if (blacklist_init(zconf.whitelist_filename, zconf.blacklist_filename,
+			   zconf.destination_cidrs, zconf.destination_cidrs_len,
+			   NULL, 0)) {
+		log_fatal("zmap", "unable to initialize blacklist / whitelist");
+	}
+	iterator_t *it = send_init();
+	if (!it) {
 		log_fatal("zmap", "unable to initialize sending component");
 	}
 	if (zconf.output_module && zconf.output_module->start) {
@@ -538,15 +560,17 @@ static void start_zmap(void)
 	}
 	tsend = malloc(zconf.senders * sizeof(pthread_t));
 	assert(tsend);
-	for (int i=0; i < zconf.senders; i++) {
+	for (uint8_t i = 0; i < zconf.senders; i++) {
 		uintptr_t sock;
 		if (zconf.dryrun) {
 			sock = get_dryrun_socket();
 		} else {
 			sock = get_socket();
 		}
-		
-		int r = pthread_create(&tsend[i], NULL, start_send, (void*) sock);
+		send_arg_t *arg = xmalloc(sizeof(send_arg_t));
+		arg->sock = sock;
+		arg->shard = get_shard(it, i);
+		int r = pthread_create(&tsend[i], NULL, start_send, arg);
 		if (r != 0) {
 			log_fatal("zmap", "unable to create send thread");
 			exit(EXIT_FAILURE);
@@ -564,7 +588,7 @@ static void start_zmap(void)
 	drop_privs();
 
 	// wait for completion
-	for (int i=0; i < zconf.senders; i++) {
+	for (uint8_t i = 0; i < zconf.senders; i++) {
 		int r = pthread_join(tsend[i], NULL);
 		if (r != 0) {
 			log_fatal("zmap", "unable to join send thread");

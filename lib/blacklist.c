@@ -257,6 +257,15 @@ int blacklist_init(char *whitelist_filename, char *blacklist_filename,
 	log_debug("constraint", "%lu addresses (%0.0f%% of address "
 			"space) can be scanned", 
 			allowed, allowed*100./((long long int)1 << 32));
+	if (!allowed) {
+		log_error("blacklist", "no addresses are eligible to be scanned in the "
+			  "current configuration. This may be because the "
+			  "blacklist being used by ZMap (%s) prevents "
+			  "any addresses from receiving probe packets.",
+			  blacklist_filename
+			);
+		return EXIT_FAILURE;
+	}
 	return EXIT_SUCCESS;
 }
 

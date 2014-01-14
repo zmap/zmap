@@ -1,0 +1,100 @@
+
+#include <stdint.h>
+#include <assert.h>
+
+#include <gmp.h>
+
+#include "../lib/includes.h"
+#include "../lib/blacklist.h"
+#include "shard.h"
+#include "state.h"
+
+
+void shard_init(shard_t* shard, 
+		uint8_t shard_id, 
+		uint8_t num_shards,
+		uint8_t sub_id,
+		uint8_t num_subshards,
+		const cycle_t* cycle,
+		shard_complete_cb cb,
+		void *arg)
+{
+	// Start out by figuring out the multiplication factor for this shard.
+	// With one shard, this would just be the generator, but with n shards,
+	// f = g^n.
+
+	// Then on top of that, we want to shard internally (subshards) per
+	// thread. With t threads, f = g^(nf).
+	uint32_t tot_shards = (uint32_t) num_shards * (uint32_t) num_subshards;
+	mpz_t start, generator, prime, result, power;
+	mpz_init_set_ui(start, cycle->offset);
+	mpz_init_set_ui(generator, cycle->generator);
+	mpz_init_set_ui(power, tot_shards);
+	mpz_init_set_ui(prime, cycle->group->prime);
+	mpz_init(result);
+	mpz_powm(result, generator, power, prime);
+	shard->params.factor = (uint64_t) mpz_get_ui(result);
+	shard->params.modulus = cycle->group->prime;
+
+	// begin_idx = s + tr - 1
+	// end_idx = [p - (p % nr) + s + tr] % p = [s + tr - (p % nr)] % p
+	// 					    ^always less than p
+	//         = s + tr - (p % nr)
+	uint64_t begin_idx = shard_id + sub_id*num_subshards - 1;
+	uint64_t temp = (cycle->group->prime % (sub_id*num_subshards)) - 1;
+	assert(temp < begin_idx);
+	uint64_t end_idx = begin_idx - temp;
+	mpz_powm_ui(result, generator, begin_idx, prime);
+	shard->params.first = (uint64_t) mpz_get_ui(result);
+	shard->params.first *= cycle->offset;
+	shard->params.first %= shard->params.modulus;
+	mpz_powm_ui(result, generator, end_idx, prime);
+	shard->params.last = (uint64_t) mpz_get_ui(result);
+	shard->params.last *= cycle->offset;
+	shard->params.last %= shard->params.modulus;
+	shard->current = cycle->offset;
+
+	// Set the callbacks
+	shard->cb = cb;
+	shard->arg = arg;
+
+	// Bump the current to a valid ip
+	shard_get_next_ip(shard);
+
+
+
+	// Clear everything
+	mpz_clear(start);
+	mpz_clear(generator);
+	mpz_clear(prime);
+	mpz_clear(power);
+	mpz_clear(result);
+}
+
+uint32_t shard_get_cur_ip(shard_t *shard)
+{
+	return (uint32_t) blacklist_lookup_index(shard->current - 1);
+}
+
+static inline uint32_t shard_get_next_elem(shard_t *shard)
+{
+	do {
+		shard->current *= shard->params.factor;
+		shard->current %= shard->params.modulus;
+	} while (shard->current >= (1LL << 32));
+	return (uint32_t) shard->current;
+}
+
+uint32_t shard_get_next_ip(shard_t *shard)
+{
+	while (1) {
+		uint32_t candidate = shard_get_next_elem(shard);
+		if (candidate == shard->params.last) {
+			return 0;
+		}
+		if (candidate - 1 < zsend.targets) {
+			return blacklist_lookup_index(candidate - 1);
+		}
+		shard->state.blacklisted++;
+	}
+}

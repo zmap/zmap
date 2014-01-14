@@ -9,9 +9,11 @@
 #ifndef SEND_H
 #define SEND_H
 
+#include "iterator.h"
+
 int get_socket(void);
 int get_dryrun_socket(void);
-int send_init(void);
-int send_run(int);
+iterator_t* send_init(void);
+int send_run(int, shard_t*);
 
 #endif //SEND_H

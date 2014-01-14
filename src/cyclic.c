@@ -47,40 +47,16 @@
 #include <gmp.h>
 
 #include "../lib/includes.h"
-#include "../lib/xalloc.h"
-#include "../lib/logger.h"
-#include "../lib/blacklist.h"
-
-#include "state.h"
 #include "aesrand.h"
-
-#define LSRC "cyclic"
-
-typedef struct cyclic_group {
-	uint64_t prime;
-	uint64_t known_primroot;
-	size_t num_prime_factors;	// number of unique prime factors of (prime-1)
-	uint64_t prime_factors[10];	// unique prime factors of (prime-1)
-} cyclic_group_t;
-
-struct cyclic_iterator {
-	const cyclic_group_t *group;
-	uint64_t prime;
-	uint64_t primroot;
-	uint64_t num_addrs;
-	uint64_t current;
-	uint64_t start;
-	uint64_t stop;
-	uint64_t factor;
-};
 
 // We will pick the first cyclic group from this list that is
 // larger than the number of IPs in our whitelist. E.g. for an
 // entire Internet scan, this would be cyclic32
 // Note: this list should remain ordered by size (primes) ascending.
+
 static cyclic_group_t groups[] = {
 { // 2^8 + 1
-	.prime = 256,
+	.prime = 257,
 	.known_primroot = 3,
 	.prime_factors = {2},
 	.num_prime_factors = 1
@@ -111,11 +87,10 @@ static cyclic_group_t groups[] = {
 }
 };
 
-
 #define COPRIME 1
 #define NOT_COPRIME 0
 
-// check whether two integers are coprime
+// Check whether an integer is coprime with (p - 1)
 static int check_coprime(uint64_t check, const cyclic_group_t *group)
 {
 	for (unsigned i=0; i < group->num_prime_factors; i++) {
@@ -130,19 +105,45 @@ static int check_coprime(uint64_t check, const cyclic_group_t *group)
 	return COPRIME;
 }
 
-// find gen of cyclic group Z modulo PRIME
-static uint64_t find_primroot(const cyclic_group_t *group)
+// Return a (random) number coprime with (p - 1) of the group,
+// which is a generator of the additive group mod (p - 1)
+static uint32_t find_primroot(const cyclic_group_t *group)
 {
-	// what luck, rand() returns a uint32_t!
-	uint32_t candidate = (uint32_t) aesrand_getword() & 0xFFFFFFFF;
-	while(check_coprime(candidate, group) != COPRIME) {
+	uint32_t candidate = (uint32_t) (aesrand_getword() & 0xFFFFFFFF);
+	while (check_coprime(candidate, group) != COPRIME) {
 		++candidate;
 	}
-	// pre-modded result is gigantic so use GMP
+	uint64_t retv = isomorphism(candidate, group);
+	return retv;
+}
+
+const cyclic_group_t* get_group(uint64_t min_size)
+{
+	for(unsigned i = 0; i < sizeof(groups); ++i) {
+		if (groups[i].prime > min_size) {
+			return &groups[i];
+		}
+	}
+	// Should not reach, final group should always be larger than 2^32
+	assert(0);
+}
+
+cycle_t make_cycle(const cyclic_group_t* group)
+{
+	cycle_t cycle;
+	cycle.group = group;
+	cycle.generator = find_primroot(group);
+	cycle.offset = (uint32_t) (aesrand_getword() & 0xFFFFFFFF);
+	return cycle;
+}
+
+uint64_t isomorphism(uint64_t additive_elt, const cyclic_group_t* mult_group)
+{
+	assert(additive_elt < mult_group->prime);
 	mpz_t base, power, prime, primroot;
-	mpz_init_set_d(base, (double) group->known_primroot);
-	mpz_init_set_d(power, (double) candidate);
-	mpz_init_set_d(prime, (double) group->prime);
+	mpz_init_set_ui(base, mult_group->known_primroot);
+	mpz_init_set_ui(power, additive_elt);
+	mpz_init_set_ui(prime, mult_group->prime);
 	mpz_init(primroot);
 	mpz_powm(primroot, base, power, prime);
 	uint64_t retv = (uint64_t) mpz_get_ui(primroot);
@@ -152,224 +153,3 @@ static uint64_t find_primroot(const cyclic_group_t *group)
 	mpz_clear(primroot);
 	return retv;
 }
-
-static uint64_t find_inverse(uint64_t primroot, uint64_t prime)
-{
-	// This does the extended Euclidean algorithm
-	int64_t a = (int64_t) primroot;
-	int64_t b = (int64_t) prime;
-	int64_t x = 0LL, y = 1LL, last_x = 1LL, last_y = 0LL, q;
-	int64_t temp;
-	while (b != 0) {
-		q = a / b;
-		// (a, b) := (b, a % b)
-		temp = b;  
-		b = a % b;
-		a = temp;
-		// (x, last_x) := (last_x - q*x, x)
-		temp = x;
-		x = last_x - q*x;
-		last_x = temp;
-		// (y, last_y) := (last_y - q*y, y)       
-		temp = y;
-		y = last_y - q*y;
-		last_y = temp;
-	}
-	x = last_x;
-	y = last_y;
-	// Now a*x + b*y = gcd(a, b)
-	if (x < 0) {
-		x += prime;
-	}
-	return (uint64_t) x;
-}
-
-static uint64_t find_stop_exponent(__attribute__((unused)) uint64_t generator,
-				   uint64_t p, uint64_t shard_num,
-				   uint64_t num_shards)
-{
-	// Number of elements in the group
-	uint64_t order = p - 1;
-	// Greatest Lower Bound on elements in each shard
-	uint64_t elts_per_shard = (order / num_shards);
-	// Exponent of the last element in this shard
-	uint64_t largest_exponent = elts_per_shard * num_shards + shard_num;
-	// But we don't want to double count the early elements, so if the extra
-	// element in this shard pushed us back around mod p, roll back the exponent
-	// by num_shards
-	if (largest_exponent > order) {
-		largest_exponent -= num_shards;
-	}
-	return largest_exponent;
-
-}
-
-// Given the first shard starts at begin, find the beginning of
-// shard_num (shards are 1-indexed)
-static uint64_t find_start(uint64_t begin, uint64_t generator, uint64_t p,
-		    uint64_t shard_num, 
-		    __attribute__((unused)) uint64_t num_shards)
-{
-	uint64_t start = begin;
-	// Tick the starting point forwards by g^(shard_num - 1)
-	while (shard_num > 1) {
-		start *= generator;
-		start %= p;
-		--shard_num;
-	}
-	return start;
-}
-
-// Given the first shard starts at begin, find the last element of this
-// shard (shards are 1-indexed)
-static uint64_t find_stop(uint64_t begin, uint64_t generator, uint64_t p,
-			  uint64_t shard_num, uint64_t num_shards)
-{
-	uint64_t stop = begin;
-	uint64_t stop_exp = find_stop_exponent(generator, p, shard_num, num_shards);
-	uint64_t inverse = find_inverse(generator, p);
-	// g^p = g, so given s < p, we need to "go backwards" (p - s) ticks 
-	// from g to get g^s
-	uint32_t stop_offset = (uint32_t) (p - stop_exp);
-	while (stop_offset) {
-		stop *= inverse;
-		stop %= p;
-		--stop_offset;
-	}
-	return stop;
-}
-
-static uint64_t find_factor(uint64_t generator, uint64_t prime, uint64_t num_shards)
-{
-	mpz_t base, power, mod, factor;
-	mpz_init_set_d(base, (double) generator);
-	mpz_init_set_d(power, (double) num_shards);
-	mpz_init_set_d(mod, (double) prime);
-	mpz_init(factor);
-	mpz_powm(factor, base, power, mod);
-	uint64_t retv = (uint64_t) mpz_get_ui(factor);
-	mpz_clear(base);
-	mpz_clear(power);
-	mpz_clear(mod);
-	mpz_clear(factor);
-	return retv;
-}
-
-cyclic_iterator_t* cyclic_init(uint32_t primroot_, uint32_t current_)
-{
-	assert(!(!primroot_ && current_));
-	uint64_t num_addrs, primroot, prime = 0, current;
-	// Initialize blacklist
-	if (blacklist_init(zconf.whitelist_filename, zconf.blacklist_filename,
-                        zconf.destination_cidrs, zconf.destination_cidrs_len,
-                        NULL, 0)) {
-                return NULL;
-        }
-	num_addrs = blacklist_count_allowed();
-	if (!num_addrs) {
-		log_error("blacklist", "no addresses are eligible to be scanned in the "
-				"current configuration. This may be because the "
-				"blacklist being used by ZMap (%s) prevents "
-				"any addresses from receiving probe packets.",
-				zconf.blacklist_filename
-			);
-		exit(EXIT_FAILURE);
-	}
-
-	const cyclic_group_t *cur_group = NULL;
-	for (uint32_t i=0; i<sizeof(groups)/sizeof(groups[0]); i++) {
-		if (groups[i].prime > num_addrs) {
-			cur_group = &groups[i];
-			log_debug("cyclic", "prime: %lu", 
-					cur_group->prime);
-			log_debug("cyclic", "known generator: %lu",
-					cur_group->known_primroot);
-
-			prime = groups[i].prime;
-			break;
-		}
-	}
-	assert(prime);
-
-	if (zconf.use_seed) {
-		aesrand_init(zconf.seed+1);
-	} else {
-		aesrand_init(0);
-	}
-	if (!primroot_) {
-		do {
-			primroot = find_primroot(cur_group);
-		} while (primroot >= (1LL << 32));
-		log_debug(LSRC, "primitive root: %lld", primroot);
-		current = (uint32_t) aesrand_getword() & 0xFFFFFFFF;
-		log_debug(LSRC, "starting point: %lld", current);
-	} else {
-		primroot = primroot_;
-		log_debug(LSRC, "primitive root %lld specified by caller",
-				primroot);
-		if (!current_) {
-			current = (uint32_t) aesrand_getword() & 0xFFFFFFFF;
-			log_debug(LSRC, "no cyclic starting point, "
-					 "selected random startpoint: %lld",
-					 current);
-		} else {
-			current = current_;
-		    log_debug(LSRC, "starting point %lld specified by caller",
-				    current);
-		}
-	}
-	zconf.generator = primroot;
-	// make sure current is an allowed ip
-	cyclic_iterator_t *cycle = xmalloc(sizeof(cyclic_iterator_t));
-	cycle->current = current;
-	cycle->group = cur_group;
-	cycle->prime = prime;
-	cycle->primroot = primroot;
-	cycle->num_addrs = num_addrs;
-	cycle->start = find_start(current, zconf.generator, prime, zconf.shard_num, zconf.total_shards);
-	cycle->stop = find_stop(current, zconf.generator, prime, zconf.shard_num, zconf.total_shards);
-	cycle->factor = find_factor(zconf.generator, prime, zconf.total_shards);
-	cyclic_get_next_ip(cycle);
-	return cycle;
-}
-
-uint32_t cyclic_get_curr_ip(cyclic_iterator_t *cycle)
-{
-	return (uint32_t) blacklist_lookup_index(cycle->current - 1);
-}
-
-uint32_t cyclic_get_primroot(cyclic_iterator_t *cycle)
-{
-	return (uint32_t) cycle->primroot;
-}
-
-static inline uint32_t cyclic_get_next_elem(cyclic_iterator_t *cycle)
-{
-	do {
-		cycle->current *= cycle->factor;
-		cycle->current %= cycle->prime;
-	} while (cycle->current >= (1LL << 32));
-	return (uint32_t) cycle->current;
-}
-
-uint32_t cyclic_get_next_ip(cyclic_iterator_t *cycle)
-{
-	while (1) {
-		uint32_t candidate = cyclic_get_next_elem(cycle);
-		if (candidate == cycle->stop) {
-			return 0;
-		}
-		if (candidate-1 < cycle->num_addrs) {
-			return blacklist_lookup_index(candidate-1);
-		}
-		zsend.blacklisted++;
-	}
-}
-
-void cyclic_free(cyclic_iterator_t* c)
-{
-	if (c) {
-		free(c);
-	}
-}
-

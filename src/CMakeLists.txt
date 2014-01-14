@@ -53,9 +53,11 @@ SET(SOURCES
 	fieldset.c
 	filter.c
 	get_gateway.c
+	iterator.c
 	monitor.c
 	recv.c
 	send.c
+	shard.c
 	state.c
 	validate.c
 	zmap.c

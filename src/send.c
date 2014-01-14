@@ -23,11 +23,13 @@
 #include "../lib/random.h"
 #include "../lib/blacklist.h"
 
-#include "cyclic.h"
+#include "aesrand.h"
 #include "get_gateway.h"
-#include "state.h"
+#include "iterator.h"
 #include "probe_modules/packet.h"
 #include "probe_modules/probe_modules.h"
+#include "shard.h"
+#include "state.h"
 #include "validate.h"
 
 // OS specific functions called by send_run
@@ -42,34 +44,30 @@ static inline int send_run_init(int sock);
 #include "send-linux.h"
 #endif /* __APPLE__ || __FreeBSD__ || __NetBSD__ */
 
-// Lock to manage access to share send state such as counters and 
-// cyclic group
-pthread_mutex_t send_mutex = PTHREAD_MUTEX_INITIALIZER;
+// The iterator over the cyclic group
 
-// Lock to provide thread safety to the user provided send callback
-pthread_mutex_t syncb_mutex = PTHREAD_MUTEX_INITIALIZER;
+// Lock for send run
+static pthread_mutex_t send_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-// Globals to handle sending from multiple IP addresses
-static uint16_t num_src_ports;
-static uint32_t num_addrs;
+// Source IP address for outgoing packets
 static in_addr_t srcip_first;
 static in_addr_t srcip_last;
-
-// Offset send addresses according to a random chose per scan execution
-// in order to help prevent cross-scan interference
 static uint32_t srcip_offset;
+static uint32_t num_src_addrs;
 
-static cyclic_iterator_t *c;
+// Source ports for outgoing packets
+static uint16_t num_src_ports;
 
 // global sender initialize (not thread specific)
-int send_init(void)
+iterator_t* send_init(void)
 {
 	// generate a new primitive root and starting position
-	c = cyclic_init(0, 0);
-	zsend.first_scanned = cyclic_get_curr_ip(c);
+	iterator_t *it;
+	it = iterator_init(zconf.senders, zconf.shard_num, zconf.total_shards);
 
 	// compute number of targets
 	uint64_t allowed = blacklist_count_allowed();
+	assert(allowed <= (1LL << 32));
 	if (allowed == (1LL << 32)) {
 		zsend.targets = 0xFFFFFFFF;
 	} else {
@@ -87,24 +85,30 @@ int send_init(void)
 				zconf.source_ip_first);
 	}
 	srcip_last = inet_addr(zconf.source_ip_last);
-	log_debug("send", "srcip_first: %u", srcip_first);
-	log_debug("send", "srcip_last: %u", srcip_last);
 	if (srcip_last == INADDR_NONE) {
 		log_fatal("send", "invalid end source ip address: `%s'",
 				zconf.source_ip_last);
 	}
+	log_debug("send", "srcip_first: %u", srcip_first);
+	log_debug("send", "srcip_last: %u", srcip_last);
 	if (srcip_first == srcip_last) {
 		srcip_offset = 0;
-		num_addrs = 1;
+		num_src_addrs = 1;
 	} else {
-		srcip_offset = rand() % (srcip_last - srcip_first);
-		num_addrs = ntohl(srcip_last) - ntohl(srcip_first) + 1;
+		uint32_t ip_first = ntohl(srcip_first);
+		uint32_t ip_last = ntohl(srcip_last);
+		assert(ip_first && ip_last);
+		assert(ip_last > ip_first);
+		uint32_t offset = (uint32_t) (aesrand_getword() & 0xFFFFFFFF);
+		srcip_offset = offset % (srcip_last - srcip_first);
+		num_src_addrs = ip_last - ip_first + 1;
 	}
 
 	// process the source port range that ZMap is allowed to use
 	num_src_ports = zconf.source_port_last - zconf.source_port_first + 1;
 	log_debug("send", "will send from %i address%s on %u source ports",
-		 num_addrs, ((num_addrs==1)?"":"es"), num_src_ports);
+		  num_src_addrs, ((num_src_addrs ==1 ) ? "":"es"),
+		  num_src_ports);
 
 	// global initialization for send module
 	assert(zconf.probe_module);
@@ -143,7 +147,7 @@ int send_init(void)
 	validate_init();
 
 	zsend.start = now();	
-	return EXIT_SUCCESS;
+	return it;
 }
 
 static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
@@ -152,7 +156,7 @@ static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
 		return srcip_first;
 	}
 	return htonl(((ntohl(dst) + srcip_offset + local_offset) 
-			% num_addrs)) + srcip_first;
+			% num_src_addrs)) + srcip_first;
 }
 
 int get_dryrun_socket(void)
@@ -170,11 +174,10 @@ int get_dryrun_socket(void)
 }
 
 // one sender thread
-int send_run(int sock)
+int send_run(int sock, shard_t *s)
 {
 	log_trace("send", "send thread started");
 	pthread_mutex_lock(&send_mutex);
-
 	// Allocate a buffer to hold the outgoing packet
 	char buf[MAX_PACKET_SIZE];
 	memset(buf, 0, MAX_PACKET_SIZE);
@@ -191,6 +194,7 @@ int send_run(int sock)
 			  "interface: %s", zconf.iface);
 		return -1;
 	}
+	// MAC address length in characters
 	char mac_buf[(ETHER_ADDR_LEN * 2) + (ETHER_ADDR_LEN - 1) + 1];
 	char *p = mac_buf;
 	for(int i=0; i < ETHER_ADDR_LEN; i++) {
@@ -204,9 +208,10 @@ int send_run(int sock)
 	}
 	log_debug("send", "source MAC address %s",
 			mac_buf);
-
-	zconf.probe_module->thread_initialize(buf, zconf.hw_mac, zconf.gw_mac,
+	if (zconf.probe_module->thread_initialize) {
+		zconf.probe_module->thread_initialize(buf, zconf.hw_mac, zconf.gw_mac,
 					      zconf.target_port);
+	}
 	pthread_mutex_unlock(&send_mutex);
 	
 	// adaptive timing to hit target rate
@@ -215,6 +220,7 @@ int send_run(int sock)
 	double last_time = now();
 	uint32_t delay = 0;
 	int interval = 0;
+	uint32_t max_targets = s->state.max_targets;
 	volatile int vi;
 	if (zconf.rate > 0) {
 		// estimate initial rate
@@ -241,34 +247,20 @@ int send_run(int sock)
 				last_time = t;
 			}
 		}
-		// generate next ip from cyclic group and update global state
-		// (everything locked happens here)
-		pthread_mutex_lock(&send_mutex);
-		if (zsend.complete) {
-			pthread_mutex_unlock(&send_mutex);
-			break;
-		}
-		if (zsend.sent >= zconf.max_targets) {
-			zsend.complete = 1;
-			zsend.finish = now();
-			pthread_mutex_unlock(&send_mutex);
+		if (s->state.sent > max_targets) {
+			s->cb(s->id, s->arg);
 			break;
 		}
 		if (zconf.max_runtime && zconf.max_runtime <= now() - zsend.start) {
-			zsend.complete = 1;
-			zsend.finish = now();
-			pthread_mutex_unlock(&send_mutex);
+			s->cb(s->id, s->arg);
 			break;
 		}
-		uint32_t curr = cyclic_get_next_ip(c);
+		uint32_t curr = shard_get_next_ip(s);
 		if (curr == 0) {
-			zsend.complete = 1;
-			zsend.finish = now();
-			pthread_mutex_unlock(&send_mutex);
-			continue;
+			s->cb(s->id, s->arg);
+			break;
 		}
-		zsend.sent++;
-		pthread_mutex_unlock(&send_mutex);
+		s->state.sent++;
 		for (int i=0; i < zconf.packet_streams; i++) {
 			uint32_t src_ip = get_src_ip(curr, i);
 
@@ -287,15 +279,12 @@ int send_run(int sock)
 					addr.s_addr = curr;
 					log_debug("send", "send_packet failed for %s. %s",
 							  inet_ntoa(addr), strerror(errno));
-					pthread_mutex_lock(&send_mutex);
-					zsend.sendto_failures++;
-					pthread_mutex_unlock(&send_mutex);
+					s->state.failures++;
 				}
 			}
 		}
 	}
-	cyclic_free(c);
-	log_debug("send", "thread finished");
+	log_debug("send", "thread %hu finished", s->id);
 	return EXIT_SUCCESS;
 }
 
