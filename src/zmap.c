@@ -693,6 +693,7 @@ int main(int argc, char *argv[])
 		char *fullpath = malloc(strlen(zconf.log_directory) + strlen(path) + 2);
 		sprintf(fullpath, "%s/%s", zconf.log_directory, path);
 		log_location = fopen(fullpath, "w");
+		free(fullpath);
 		
 	} else {
 		log_location = stderr;
@@ -1061,6 +1062,8 @@ int main(int argc, char *argv[])
 	}
 
 	start_zmap();
+
+	fclose(log_location);
 
 	cmdline_parser_free(&args);
 	free(params);
