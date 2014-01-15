@@ -34,13 +34,19 @@ void fprintf_ip_header(FILE *fp, struct ip *iph)
 {
 	struct in_addr *s = (struct in_addr *) &(iph->ip_src);
 	struct in_addr *d = (struct in_addr *) &(iph->ip_dst);
-	char srcip[20];
-	char dstip[20];
+
+	unsigned int ip_addr_length = 20;
+	char srcip[ip_addr_length + 1];
+	char dstip[ip_addr_length + 1];
 	// inet_ntoa is a const char * so we if just call it in
 	// fprintf, you'll get back wrong results since we're
 	// calling it twice.
-	strncpy(srcip, inet_ntoa(*s), 19);
-	strncpy(dstip, inet_ntoa(*d), 19);
+	strncpy(srcip, inet_ntoa(*s), ip_addr_length - 1);
+	strncpy(dstip, inet_ntoa(*d), ip_addr_length - 1);
+
+	srcip[ip_addr_length] = '\0';
+	dstip[ip_addr_length] = '\0';
+
 	fprintf(fp, "ip { saddr: %s | daddr: %s | checksum: %#04X }\n",
 			srcip,
 			dstip,
