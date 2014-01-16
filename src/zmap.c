@@ -27,7 +27,7 @@
 #include "../lib/random.h"
 #include "../lib/blacklist.h"
 
-#ifndef __linux__
+#if defined(__APPLE__)
 #include <mach/thread_act.h>
 #endif
 
@@ -156,6 +156,13 @@ static void set_cpu(void)
 }
 
 #else
+
+#if defined(__FreeBSD__) || defined(__NetBSD__)
+#include <sys/param.h>
+#include <sys/cpuset.h>
+#define cpu_set_t cpuset_t
+#endif
+
 static void set_cpu(void)
 {
 	pthread_mutex_lock(&cpu_affinity_mutex);
