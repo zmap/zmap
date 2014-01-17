@@ -60,14 +60,6 @@ option "probes"			P "Number of probes to send to each IP"
 	optional int
 option "dryrun"			d "Don't actually send packets"
 	optional
-option "shards"			- "Set the total number of shards"
-	typestr="N"
-	optional int
-	default="1"
-option "shard"			- "Set which shard this scan is"
-	typestr="n"
-	optional int
-	default="1"
 
 section "Network options" 
 
