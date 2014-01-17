@@ -61,9 +61,6 @@ static uint16_t num_src_ports;
 // global sender initialize (not thread specific)
 iterator_t* send_init(void)
 {
-	// generate a new primitive root and starting position
-	iterator_t *it;
-	it = iterator_init(zconf.senders, zconf.shard_num, zconf.total_shards);
 
 	// compute number of targets
 	uint64_t allowed = blacklist_count_allowed();
@@ -76,6 +73,10 @@ iterator_t* send_init(void)
 	if (zsend.targets > zconf.max_targets) {
 		zsend.targets = zconf.max_targets;
 	}
+
+	// generate a new primitive root and starting position
+	iterator_t *it;
+	it = iterator_init(zconf.senders, zconf.shard_num, zconf.total_shards);
 
 	// process the dotted-notation addresses passed to ZMAP and determine
 	// the source addresses from which we'll send packets;
@@ -231,6 +232,7 @@ int send_run(int sock, shard_t *s)
 		interval = (zconf.rate / zconf.senders) / 20;
 		last_time = now();
 	}
+	uint32_t curr = shard_get_cur_ip(s);
 	while (1) {
 		// adaptive timing delay
 		if (delay > 0) {
@@ -255,7 +257,7 @@ int send_run(int sock, shard_t *s)
 			s->cb(s->id, s->arg);
 			break;
 		}
-		uint32_t curr = shard_get_next_ip(s);
+		curr = shard_get_next_ip(s);
 		if (curr == 0) {
 			s->cb(s->id, s->arg);
 			break;
@@ -284,6 +286,7 @@ int send_run(int sock, shard_t *s)
 			}
 		}
 	}
+	fflush(stdout);
 	log_debug("send", "thread %hu finished", s->id);
 	return EXIT_SUCCESS;
 }

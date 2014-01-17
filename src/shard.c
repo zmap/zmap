@@ -36,32 +36,33 @@ void shard_init(shard_t* shard,
 	shard->params.factor = (uint64_t) mpz_get_ui(result);
 	shard->params.modulus = cycle->group->prime;
 
-	// begin_idx = s + tr - 1
+	// begin_idx = s + tr
 	// end_idx = [p - (p % nr) + s + tr] % p = [s + tr - (p % nr)] % p
 	// 					    ^always less than p
 	//         = s + tr - (p % nr)
-	uint64_t begin_idx = shard_id + sub_id*num_subshards - 1;
-	uint64_t temp = (cycle->group->prime % (sub_id*num_subshards)) - 1;
-	assert(temp < begin_idx);
+	uint64_t begin_idx = shard_id + sub_id*num_subshards;
+	uint64_t temp = cycle->group->prime % (num_shards*num_subshards);
+	assert(temp <= begin_idx);
 	uint64_t end_idx = begin_idx - temp;
 	mpz_powm_ui(result, generator, begin_idx, prime);
 	shard->params.first = (uint64_t) mpz_get_ui(result);
-	shard->params.first *= cycle->offset;
+	//shard->params.first *= cycle->offset;
 	shard->params.first %= shard->params.modulus;
 	mpz_powm_ui(result, generator, end_idx, prime);
 	shard->params.last = (uint64_t) mpz_get_ui(result);
-	shard->params.last *= cycle->offset;
+	//shard->params.last *= cycle->offset;
 	shard->params.last %= shard->params.modulus;
-	shard->current = cycle->offset;
+	shard->current = shard->params.first;
+
+	shard->state.max_targets = zsend.targets / num_subshards + 1;
 
 	// Set the callbacks
 	shard->cb = cb;
 	shard->arg = arg;
 
-	// Bump the current to a valid ip
-	shard_get_next_ip(shard);
-
-
+	if (shard->current > zsend.targets) {
+		shard_get_next_ip(shard);
+	}
 
 	// Clear everything
 	mpz_clear(start);
@@ -88,10 +89,10 @@ static inline uint32_t shard_get_next_elem(shard_t *shard)
 uint32_t shard_get_next_ip(shard_t *shard)
 {
 	while (1) {
-		uint32_t candidate = shard_get_next_elem(shard);
-		if (candidate == shard->params.last) {
+		if (shard->current == shard->params.last && shard->state.sent > 0) {
 			return 0;
 		}
+		uint32_t candidate = shard_get_next_elem(shard);
 		if (candidate - 1 < zsend.targets) {
 			return blacklist_lookup_index(candidate - 1);
 		}

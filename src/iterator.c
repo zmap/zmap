@@ -4,6 +4,7 @@
 
 #include "iterator.h"
 #include "shard.h"
+#include "state.h"
 
 #include "../lib/includes.h"
 #include "../lib/xalloc.h"
@@ -31,7 +32,7 @@ void shard_complete(uint8_t thread_id, void *arg)
 	}
 	pthread_mutex_unlock(&it->mutex);
 	if (done) {
-		// TODO
+		zsend.complete = 1;
 	}
 }
 
@@ -58,7 +59,7 @@ iterator_t* iterator_init(uint8_t num_threads, uint8_t shard,
 			   );
 
 	}
-	return 0;
+	return it;
 }
 
 shard_t* get_shard(iterator_t *it, uint8_t thread_id)

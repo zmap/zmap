@@ -47,6 +47,7 @@
 #include <gmp.h>
 
 #include "../lib/includes.h"
+#include "../lib/logger.h"
 #include "aesrand.h"
 
 // We will pick the first cyclic group from this list that is
@@ -109,10 +110,12 @@ static int check_coprime(uint64_t check, const cyclic_group_t *group)
 // which is a generator of the additive group mod (p - 1)
 static uint32_t find_primroot(const cyclic_group_t *group)
 {
-	uint32_t candidate = (uint32_t) (aesrand_getword() & 0xFFFFFFFF);
+	uint32_t candidate = (uint32_t) ((aesrand_getword() & 0xFFFFFFFF) % group->prime);
 	while (check_coprime(candidate, group) != COPRIME) {
 		++candidate;
 	}
+	printf("additive generator: %u\n", candidate);
+	fflush(stdout);
 	uint64_t retv = isomorphism(candidate, group);
 	return retv;
 }
@@ -134,6 +137,7 @@ cycle_t make_cycle(const cyclic_group_t* group)
 	cycle.group = group;
 	cycle.generator = find_primroot(group);
 	cycle.offset = (uint32_t) (aesrand_getword() & 0xFFFFFFFF);
+	cycle.offset %= group->prime;
 	return cycle;
 }
 
@@ -147,6 +151,7 @@ uint64_t isomorphism(uint64_t additive_elt, const cyclic_group_t* mult_group)
 	mpz_init(primroot);
 	mpz_powm(primroot, base, power, prime);
 	uint64_t retv = (uint64_t) mpz_get_ui(primroot);
+	log_trace("zmap", "Isomorphism: %llu", retv);
 	mpz_clear(base);
 	mpz_clear(power);
 	mpz_clear(prime);
