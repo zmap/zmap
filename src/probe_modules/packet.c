@@ -30,22 +30,23 @@ void print_macaddr(struct ifreq* i)
 }
 #endif /* NDEBUG */
 
+#define IP_ADDR_LEN 20 
+
 void fprintf_ip_header(FILE *fp, struct ip *iph)
 {
 	struct in_addr *s = (struct in_addr *) &(iph->ip_src);
 	struct in_addr *d = (struct in_addr *) &(iph->ip_dst);
 
-	unsigned int ip_addr_length = 20;
-	char srcip[21];
-	char dstip[21];
+	char srcip[IP_ADDR_LEN+1];
+	char dstip[IP_ADDR_LEN+1];
 	// inet_ntoa is a const char * so we if just call it in
 	// fprintf, you'll get back wrong results since we're
 	// calling it twice.
-	strncpy(srcip, inet_ntoa(*s), ip_addr_length - 1);
-	strncpy(dstip, inet_ntoa(*d), ip_addr_length - 1);
+	strncpy(srcip, inet_ntoa(*s), IP_ADDR_LEN - 1);
+	strncpy(dstip, inet_ntoa(*d), IP_ADDR_LEN - 1);
 
-	srcip[ip_addr_length] = '\0';
-	dstip[ip_addr_length] = '\0';
+	srcip[IP_ADDR_LEN] = '\0';
+	dstip[IP_ADDR_LEN] = '\0';
 
 	fprintf(fp, "ip { saddr: %s | daddr: %s | checksum: %#04X }\n",
 			srcip,
