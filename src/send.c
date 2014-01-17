@@ -59,14 +59,12 @@ static in_addr_t srcip_last;
 // in order to help prevent cross-scan interference
 static uint32_t srcip_offset;
 
-static cyclic_iterator_t *c;
-
 // global sender initialize (not thread specific)
 int send_init(void)
 {
 	// generate a new primitive root and starting position
-	c = cyclic_init(0, 0);
-	zsend.first_scanned = cyclic_get_curr_ip(c);
+	cyclic_init(0, 0);
+	zsend.first_scanned = cyclic_get_curr_ip();
 
 	// compute number of targets
 	uint64_t allowed = blacklist_count_allowed();
@@ -260,7 +258,7 @@ int send_run(int sock)
 			pthread_mutex_unlock(&send_mutex);
 			break;
 		}
-		uint32_t curr = cyclic_get_next_ip(c);
+		uint32_t curr = cyclic_get_next_ip();
 		if (curr == zsend.first_scanned) {
 			zsend.complete = 1;
 			zsend.finish = now();
@@ -292,7 +290,6 @@ int send_run(int sock)
 			}
 		}
 	}
-	cyclic_free(c);
 	log_debug("send", "thread finished");
 	return EXIT_SUCCESS;
 }

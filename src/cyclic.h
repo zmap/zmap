@@ -11,20 +11,15 @@
 #ifndef CYCLIC_H
 #define CYCLIC_H
 
-typedef struct cyclic_iterator cyclic_iterator_t;
-
-cyclic_iterator_t* cyclic_init(uint32_t, uint32_t);
+int cyclic_init(uint32_t, uint32_t);
 
 // get next IP address to scan
-uint32_t cyclic_get_next_ip(cyclic_iterator_t*);
+uint32_t cyclic_get_next_ip(void);
 
 // what IP address was returned last
-uint32_t cyclic_get_curr_ip(cyclic_iterator_t*);
+uint32_t cyclic_get_curr_ip(void);
 
 // what primitive root was generated for this current scan
-uint32_t cyclic_get_primroot(cyclic_iterator_t*);
-
-// Returns NULL on success, itself on failure
-void cyclic_free(cyclic_iterator_t*);
+uint32_t cyclic_get_primroot(void);
 
 #endif

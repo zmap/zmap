@@ -47,7 +47,7 @@
 #include <gmp.h>
 
 #include "../lib/includes.h"
-#include "../lib/xalloc.h"
+
 #include "../lib/logger.h"
 #include "../lib/blacklist.h"
 
@@ -62,16 +62,6 @@ typedef struct cyclic_group {
 	size_t num_prime_factors;	// number of unique prime factors of (prime-1)
 	uint64_t prime_factors[10];	// unique prime factors of (prime-1)
 } cyclic_group_t;
-
-struct cyclic_iterator {
-	const cyclic_group_t *group;
-	uint64_t prime;
-	uint64_t primroot;
-	uint64_t num_addrs;
-	uint64_t current;
-	uint64_t start;
-	uint64_t stop;
-};
 
 // We will pick the first cyclic group from this list that is
 // larger than the number of IPs in our whitelist. E.g. for an
@@ -104,6 +94,13 @@ static cyclic_group_t groups[] = {
 }
 };
 
+
+// selected prime/primitive root that we'll use as the generator
+static uint64_t prime = 0;
+static uint64_t primroot = 0;
+static uint64_t current = 0;
+
+static uint64_t num_addrs = 0;
 
 #define COPRIME 1
 #define NOT_COPRIME 0
@@ -215,16 +212,15 @@ uint64_t find_stop(uint64_t generator, uint64_t p, uint64_t shard_num, uint64_t 
 	return stop;
 }
 
-cyclic_iterator_t* cyclic_init(uint32_t primroot_, uint32_t current_)
+int cyclic_init(uint32_t primroot_, uint32_t current_)
 {
 	assert(!(!primroot_ && current_));
-	uint64_t num_addrs, primroot, prime = 0, current;
 	// Initialize blacklist
 	if (blacklist_init(zconf.whitelist_filename, zconf.blacklist_filename,
-                        zconf.destination_cidrs, zconf.destination_cidrs_len,
-                        NULL, 0)) {
-                return NULL;
-        }
+			zconf.destination_cidrs, zconf.destination_cidrs_len,
+			NULL, 0)) {
+		return -1;
+	}
 	num_addrs = blacklist_count_allowed();
 	if (!num_addrs) {
 		log_error("blacklist", "no addresses are eligible to be scanned in the "
@@ -249,7 +245,6 @@ cyclic_iterator_t* cyclic_init(uint32_t primroot_, uint32_t current_)
 			break;
 		}
 	}
-	assert(prime);
 
 	if (zconf.use_seed) {
 		aesrand_init(zconf.seed+1);
@@ -280,51 +275,38 @@ cyclic_iterator_t* cyclic_init(uint32_t primroot_, uint32_t current_)
 	}
 	zconf.generator = primroot;
 	// make sure current is an allowed ip
-	cyclic_iterator_t *cycle = xmalloc(sizeof(cyclic_iterator_t));
-	cycle->group = cur_group;
-	cycle->prime = prime;
-	cycle->primroot = primroot;
-	cycle->num_addrs = num_addrs;
-	cycle->current = current;
-	cyclic_get_next_ip(cycle);
+	cyclic_get_next_ip();
 
-	return cycle;
+	return 0;
 }
 
-uint32_t cyclic_get_curr_ip(cyclic_iterator_t *cycle)
+uint32_t cyclic_get_curr_ip(void)
 {
-	return (uint32_t) blacklist_lookup_index(cycle->current - 1);
+	return (uint32_t) blacklist_lookup_index(current-1);
 }
 
-uint32_t cyclic_get_primroot(cyclic_iterator_t *cycle)
+uint32_t cyclic_get_primroot(void)
 {
-	return (uint32_t) cycle->primroot;
+	return (uint32_t) primroot;
 }
 
-static inline uint32_t cyclic_get_next_elem(cyclic_iterator_t *cycle)
+static inline uint32_t cyclic_get_next_elem(void)
 {
 	do {
-		cycle->current *= cycle->primroot;
-		cycle->current %= cycle->prime;
-	} while (cycle->current >= (1LL << 32));
-	return (uint32_t) cycle->current;
+		current *= primroot;
+		current %= prime;
+	} while (current >= (1LL << 32));
+	return (uint32_t) current;
 }
 
-uint32_t cyclic_get_next_ip(cyclic_iterator_t *cycle)
+uint32_t cyclic_get_next_ip(void)
 {
 	while (1) {
-		uint32_t candidate = cyclic_get_next_elem(cycle);
-		if (candidate-1 < cycle->num_addrs) {
+		uint32_t candidate = cyclic_get_next_elem();
+		if (candidate-1 < num_addrs) {
 			return blacklist_lookup_index(candidate-1);
 		}
 		zsend.blacklisted++;
-	}
-}
-
-void cyclic_free(cyclic_iterator_t* c)
-{
-	if (c) {
-		free(c);
 	}
 }
 
