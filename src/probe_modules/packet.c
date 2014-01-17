@@ -36,8 +36,8 @@ void fprintf_ip_header(FILE *fp, struct ip *iph)
 	struct in_addr *d = (struct in_addr *) &(iph->ip_dst);
 
 	unsigned int ip_addr_length = 20;
-	char srcip[ip_addr_length + 1];
-	char dstip[ip_addr_length + 1];
+	char srcip[21];
+	char dstip[21];
 	// inet_ntoa is a const char * so we if just call it in
 	// fprintf, you'll get back wrong results since we're
 	// calling it twice.
