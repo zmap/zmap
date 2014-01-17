@@ -146,9 +146,7 @@ static uint64_t find_primroot(const cyclic_group_t *group)
 	return retv;
 }
 
-static uint64_t find_inverse(uint64_t primroot, uint64_t prime)
-{
-	// This does the extended Euclidean algorithm
+static uint64_t find_inverse(uint64_t primroot, uint64_t prime) {
 	int64_t a = (int64_t) primroot;
 	int64_t b = (int64_t) prime;
 	int64_t x = 0LL, y = 1LL, last_x = 1LL, last_y = 0LL, q;
@@ -177,18 +175,15 @@ static uint64_t find_inverse(uint64_t primroot, uint64_t prime)
 	return (uint64_t) x;
 }
 
-static uint64_t find_stop_exponent(__attribute__((unused)) uint64_t generator,
-				   uint64_t p, uint64_t shard_num,
-				   uint64_t num_shards)
-{
+static uint64_t find_stop_order(__attribute__((unused)) uint64_t generator, uint64_t p, uint64_t shard_num, uint64_t num_shards) {
 	// Number of elements in the group
 	uint64_t order = p - 1;
 	// Greatest Lower Bound on elements in each shard
 	uint64_t elts_per_shard = (order / num_shards);
-	// Exponent of the last element in this shard
+	// Order of the last element in this shard
 	uint64_t largest_exponent = elts_per_shard * num_shards + shard_num;
 	// But we don't want to double count the early elements, so if the extra
-	// element in this shard pushed us back around mod p, roll back the exponent
+	// element in this shard pushed us back around mod p, roll back the order
 	// by num_shards
 	if (largest_exponent > order) {
 		largest_exponent -= num_shards;
@@ -197,14 +192,8 @@ static uint64_t find_stop_exponent(__attribute__((unused)) uint64_t generator,
 
 }
 
-// Given the first shard starts at begin, find the beginning of
-// shard_num (shards are 1-indexed)
-uint64_t find_start(uint64_t begin, uint64_t generator, uint64_t p,
-		    uint64_t shard_num, 
-		    __attribute__((unused)) uint64_t num_shards)
-{
-	uint64_t start = begin;
-	// Tick the starting point forwards by g^(shard_num - 1)
+uint64_t find_start(uint64_t generator, uint64_t p, uint64_t shard_num, __attribute__((unused)) uint64_t num_shards) {
+	uint64_t start = generator;
 	while (shard_num > 1) {
 		start *= generator;
 		start %= p;
@@ -213,17 +202,11 @@ uint64_t find_start(uint64_t begin, uint64_t generator, uint64_t p,
 	return start;
 }
 
-// Given the first shard starts at begin, find the last element of this
-// shard (shards are 1-indexed)
-uint64_t find_stop(uint64_t begin, uint64_t generator, uint64_t p,
-			  uint64_t shard_num, uint64_t num_shards)
-{
-	uint64_t stop = begin;
-	uint64_t stop_exp = find_stop_exponent(generator, p, shard_num, num_shards);
+uint64_t find_stop(uint64_t generator, uint64_t p, uint64_t shard_num, uint64_t num_shards) {
+	uint64_t stop = generator;
+	uint64_t stop_order = find_stop_order(generator, p, shard_num, num_shards);
 	uint64_t inverse = find_inverse(generator, p);
-	// g^p = g, so given s < p, we need to "go backwards" (p - s) ticks 
-	// from g to get g^s
-	uint32_t stop_offset = (uint32_t) (p - stop_exp);
+	uint32_t stop_offset = (uint32_t) (p - 1 - stop_order + 1);
 	while (stop_offset) {
 		stop *= inverse;
 		stop %= p;
