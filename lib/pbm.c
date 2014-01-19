@@ -38,7 +38,7 @@ static inline void bm_set(uint8_t *bm, uint16_t v)
 int pbm_check(uint8_t **b, uint32_t v)
 {
 	uint32_t top = v >> 16;
-	uint32_t bottom = v & PAGE_SIZE_IN_BITS;
+	uint32_t bottom = v & PAGE_MASK;
 	return b[top] && bm_check(b[top], bottom);
 }
 
