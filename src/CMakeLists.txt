@@ -14,6 +14,11 @@ if (APPLE)
 	endif()
 endif()
 
+if (BSD)
+	include_directories(/usr/local/include)
+	link_directories(/usr/local/lib)
+endif()
+
 SET(LIB_SOURCES
 	${PROJECT_SOURCE_DIR}/lib/blacklist.c
 	${PROJECT_SOURCE_DIR}/lib/constraint.c
@@ -92,7 +97,7 @@ add_custom_command(OUTPUT parser.c
 
 add_executable(zmap ${SOURCES})
 
-if (APPLE)
+if (APPLE OR BSD)
 	set(DNET_LIBRARIES "dnet")
 else()
 	set(DNET_LIBRARIES "")

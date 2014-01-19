@@ -31,6 +31,15 @@
 #include <net/if.h>
 #include <net/if_dl.h>
 
+#if !defined(__APPLE__)
+#include <dnet/os.h>
+#include <dnet/eth.h>
+#include <dnet/ip.h>
+#include <dnet/ip6.h>
+#include <dnet/addr.h>
+#include <dnet/arp.h>
+#endif
+
 int get_hw_addr(struct in_addr *gw_ip, UNUSED char *iface, unsigned char *hw_mac)
 {
 	arp_t *arp;

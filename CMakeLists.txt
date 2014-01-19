@@ -13,6 +13,10 @@ else()
 	set(USING_GCC "YES")
 endif()
 
+if ("${CMAKE_SYSTEM_NAME}" MATCHES "FreeBSD" OR "${CMAKE_SYSTEM_NAME}" MATCHES "NetBSD")
+   set(BSD "YES")
+endif()
+
 # Hardening and warnings for building with gcc
 # Maybe add -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations
 set(GCCWARNINGS 
@@ -35,7 +39,7 @@ if(ENABLE_DEVELOPMENT)
 else()
 	# Hardening and optimizations for building with gcc
 	set(GCCHARDENING "-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-all -fwrapv -fPIC --param ssp-buffer-size=1")
-	if (NOT APPLE)
+	if (NOT APPLE AND NOT BSD)
 		set(LDHARDENING "-z relro -z now")
 	else()
 		set(LDHARDENING "")
