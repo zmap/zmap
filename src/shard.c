@@ -29,7 +29,6 @@ void shard_init(shard_t* shard,
 	// tot_shards = nr
 	uint32_t tot_shards = (uint32_t) num_shards * (uint32_t) num_subshards;
 	uint64_t num_elts = cycle->group->prime - 1;
-	assert(tot_shards == 3);
 	mpz_t start, generator, prime, result, power;
 	mpz_init_set_ui(start, cycle->offset);
 	mpz_init_set_ui(generator, cycle->generator);
@@ -44,7 +43,6 @@ void shard_init(shard_t* shard,
 	// end_idx = [p - (p % nr) + (nr)] % p
 	//         = nr - (p % nr)
 	uint64_t begin_idx = shard_id + sub_id*num_subshards;
-	assert(begin_idx == shard_id);
 	uint64_t end_idx = (num_elts - (num_elts % tot_shards) + begin_idx) % num_elts;
 	if (end_idx >= tot_shards) {
 		end_idx += tot_shards;
@@ -96,10 +94,10 @@ static inline uint32_t shard_get_next_elem(shard_t *shard)
 uint32_t shard_get_next_ip(shard_t *shard)
 {
 	while (1) {
-		if (shard->current == shard->params.last && shard->state.sent > 0) {
+		uint32_t candidate = shard_get_next_elem(shard);
+		if (candidate == shard->params.last) {
 			return 0;
 		}
-		uint32_t candidate = shard_get_next_elem(shard);
 		if (candidate - 1 < zsend.targets) {
 			return blacklist_lookup_index(candidate - 1);
 		}
