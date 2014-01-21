@@ -1,16 +1,18 @@
+#include <assert.h>
 #include <pthread.h>
 #include <stdint.h>
-#include <assert.h>
-
-#include "iterator.h"
-#include "shard.h"
-#include "state.h"
+#include <time.h>
 
 #include "../lib/includes.h"
-#include "../lib/xalloc.h"
 #include "../lib/blacklist.h"
+#include "../lib/logger.h"
+#include "../lib/xalloc.h"
+
+#include "iterator.h"
 
 #include "aesrand.h"
+#include "shard.h"
+#include "state.h"
 
 struct iterator {
 	cycle_t cycle;
@@ -26,12 +28,19 @@ void shard_complete(uint8_t thread_id, void *arg)
 	assert(thread_id < it->num_threads);
 	pthread_mutex_lock(&it->mutex);
 	it->complete[thread_id] = 1;
+	shard_t *s = &it->thread_shards[thread_id];
+	zsend.sent += s->state.sent;
+	zsend.blacklisted += s->state.blacklisted;
+	zsend.targets += s->state.max_targets;
+	zsend.sendto_failures += s->state.failures;
 	uint8_t done = 1;
 	for (uint32_t i = 0; done && (i < it->num_threads); ++i) {
 		done = done && it->complete[i];
 	}
 	if (done) {
 		zsend.complete = 1;
+		zsend.finish = now();
+		zsend.first_scanned = it->thread_shards[0].state.first_scanned;
 	}
 	pthread_mutex_unlock(&it->mutex);
 }
