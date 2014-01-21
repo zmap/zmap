@@ -537,9 +537,7 @@ static void start_zmap(void)
 			   NULL, 0)) {
 		log_fatal("zmap", "unable to initialize blacklist / whitelist");
 	}
-	printf("%s\n", "blacklist inited");
 	iterator_t *it = send_init();
-	printf("%s\n", "send inited");
 	if (!it) {
 		log_fatal("zmap", "unable to initialize sending component");
 	}
@@ -563,7 +561,7 @@ static void start_zmap(void)
 	tsend = malloc(zconf.senders * sizeof(pthread_t));
 	assert(tsend);
 	for (uint8_t i = 0; i < zconf.senders; i++) {
-		uintptr_t sock;
+		int sock;
 		if (zconf.dryrun) {
 			sock = get_dryrun_socket();
 		} else {

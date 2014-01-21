@@ -28,12 +28,12 @@ void shard_complete(uint8_t thread_id, void *arg)
 	it->complete[thread_id] = 1;
 	uint8_t done = 1;
 	for (uint32_t i = 0; done && (i < it->num_threads); ++i) {
-		done &= it->complete[i];
+		done = done && it->complete[i];
 	}
-	pthread_mutex_unlock(&it->mutex);
 	if (done) {
 		zsend.complete = 1;
 	}
+	pthread_mutex_unlock(&it->mutex);
 }
 
 iterator_t* iterator_init(uint8_t num_threads, uint8_t shard,

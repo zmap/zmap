@@ -42,11 +42,11 @@ void shard_init(shard_t* shard,
 	// begin_idx = s + tr
 	// end_idx = [p - (p % nr) + (nr)] % p
 	//         = nr - (p % nr)
-	uint64_t begin_idx = shard_id + sub_id*num_subshards;
+	uint64_t begin_idx = shard_id + sub_id*num_shards;
 	uint64_t end_idx = (num_elts - (num_elts % tot_shards) + begin_idx) % num_elts;
 	if (end_idx >= tot_shards) {
 		end_idx += tot_shards;
-		end_idx %= cycle->group->prime - 1;
+		end_idx %= num_elts;
 	}
 	//assert(temp <= begin_idx);
 	//uint64_t end_idx = begin_idx - temp;
@@ -60,6 +60,9 @@ void shard_init(shard_t* shard,
 	//shard->params.last %= shard->params.modulus;
 	shard->current = shard->params.first;
 	shard->state.max_targets = zsend.targets / num_subshards + 1;
+
+	// Set the (thread) id
+	shard->id = sub_id;
 
 	// Set the callbacks
 	shard->cb = cb;

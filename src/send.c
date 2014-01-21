@@ -270,7 +270,9 @@ int send_run(int sock, shard_t *s)
 			zconf.probe_module->make_packet(buf, src_ip, curr, validation, i);
 
 			if (zconf.dryrun) {
+				pthread_mutex_lock(&send_mutex);
 				zconf.probe_module->print_packet(stdout, buf);
+				pthread_mutex_unlock(&send_mutex);
 			} else {
 				int length = zconf.probe_module->packet_length;
 				void *contents = buf + zconf.send_ip_pkts*sizeof(struct ether_header);
@@ -286,7 +288,9 @@ int send_run(int sock, shard_t *s)
 		}
 		curr = shard_get_next_ip(s);
 	}
+	pthread_mutex_lock(&send_mutex);
 	fflush(stdout);
+	pthread_mutex_unlock(&send_mutex);
 	log_debug("send", "thread %hu finished", s->id);
 	return EXIT_SUCCESS;
 }
