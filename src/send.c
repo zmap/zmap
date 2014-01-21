@@ -257,7 +257,6 @@ int send_run(int sock, shard_t *s)
 			s->cb(s->id, s->arg);
 			break;
 		}
-		curr = shard_get_next_ip(s);
 		if (curr == 0) {
 			s->cb(s->id, s->arg);
 			break;
@@ -285,6 +284,7 @@ int send_run(int sock, shard_t *s)
 				}
 			}
 		}
+		curr = shard_get_next_ip(s);
 	}
 	fflush(stdout);
 	log_debug("send", "thread %hu finished", s->id);

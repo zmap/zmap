@@ -24,8 +24,12 @@ void shard_init(shard_t* shard,
 	// f = g^n.
 
 	// Then on top of that, we want to shard internally (subshards) per
-	// thread. With t threads, f = g^(nf).
+	// thread. With t threads, f = g^(nr).
+	//
+	// tot_shards = nr
 	uint32_t tot_shards = (uint32_t) num_shards * (uint32_t) num_subshards;
+	uint64_t num_elts = cycle->group->prime - 1;
+	assert(tot_shards == 3);
 	mpz_t start, generator, prime, result, power;
 	mpz_init_set_ui(start, cycle->offset);
 	mpz_init_set_ui(generator, cycle->generator);
@@ -37,23 +41,26 @@ void shard_init(shard_t* shard,
 	shard->params.modulus = cycle->group->prime;
 
 	// begin_idx = s + tr
-	// end_idx = [p - (p % nr) + s + tr] % p = [s + tr - (p % nr)] % p
-	// 					    ^always less than p
-	//         = s + tr - (p % nr)
+	// end_idx = [p - (p % nr) + (nr)] % p
+	//         = nr - (p % nr)
 	uint64_t begin_idx = shard_id + sub_id*num_subshards;
-	uint64_t temp = cycle->group->prime % (num_shards*num_subshards);
-	assert(temp <= begin_idx);
-	uint64_t end_idx = begin_idx - temp;
-	mpz_powm_ui(result, generator, begin_idx, prime);
+	assert(begin_idx == shard_id);
+	uint64_t end_idx = (num_elts - (num_elts % tot_shards) + begin_idx) % num_elts;
+	if (end_idx >= tot_shards) {
+		end_idx += tot_shards;
+		end_idx %= cycle->group->prime - 1;
+	}
+	//assert(temp <= begin_idx);
+	//uint64_t end_idx = begin_idx - temp;
+	mpz_powm_ui(result, generator, begin_idx + 1, prime);
 	shard->params.first = (uint64_t) mpz_get_ui(result);
 	//shard->params.first *= cycle->offset;
-	shard->params.first %= shard->params.modulus;
-	mpz_powm_ui(result, generator, end_idx, prime);
+	//shard->params.first %= shard->params.modulus;
+	mpz_powm_ui(result, generator, end_idx + 1, prime);
 	shard->params.last = (uint64_t) mpz_get_ui(result);
 	//shard->params.last *= cycle->offset;
-	shard->params.last %= shard->params.modulus;
+	//shard->params.last %= shard->params.modulus;
 	shard->current = shard->params.first;
-
 	shard->state.max_targets = zsend.targets / num_subshards + 1;
 
 	// Set the callbacks

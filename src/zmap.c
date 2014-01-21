@@ -1034,7 +1034,7 @@ int main(int argc, char *argv[])
 		zconf.use_seed = 1;
 	}
 	// Set up sharding
-	zconf.shard_num = 1;
+	zconf.shard_num = 0;
 	zconf.total_shards = 1;
 	if ((args.shard_given || args.shards_given) && !args.seed_given) {
 		log_fatal("zmap", "Need to specify seed if sharding a scan");
@@ -1043,10 +1043,18 @@ int main(int argc, char *argv[])
 		log_fatal("zmap",
 			  "Need to specify both shard number and total number of shards");
 	}
+	if (args.shard_given) {
+		enforce_range("shard", args.shard_arg, 0, 254);
+	}
+	if (args.shards_given) {
+		enforce_range("shards", args.shards_arg, 1, 254);
+	}
 	SET_IF_GIVEN(zconf.shard_num, shard);
 	SET_IF_GIVEN(zconf.total_shards, shards);
-	if (zconf.shard_num > zconf.total_shards) {
-		log_fatal("zmap", "Shard number out of range");
+	if (zconf.shard_num >= zconf.total_shards) {
+		log_fatal("zmap", "With %hhu total shards, shard number (%hhu)"
+			  " must be in range [0, %hhu)", zconf.total_shards, 
+			  zconf.shard_num, zconf.total_shards);
 	}
 
 	if (args.bandwidth_given) {
