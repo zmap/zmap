@@ -13,8 +13,10 @@
 #include <unistd.h>
 #include <math.h>
 
-#include "recv.h"
 #include "monitor.h"
+
+#include "iterator.h"
+#include "recv.h"
 #include "state.h"
 
 #include "../lib/logger.h"
@@ -100,12 +102,12 @@ static void number_string(uint32_t n, char *buf, size_t len)
 }
 
 // estimate time remaining time based on config and state
-double compute_remaining_time(double age)
+double compute_remaining_time(double age, uint64_t sent)
 {
 	if (!zsend.complete) {
 		double remaining[] = {INFINITY, INFINITY, INFINITY};
 		if (zsend.targets) {
-			double done = (double)zsend.sent/zsend.targets;
+			double done = (double) sent/zsend.targets;
 			remaining[0] = (1. - done)*(age/done) + zconf.cooldown_secs;
 		}
 		if (zconf.max_runtime) {
@@ -121,13 +123,15 @@ double compute_remaining_time(double age)
 	}
 }
 
-static void monitor_update(void)
+static void monitor_update(iterator_t *it)
 {
+	uint32_t total_sent = iterator_get_sent(it);
 	if (last_now > 0.0) {
 		double age = now() - zsend.start;
 		double delta = now() - last_now;
-		double remaining_secs = compute_remaining_time(age);
+		double remaining_secs = compute_remaining_time(age, total_sent);
 		double percent_complete = 100.*age/(age + remaining_secs);
+
 
 		// ask pcap for fresh values
 		recv_update_pcap_stats();
@@ -166,21 +170,21 @@ static void monitor_update(void)
 
 		// Warn if we fail to send > 1% of our average send rate
 		uint32_t fail_rate = (uint32_t)((zsend.sendto_failures - last_failures) / delta); // failures/sec
-		if (fail_rate > ((zsend.sent / age) / 100)) {
+		if (fail_rate > ((total_sent / age) / 100)) {
 			log_warn("monitor", "Failed to send %d packets/sec (%d total failures)",
 					 fail_rate, zsend.sendto_failures);
 		}
 		float hits;
-		if (!zsend.sent) {
+		if (!total_sent) {
 			hits = 0;
 		} else {
-			hits = zrecv.success_unique*100./zsend.sent;
+			hits = zrecv.success_unique*100./total_sent;
 		}
 		if (!zsend.complete) {
 			// main display (during sending)
-			number_string((zsend.sent - last_sent)/delta,
+			number_string((total_sent - last_sent)/delta,
 							send_rate, sizeof(send_rate));
-			number_string((zsend.sent/age), send_avg, sizeof(send_avg));
+			number_string((total_sent/age), send_avg, sizeof(send_avg));
 			fprintf(stderr,
 					"%5s %0.0f%%%s; send: %u %sp/s (%sp/s avg); "
 					"recv: %u %sp/s (%sp/s avg); "
@@ -189,7 +193,7 @@ static void monitor_update(void)
 					time_past,
 					percent_complete,
 					time_left,
-					zsend.sent,
+					total_sent,
 					send_rate,
 					send_avg,
 					zrecv.success_unique,
@@ -200,7 +204,7 @@ static void monitor_update(void)
 					hits);
 		} else {
 		  	// alternate display (during cooldown)
-			number_string((zsend.sent/(zsend.finish - zsend.start)), send_avg, sizeof(send_avg));
+			number_string((total_sent/(zsend.finish - zsend.start)), send_avg, sizeof(send_avg));
 			fprintf(stderr, 
 					"%5s %0.0f%%%s; send: %u done (%sp/s avg); "
 					"recv: %u %sp/s (%sp/s avg); "
@@ -209,7 +213,7 @@ static void monitor_update(void)
 					time_past,
 					percent_complete,
 					time_left,
-					zsend.sent,
+					total_sent,
 					send_avg,
 					zrecv.success_unique,
 					recv_rate,
@@ -220,16 +224,16 @@ static void monitor_update(void)
 		}
 	}
 	last_now  = now();
-	last_sent = zsend.sent;
+	last_sent = total_sent;
 	last_rcvd = zrecv.success_unique;
 	last_drop = zrecv.pcap_drop + zrecv.pcap_ifdrop;
 	last_failures = zsend.sendto_failures;
 }
 
-void monitor_run(void)
+void monitor_run(iterator_t *it)
 {
 	while (!(zsend.complete && zrecv.complete))  {
-		monitor_update();
+		monitor_update(it);
 		sleep(UPDATE_INTERVAL);
 	}
 }

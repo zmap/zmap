@@ -71,6 +71,15 @@ iterator_t* iterator_init(uint8_t num_threads, uint8_t shard,
 	return it;
 }
 
+uint32_t iterator_get_sent(iterator_t *it)
+{
+	uint32_t sent = 0;
+	for (uint8_t i = 0; i < it->num_threads; ++i) {
+		sent += it->thread_shards[i].state.sent;
+	}
+	return sent;
+}
+
 shard_t* get_shard(iterator_t *it, uint8_t thread_id)
 {
 	assert(thread_id < it->num_threads);

@@ -215,10 +215,11 @@ static void drop_privs()
 	log_fatal("zmap", "Couldn't change UID to 'nobody'");		
 }
 
-static void *start_mon(__attribute__((unused)) void *arg)
+static void *start_mon(void *arg)
 {
+	iterator_t *it = (iterator_t *) arg;
 	set_cpu();
-	monitor_run();
+	monitor_run(it);
 	return NULL;
 }
 
@@ -578,7 +579,7 @@ static void start_zmap(void)
 	}
 	log_debug("zmap", "%d sender threads spawned", zconf.senders);
 	if (!zconf.quiet) {
-		int r = pthread_create(&tmon, NULL, start_mon, NULL);
+		int r = pthread_create(&tmon, NULL, start_mon, it);
 		if (r != 0) {
 			log_fatal("zmap", "unable to create monitor thread");
 			exit(EXIT_FAILURE);
