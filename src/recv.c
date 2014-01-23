@@ -221,7 +221,9 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 	zrecv.finish = now();
 	// get final pcap statistics before closing
 	recv_update_pcap_stats();
-	pcap_close(pc);
+	if (!zconf.dryrun) {
+		pcap_close(pc);
+	}
 	zrecv.complete = 1;
 	log_debug("recv", "thread finished");
 	return 0;
