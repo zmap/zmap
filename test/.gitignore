@@ -1,0 +1,5 @@
+*.*-t*
+*-t*
+tempfile
+outfile
+!.gitignore
