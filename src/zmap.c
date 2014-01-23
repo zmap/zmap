@@ -539,6 +539,7 @@ static void start_zmap(void)
 	for (;;) {
 		pthread_mutex_lock(&recv_ready_mutex);
 		if (zconf.recv_ready) {
+			pthread_mutex_unlock(&recv_ready_mutex);
 			break;
 		}
 		pthread_mutex_unlock(&recv_ready_mutex);
