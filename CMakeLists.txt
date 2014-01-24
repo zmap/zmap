@@ -114,7 +114,7 @@ SET (${VERSION} CPACK_DEBIAN_PACKAGE_VERSION)
 SET (CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
 SET (CPACK_DEBIAN_PACKAGE_SECTION "network")
 SET (CPACK_DEBIAN_ARCHITECTURE ${CMAKE_SYSTEM_PROCESSOR})
-SET (CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.1.3), libgmp3c2, libpcap0.8")
+SET (CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.1.3), libgmp10, libpcap0.8")
 
 SET (CPACK_PACKAGE_DESCRIPTION "Internet-scale network scanner")
 SET (CPACK_PACKAGE_DESCRIPTION_SUMMARY "ZMap is an open-source network scanner that enables researchers to easily perform Internet-wide network studies. With a single machine and a well provisioned network uplink, ZMap is capable of performing a complete scan of the IPv4 address space in under 45 minutes, approaching the theoretical limit of gigabit Ethernet. ZMap can be used to study protocol adoption over time, monitor service availability, and help us better understand large systems distributed across the Internet.")
