@@ -56,7 +56,7 @@ struct state_conf {
 	// continue to process responses
 	int cooldown_secs;
 	// number of sending threads
-	int senders;
+	uint8_t senders;
 	// should use CLI provided randomization seed instead of generating
 	// a random seed.
 	int use_seed;
@@ -64,6 +64,9 @@ struct state_conf {
 	// generator of the cyclic multiplicative group that is utilized for
 	// address generation
 	uint32_t generator;
+	// sharding options
+	uint8_t shard_num;
+	uint8_t total_shards;
 	int packet_streams;
 	struct probe_module *probe_module;
 	struct output_module *output_module;

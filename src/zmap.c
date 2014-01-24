@@ -23,9 +23,11 @@
 #include <pthread.h>
 
 #include "../lib/includes.h"
+#include "../lib/blacklist.h"
 #include "../lib/logger.h"
 #include "../lib/random.h"
-#include "../lib/blacklist.h"
+#include "../lib/xalloc.h"
+
 
 #if defined(__APPLE__)
 #include <mach/thread_act.h>
@@ -35,6 +37,7 @@
 #include <json.h>
 #endif
 
+#include "aesrand.h"
 #include "zopt.h"
 #include "send.h"
 #include "recv.h"
@@ -183,12 +186,17 @@ static void set_cpu(void)
 }
 #endif
 
+typedef struct send_arg {
+	int sock;
+	shard_t *shard;
+} send_arg_t;
+
 static void* start_send(void *arg)
 {
-	uintptr_t v = (uintptr_t) arg;
-	int sock = (int) v & 0xFFFF;
+	send_arg_t *v = (send_arg_t *) arg;
 	set_cpu();
-	send_run(sock);
+	send_run(v->sock, v->shard);
+	free(v);
 	return NULL;
 }
 
@@ -214,10 +222,11 @@ static void drop_privs()
 	log_fatal("zmap", "Couldn't change UID to 'nobody'");		
 }
 
-static void *start_mon(__attribute__((unused)) void *arg)
+static void *start_mon(void *arg)
 {
+	iterator_t *it = (iterator_t *) arg;
 	set_cpu();
-	monitor_run();
+	monitor_run(it);
 	return NULL;
 }
 
@@ -514,16 +523,30 @@ static void start_zmap(void)
 		zconf.gw_mac_set = 1;
 	}
 	log_debug("send", "gateway MAC address %02x:%02x:%02x:%02x:%02x:%02x",
-				  zconf.gw_mac[0], zconf.gw_mac[1], zconf.gw_mac[2],
-				  zconf.gw_mac[3], zconf.gw_mac[4], zconf.gw_mac[5]);
+		  zconf.gw_mac[0], zconf.gw_mac[1], zconf.gw_mac[2],
+		  zconf.gw_mac[3], zconf.gw_mac[4], zconf.gw_mac[5]);
+	// Initialization
 
-	// initialization
+	// Seed the RNG
+	if (zconf.use_seed) {
+		aesrand_init(zconf.seed + 1);
+	} else {
+		aesrand_init(0);
+	}
+
 	log_info("zmap", "output module: %s", zconf.output_module->name);
 	if (zconf.output_module && zconf.output_module->init) {
 		zconf.output_module->init(&zconf, zconf.output_fields,
 				zconf.output_fields_len);
 	}
-	if (send_init()) {
+	// blacklist
+	if (blacklist_init(zconf.whitelist_filename, zconf.blacklist_filename,
+			   zconf.destination_cidrs, zconf.destination_cidrs_len,
+			   NULL, 0)) {
+		log_fatal("zmap", "unable to initialize blacklist / whitelist");
+	}
+	iterator_t *it = send_init();
+	if (!it) {
 		log_fatal("zmap", "unable to initialize sending component");
 	}
 	if (zconf.output_module && zconf.output_module->start) {
@@ -546,15 +569,17 @@ static void start_zmap(void)
 	}
 	tsend = malloc(zconf.senders * sizeof(pthread_t));
 	assert(tsend);
-	for (int i=0; i < zconf.senders; i++) {
-		uintptr_t sock;
+	for (uint8_t i = 0; i < zconf.senders; i++) {
+		int sock;
 		if (zconf.dryrun) {
 			sock = get_dryrun_socket();
 		} else {
 			sock = get_socket();
 		}
-		
-		int r = pthread_create(&tsend[i], NULL, start_send, (void*) sock);
+		send_arg_t *arg = xmalloc(sizeof(send_arg_t));
+		arg->sock = sock;
+		arg->shard = get_shard(it, i);
+		int r = pthread_create(&tsend[i], NULL, start_send, arg);
 		if (r != 0) {
 			log_fatal("zmap", "unable to create send thread");
 			exit(EXIT_FAILURE);
@@ -562,7 +587,7 @@ static void start_zmap(void)
 	}
 	log_debug("zmap", "%d sender threads spawned", zconf.senders);
 	if (!zconf.quiet) {
-		int r = pthread_create(&tmon, NULL, start_mon, NULL);
+		int r = pthread_create(&tmon, NULL, start_mon, it);
 		if (r != 0) {
 			log_fatal("zmap", "unable to create monitor thread");
 			exit(EXIT_FAILURE);
@@ -572,7 +597,7 @@ static void start_zmap(void)
 	drop_privs();
 
 	// wait for completion
-	for (int i=0; i < zconf.senders; i++) {
+	for (uint8_t i = 0; i < zconf.senders; i++) {
 		int r = pthread_join(tsend[i], NULL);
 		if (r != 0) {
 			log_fatal("zmap", "unable to join send thread");
@@ -1016,6 +1041,30 @@ int main(int argc, char *argv[])
 		zconf.seed = args.seed_arg;
 		zconf.use_seed = 1;
 	}
+	// Set up sharding
+	zconf.shard_num = 0;
+	zconf.total_shards = 1;
+	if ((args.shard_given || args.shards_given) && !args.seed_given) {
+		log_fatal("zmap", "Need to specify seed if sharding a scan");
+	}
+	if (args.shard_given ^ args.shards_given) {
+		log_fatal("zmap",
+			  "Need to specify both shard number and total number of shards");
+	}
+	if (args.shard_given) {
+		enforce_range("shard", args.shard_arg, 0, 254);
+	}
+	if (args.shards_given) {
+		enforce_range("shards", args.shards_arg, 1, 254);
+	}
+	SET_IF_GIVEN(zconf.shard_num, shard);
+	SET_IF_GIVEN(zconf.total_shards, shards);
+	if (zconf.shard_num >= zconf.total_shards) {
+		log_fatal("zmap", "With %hhu total shards, shard number (%hhu)"
+			  " must be in range [0, %hhu)", zconf.total_shards, 
+			  zconf.shard_num, zconf.total_shards);
+	}
+
 	if (args.bandwidth_given) {
 		// Supported: G,g=*1000000000; M,m=*1000000 K,k=*1000 bits per second
 		zconf.bandwidth = atoi(args.bandwidth_arg);

@@ -47,27 +47,21 @@
 #include <gmp.h>
 
 #include "../lib/includes.h"
-
 #include "../lib/logger.h"
-#include "../lib/blacklist.h"
-
-#include "state.h"
 #include "aesrand.h"
-
-#define LSRC "cyclic"
-
-typedef struct cyclic_group {
-	uint64_t prime;
-	uint64_t known_primroot;
-	size_t num_prime_factors;	// number of unique prime factors of (prime-1)
-	uint64_t prime_factors[10];	// unique prime factors of (prime-1)
-} cyclic_group_t;
 
 // We will pick the first cyclic group from this list that is
 // larger than the number of IPs in our whitelist. E.g. for an
 // entire Internet scan, this would be cyclic32
 // Note: this list should remain ordered by size (primes) ascending.
+
 static cyclic_group_t groups[] = {
+{ // 2^8 + 1
+	.prime = 257,
+	.known_primroot = 3,
+	.prime_factors = {2},
+	.num_prime_factors = 1
+},
 { // 2^16 + 1
 	.prime = 65537,
 	.known_primroot = 3,
@@ -94,18 +88,10 @@ static cyclic_group_t groups[] = {
 }
 };
 
-
-// selected prime/primitive root that we'll use as the generator
-static uint64_t prime = 0;
-static uint64_t primroot = 0;
-static uint64_t current = 0;
-
-static uint64_t num_addrs = 0;
-
 #define COPRIME 1
 #define NOT_COPRIME 0
 
-// check whether two integers are coprime
+// Check whether an integer is coprime with (p - 1)
 static int check_coprime(uint64_t check, const cyclic_group_t *group)
 {
 	for (unsigned i=0; i < group->num_prime_factors; i++) {
@@ -120,124 +106,53 @@ static int check_coprime(uint64_t check, const cyclic_group_t *group)
 	return COPRIME;
 }
 
-// find gen of cyclic group Z modulo PRIME
-static uint64_t find_primroot(const cyclic_group_t *group)
+// Return a (random) number coprime with (p - 1) of the group,
+// which is a generator of the additive group mod (p - 1)
+static uint32_t find_primroot(const cyclic_group_t *group)
 {
-	// what luck, rand() returns a uint32_t!
-	uint32_t candidate = (uint32_t) aesrand_getword() & 0xFFFFFFFF;
-	while(check_coprime(candidate, group) != COPRIME) {
+	uint32_t candidate = (uint32_t) ((aesrand_getword() & 0xFFFFFFFF) % group->prime);
+	while (check_coprime(candidate, group) != COPRIME) {
 		++candidate;
 	}
-	// pre-modded result is gigantic so use GMP
+	uint64_t retv = isomorphism(candidate, group);
+	return retv;
+}
+
+const cyclic_group_t* get_group(uint64_t min_size)
+{
+	for(unsigned i = 0; i < sizeof(groups); ++i) {
+		if (groups[i].prime > min_size) {
+			return &groups[i];
+		}
+	}
+	// Should not reach, final group should always be larger than 2^32
+	assert(0);
+}
+
+cycle_t make_cycle(const cyclic_group_t* group)
+{
+	cycle_t cycle;
+	cycle.group = group;
+	cycle.generator = find_primroot(group);
+	cycle.offset = (uint32_t) (aesrand_getword() & 0xFFFFFFFF);
+	cycle.offset %= group->prime;
+	return cycle;
+}
+
+uint64_t isomorphism(uint64_t additive_elt, const cyclic_group_t* mult_group)
+{
+	assert(additive_elt < mult_group->prime);
 	mpz_t base, power, prime, primroot;
-	mpz_init_set_d(base, (double) group->known_primroot);
-	mpz_init_set_d(power, (double) candidate);
-	mpz_init_set_d(prime, (double) group->prime);
+	mpz_init_set_ui(base, mult_group->known_primroot);
+	mpz_init_set_ui(power, additive_elt);
+	mpz_init_set_ui(prime, mult_group->prime);
 	mpz_init(primroot);
 	mpz_powm(primroot, base, power, prime);
 	uint64_t retv = (uint64_t) mpz_get_ui(primroot);
+	log_trace("zmap", "Isomorphism: %llu", retv);
 	mpz_clear(base);
 	mpz_clear(power);
 	mpz_clear(prime);
 	mpz_clear(primroot);
 	return retv;
 }
-
-int cyclic_init(uint32_t primroot_, uint32_t current_)
-{
-	assert(!(!primroot_ && current_));
-	// Initialize blacklist
-	if (blacklist_init(zconf.whitelist_filename, zconf.blacklist_filename,
-			zconf.destination_cidrs, zconf.destination_cidrs_len,
-			NULL, 0)) {
-		return -1;
-	}
-	num_addrs = blacklist_count_allowed();
-	if (!num_addrs) {
-		log_error("blacklist", "no addresses are eligible to be scanned in the "
-				"current configuration. This may be because the "
-				"blacklist being used by ZMap (%s) prevents "
-				"any addresses from receiving probe packets.",
-				zconf.blacklist_filename
-			);
-		exit(EXIT_FAILURE);
-	}
-
-	const cyclic_group_t *cur_group = NULL;
-	for (uint32_t i=0; i<sizeof(groups)/sizeof(groups[0]); i++) {
-		if (groups[i].prime > num_addrs) {
-			cur_group = &groups[i];
-			log_debug("cyclic", "prime: %lu", 
-					cur_group->prime);
-			log_debug("cyclic", "known generator: %lu",
-					cur_group->known_primroot);
-
-			prime = groups[i].prime;
-			break;
-		}
-	}
-
-	if (zconf.use_seed) {
-		aesrand_init(zconf.seed+1);
-	} else {
-		aesrand_init(0);
-	}
-	if (!primroot_) {
-		do {
-			primroot = find_primroot(cur_group);
-		} while (primroot >= (1LL << 32));
-		log_debug(LSRC, "primitive root: %lld", primroot);
-		current = (uint32_t) aesrand_getword() & 0xFFFFFFFF;
-		log_debug(LSRC, "starting point: %lld", current);
-	} else {
-		primroot = primroot_;
-		log_debug(LSRC, "primitive root %lld specified by caller",
-				primroot);
-		if (!current_) {
-			current = (uint32_t) aesrand_getword() & 0xFFFFFFFF;
-			log_debug(LSRC, "no cyclic starting point, "
-					 "selected random startpoint: %lld",
-					 current);
-		} else {
-			current = current_;
-		    log_debug(LSRC, "starting point %lld specified by caller",
-				    current);
-		}
-	}
-	zconf.generator = primroot;
-	// make sure current is an allowed ip
-	cyclic_get_next_ip();
-
-	return 0;
-}
-
-uint32_t cyclic_get_curr_ip(void)
-{
-	return (uint32_t) blacklist_lookup_index(current-1);
-}
-
-uint32_t cyclic_get_primroot(void)
-{
-	return (uint32_t) primroot;
-}
-
-static inline uint32_t cyclic_get_next_elem(void)
-{
-	do {
-		current *= primroot;
-		current %= prime;
-	} while (current >= (1LL << 32));
-	return (uint32_t) current;
-}
-
-uint32_t cyclic_get_next_ip(void)
-{
-	while (1) {
-		uint32_t candidate = cyclic_get_next_elem();
-		if (candidate-1 < num_addrs) {
-			return blacklist_lookup_index(candidate-1);
-		}
-		zsend.blacklisted++;
-	}
-}
-
