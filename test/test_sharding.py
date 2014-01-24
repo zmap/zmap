@@ -8,6 +8,8 @@ zmap_std_args = [ "-b",
                   "--seed=1234",
                   "192.168.1.0/24",
                   "--dryrun",
+                  "-c",
+                  "1"
                 ]
 
 zmap = sh.Command("../src/zmap").bake(*zmap_std_args)
