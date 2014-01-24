@@ -31,15 +31,14 @@ void shard_complete(uint8_t thread_id, void *arg)
 	shard_t *s = &it->thread_shards[thread_id];
 	zsend.sent += s->state.sent;
 	zsend.blacklisted += s->state.blacklisted;
-	zsend.targets += s->state.max_targets;
 	zsend.sendto_failures += s->state.failures;
 	uint8_t done = 1;
-	for (uint32_t i = 0; done && (i < it->num_threads); ++i) {
+	for (uint8_t i = 0; done && (i < it->num_threads); ++i) {
 		done = done && it->complete[i];
 	}
 	if (done) {
-		zsend.complete = 1;
 		zsend.finish = now();
+		zsend.complete = 1;
 		zsend.first_scanned = it->thread_shards[0].state.first_scanned;
 	}
 	pthread_mutex_unlock(&it->mutex);
@@ -56,8 +55,8 @@ iterator_t* iterator_init(uint8_t num_threads, uint8_t shard,
 	it->thread_shards = xcalloc(num_threads, sizeof(shard_t));
 	it->complete = xcalloc(it->num_threads, sizeof(uint8_t));
 	pthread_mutex_init(&it->mutex, NULL);
-	for (uint32_t i = 0; i < num_threads; ++i) {
-		shard_init(it->thread_shards + i,
+	for (uint8_t i = 0; i < num_threads; ++i) {
+		shard_init(&it->thread_shards[i],
 			   shard,
 			   num_shards,
 			   i,
