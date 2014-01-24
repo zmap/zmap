@@ -39,9 +39,10 @@ void shard_init(shard_t* shard,
 	shard->params.factor = (uint64_t) mpz_get_ui(result);
 	shard->params.modulus = cycle->group->prime;
 
+	// e = p - 1 = num_elts
 	// begin_idx = s + tr
-	// end_idx = [p - (p % nr) + (nr)] % p
-	//         = nr - (p % nr)
+	// end_idx = [e - (e % nr) + (s + tr)] % e
+	//         = [e - (e % nr) + begin_idx] % e
 	uint64_t begin_idx = shard_id + sub_id*num_shards;
 	uint64_t end_idx = (num_elts - (num_elts % tot_shards) + begin_idx) % num_elts;
 	if (end_idx >= tot_shards) {
