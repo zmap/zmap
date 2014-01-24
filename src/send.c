@@ -292,9 +292,11 @@ int send_run(int sock, shard_t *s)
 		}
 		curr = shard_get_next_ip(s);
 	}
-	pthread_mutex_lock(&send_mutex);
-	fflush(stdout);
-	pthread_mutex_unlock(&send_mutex);
+	if (zconf.dryrun) {
+		pthread_mutex_lock(&send_mutex);
+		fflush(stdout);
+		pthread_mutex_unlock(&send_mutex);
+	}
 	log_debug("send", "thread %hu finished", s->id);
 	return EXIT_SUCCESS;
 }
