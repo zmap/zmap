@@ -114,8 +114,6 @@ static uint32_t find_primroot(const cyclic_group_t *group)
 	while (check_coprime(candidate, group) != COPRIME) {
 		++candidate;
 	}
-	printf("additive generator: %u\n", candidate);
-	fflush(stdout);
 	uint64_t retv = isomorphism(candidate, group);
 	return retv;
 }
