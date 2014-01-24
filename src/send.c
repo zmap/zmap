@@ -140,6 +140,14 @@ iterator_t* send_init(void)
 						zconf.bandwidth, zconf.rate);
 	}
 
+	// Get the source hardware address, and give it to the probe
+	// module
+	if (get_iface_hw_addr(zconf.iface, zconf.hw_mac)) {
+		log_fatal("send", "could not retrieve hardware address for"
+			  "interface: %s", zconf.iface);
+		return NULL;
+	}
+
 	if (zconf.dryrun) {
 		log_info("send", "dryrun mode -- won't actually send packets");
 	}
@@ -188,13 +196,6 @@ int send_run(int sock, shard_t *s)
 		return -1;
 	}
 
-	// Get the source hardware address, and give it to the probe
-	// module
-	if (get_iface_hw_addr(zconf.iface, zconf.hw_mac)) {
-		log_fatal("send", "could not retrieve hardware address for"
-			  "interface: %s", zconf.iface);
-		return -1;
-	}
 	// MAC address length in characters
 	char mac_buf[(ETHER_ADDR_LEN * 2) + (ETHER_ADDR_LEN - 1) + 1];
 	char *p = mac_buf;
