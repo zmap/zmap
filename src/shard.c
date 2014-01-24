@@ -60,7 +60,7 @@ void shard_init(shard_t* shard,
 	//shard->params.last *= cycle->offset;
 	//shard->params.last %= shard->params.modulus;
 	shard->current = shard->params.first;
-	shard->state.max_targets = zsend.targets / num_subshards + 1;
+	shard->state.max_targets = zsend.targets / num_subshards;
 
 	// Set the (thread) id
 	shard->id = sub_id;
