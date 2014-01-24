@@ -49,8 +49,6 @@ void shard_init(shard_t* shard,
 		end_idx += tot_shards;
 		end_idx %= num_elts;
 	}
-	//assert(temp <= begin_idx);
-	//uint64_t end_idx = begin_idx - temp;
 	mpz_powm_ui(result, generator, begin_idx + 1, prime);
 	shard->params.first = (uint64_t) mpz_get_ui(result);
 	//shard->params.first *= cycle->offset;
