@@ -249,6 +249,10 @@ int send_run(int sock, shard_t *s)
 				last_time = t;
 			}
 		}
+		if (zrecv.complete) {
+			s->cb(s->id, s->arg);
+			break;
+		}
 		if (s->state.sent > max_targets) {
 			s->cb(s->id, s->arg);
 			break;
