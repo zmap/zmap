@@ -123,7 +123,7 @@ double compute_remaining_time(double age, uint64_t sent)
 	}
 }
 
-static void monitor_update(iterator_t *it)
+static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 {
 	uint32_t total_sent = iterator_get_sent(it);
 	if (last_now > 0.0) {
@@ -134,7 +134,9 @@ static void monitor_update(iterator_t *it)
 
 
 		// ask pcap for fresh values
+		pthread_mutex_lock(recv_ready_mutex);
 		recv_update_pcap_stats();
+		pthread_mutex_unlock(recv_ready_mutex);
 
 		// format times for display
 		char time_left[20];
@@ -230,10 +232,10 @@ static void monitor_update(iterator_t *it)
 	last_failures = zsend.sendto_failures;
 }
 
-void monitor_run(iterator_t *it)
+void monitor_run(iterator_t *it, pthread_mutex_t *lock)
 {
 	while (!(zsend.complete && zrecv.complete))  {
-		monitor_update(it);
+		monitor_update(it, lock);
 		sleep(UPDATE_INTERVAL);
 	}
 }
