@@ -111,6 +111,9 @@ static int check_coprime(uint64_t check, const cyclic_group_t *group)
 static uint32_t find_primroot(const cyclic_group_t *group)
 {
 	uint32_t candidate = (uint32_t) ((aesrand_getword() & 0xFFFFFFFF) % group->prime);
+	if (candidate == 0) {
+		++candidate;
+	}
 	while (check_coprime(candidate, group) != COPRIME) {
 		++candidate;
 	}
