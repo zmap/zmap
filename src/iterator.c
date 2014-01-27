@@ -47,7 +47,7 @@ void shard_complete(uint8_t thread_id, void *arg)
 iterator_t* iterator_init(uint8_t num_threads, uint8_t shard,
 			  uint8_t num_shards)
 {
-	uint64_t num_addrs = blacklist_count_allowed();
+	uint64_t num_addrs = zsend.targets;
 	iterator_t *it = xmalloc(sizeof(struct iterator));
 	const cyclic_group_t *group = get_group(num_addrs);
 	it->cycle = make_cycle(group);
