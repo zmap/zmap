@@ -252,6 +252,7 @@ int blacklist_init(char *whitelist_filename, char *blacklist_filename,
 		init_from_array(blacklist_entries,
 				blacklist_entries_len, ADDR_DISALLOWED);
 	}
+	init_from_string(strdup("0.0.0.0"), ADDR_DISALLOWED);
 	constraint_paint_value(constraint, ADDR_ALLOWED);
 	uint64_t allowed = blacklist_count_allowed();
 	log_debug("constraint", "%lu addresses (%0.0f%% of address "
