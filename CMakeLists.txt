@@ -90,7 +90,7 @@ add_subdirectory(src)
 #configure_file(zmap_conf_install.cmake.in zmap_conf_install.cmake)
 #install(SCRIPT "${PROJECT_SOURCE_DIR}/zmap_conf_install.cmake")
 
-FILE(GLOB CONF_FILES "conf/*")
+FILE(GLOB CONF_FILES "${PROJECT_SOURCE_DIR}/conf/*")
 if (RESPECT_INSTALL_PREFIX_CONFIG)
 	set(CONFIG_DESTINATION "etc/zmap")
 else()
