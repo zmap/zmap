@@ -1,3 +1,4 @@
+.*
 *.o
 *.a
 *.pyc
@@ -15,3 +16,6 @@ lexer.h
 parser.c
 parser.h
 install_manifest.txt
+_CPack_Packages/*
+*.deb
+!.gitignore

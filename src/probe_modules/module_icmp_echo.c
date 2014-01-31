@@ -15,18 +15,14 @@
 #include <unistd.h>
 #include <string.h>
 
-#include <netinet/ether.h>
-#include <netinet/ip.h>
-#include <netinet/ip_icmp.h>
-
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
+#include "../../lib/includes.h"
 #include "probe_modules.h"
 #include "../fieldset.h"
 #include "packet.h"
 #include "validate.h"
+
+#define ICMP_SMALLEST_SIZE 5
+#define ICMP_TIMXCEED_UNREACH_HEADER_SIZE 8
 
 probe_module_t module_icmp_echo;
 
@@ -35,11 +31,11 @@ int icmp_echo_init_perthread(void* buf, macaddr_t *src,
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 
-	struct ethhdr *eth_header = (struct ethhdr *)buf;
+	struct ether_header *eth_header = (struct ether_header *) buf;
 	make_eth_header(eth_header, src, gw);
 
-	struct iphdr *ip_header = (struct iphdr*)(&eth_header[1]);
-	uint16_t len = htons(sizeof(struct iphdr) + sizeof(struct icmp) - 8);
+	struct ip *ip_header = (struct ip *) (&eth_header[1]);
+	uint16_t len = htons(sizeof(struct ip) + sizeof(struct icmp) - 8);
 	make_ip_header(ip_header, IPPROTO_ICMP, len);
 
 	struct icmp *icmp_header = (struct icmp*)(&ip_header[1]);
@@ -51,29 +47,29 @@ int icmp_echo_init_perthread(void* buf, macaddr_t *src,
 int icmp_echo_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 				uint32_t *validation, __attribute__((unused))int probe_num)
 {
-	struct ethhdr *eth_header = (struct ethhdr *)buf;
-	struct iphdr *ip_header = (struct iphdr*)(&eth_header[1]);
+	struct ether_header *eth_header = (struct ether_header *) buf;
+	struct ip *ip_header = (struct ip *)(&eth_header[1]);
 	struct icmp *icmp_header = (struct icmp*)(&ip_header[1]);
 	uint16_t icmp_idnum = validation[2] & 0xFFFF;
 
-	ip_header->saddr = src_ip;
-	ip_header->daddr = dst_ip;
+	ip_header->ip_src.s_addr = src_ip;
+	ip_header->ip_dst.s_addr = dst_ip;
 
 	icmp_header->icmp_id = icmp_idnum;
 	icmp_header->icmp_cksum = 0;
 	icmp_header->icmp_cksum = icmp_checksum((unsigned short *) icmp_header);
 
-	ip_header->check = 0;
-	ip_header->check = ip_checksum((unsigned short *) ip_header);
+	ip_header->ip_sum = 0;
+	ip_header->ip_sum = zmap_ip_checksum((unsigned short *) ip_header);
 
 	return EXIT_SUCCESS;
 }
 
 void icmp_echo_print_packet(FILE *fp, void* packet)
 {
-	struct ethhdr *ethh = (struct ethhdr *) packet;
-	struct iphdr *iph = (struct iphdr *) &ethh[1];
-	struct icmp *icmp_header = (struct icmp*)(&iph[1]);
+	struct ether_header *ethh = (struct ether_header *) packet;
+	struct ip *iph = (struct ip *) &ethh[1];
+	struct icmp *icmp_header = (struct icmp*) (&iph[1]);
 
 	fprintf(fp, "icmp { type: %u | code: %u "
 			"| checksum: %u | id: %u | seq: %u }\n",
@@ -89,59 +85,64 @@ void icmp_echo_print_packet(FILE *fp, void* packet)
 
 
 
-int icmp_validate_packet(const struct iphdr *ip_hdr, 
+int icmp_validate_packet(const struct ip *ip_hdr, 
 		uint32_t len, uint32_t *src_ip, uint32_t *validation)
 {
-	if (ip_hdr->protocol != IPPROTO_ICMP) {
+	if (ip_hdr->ip_p != IPPROTO_ICMP) {
 		return 0;
 	}
 	
-	if ((4*ip_hdr->ihl + sizeof(struct icmphdr)) > len) {
+	if (((uint32_t) 4 * ip_hdr->ip_hl + ICMP_SMALLEST_SIZE) > len) {
 		// buffer not large enough to contain expected icmp header 
 		return 0;
 	}
 	
-	struct icmphdr *icmp_h = (struct icmphdr*)((char *)ip_hdr + 4*ip_hdr->ihl);
-	uint16_t icmp_idnum = icmp_h->un.echo.id;
+	struct icmp *icmp_h = (struct icmp *) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
+	uint16_t icmp_idnum = icmp_h->icmp_id;
 
 	// ICMP validation is tricky: for some packet types, we must look inside 
 	// the payload
-	if (icmp_h->type == ICMP_TIME_EXCEEDED || icmp_h->type == ICMP_DEST_UNREACH) {
-		if ((4*ip_hdr->ihl + sizeof(struct icmphdr) +
-			sizeof(struct iphdr)) > len) {
+	if (icmp_h->icmp_type == ICMP_TIMXCEED || icmp_h->icmp_type == ICMP_UNREACH) {
+
+		// Should have 16B TimeExceeded/Dest_Unreachable header + original IP header
+		// + 1st 8B of original ICMP frame
+		if ((4*ip_hdr->ip_hl + ICMP_TIMXCEED_UNREACH_HEADER_SIZE +
+			sizeof(struct ip)) > len) {
 			return 0;
 		}
-		struct iphdr *ip_inner = (struct iphdr *)(icmp_h + 1);
-		if ((4*ip_hdr->ihl + sizeof(struct icmphdr) +
-				4*ip_inner->ihl + sizeof(struct icmphdr)) > len) {
+
+		struct ip *ip_inner = (struct ip *)(icmp_h + 1);
+		if (((uint32_t) 4 * ip_hdr->ip_hl + ICMP_TIMXCEED_UNREACH_HEADER_SIZE +
+				4*ip_inner->ip_hl + 8 /*1st 8 bytes of original*/ ) > len) {
 			return 0;
 		}
-		struct icmphdr *icmp_inner = (struct icmphdr*)((char *)ip_inner + 4 *ip_hdr->ihl);
+
+		struct icmp *icmp_inner = (struct icmp *)((char *) ip_inner + 4*ip_hdr->ip_hl);
 
 		// Regenerate validation and icmp id based off inner payload
-		icmp_idnum = icmp_inner->un.echo.id;
-		*src_ip = ip_inner->daddr;
-		validate_gen(ip_hdr->daddr, ip_inner->daddr, (uint8_t *)validation);
+		icmp_idnum = icmp_inner->icmp_id;
+		*src_ip = ip_inner->ip_dst.s_addr;
+		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
+			     (uint8_t *) validation);
 	} 
 
 	// validate icmp id
 	if (icmp_idnum != (validation[2] & 0xFFFF)) {
 		return 0;
 	}
-
 	return 1;
 }
 
 void icmp_echo_process_packet(const u_char *packet,
 		__attribute__((unused)) uint32_t len, fieldset_t *fs)
 {
-	struct iphdr *ip_hdr = (struct iphdr *)&packet[sizeof(struct ethhdr)];
-	struct icmphdr *icmp_hdr = (struct icmphdr*)((char *)ip_hdr + 4 *ip_hdr->ihl);
-	fs_add_uint64(fs, "type", icmp_hdr->type);
-	fs_add_uint64(fs, "code", icmp_hdr->code);
-	fs_add_uint64(fs, "icmp-id", ntohs(icmp_hdr->un.echo.id));
-	fs_add_uint64(fs, "seq", ntohs(icmp_hdr->un.echo.sequence));
-	switch (icmp_hdr->type) {
+	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
+	struct icmp *icmp_hdr = (struct icmp *) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
+	fs_add_uint64(fs, "type", icmp_hdr->icmp_type);
+	fs_add_uint64(fs, "code", icmp_hdr->icmp_code);
+	fs_add_uint64(fs, "icmp-id", ntohs(icmp_hdr->icmp_id));
+	fs_add_uint64(fs, "seq", ntohs(icmp_hdr->icmp_seq));
+	switch (icmp_hdr->icmp_type) {
 		case ICMP_ECHOREPLY:
 			fs_add_string(fs, "classification", (char*) "echoreply", 0); 
 			fs_add_uint64(fs, "success", 1); 

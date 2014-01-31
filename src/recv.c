@@ -11,24 +11,12 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <assert.h>
 
 #include <pcap.h>
 #include <pcap/pcap.h>
 
-#include <netinet/tcp.h>
-#include <netinet/ip_icmp.h>
-#include <netinet/udp.h>
-#include <netinet/ip.h>
-#include <netinet/in.h>
-
-#include <linux/if_ether.h>
-#include <arpa/inet.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <net/if.h>
-#include <assert.h>
-
+#include "../lib/includes.h"
 #include "../lib/logger.h"
 #include "../lib/pbm.h"
 
@@ -65,21 +53,21 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 	// length of entire packet captured by libpcap
 	uint32_t buflen = (uint32_t) p->caplen;
 
-	if ((sizeof(struct iphdr) + (zconf.send_ip_pkts ? 0 : sizeof(struct ethhdr))) > buflen) {
+	if ((sizeof(struct ip) + (zconf.send_ip_pkts ? 0 : sizeof(struct ether_header))) > buflen) {
 		// buffer not large enough to contain ethernet
 		// and ip headers. further action would overrun buf
 		return;
 	}
-	struct iphdr *ip_hdr = (struct iphdr *)&bytes[(zconf.send_ip_pkts ? 0 : sizeof(struct ethhdr))];
+	struct ip *ip_hdr = (struct ip *) &bytes[(zconf.send_ip_pkts ? 0 : sizeof(struct ether_header))];
 
-	uint32_t src_ip = ip_hdr->saddr;
+	uint32_t src_ip = ip_hdr->ip_src.s_addr;
 
 	uint32_t validation[VALIDATE_BYTES/sizeof(uint8_t)];
 	// TODO: for TTL exceeded messages, ip_hdr->saddr is going to be different
 	// and we must calculate off potential payload message instead
-	validate_gen(ip_hdr->daddr, ip_hdr->saddr, (uint8_t *)validation);
+	validate_gen(ip_hdr->ip_dst.s_addr, ip_hdr->ip_src.s_addr, (uint8_t *) validation);
 
-	if (!zconf.probe_module->validate_packet(ip_hdr, buflen - (zconf.send_ip_pkts ? 0 : sizeof(struct ethhdr)),
+	if (!zconf.probe_module->validate_packet(ip_hdr, buflen - (zconf.send_ip_pkts ? 0 : sizeof(struct ether_header)),
 				&src_ip, validation)) {
 		return;
 	}
@@ -97,7 +85,7 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 		if (buflen > sizeof(fake_eth_hdr)) {
 			buflen = sizeof(fake_eth_hdr);
 		}
-		memcpy(&fake_eth_hdr[sizeof(struct ethhdr)], bytes, buflen);
+		memcpy(&fake_eth_hdr[sizeof(struct ether_header)], bytes, buflen);
 		bytes = fake_eth_hdr;
 	}
 	zconf.probe_module->process_packet(bytes, buflen, fs);
@@ -166,9 +154,9 @@ int recv_update_pcap_stats(void)
 
 int recv_run(pthread_mutex_t *recv_ready_mutex)
 {
-	log_debug("recv", "thread started");
+	log_trace("recv", "recv thread started");
 	num_src_ports = zconf.source_port_last - zconf.source_port_first + 1;
-	log_debug("recv", "using dev %s", zconf.iface);
+	log_debug("recv", "capturing responses on %s", zconf.iface);
 	if (!zconf.dryrun) {
 		char errbuf[PCAP_ERRBUF_SIZE];
 		pc = pcap_open_live(zconf.iface, zconf.probe_module->pcap_snaplen,
@@ -192,13 +180,12 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 		}
 	}
 	if (zconf.send_ip_pkts) {
-		struct ethhdr *eth = (struct ethhdr *)fake_eth_hdr;
+		struct ether_header *eth = (struct ether_header *) fake_eth_hdr;
 		memset(fake_eth_hdr, 0, sizeof(fake_eth_hdr));
-		eth->h_proto = htons(ETH_P_IP);
+		eth->ether_type = htons(ETHERTYPE_IP);
 	}
 	// initialize paged bitmap
 	seen = pbm_init();
-	log_debug("recv", "receiver ready");
 	if (zconf.filter_duplicates) {
 		log_debug("recv", "duplicate responses will be excluded from output"); 
 	} else {
@@ -222,11 +209,10 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 		if (zconf.dryrun) {
 			sleep(1);
 		} else {
-			if (pcap_dispatch(pc, 0, packet_cb, NULL) == -1) {
+			if (pcap_dispatch(pc, -1, packet_cb, NULL) == -1) {
 				log_fatal("recv", "pcap_dispatch error");
 			}
 			if (zconf.max_results && zrecv.success_unique >= zconf.max_results) {
-				zsend.complete = 1;
 				break;
 			}
 		}
@@ -234,7 +220,12 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 	zrecv.finish = now();
 	// get final pcap statistics before closing
 	recv_update_pcap_stats();
-	pcap_close(pc);
+	if (!zconf.dryrun) {
+		pthread_mutex_lock(recv_ready_mutex);
+		pcap_close(pc);
+		pc = NULL;
+		pthread_mutex_unlock(recv_ready_mutex);
+	}
 	zrecv.complete = 1;
 	log_debug("recv", "thread finished");
 	return 0;

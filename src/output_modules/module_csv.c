@@ -39,7 +39,7 @@ int csv_init(struct state_conf *conf, char **fields, int fieldlens)
 		log_warn("csv", "no output file selected. "
 				   "no results will be provided.");
 	}
-	if (fieldlens > 0 && file) {
+	if (fieldlens > 1 && file) {
 		log_debug("csv", "more than one field, will add headers");
 		for (int i=0; i < fieldlens; i++) {
 			if (i) {
@@ -78,10 +78,14 @@ int csv_process(fieldset_t *fs)
 	for (int i=0; i < fs->len; i++) {
 		field_t *f = &(fs->fields[i]);
 		if (i) {
-			fprintf(file, ", ");
+			fprintf(file, ",");
 		}
 		if (f->type == FS_STRING) {
-			fprintf(file, "%s", (char*) f->value.ptr);
+			if (strchr((char*) f->value.ptr, ',')) {
+				fprintf(file, "\"%s\"", (char*) f->value.ptr);
+			} else {
+				fprintf(file, "%s", (char*) f->value.ptr);
+			}
 		} else if (f->type == FS_UINT64) {
 			fprintf(file, "%" PRIu64, (uint64_t) f->value.num);
 		} else if (f->type == FS_BINARY) {

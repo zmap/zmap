@@ -35,19 +35,27 @@ struct state_conf zconf = {
 	.probe_module = NULL,
 	.probe_args = NULL,
 	.gw_mac = {0},
+	.gw_ip = 0,
+	.hw_mac = {0},
 	.gw_mac_set = 0,
 	.send_ip_pkts = 0,
 	.source_ip_first = NULL,
 	.source_ip_last = NULL,
 	.raw_output_fields = NULL,
 	.output_fields = NULL,
+	.output_filter_str = NULL,
 	.output_fields_len = 0,
+	.log_file = NULL,
+	.log_directory = NULL,
 	.dryrun = 0,
 	.quiet = 0,
 	.summary = 0,
+	.syslog = 1,
 	.filter_duplicates = 0,
 	.filter_unsuccessful = 0,
 	.recv_ready = 0,
+	.metadata_file = NULL,
+	.metadata_filename = NULL
 };
 
 // global sender stats and defaults

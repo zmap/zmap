@@ -1,9 +1,10 @@
 #include "xalloc.h"
-#include "../lib/logger.h"
+#include "logger.h"
 
 #include <stdlib.h>
+#include <string.h>
 
-void die() __attribute__((noreturn));
+static void die() __attribute__((noreturn));
 
 void* xcalloc(size_t count, size_t size)
 {
@@ -22,6 +23,7 @@ void xfree(void *ptr)
 void* xmalloc(size_t size)
 {
 	void* res = malloc(size);
+	memset(res, 0 , size);
 	if (res == NULL) {
 		die();
 	}

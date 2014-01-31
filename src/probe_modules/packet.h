@@ -1,10 +1,5 @@
-#include "state.h"
-
-#include <netinet/ether.h>
-#include <netinet/ip.h>
-#include <netinet/tcp.h>
-#include <netinet/ip_icmp.h>
-#include <netinet/udp.h>
+#include "../../lib/includes.h"
+#include "../state.h"
 
 #ifndef PACKET_H
 #define PACKET_H
@@ -13,15 +8,15 @@
 
 typedef unsigned short __attribute__((__may_alias__)) alias_unsigned_short;
 
-void make_eth_header(struct ethhdr *ethh, macaddr_t *src, macaddr_t *dst);
+void make_eth_header(struct ether_header *ethh, macaddr_t *src, macaddr_t *dst);
 
-void make_ip_header(struct iphdr *iph, uint8_t, uint16_t);
+void make_ip_header(struct ip *iph, uint8_t, uint16_t);
 void make_tcp_header(struct tcphdr*, port_h_t);
 void make_icmp_header(struct icmp *);
 void make_udp_header(struct udphdr *udp_header, port_h_t dest_port,
 				uint16_t len);
-void fprintf_ip_header(FILE *fp, struct iphdr *iph);
-void fprintf_eth_header(FILE *fp, struct ethhdr *ethh);
+void fprintf_ip_header(FILE *fp, struct ip *iph);
+void fprintf_eth_header(FILE *fp, struct ether_header *ethh);
 
 static inline unsigned short in_checksum(unsigned short *ip_pkt, int len)
 {
@@ -34,10 +29,10 @@ static inline unsigned short in_checksum(unsigned short *ip_pkt, int len)
 	return (unsigned short) (~sum);
 }
 
-__attribute__((unused)) static inline unsigned short ip_checksum(
+__attribute__((unused)) static inline unsigned short zmap_ip_checksum(
                 unsigned short *buf)
 {
-	return in_checksum(buf, (int) sizeof(struct iphdr));
+	return in_checksum(buf, (int) sizeof(struct ip));
 }
 
 __attribute__((unused)) static inline unsigned short icmp_checksum(

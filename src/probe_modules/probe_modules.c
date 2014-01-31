@@ -12,12 +12,7 @@
 #include <time.h>
 #include <sys/time.h>
 
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <net/if.h>
-#include <linux/if_packet.h>
-
+#include "../../lib/includes.h"
 #include "../../lib/logger.h"
 #include "../fieldset.h"
 #include "probe_modules.h"
@@ -55,17 +50,17 @@ void print_probe_modules(void)
 }
 
 
-void fs_add_ip_fields(fieldset_t *fs, struct iphdr *ip)
+void fs_add_ip_fields(fieldset_t *fs, struct ip *ip)
 {
 	// WARNING: you must update fs_ip_fields_len  as well
 	// as the definitions set (ip_fiels) if you
 	// change the fields added below:
-	fs_add_string(fs, "saddr", make_ip_str(ip->saddr), 1);
-	fs_add_uint64(fs, "saddr-raw", (uint64_t) ip->saddr);
-	fs_add_string(fs, "daddr", make_ip_str(ip->daddr), 1);
-	fs_add_uint64(fs, "daddr-raw", (uint64_t) ip->daddr);
-	fs_add_uint64(fs, "ipid", ntohs(ip->id));
-	fs_add_uint64(fs, "ttl", ip->ttl);
+	fs_add_string(fs, "saddr", make_ip_str(ip->ip_src.s_addr), 1);
+	fs_add_uint64(fs, "saddr-raw", (uint64_t) ip->ip_src.s_addr);
+	fs_add_string(fs, "daddr", make_ip_str(ip->ip_dst.s_addr), 1);
+	fs_add_uint64(fs, "daddr-raw", (uint64_t) ip->ip_dst.s_addr);
+	fs_add_uint64(fs, "ipid", ntohs(ip->ip_id));
+	fs_add_uint64(fs, "ttl", ip->ip_ttl);
 }
 
 #define TIMESTR_LEN 55

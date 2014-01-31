@@ -15,15 +15,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include <netinet/udp.h>
-#include <netinet/ip.h>
-#include <netinet/ether.h>
-#include <netinet/ip_icmp.h>
-
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
+#include "../../lib/includes.h"
 #include "probe_modules.h"
 #include "packet.h"
 #include "logger.h"
@@ -31,34 +23,40 @@
 #define MAX_UDP_PAYLOAD_LEN 1472
 #define UNUSED __attribute__((unused))
 
-char *udp_send_msg = NULL;
-int udp_send_msg_len = 0;
+static char *udp_send_msg = NULL;
+static int udp_send_msg_len = 0;
 
-const char *udp_send_msg_default = "GET / HTTP/1.1\r\nHost: www\r\n\r\n"; 
+static const char *udp_send_msg_default = "GET / HTTP/1.1\r\nHost: www\r\n\r\n"; 
 
 const char *udp_unreach_strings[] = {
-"network unreachable",
-"host unreachable",
-"protocol unreachable",
-"port unreachable",
-"fragments required",
-"source route failed",
-"network unknown",
-"host unknown",
-"source host isolated",
-"network admin. prohibited",
-"host admin. prohibited",
-"network unreachable TOS",
-"host unreachable TOS",
-"communication admin. prohibited",
-"host presdence violation",
-"precedence cutoff"};
+	"network unreachable",
+	"host unreachable",
+	"protocol unreachable",
+	"port unreachable",
+	"fragments required",
+	"source route failed",
+	"network unknown",
+	"host unknown",
+	"source host isolated",
+	"network admin. prohibited",
+	"host admin. prohibited",
+	"network unreachable TOS",
+	"host unreachable TOS",
+	"communication admin. prohibited",
+	"host presdence violation",
+	"precedence cutoff"
+};
 
 static int num_ports;
 
 probe_module_t module_udp;
 
-int udp_global_initialize(struct state_conf *conf) {
+void udp_set_num_ports(int x)
+{
+	num_ports = x;
+}
+
+static int udp_global_initialize(struct state_conf *conf) {
 	char *args, *c;
 	int i;
 	unsigned int n;
@@ -80,7 +78,8 @@ int udp_global_initialize(struct state_conf *conf) {
 	if (! c) {
 		free(args);
 		free(udp_send_msg);
-		log_fatal("udp", "unknown UDP probe specification (expected file:/path or text:STRING or hex:01020304)");
+		log_fatal("udp", "unknown UDP probe specification (expected "
+				"file:/path or text:STRING or hex:01020304)");
 		exit(1);
 	}
 
@@ -144,25 +143,28 @@ int udp_global_initialize(struct state_conf *conf) {
 		udp_send_msg_len = MAX_UDP_PAYLOAD_LEN;
 	}
 	free(args);
-	return(0);
+	return EXIT_SUCCESS;
 }
 
 int udp_global_cleanup(__attribute__((unused)) struct state_conf *zconf,
-					   __attribute__((unused)) struct state_send *zsend,
-					   __attribute__((unused)) struct state_recv *zrecv) {
-	if (udp_send_msg) free(udp_send_msg);
+		__attribute__((unused)) struct state_send *zsend,
+		__attribute__((unused)) struct state_recv *zrecv)
+{
+	if (udp_send_msg) {
+		free(udp_send_msg);
+	}
 	udp_send_msg = NULL;
-	return(0);
+	return EXIT_SUCCESS;
 }
 
 int udp_init_perthread(void* buf, macaddr_t *src,
 		macaddr_t *gw, __attribute__((unused)) port_h_t dst_port)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
-	struct ethhdr *eth_header = (struct ethhdr *)buf;
+	struct ether_header *eth_header = (struct ether_header *) buf;
 	make_eth_header(eth_header, src, gw);
-	struct iphdr *ip_header = (struct iphdr*)(&eth_header[1]);
-	uint16_t len = htons(sizeof(struct iphdr) + sizeof(struct udphdr) + udp_send_msg_len);
+	struct ip *ip_header = (struct ip*)(&eth_header[1]);
+	uint16_t len = htons(sizeof(struct ip) + sizeof(struct udphdr) + udp_send_msg_len);
 	make_ip_header(ip_header, IPPROTO_UDP, len);
 
 	struct udphdr *udp_header = (struct udphdr*)(&ip_header[1]);
@@ -171,7 +173,7 @@ int udp_init_perthread(void* buf, macaddr_t *src,
 
 	char* payload = (char*)(&udp_header[1]);
 
-	module_udp.packet_length = sizeof(struct ethhdr) + sizeof(struct iphdr) 
+	module_udp.packet_length = sizeof(struct ether_header) + sizeof(struct ip) 
 				+ sizeof(struct udphdr) + udp_send_msg_len;
 	assert(module_udp.packet_length <= MAX_PACKET_SIZE);
 
@@ -183,29 +185,30 @@ int udp_init_perthread(void* buf, macaddr_t *src,
 int udp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip, 
 		uint32_t *validation, int probe_num)
 {
-	struct ethhdr *eth_header = (struct ethhdr *)buf;
-	struct iphdr *ip_header = (struct iphdr*)(&eth_header[1]);
-	struct udphdr *udp_header = (struct udphdr*)(&ip_header[1]);
+	struct ether_header *eth_header = (struct ether_header *) buf;
+	struct ip *ip_header = (struct ip*) (&eth_header[1]);
+	struct udphdr *udp_header= (struct udphdr *) &ip_header[1];
+	//struct = (struct udphdr*) (&ip_header[1]);
 
-	ip_header->saddr = src_ip;
-	ip_header->daddr = dst_ip;
-	udp_header->source = htons(get_src_port(num_ports, probe_num,
-					validation));
-	ip_header->check = 0;
-	ip_header->check = ip_checksum((unsigned short *) ip_header);
+	ip_header->ip_src.s_addr = src_ip;
+	ip_header->ip_dst.s_addr = dst_ip;
+	udp_header->uh_sport = htons(get_src_port(num_ports, probe_num,
+				     validation));
+	ip_header->ip_sum = 0;
+	ip_header->ip_sum = zmap_ip_checksum((unsigned short *) ip_header);
 
 	return EXIT_SUCCESS;
 }
 
 void udp_print_packet(FILE *fp, void* packet)
 {
-	struct ethhdr *ethh = (struct ethhdr *) packet;
-	struct iphdr *iph = (struct iphdr *) &ethh[1];
-	struct udphdr *udph  = (struct udphdr*)(&iph[1]);
+	struct ether_header *ethh = (struct ether_header *) packet;
+	struct ip *iph = (struct ip *) &ethh[1];
+	struct udphdr *udph  = (struct udphdr*) (iph + 4*iph->ip_hl);
 	fprintf(fp, "udp { source: %u | dest: %u | checksum: %u }\n",
-			ntohs(udph->source),
-			ntohs(udph->dest),
-			ntohl(udph->check));
+		ntohs(udph->uh_sport),
+		ntohs(udph->uh_dport),
+		ntohl(udph->uh_sum));
 	fprintf_ip_header(fp, iph);
 	fprintf_eth_header(fp, ethh);
 	fprintf(fp, "------------------------------------------------------\n");
@@ -213,39 +216,40 @@ void udp_print_packet(FILE *fp, void* packet)
 
 void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *fs)
 {
-	struct iphdr *ip_hdr = (struct iphdr *)&packet[sizeof(struct ethhdr)];
-	if (ip_hdr->protocol == IPPROTO_UDP) {
-		struct udphdr *udp = (struct udphdr *)((char *)ip_hdr + ip_hdr->ihl * 4);
+	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
+	if (ip_hdr->ip_p == IPPROTO_UDP) {
+		struct udphdr *udp = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
 		fs_add_string(fs, "classification", (char*) "udp", 0);
 		fs_add_uint64(fs, "success", 1);
-		fs_add_uint64(fs, "sport", ntohs(udp->source));
-		fs_add_uint64(fs, "dport", ntohs(udp->dest));
+		fs_add_uint64(fs, "sport", ntohs(udp->uh_sport));
+		fs_add_uint64(fs, "dport", ntohs(udp->uh_dport));
 		fs_add_null(fs, "icmp_responder");
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
-		fs_add_binary(fs, "data", (ntohs(udp->len) - sizeof(struct udphdr)), (void*) &udp[1], 0);
-	} else if (ip_hdr->protocol == IPPROTO_ICMP) {
-		struct icmphdr *icmp = (struct icmphdr *)((char *)ip_hdr + ip_hdr->ihl * 4);
-		struct iphdr *ip_inner = (struct iphdr*)&icmp[1];
+		fs_add_binary(fs, "data", (ntohs(udp->uh_ulen) - sizeof(struct udphdr)), (void*) &udp[1], 0);
+	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
+		struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
+		struct ip *ip_inner = (struct ip *) &icmp[1];
 		// ICMP unreach comes from another server (not the one we sent a probe to);
 		// But we will fix up saddr to be who we sent the probe to, in case you care.
-		fs_modify_string(fs, "saddr", make_ip_str(ip_inner->daddr), 1);
+		fs_modify_string(fs, "saddr", make_ip_str(ip_inner->ip_dst.s_addr), 1);
 		fs_add_string(fs, "classification", (char*) "icmp-unreach", 0);
 		fs_add_uint64(fs, "success", 0);
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");
-		fs_add_string(fs, "icmp_responder", make_ip_str(ip_hdr->saddr), 1);
-		fs_add_uint64(fs, "icmp_type", icmp->type);
-		fs_add_uint64(fs, "icmp_code", icmp->code);
-		if (icmp->code <= ICMP_PREC_CUTOFF) {
-			fs_add_string(fs, "icmp_unreach_str", (char *)udp_unreach_strings[icmp->code], 0);
+		fs_add_string(fs, "icmp_responder", make_ip_str(ip_hdr->ip_src.s_addr), 1);
+		fs_add_uint64(fs, "icmp_type", icmp->icmp_type);
+		fs_add_uint64(fs, "icmp_code", icmp->icmp_code);
+		if (icmp->icmp_code <= ICMP_UNREACH_PRECEDENCE_CUTOFF) {
+			fs_add_string(fs, "icmp_unreach_str", 
+				(char *) udp_unreach_strings[icmp->icmp_code], 0);
 		} else {
-			fs_add_string(fs, "icmp_unreach_str", (char *)"unknown", 0);
+			fs_add_string(fs, "icmp_unreach_str", (char *) "unknown", 0);
 		}
 		fs_add_null(fs, "data");
 	} else {
-		fs_add_string(fs, "classification", (char*) "other", 0);
+		fs_add_string(fs, "classification", (char *) "other", 0);
 		fs_add_uint64(fs, "success", 0);
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");
@@ -257,44 +261,44 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 	}
 }
 
-int udp_validate_packet(const struct iphdr *ip_hdr, uint32_t len, 
+int udp_validate_packet(const struct ip *ip_hdr, uint32_t len, 
 		__attribute__((unused))uint32_t *src_ip, uint32_t *validation)
 {
 	uint16_t dport, sport;
-	if (ip_hdr->protocol == IPPROTO_UDP) {
-		if ((4*ip_hdr->ihl + sizeof(struct udphdr)) > len) {
+	if (ip_hdr->ip_p == IPPROTO_UDP) {
+		if ((4*ip_hdr->ip_hl + sizeof(struct udphdr)) > len) {
 			// buffer not large enough to contain expected udp header 
 			return 0;
 		}
-		struct udphdr *udp = (struct udphdr*)((char *)ip_hdr + 4*ip_hdr->ihl);
+		struct udphdr *udp = (struct udphdr*) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
 
-		sport = ntohs(udp->dest);
-		dport = ntohs(udp->source);
-	} else if (ip_hdr->protocol == IPPROTO_ICMP) {
+		sport = ntohs(udp->uh_dport);
+		dport = ntohs(udp->uh_sport);
+	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		// UDP can return ICMP Destination unreach
 		// IP( ICMP( IP( UDP ) ) ) for a destination unreach
-		uint32_t min_len = 4*ip_hdr->ihl + sizeof(struct icmphdr)
-				+ sizeof(struct iphdr) + sizeof(struct udphdr);
+		uint32_t min_len = 4*ip_hdr->ip_hl + sizeof(struct icmp)
+				+ sizeof(struct ip) + sizeof(struct udphdr);
 		if (len < min_len) {
 			// Not enough information for us to validate
 			return 0;
 		}
 
-		struct icmphdr *icmp = (struct icmphdr*)((char *)ip_hdr + 4*ip_hdr->ihl);
-		if (icmp->type != ICMP_DEST_UNREACH) {
+		struct icmp *icmp = (struct icmp*) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
+		if (icmp->icmp_type != ICMP_UNREACH) {
 			return 0;
 		}
 
-		struct iphdr *ip_inner = (struct iphdr*)&icmp[1];
+		struct ip *ip_inner = (struct ip*) &icmp[1];
 		// Now we know the actual inner ip length, we should recheck the buffer
-		if (len < 4*ip_inner->ihl - sizeof(struct iphdr) + min_len) {
+		if (len < 4*ip_inner->ip_hl - sizeof(struct ip) + min_len) {
 			return 0;
 		}
 		// This is the packet we sent
-		struct udphdr *udp = (struct udphdr *)((char*)ip_inner + 4*ip_inner->ihl);
+		struct udphdr *udp = (struct udphdr *) ((char*) ip_inner + 4*ip_inner->ip_hl);
 
-		sport = ntohs(udp->source);
-		dport = ntohs(udp->dest);
+		sport = ntohs(udp->uh_sport);
+		dport = ntohs(udp->uh_dport);
 	} else {
 		return 0;
 	}

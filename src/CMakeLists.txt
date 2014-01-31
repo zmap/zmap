@@ -5,6 +5,20 @@ include_directories(
 	${PROJECT_SOURCE_DIR}/src/output_modules
 	)
 
+if (APPLE)
+	if (EXISTS /opt/local/include)
+		include_directories(/opt/local/include)
+	endif()
+	if (EXISTS /opt/local/lib)
+		link_directories(/opt/local/lib)
+	endif()
+endif()
+
+if (BSD)
+	include_directories(/usr/local/include)
+	link_directories(/usr/local/lib)
+endif()
+
 SET(LIB_SOURCES
 	${PROJECT_SOURCE_DIR}/lib/blacklist.c
 	${PROJECT_SOURCE_DIR}/lib/constraint.c
@@ -12,7 +26,6 @@ SET(LIB_SOURCES
 	${PROJECT_SOURCE_DIR}/lib/pbm.c
 	${PROJECT_SOURCE_DIR}/lib/random.c
 	${PROJECT_SOURCE_DIR}/lib/rijndael-alg-fst.c
-	${PROJECT_SOURCE_DIR}/lib/stack.c
 	${PROJECT_SOURCE_DIR}/lib/xalloc.c
 )
 
@@ -45,9 +58,11 @@ SET(SOURCES
 	fieldset.c
 	filter.c
 	get_gateway.c
+	iterator.c
 	monitor.c
 	recv.c
 	send.c
+	shard.c
 	state.c
 	validate.c
 	zmap.c
@@ -75,18 +90,25 @@ add_custom_command(OUTPUT zopt.h
 	)
 
 add_custom_command(OUTPUT lexer.c
-	COMMAND flex -o "${CMAKE_CURRENT_BINARY_DIR}/lexer.c" --header-file="${CMAKE_CURRENT_BINARY_DIR}/lexer.h" lexer.l
+	COMMAND flex -o "${CMAKE_CURRENT_BINARY_DIR}/lexer.c" --header-file="${CMAKE_CURRENT_BINARY_DIR}/lexer.h" "${CMAKE_CURRENT_SOURCE_DIR}/lexer.l"
 	)
 
 add_custom_command(OUTPUT parser.c
-	COMMAND byacc -d -o parser.c parser.y
+	COMMAND byacc -d -o "${CMAKE_CURRENT_BINARY_DIR}/parser.c" "${CMAKE_CURRENT_SOURCE_DIR}/parser.y"
 	)
 
 add_executable(zmap ${SOURCES})
 
+if (APPLE OR BSD)
+	set(DNET_LIBRARIES "dnet")
+else()
+	set(DNET_LIBRARIES "")
+endif()
+
 target_link_libraries(
 	zmap 
 	pcap gmp m
+	${DNET_LIBRARIES}
 	${REDIS_LIBS}
 	${JSON_LIBRARIES}
 	)

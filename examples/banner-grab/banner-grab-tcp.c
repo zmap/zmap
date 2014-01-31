@@ -327,7 +327,7 @@ int main(int argc, char *argv[])
 	int ret;
 	FILE *fp;
 
-	log_init(stderr, LOG_INFO);
+	log_init(stderr, LOG_INFO, 0, "banner-grab");
 
 	ret = ulimit(4, 1000000);	// Allow us to open 1 million fds (instead of 1024)
 	if (ret < 0) {
@@ -383,7 +383,7 @@ int main(int argc, char *argv[])
 			break;
 		case 'v':
 			if (atoi(optarg) >= 0 && atoi(optarg) <= 5) {
-				log_init(stderr, atoi(optarg));
+				log_init(stderr, atoi(optarg), 0, "banner-grab");
 			}
 			break;
 		case 'f':

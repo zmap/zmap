@@ -5,21 +5,40 @@
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
-
-#include <stdint.h>
-
 #ifndef CYCLIC_H
 #define CYCLIC_H
 
-int cyclic_init(uint32_t, uint32_t);
+#include <stdint.h>
+#include <stddef.h>
 
-// get next IP address to scan
-uint32_t cyclic_get_next_ip(void);
+// Represents a multiplicative cyclic group (Z/pZ)*
+typedef struct cyclic_group {
+	uint64_t prime;			// p
+	uint64_t known_primroot;	// Known primitive root of (Z/pZ)*
+	size_t num_prime_factors;	// Length of num_prime_factors
+	uint64_t prime_factors[10];	// Unique prime factors of (p-1)
+} cyclic_group_t;
 
-// what IP address was returned last
-uint32_t cyclic_get_curr_ip(void);
+// Represents a cycle in a group
+typedef struct cycle {
+	const cyclic_group_t* group;
+	uint64_t generator;
+	uint32_t offset;
+} cycle_t;
 
-// what primitive root was generated for this current scan
-uint32_t cyclic_get_primroot(void);
+// Get a cyclic_group_t of at least min_size.
+// Pointer into static data, do not free().
+const cyclic_group_t* get_group(uint64_t min_size);
+
+// Generate cycle (find generator and inverse)
+cycle_t make_cycle(const cyclic_group_t* group);
+
+// Perform the isomorphism from (Z/pZ)+ to (Z/pZ)*
+// Given known primitive root of (Z/pZ)* n, with x in (Z/pZ)+, do:
+//	f(x) = n^x mod p
+//
+// The isomorphism in the reverse direction is discrete log, and is
+// therefore hard.
+uint64_t isomorphism(uint64_t additive_elt, const cyclic_group_t* mult_group);
 
 #endif

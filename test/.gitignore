@@ -1,0 +1,6 @@
+*.*-t*
+*-t*
+tempfile
+outfile
+!.gitignore
+shardfile

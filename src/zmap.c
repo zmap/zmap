@@ -15,21 +15,29 @@
 #include <assert.h>
 #include <sched.h>
 #include <errno.h>
-
 #include <pwd.h>
-#include <net/if.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/types.h>
+#include <time.h>
 
 #include <pcap/pcap.h>
 
 #include <pthread.h>
 
+#include "../lib/includes.h"
+#include "../lib/blacklist.h"
 #include "../lib/logger.h"
 #include "../lib/random.h"
+#include "../lib/xalloc.h"
 
+
+#if defined(__APPLE__)
+#include <mach/thread_act.h>
+#endif
+
+#ifdef JSON
+#include <json.h>
+#endif
+
+#include "aesrand.h"
 #include "zopt.h"
 #include "send.h"
 #include "recv.h"
@@ -41,6 +49,8 @@
 #include "output_modules/output_modules.h"
 #include "probe_modules/probe_modules.h"
 
+#define MAC_ADDR_LEN 6
+
 pthread_mutex_t cpu_affinity_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t recv_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -49,31 +59,112 @@ pthread_mutex_t recv_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 // of fields that the user wants output 
 static void split_string(char* in, int *len, char***results)
 {
-        char** fields = calloc(MAX_FIELDS, sizeof(char*));
-        memset(fields, 0, MAX_FIELDS*sizeof(fields));
-        int retvlen = 0;
-        char *currloc = in; 
-        // parse csv into a set of strings
-        while (1) {
-                size_t len = strcspn(currloc, ", ");    
-                if (len == 0) {
-                        currloc++;
-                } else {
-                        char *new = malloc(len+1);
+	char** fields = calloc(MAX_FIELDS, sizeof(char*));
+	memset(fields, 0, MAX_FIELDS*sizeof(fields));
+	int retvlen = 0;
+	char *currloc = in; 
+	// parse csv into a set of strings
+	while (1) {
+		size_t len = strcspn(currloc, ", ");    
+		if (len == 0) {
+			currloc++;
+		} else {
+			char *new = malloc(len+1);
 			assert(new);
-                        strncpy(new, currloc, len);
-                        new[len] = '\0';             
-                        fields[retvlen++] = new;
+			strncpy(new, currloc, len);
+			new[len] = '\0';	     
+			fields[retvlen++] = new;
 			assert(fields[retvlen-1]);
-                }   
+		}   
 		if (len == strlen(currloc)) {
 			break;
 		}
-                currloc += len;
-        }
-        *results = fields;
-        *len = retvlen;
+		currloc += len;
+	}
+	*results = fields;
+	*len = retvlen;
 }
+
+// print a string using w length long lines
+// attempting to break on spaces.
+void fprintw(FILE *f, char *s, size_t w)
+{
+	if (strlen(s) <= w) {
+		fprintf(f, "%s", s); 
+		return;
+	}   
+	// process each line individually in order to
+	// respect existing line breaks in string.
+	char *news = strdup(s);
+	char *pch = strtok(news, "\n");
+	while (pch) {
+		if (strlen(pch) <= w) {
+			printf("%s\n", pch);
+			pch = strtok(NULL, "\n");
+			continue;
+		}   
+		char *t = pch;
+		while (strlen(t)) {
+			size_t numchars = 0; //number of chars to print
+			char *tmp = t;
+			while (1) {
+				size_t new = strcspn(tmp, " ") + 1;
+				if (new == strlen(tmp) || new > w) {
+					// there are no spaces in the string, so, just 
+					// print the entire thing on one line;
+					numchars += new;
+					break;
+				} else if (numchars + new > w) {
+					// if we added any more, we'd be over w chars so
+					// time to print the line and move on to the next.
+					break;
+				} else {
+					tmp += (size_t) new;
+					numchars += new;
+				}   
+			}   
+			fprintf(f, "%.*s\n", (int) numchars, t); 
+			t += (size_t) numchars;
+			if (t > pch + (size_t)strlen(pch)) {
+				break;
+			}   
+		}   
+		pch = strtok(NULL, "\n");
+	}   
+	free(news);
+}
+
+
+//#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(__APPLE__)
+static void set_cpu(void)
+{
+	pthread_mutex_lock(&cpu_affinity_mutex);
+	static int core=0;
+	int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+
+	mach_port_t tid = pthread_mach_thread_np(pthread_self());
+	struct thread_affinity_policy policy;
+	policy.affinity_tag = core;
+	kern_return_t ret = thread_policy_set(tid,THREAD_AFFINITY_POLICY,
+					(thread_policy_t) &policy,THREAD_AFFINITY_POLICY_COUNT);
+	if (ret != KERN_SUCCESS) {
+		log_error("zmap", "can't set thread CPU affinity");
+	}
+	log_trace("zmap", "set thread %u affinity to core %d",
+			pthread_self(), core);
+	core = (core + 1) % num_cores;
+
+	pthread_mutex_unlock(&cpu_affinity_mutex);
+}
+
+#else
+
+#if defined(__FreeBSD__) || defined(__NetBSD__)
+#include <sys/param.h>
+#include <sys/cpuset.h>
+#define cpu_set_t cpuset_t
+#endif
 
 static void set_cpu(void)
 {
@@ -83,6 +174,7 @@ static void set_cpu(void)
 	cpu_set_t cpuset;	
 	CPU_ZERO(&cpuset);
 	CPU_SET(core, &cpuset);
+
 	if (pthread_setaffinity_np(pthread_self(),
 				sizeof(cpu_set_t), &cpuset) != 0) {
 		log_error("zmap", "can't set thread CPU affinity");
@@ -91,14 +183,20 @@ static void set_cpu(void)
 			pthread_self(), core);
 	core = (core + 1) % num_cores;
 	pthread_mutex_unlock(&cpu_affinity_mutex);
-}	
+}
+#endif
+
+typedef struct send_arg {
+	int sock;
+	shard_t *shard;
+} send_arg_t;
 
 static void* start_send(void *arg)
 {
-	uintptr_t v = (uintptr_t) arg;
-	int sock = (int) v & 0xFFFF;
+	send_arg_t *v = (send_arg_t *) arg;
 	set_cpu();
-	send_run(sock);
+	send_run(v->sock, v->shard);
+	free(v);
 	return NULL;
 }
 
@@ -124,10 +222,17 @@ static void drop_privs()
 	log_fatal("zmap", "Couldn't change UID to 'nobody'");		
 }
 
-static void *start_mon(__attribute__((unused)) void *arg)
+typedef struct mon_start_arg {
+	iterator_t *it;
+	pthread_mutex_t *recv_ready_mutex;
+} mon_start_arg_t;
+
+static void *start_mon(void *arg)
 {
+	mon_start_arg_t *mon_arg = (mon_start_arg_t *) arg;
 	set_cpu();
-	monitor_run();
+	monitor_run(mon_arg->it, mon_arg->recv_ready_mutex);
+	free(mon_arg);
 	return NULL;
 }
 
@@ -182,20 +287,217 @@ static void summary(void)
 	SS("exc", "scan-type", zconf.probe_module->name);
 }
 
+#ifdef JSON
+static void json_metadata(FILE *file)
+{
+	char send_start_time[STRTIME_LEN+1];
+	assert(dstrftime(send_start_time, STRTIME_LEN, "%c", zsend.start));
+	char send_end_time[STRTIME_LEN+1];
+	assert(dstrftime(send_end_time, STRTIME_LEN, "%c", zsend.finish));
+	char recv_start_time[STRTIME_LEN+1];
+	assert(dstrftime(recv_start_time, STRTIME_LEN, "%c", zrecv.start));
+	char recv_end_time[STRTIME_LEN+1];
+	assert(dstrftime(recv_end_time, STRTIME_LEN, "%c", zrecv.finish));
+	double hitrate = ((double) 100 * zrecv.success_unique)/((double)zsend.sent);
+
+	json_object *obj = json_object_new_object();
+
+	// scanner host name
+	char hostname[1024];
+	if (gethostname(hostname, 1023) < 0) {
+		log_error("json-metadata", "unable to retrieve local hostname");
+	} else {
+		hostname[1023] = '\0';
+		json_object_object_add(obj, "local-hostname", json_object_new_string(hostname));
+		struct hostent* h = gethostbyname(hostname);
+		if (h) {
+			json_object_object_add(obj, "full-hostname", json_object_new_string(h->h_name));
+		} else {
+			log_error("json-metadata", "unable to retrieve complete hostname");
+		}
+	}
+	
+	json_object_object_add(obj, "target-port",
+			json_object_new_int(zconf.target_port));
+	json_object_object_add(obj, "source-port-first",
+			json_object_new_int(zconf.source_port_first));
+	json_object_object_add(obj, "source_port-last",
+			json_object_new_int(zconf.source_port_last));
+	json_object_object_add(obj, "max-targets", json_object_new_int(zconf.max_targets));
+	json_object_object_add(obj, "max-runtime", json_object_new_int(zconf.max_runtime));
+	json_object_object_add(obj, "max-results", json_object_new_int(zconf.max_results));
+	if (zconf.iface) {
+		json_object_object_add(obj, "iface", json_object_new_string(zconf.iface));
+	}
+	json_object_object_add(obj, "rate", json_object_new_int(zconf.rate));
+	json_object_object_add(obj, "bandwidth", json_object_new_int(zconf.bandwidth));
+	json_object_object_add(obj, "cooldown-secs", json_object_new_int(zconf.cooldown_secs));
+	json_object_object_add(obj, "senders", json_object_new_int(zconf.senders));
+	json_object_object_add(obj, "use-seed", json_object_new_int(zconf.use_seed));
+	json_object_object_add(obj, "seed", json_object_new_int(zconf.seed));
+	json_object_object_add(obj, "generator", json_object_new_int(zconf.generator));
+	json_object_object_add(obj, "hitrate", json_object_new_double(hitrate));
+
+	json_object_object_add(obj, "syslog", json_object_new_int(zconf.syslog));
+	json_object_object_add(obj, "filter-duplicates", json_object_new_int(zconf.filter_duplicates));
+	json_object_object_add(obj, "filter-unsuccessful", json_object_new_int(zconf.filter_unsuccessful));
+
+	json_object_object_add(obj, "pcap-recv", json_object_new_int(zrecv.pcap_recv));
+	json_object_object_add(obj, "pcap-drop", json_object_new_int(zrecv.pcap_drop));
+	json_object_object_add(obj, "pcap-ifdrop", json_object_new_int(zrecv.pcap_ifdrop));
+
+	json_object_object_add(obj, "blacklisted", json_object_new_int(zsend.blacklisted));
+	json_object_object_add(obj, "first-scanned", json_object_new_int(zsend.first_scanned));
+	json_object_object_add(obj, "send-to-failures", json_object_new_int(zsend.sendto_failures));
+	json_object_object_add(obj, "total-sent", json_object_new_int(zsend.sent));
+
+	json_object_object_add(obj, "success-total", json_object_new_int(zrecv.success_total));
+	json_object_object_add(obj, "success-unique", json_object_new_int(zrecv.success_unique));
+	json_object_object_add(obj, "success-cooldown-total", json_object_new_int(zrecv.cooldown_total));
+	json_object_object_add(obj, "success-cooldown-unique", json_object_new_int(zrecv.cooldown_unique));
+	json_object_object_add(obj, "failure-total", json_object_new_int(zrecv.failure_total));
+
+	json_object_object_add(obj, "packet-streams",
+			json_object_new_int(zconf.packet_streams));
+	json_object_object_add(obj, "probe-module",
+			json_object_new_string(((probe_module_t *)zconf.probe_module)->name));
+	json_object_object_add(obj, "output-module",
+			json_object_new_string(((output_module_t *)zconf.output_module)->name));
+	
+	json_object_object_add(obj, "send-start-time",
+			json_object_new_string(send_start_time));
+	json_object_object_add(obj, "send-end-time",
+			json_object_new_string(send_end_time));
+	json_object_object_add(obj, "recv-start-time",
+			json_object_new_string(recv_start_time));
+	json_object_object_add(obj, "recv-end-time",
+			json_object_new_string(recv_end_time));
+
+	if (zconf.output_filter_str) {
+		json_object_object_add(obj, "output-filter", json_object_new_string(zconf.output_filter_str));
+	}
+	if (zconf.log_file) {
+		json_object_object_add(obj, "log-file", json_object_new_string(zconf.log_file));
+	}
+	if (zconf.log_directory) {
+		json_object_object_add(obj, "log-directory", json_object_new_string(zconf.log_directory));
+	}
+
+	if (zconf.destination_cidrs_len) {
+		json_object *cli_dest_cidrs = json_object_new_array();
+		for (int i=0; i < zconf.destination_cidrs_len; i++) { 
+			json_object_array_add(cli_dest_cidrs, json_object_new_string(zconf.destination_cidrs[i]));
+		}
+		json_object_object_add(obj, "cli-cidr-destinations",
+				cli_dest_cidrs);
+	}
+	if (zconf.probe_args) {
+		json_object_object_add(obj, "probe-args",
+			json_object_new_string(zconf.probe_args));
+	}
+	if (zconf.output_args) {
+		json_object_object_add(obj, "output-args",
+			json_object_new_string(zconf.output_args));
+	}
+
+	if (zconf.gw_mac) {
+		char mac_buf[ (MAC_ADDR_LEN * 2) + (MAC_ADDR_LEN - 1) + 1 ];
+		memset(mac_buf, 0, sizeof(mac_buf));
+		char *p = mac_buf;
+		for(int i=0; i < MAC_ADDR_LEN; i++) {
+			if (i == MAC_ADDR_LEN-1) {
+				snprintf(p, 3, "%.2x", zconf.gw_mac[i]);
+				p += 2;
+			} else {
+				snprintf(p, 4, "%.2x:", zconf.gw_mac[i]);
+				p += 3;
+			}
+		}
+		json_object_object_add(obj, "gateway-mac", json_object_new_string(mac_buf));
+	}
+	if (zconf.gw_ip) {
+		struct in_addr addr;
+		addr.s_addr = zconf.gw_ip;
+		json_object_object_add(obj, "gateway-ip", json_object_new_string(inet_ntoa(addr)));
+	}
+	if (zconf.hw_mac) {
+		char mac_buf[(ETHER_ADDR_LEN * 2) + (ETHER_ADDR_LEN - 1) + 1];
+		char *p = mac_buf;
+		for(int i=0; i < ETHER_ADDR_LEN; i++) {
+			if (i == ETHER_ADDR_LEN-1) {
+				snprintf(p, 3, "%.2x", zconf.hw_mac[i]);
+				p += 2;
+			} else {
+				snprintf(p, 4, "%.2x:", zconf.hw_mac[i]);
+				p += 3;
+			}
+		}
+		json_object_object_add(obj, "source-mac", json_object_new_string(mac_buf));
+	}
+
+	json_object_object_add(obj, "source-ip-first",
+			json_object_new_string(zconf.source_ip_first));
+	json_object_object_add(obj, "source-ip-last",
+			json_object_new_string(zconf.source_ip_last));
+	if (zconf.output_filename) {
+		json_object_object_add(obj, "output-filename",
+				json_object_new_string(zconf.output_filename));
+	}
+	if (zconf.blacklist_filename) {
+		json_object_object_add(obj,
+			"blacklist-filename", 
+			json_object_new_string(zconf.blacklist_filename));
+	}
+	if (zconf.whitelist_filename) {
+		json_object_object_add(obj,
+			"whitelist-filename",
+			json_object_new_string(zconf.whitelist_filename));
+	}
+	json_object_object_add(obj, "dryrun", json_object_new_int(zconf.dryrun));
+	json_object_object_add(obj, "summary", json_object_new_int(zconf.summary));
+	json_object_object_add(obj, "quiet", json_object_new_int(zconf.quiet));
+	json_object_object_add(obj, "log_level", json_object_new_int(zconf.log_level));
+	// add blacklisted and whitelisted CIDR blocks
+	bl_cidr_node_t *b = get_blacklisted_cidrs();
+	if (b) {
+		json_object *blacklisted_cidrs = json_object_new_array();
+		do {
+			char cidr[50];
+			struct in_addr addr;
+			addr.s_addr = b->ip_address;
+			sprintf(cidr, "%s/%i", inet_ntoa(addr), b->prefix_len);
+			json_object_array_add(blacklisted_cidrs,
+					json_object_new_string(cidr));
+		} while (b && (b = b->next));
+		json_object_object_add(obj, "blacklisted-networks", blacklisted_cidrs);
+	}
+
+	b = get_whitelisted_cidrs();
+	if (b) {
+		json_object *whitelisted_cidrs = json_object_new_array();
+		do {
+			char cidr[50];
+			struct in_addr addr;
+			addr.s_addr = b->ip_address;
+			sprintf(cidr, "%s/%i", inet_ntoa(addr), b->prefix_len);
+			json_object_array_add(whitelisted_cidrs,
+					json_object_new_string(cidr));
+		} while (b && (b = b->next));
+		json_object_object_add(obj, "whitelisted-networks", whitelisted_cidrs);
+	}
+
+	fprintf(file, "%s\n", json_object_to_json_string(obj));
+	json_object_put(obj);
+}
+#endif
+
 static void start_zmap(void)
 {
-	log_info("zmap", "started");
 	if (zconf.iface == NULL) {
-		char errbuf[PCAP_ERRBUF_SIZE];
-		char *iface = pcap_lookupdev(errbuf);
-		if (iface == NULL) {
-			log_fatal("zmap", "could not detect default network interface "
-					"(e.g. eth0). Try running as root or setting"
-					" interface using -i flag.");
-		}
+		zconf.iface = get_default_iface();
+		assert(zconf.iface);
 		log_debug("zmap", "no interface provided. will use default"
-				" interface (%s).", iface);
-		zconf.iface = iface;
+				" interface (%s).", zconf.iface);
 	}
 	if (zconf.source_ip_first == NULL) {
 		struct in_addr default_ip;
@@ -211,68 +513,90 @@ static void start_zmap(void)
 	}
 	if (!zconf.gw_mac_set) {
 		struct in_addr gw_ip;
-		char iface[IF_NAMESIZE];
-		if (get_default_gw(&gw_ip, iface) < 0) {
+		if (get_default_gw(&gw_ip, zconf.iface) < 0) {
 			log_fatal("zmap", "could not detect default gateway address for %s."
 					" Try setting default gateway mac address (-G).",
 					zconf.iface);
 		}
-		log_debug("zmap", "found gateway IP %s on %s", inet_ntoa(gw_ip), iface); 
-		if (get_hw_addr(&gw_ip, iface, zconf.gw_mac) < 0) {
+		log_debug("zmap", "found gateway IP %s on %s", inet_ntoa(gw_ip), zconf.iface); 
+		zconf.gw_ip = gw_ip.s_addr;
+		
+		if (get_hw_addr(&gw_ip, zconf.iface, zconf.gw_mac)) {
 			log_fatal("zmap", "could not detect GW MAC address for %s on %s."
 					" Try setting default gateway mac address (-G).",
 					inet_ntoa(gw_ip), zconf.iface);
 		}
 		zconf.gw_mac_set = 1;
-		log_debug("zmap", "MAC address of selected gateway %02x:%02x:%02x:%02x:%02x:%02x",
-				  zconf.gw_mac[0], zconf.gw_mac[1], zconf.gw_mac[2],
-				  zconf.gw_mac[3], zconf.gw_mac[4], zconf.gw_mac[5]);
 	}
-	// initialization
-	log_info("zmap", "zmap selected output module: %s", zconf.output_module->name);
+	log_debug("send", "gateway MAC address %02x:%02x:%02x:%02x:%02x:%02x",
+		  zconf.gw_mac[0], zconf.gw_mac[1], zconf.gw_mac[2],
+		  zconf.gw_mac[3], zconf.gw_mac[4], zconf.gw_mac[5]);
+	// Initialization
+
+	// Seed the RNG
+	if (zconf.use_seed) {
+		aesrand_init(zconf.seed + 1);
+	} else {
+		aesrand_init(0);
+	}
+
+	log_info("zmap", "output module: %s", zconf.output_module->name);
 	if (zconf.output_module && zconf.output_module->init) {
 		zconf.output_module->init(&zconf, zconf.output_fields,
 				zconf.output_fields_len);
 	}
-	if (send_init()) {
-		exit(EXIT_FAILURE);
+	// blacklist
+	if (blacklist_init(zconf.whitelist_filename, zconf.blacklist_filename,
+			   zconf.destination_cidrs, zconf.destination_cidrs_len,
+			   NULL, 0)) {
+		log_fatal("zmap", "unable to initialize blacklist / whitelist");
+	}
+	iterator_t *it = send_init();
+	if (!it) {
+		log_fatal("zmap", "unable to initialize sending component");
 	}
 	if (zconf.output_module && zconf.output_module->start) {
 		zconf.output_module->start(&zconf, &zsend, &zrecv);
 	}
+
 	// start threads
 	pthread_t *tsend, trecv, tmon;
 	int r = pthread_create(&trecv, NULL, start_recv, NULL);
 	if (r != 0) {
 		log_fatal("zmap", "unable to create recv thread");
-		exit(EXIT_FAILURE);
 	}
 	for (;;) {
 		pthread_mutex_lock(&recv_ready_mutex);
 		if (zconf.recv_ready) {
+			pthread_mutex_unlock(&recv_ready_mutex);
 			break;
 		}
 		pthread_mutex_unlock(&recv_ready_mutex);
 	}
 	tsend = malloc(zconf.senders * sizeof(pthread_t));
 	assert(tsend);
-	log_debug("zmap", "using %d sender threads", zconf.senders);
-	for (int i=0; i < zconf.senders; i++) {
-	uintptr_t sock;
+	for (uint8_t i = 0; i < zconf.senders; i++) {
+		int sock;
 		if (zconf.dryrun) {
 			sock = get_dryrun_socket();
 		} else {
 			sock = get_socket();
 		}
-		
-		int r = pthread_create(&tsend[i], NULL, start_send, (void*) sock);
+		send_arg_t *arg = xmalloc(sizeof(send_arg_t));
+		arg->sock = sock;
+		arg->shard = get_shard(it, i);
+		int r = pthread_create(&tsend[i], NULL, start_send, arg);
 		if (r != 0) {
 			log_fatal("zmap", "unable to create send thread");
 			exit(EXIT_FAILURE);
 		}
 	}
+	log_debug("zmap", "%d sender threads spawned", zconf.senders);
 	if (!zconf.quiet) {
-		int r = pthread_create(&tmon, NULL, start_mon, NULL);
+		mon_start_arg_t *mon_arg = xmalloc(sizeof(mon_start_arg_t));
+		mon_arg->it = it;
+		mon_arg->recv_ready_mutex = &recv_ready_mutex;
+		int r = pthread_create(&tmon, NULL, start_mon, mon_arg);
 		if (r != 0) {
 			log_fatal("zmap", "unable to create monitor thread");
 			exit(EXIT_FAILURE);
@@ -282,7 +606,7 @@ static void start_zmap(void)
 	drop_privs();
 
 	// wait for completion
-	for (int i=0; i < zconf.senders; i++) {
+	for (uint8_t i = 0; i < zconf.senders; i++) {
 		int r = pthread_join(tsend[i], NULL);
 		if (r != 0) {
 			log_fatal("zmap", "unable to join send thread");
@@ -307,6 +631,11 @@ static void start_zmap(void)
 	if (zconf.summary) {
 		summary();
 	}
+#ifdef JSON
+	if (zconf.metadata_filename) {
+		json_metadata(zconf.metadata_file);
+	}
+#endif
 	if (zconf.output_module && zconf.output_module->close) {
 		zconf.output_module->close(&zconf, &zsend, &zrecv);
 	}
@@ -319,9 +648,8 @@ static void start_zmap(void)
 static void enforce_range(const char *name, int v, int min, int max)
 {
 	if (v < min || v > max) {
-	  	fprintf(stderr, "%s: argument `%s' must be between %d and %d\n",
-			CMDLINE_PARSER_PACKAGE, name, min, max);
-		exit(EXIT_FAILURE);
+	  	log_fatal("zmap", "argument `%s' must be between %d and %d\n",
+			name, min, max);
 	}
 }
 
@@ -334,12 +662,12 @@ static int file_exists(char *name)
 	return 1;
 }
 
-#define MAC_LEN IFHWADDRLEN
+#define MAC_LEN ETHER_ADDR_LEN
 int parse_mac(macaddr_t *out, char *in)
 {
 	if (strlen(in) < MAC_LEN*3-1)
 		return 0;
-	char octet[3];
+	char octet[4];
 	octet[2] = '\0';
 	for (int i=0; i < MAC_LEN; i++) {
 		if (i < MAC_LEN-1 && in[i*3+2] != ':') {
@@ -381,12 +709,52 @@ int main(int argc, char *argv[])
 			exit(EXIT_FAILURE);
 		}
 	}
+
+	// initialize logging. if no log file or log directory are specified
+	// default to using stderr.
 	zconf.log_level = args.verbosity_arg;
-	log_init(stderr, zconf.log_level);
+	zconf.log_file = args.log_file_arg;
+	zconf.log_directory = args.log_directory_arg;
+	if (args.disable_syslog_given) {
+		zconf.syslog = 0;
+	}
+	if (zconf.log_file && zconf.log_directory) {
+		log_init(stderr, zconf.log_level, zconf.syslog, "zmap");
+		log_fatal("zmap", "log-file and log-directory cannot "
+				"specified simultaneously.");
+	}
+	FILE *log_location = NULL;
+	if (zconf.log_file) {
+		log_location = fopen(zconf.log_file, "w");
+	} else if (zconf.log_directory) {
+		time_t now;
+    		time(&now);
+		struct tm *local = localtime(&now);
+		char path[100];
+		strftime(path, 100, "zmap-%Y-%m-%dT%H%M%S%z.log", local);
+		char *fullpath = malloc(strlen(zconf.log_directory) + strlen(path) + 2);
+		sprintf(fullpath, "%s/%s", zconf.log_directory, path);
+		log_location = fopen(fullpath, "w");
+		free(fullpath);
+		
+	} else {
+		log_location = stderr;
+	}
+	if (!log_location) {
+		log_init(stderr, zconf.log_level, zconf.syslog, "zmap");
+		log_fatal("zmap", "unable to open specified log file: %s",
+				strerror(errno));
+	}
+	log_init(log_location, zconf.log_level, zconf.syslog, "zmap");
 	log_trace("zmap", "zmap main thread started");
+	if (zconf.syslog) {
+		log_debug("zmap", "syslog support enabled");
+	} else {
+		log_info("zmap", "syslog support disabled");
+	}
 	// parse the provided probe and output module s.t. that we can support
 	// other command-line helpers (e.g. probe help)
-	log_trace("zmap", "requested ouput-module: %s\n", args.output_module_arg);
+	log_trace("zmap", "requested ouput-module: %s", args.output_module_arg);
 
 	// we changed output module setup after the original version of ZMap was
 	// made public. After this setup was removed, many of the original
@@ -405,7 +773,7 @@ int main(int argc, char *argv[])
 		zconf.filter_unsuccessful = 1;
 	} else if (!strcmp(args.output_module_arg, "simple_file")) {
 		log_warn("zmap", "the simple_file output interface has been deprecated and "
-                                 "will be removed in the future. Users should use the csv "
+				 "will be removed in the future. Users should use the csv "
 				 "output module. Newer scan options such as output-fields "
 				 "are not supported with this output module."); 
 		zconf.output_module = get_output_module_by_name("csv");
@@ -414,7 +782,7 @@ int main(int argc, char *argv[])
 		zconf.filter_unsuccessful = 1;
 	} else if (!strcmp(args.output_module_arg, "extended_file")) {
 		log_warn("zmap", "the extended_file output interface has been deprecated and "
-                                 "will be removed in the future. Users should use the csv "
+				 "will be removed in the future. Users should use the csv "
 				 "output module. Newer scan options such as output-fields "
 				 "are not supported with this output module."); 
 		zconf.output_module = get_output_module_by_name("csv");
@@ -425,7 +793,7 @@ int main(int argc, char *argv[])
 		zconf.filter_duplicates = 0;
 	} else if (!strcmp(args.output_module_arg, "redis")) {
 		log_warn("zmap", "the redis output interface has been deprecated and "
-                                 "will be removed in the future. Users should "
+				 "will be removed in the future. Users should "
 				 "either use redis-packed or redis-json in the "
 				 "future.");
 		zconf.output_module = get_output_module_by_name("redis-packed");
@@ -461,28 +829,28 @@ int main(int argc, char *argv[])
 	} else {
 		zconf.output_module = get_output_module_by_name(args.output_module_arg);
 		if (!zconf.output_module) {
-		  fprintf(stderr, "%s: specified output module (%s) does not exist\n",
-			  CMDLINE_PARSER_PACKAGE, args.output_module_arg);
+		  log_fatal("zmap", "%s: specified output module (%s) does not exist\n",
+				args.output_module_arg);
 		  exit(EXIT_FAILURE);
 		}
 	}
 	zconf.probe_module = get_probe_module_by_name(args.probe_module_arg);
 	if (!zconf.probe_module) {
-		fprintf(stderr, "%s: specified probe module (%s) does not exist\n",
-				CMDLINE_PARSER_PACKAGE, args.probe_module_arg);
+		log_fatal("zmap", "specified probe module (%s) does not exist\n",
+				args.probe_module_arg);
 	  exit(EXIT_FAILURE);
 	}
 	if (args.help_given) {
 		cmdline_parser_print_help();
-		printf("\nselected probe-module (%s) help\n", zconf.probe_module->name);
+		printf("\nProbe-module (%s) Help:\n", zconf.probe_module->name);
 		if (zconf.probe_module->helptext) {
-			printf("%s\n", zconf.probe_module->helptext);
+			fprintw(stdout, (char*) zconf.probe_module->helptext, 80);
 		} else {
 			printf("no help text available\n");
 		}
-		printf("\nselected output-module (%s) help\n", zconf.output_module->name);
+		printf("\nOutput-module (%s) Help:\n", zconf.output_module->name);
 		if (zconf.output_module->helptext) {
-			printf("%s\n", zconf.output_module->helptext);
+			fprintw(stdout, (char*) zconf.output_module->helptext, 80);
 		} else {
 			printf("no help text available\n");
 		}
@@ -503,7 +871,7 @@ int main(int argc, char *argv[])
 	if (args.vpn_given) {
 		zconf.send_ip_pkts = 1;
 		zconf.gw_mac_set = 1;
-		memset(zconf.gw_mac, 0, IFHWADDRLEN);
+		memset(zconf.gw_mac, 0, MAC_LEN);
 	}
 	if (cmdline_parser_required(&args, CMDLINE_PARSER_PACKAGE) != 0) {
 		exit(EXIT_FAILURE);
@@ -579,6 +947,7 @@ int main(int argc, char *argv[])
 		if (!validate_filter(zconf.filter.expression, &zconf.fsconf.defs)) {
 			log_fatal("zmap", "Invalid filter");
 		}
+		zconf.output_filter_str = args.output_filter_arg;
 	}
 
 	SET_BOOL(zconf.dryrun, dryrun);
@@ -595,6 +964,26 @@ int main(int argc, char *argv[])
 	SET_IF_GIVEN(zconf.max_results, max_results);
 	SET_IF_GIVEN(zconf.rate, rate);
 	SET_IF_GIVEN(zconf.packet_streams, probes);
+
+	if (args.metadata_file_arg) {
+#ifdef JSON
+		zconf.metadata_filename = args.metadata_file_arg;				
+		if (!strcmp(zconf.metadata_filename, "-")) {
+			zconf.metadata_file = stdout;
+		} else {
+			zconf.metadata_file = fopen(zconf.metadata_filename, "w");
+		}
+		if (!zconf.metadata_file) {
+			log_fatal("metadata", "unable to open metadata file");
+		}
+		log_trace("metadata", "metdata will be saved to %s",
+				zconf.metadata_filename);
+#else
+		log_fatal("zmap", "JSON support not compiled into ZMap. "
+				"Metadata output not supported.");
+#endif
+	}
+
 
 	// find if zmap wants any specific cidrs scanned instead
 	// of the entire Internet
@@ -633,9 +1022,7 @@ int main(int argc, char *argv[])
 			}
 		}
 	  	if (!args.target_port_given) {
-			fprintf(stderr, "%s: target port is required for this type of probe\n",
-				CMDLINE_PARSER_PACKAGE);
-			exit(EXIT_FAILURE);
+			log_fatal("zmap", "target port (-p) is required for this type of probe");
 		}
 		enforce_range("target-port", args.target_port_arg, 0, 0xFFFF);
 		zconf.target_port = args.target_port_arg;
@@ -663,6 +1050,30 @@ int main(int argc, char *argv[])
 		zconf.seed = args.seed_arg;
 		zconf.use_seed = 1;
 	}
+	// Set up sharding
+	zconf.shard_num = 0;
+	zconf.total_shards = 1;
+	if ((args.shard_given || args.shards_given) && !args.seed_given) {
+		log_fatal("zmap", "Need to specify seed if sharding a scan");
+	}
+	if (args.shard_given ^ args.shards_given) {
+		log_fatal("zmap",
+			  "Need to specify both shard number and total number of shards");
+	}
+	if (args.shard_given) {
+		enforce_range("shard", args.shard_arg, 0, 254);
+	}
+	if (args.shards_given) {
+		enforce_range("shards", args.shards_arg, 1, 254);
+	}
+	SET_IF_GIVEN(zconf.shard_num, shard);
+	SET_IF_GIVEN(zconf.total_shards, shards);
+	if (zconf.shard_num >= zconf.total_shards) {
+		log_fatal("zmap", "With %hhu total shards, shard number (%hhu)"
+			  " must be in range [0, %hhu)", zconf.total_shards, 
+			  zconf.shard_num, zconf.total_shards);
+	}
+
 	if (args.bandwidth_given) {
 		// Supported: G,g=*1000000000; M,m=*1000000 K,k=*1000 bits per second
 		zconf.bandwidth = atoi(args.bandwidth_arg);
@@ -717,6 +1128,8 @@ int main(int argc, char *argv[])
 	}
 
 	start_zmap();
+
+	fclose(log_location);
 
 	cmdline_parser_free(&args);
 	free(params);

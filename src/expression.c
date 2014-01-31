@@ -16,7 +16,6 @@ static int eval_gt_eq_node(node_t *node, fieldset_t *fields);
 static node_t* alloc_node() 
 {
 	node_t *node = xmalloc(sizeof(node_t));
-	memset(node, 0, sizeof(node_t));
 	return node;
 }
 
