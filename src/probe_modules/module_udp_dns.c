@@ -51,7 +51,7 @@ static const char udp_dns_msg_default_tail [4]  = "\x00\x01\x00\x01";
 /* defined in module_udp.c
 const char *udp_unreach_strings[] */
 
-const char *udp_app_response_strings[] = {
+const char *udp_dns_response_strings[] = {
         "DNS no error",
         "DNS format error",
         "DNS server failure",
@@ -276,7 +276,7 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
-		fs_add_string(fs, "app_response_str", (char *) udp_app_response_strings[dns_hdr->rcode], 0);
+		fs_add_string(fs, "app_response_str", (char *) udp_dns_response_strings[dns_hdr->rcode], 0);
 		fs_add_uint64(fs, "app_response_code",dns_hdr->rcode);
 		fs_add_uint64(fs, "udp_pkt_size", ntohs(udp_hdr->uh_ulen));
 		fs_add_binary(fs, "data", (ntohs(udp_hdr->uh_ulen) - sizeof(struct udphdr)), (void*) &udp_hdr[1], 0);
