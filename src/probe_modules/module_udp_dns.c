@@ -18,6 +18,7 @@
 #include <assert.h>
 
 #include "../../lib/includes.h"
+#include "../../lib/random.h"
 #include "probe_modules.h"
 #include "packet.h"
 #include "logger.h"
@@ -26,8 +27,8 @@
 #define MAX_UDP_PAYLOAD_LEN 1472
 #define UNUSED __attribute__((unused))
 
-static char *udp_dns_send_msg = NULL;
-static int udp_dns_send_msg_len = 0;
+static char *udp_send_msg = NULL;
+static int udp_send_msg_len = 0;
 
 // std query recursive for www.google.com type A
 // HEADER 12 bytes
@@ -42,29 +43,13 @@ static int udp_dns_send_msg_len = 0;
 // TAILER 4 bytes
 // \x00\x01 -> Type: A (Host address)
 // \x00\x01 -> Class: IN (0x0001)
-static const char udp_dns_send_msg_default [32] = "\xb0\x0b\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x03\x77\x77\x77\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01";
-static const char udp_dns_send_msg_default_head [12] = "\xb0\x0b\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00";
-static const char udp_dns_send_msg_default_name [16] = "\x03\x77\x77\x77\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00";
-static const char udp_dns_send_msg_default_tail [4]  = "\x00\x01\x00\x01";
+static const char udp_dns_msg_default [32] = "\xb0\x0b\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x03\x77\x77\x77\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01";
+static const char udp_dns_msg_default_head [12] = "\xb0\x0b\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00";
+static const char udp_dns_msg_default_name [16] = "\x03\x77\x77\x77\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00";
+static const char udp_dns_msg_default_tail [4]  = "\x00\x01\x00\x01";
 
-const char *udp_dns_unreach_strings[] = {
-	"network unreachable",
-	"host unreachable",
-	"protocol unreachable",
-	"port unreachable",
-	"fragments required",
-	"source route failed",
-	"network unknown",
-	"host unknown",
-	"source host isolated",
-	"network admin. prohibited",
-	"host admin. prohibited",
-	"network unreachable TOS",
-	"host unreachable TOS",
-	"communication admin. prohibited",
-	"host presdence violation",
-	"precedence cutoff"
-};
+/* defined in module_udp.c
+const char *udp_unreach_strings[] */
 
 const char *udp_app_response_strings[] = {
         "DNS no error",
@@ -110,9 +95,9 @@ static int udp_dns_global_initialize(struct state_conf *conf) {
 
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
 
-	udp_dns_send_msg_len = sizeof(udp_dns_send_msg_default);
-	udp_dns_send_msg = malloc(udp_dns_send_msg_len);
-	memcpy(udp_dns_send_msg, udp_dns_send_msg_default, udp_dns_send_msg_len);
+	udp_send_msg_len = sizeof(udp_dns_msg_default);
+	udp_send_msg = malloc(udp_send_msg_len);
+	memcpy(udp_send_msg, udp_dns_msg_default, udp_send_msg_len);
 
 	if (!(conf->probe_args && strlen(conf->probe_args) > 0))
 		return(0);
@@ -123,7 +108,7 @@ static int udp_dns_global_initialize(struct state_conf *conf) {
 	c = strchr(args, ':');
 	if (! c) {
 		free(args);
-		free(udp_dns_send_msg);
+		free(udp_send_msg);
 		log_fatal("udp_dns", "unknown UDP DNS probe specification (expected "
 				"full-payload with file:/path or hex:01020304, or domain name with name:www.domain.com)");
 		exit(1);
@@ -132,71 +117,75 @@ static int udp_dns_global_initialize(struct state_conf *conf) {
 	*c++ = 0;
 
 	if (strcmp(args, "name") == 0) {
-		free(udp_dns_send_msg);
+		free(udp_send_msg);
 
 		// prepare domain name
 		dns_domain_len=strlen(c)+2; // head 1 byte + tail 1 byte \0
 		dns_domain = malloc(dns_domain_len);
 		CovertToDnsNameFormat(dns_domain, (unsigned char*)c);
 
-		udp_dns_send_msg_len=dns_domain_len + 12 + 4; // domain length +  header + tailer
-		udp_dns_send_msg = malloc(udp_dns_send_msg_len);
+		udp_send_msg_len=dns_domain_len + 12 + 4; // domain length +  header + tailer
+		udp_send_msg = malloc(udp_send_msg_len);
 
 		// create query packet
-		memcpy(udp_dns_send_msg, udp_dns_send_msg_default_head, sizeof(udp_dns_send_msg_default_head)); // header
-		memcpy(udp_dns_send_msg + sizeof(udp_dns_send_msg_default_head), dns_domain, dns_domain_len); // domain
-		memcpy(udp_dns_send_msg + sizeof(udp_dns_send_msg_default_head) + dns_domain_len, udp_dns_send_msg_default_tail, sizeof(udp_dns_send_msg_default_tail)); // trailer
+
+		memcpy(udp_send_msg, udp_dns_msg_default_head, sizeof(udp_dns_msg_default_head)); // header
+		// patch for random Transaction ID
+		random_bytes(udp_send_msg, 2);
+
+		memcpy(udp_send_msg + sizeof(udp_dns_msg_default_head), dns_domain, dns_domain_len); // domain
+		memcpy(udp_send_msg + sizeof(udp_dns_msg_default_head) + dns_domain_len, udp_dns_msg_default_tail, sizeof(udp_dns_msg_default_tail)); // trailer
 
 	} else if (strcmp(args, "file") == 0) {
 		inp = fopen(c, "rb");
 		if (!inp) {
 			free(args);
-			free(udp_dns_send_msg);
+			free(udp_send_msg);
 			log_fatal("udp_dns", "could not open UDP DNS data file '%s'\n", c);
 			exit(1);
 		}
-		free(udp_dns_send_msg);
-		udp_dns_send_msg = malloc(MAX_UDP_PAYLOAD_LEN);
-		if (! udp_dns_send_msg) {
+		free(udp_send_msg);
+		udp_send_msg = malloc(MAX_UDP_PAYLOAD_LEN);
+		if (! udp_send_msg) {
 			free(args);
 			log_fatal("udp_dns", "failed to malloc payload buffer");
 			exit(1);
 		}
-		udp_dns_send_msg_len = fread(udp_dns_send_msg, 1, MAX_UDP_PAYLOAD_LEN, inp);
+		udp_send_msg_len = fread(udp_send_msg, 1, MAX_UDP_PAYLOAD_LEN, inp);
 		fclose(inp);
 
 	} else if (strcmp(args, "hex") == 0) {
-		udp_dns_send_msg_len = strlen(c) / 2;
-		free(udp_dns_send_msg);
-		udp_dns_send_msg = malloc(udp_dns_send_msg_len);
-		if (! udp_dns_send_msg) {
+		udp_send_msg_len = strlen(c) / 2;
+		free(udp_send_msg);
+		udp_send_msg = malloc(udp_send_msg_len);
+		if (! udp_send_msg) {
 			free(args);
 			log_fatal("udp_dns", "failed to malloc payload buffer");
 			exit(1);
 		}
 
-		for (i=0; i < udp_dns_send_msg_len; i++) {
+		for (i=0; i < udp_send_msg_len; i++) {
 			if (sscanf(c + (i*2), "%2x", &n) != 1) {
 				free(args);
-				free(udp_dns_send_msg);
+				free(udp_send_msg);
 				log_fatal("udp_dns", "non-hex character: '%c'", c[i*2]);
 				exit(1);
 			}
-			udp_dns_send_msg[i] = (n & 0xff);
+			udp_send_msg[i] = (n & 0xff);
 		}
 	} else {
 		log_fatal("udp_dns", "unknown UDP DNS probe specification (expected "
 				"full-payload with file:/path or hex:01020304, or domain name with name:www.domain.com)");
-		free(udp_dns_send_msg);
+		free(udp_send_msg);
 		free(args);
 		exit(1);
 	}
 
-	if (udp_dns_send_msg_len > MAX_UDP_PAYLOAD_LEN) {
+	if (udp_send_msg_len > MAX_UDP_PAYLOAD_LEN) {
 		log_warn("udp_dns", "warning: reducing UDP payload to %d "
 			        "bytes (from %d) to fit on the wire\n", 
-				MAX_UDP_PAYLOAD_LEN, udp_dns_send_msg_len);
-		udp_dns_send_msg_len = MAX_UDP_PAYLOAD_LEN;
+				MAX_UDP_PAYLOAD_LEN, udp_send_msg_len);
+		udp_send_msg_len = MAX_UDP_PAYLOAD_LEN;
 	}
 	free(args);
 	return EXIT_SUCCESS;
@@ -206,10 +195,10 @@ int udp_dns_global_cleanup(__attribute__((unused)) struct state_conf *zconf,
 		__attribute__((unused)) struct state_send *zsend,
 		__attribute__((unused)) struct state_recv *zrecv)
 {
-	if (udp_dns_send_msg) {
-		free(udp_dns_send_msg);
+	if (udp_send_msg) {
+		free(udp_send_msg);
 	}
-	udp_dns_send_msg = NULL;
+	udp_send_msg = NULL;
 	return EXIT_SUCCESS;
 }
 
@@ -220,20 +209,20 @@ int udp_dns_init_perthread(void* buf, macaddr_t *src,
 	struct ether_header *eth_header = (struct ether_header *) buf;
 	make_eth_header(eth_header, src, gw);
 	struct ip *ip_header = (struct ip*)(&eth_header[1]);
-	uint16_t len = htons(sizeof(struct ip) + sizeof(struct udphdr) + udp_dns_send_msg_len);
+	uint16_t len = htons(sizeof(struct ip) + sizeof(struct udphdr) + udp_send_msg_len);
 	make_ip_header(ip_header, IPPROTO_UDP, len);
 
 	struct udphdr *udp_header = (struct udphdr*)(&ip_header[1]);
-	len = sizeof(struct udphdr) + udp_dns_send_msg_len;
+	len = sizeof(struct udphdr) + udp_send_msg_len;
 	make_udp_header(udp_header, zconf.target_port, len);
 
 	char* payload = (char*)(&udp_header[1]);
 
 	module_udp_dns.packet_length = sizeof(struct ether_header) + sizeof(struct ip) 
-				+ sizeof(struct udphdr) + udp_dns_send_msg_len;
+				+ sizeof(struct udphdr) + udp_send_msg_len;
 	assert(module_udp_dns.packet_length <= MAX_PACKET_SIZE);
 
-	memcpy(payload, udp_dns_send_msg, udp_dns_send_msg_len);
+	memcpy(payload, udp_send_msg, udp_send_msg_len);
 
 	return EXIT_SUCCESS;
 }
@@ -272,50 +261,26 @@ void udp_dns_print_packet(FILE *fp, void* packet)
 
 void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *fs)
 {
-	log_debug("udp_dns", "dns_process_packet");
+	// log_debug("udp_dns", "dns_process_packet");
 	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		struct udphdr *udp_hdr = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
+		struct dnshdr *dns_hdr = (struct dnshdr *) ((char *) udp_hdr + 8);
+		fs_add_string(fs, "classification", (char*) "udp_dns", 0);
+		// success is 1 if is application level success 
+		// response pkt is an answer and response code is no error
+		fs_add_uint64(fs, "success", (dns_hdr->qr == DNS_QR_ANSWER) && (dns_hdr->rcode == DNS_RCODE_NOERR));
+		fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
+		fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
+		fs_add_null(fs, "icmp_responder");
+		fs_add_null(fs, "icmp_type");
+		fs_add_null(fs, "icmp_code");
+		fs_add_null(fs, "icmp_unreach_str");
+		fs_add_string(fs, "app_response_str", (char *) udp_app_response_strings[dns_hdr->rcode], 0);
+		fs_add_uint64(fs, "app_response_code",dns_hdr->rcode);
+		fs_add_uint64(fs, "udp_pkt_size", ntohs(udp_hdr->uh_ulen));
+		fs_add_binary(fs, "data", (ntohs(udp_hdr->uh_ulen) - sizeof(struct udphdr)), (void*) &udp_hdr[1], 0);
 
-		// DNS packet
-		if (ntohs(udp_hdr->uh_sport)==53) {
-			log_debug("udp_dns", "sport is 53");
-			struct dnshdr *dns_hdr = (struct dnshdr *) ((char *) udp_hdr + 8);
-			fs_add_string(fs, "classification", (char*) "udp_dns", 0);
-
-			// success is 1 if is application level success (response pkt is an answer and response code is no error)
-			fs_add_uint64(fs, "success", (dns_hdr->qr == DNS_QR_ANSWER) && (dns_hdr->rcode == DNS_RCODE_NOERR));
-
-			fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
-			fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
-			fs_add_null(fs, "icmp_responder");
-			fs_add_null(fs, "icmp_type");
-			fs_add_null(fs, "icmp_code");
-			fs_add_null(fs, "icmp_unreach_str");
-			fs_add_string(fs, "app_response_str", (char *) udp_app_response_strings[dns_hdr->rcode], 0);
-			fs_add_uint64(fs, "app_response_code",dns_hdr->rcode);
-			fs_add_uint64(fs, "udp_pkt_size", ntohs(udp_hdr->uh_ulen));
-			fs_add_binary(fs, "data", (ntohs(udp_hdr->uh_ulen) - sizeof(struct udphdr)), (void*) &udp_hdr[1], 0);
-
-		// UDP but not DNS packet
-		} else {
-			log_debug("udp_dns", "sport is not 53");
-			fs_add_string(fs, "classification", (char*) "udp", 0);
-			// success is 0 because is not application success
-			fs_add_uint64(fs, "success", 0);
-			fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
-			fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
-			fs_add_null(fs, "icmp_responder");
-			fs_add_null(fs, "icmp_type");
-			fs_add_null(fs, "icmp_code");
-			fs_add_null(fs, "icmp_unreach_str");
-			fs_add_null(fs, "app_response_str");
-			fs_add_null(fs, "app_response_code");
-			fs_add_uint64(fs, "udp_pkt_size", ntohs(udp_hdr->uh_ulen));
-			fs_add_binary(fs, "data", (ntohs(udp_hdr->uh_ulen) - sizeof(struct udphdr)), (void*) &udp_hdr[1], 0);
-		}
-
-	// ICMP packet
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
 		struct ip *ip_inner = (struct ip *) &icmp[1];
@@ -331,7 +296,7 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 		fs_add_uint64(fs, "icmp_code", icmp->icmp_code);
 		if (icmp->icmp_code <= ICMP_UNREACH_PRECEDENCE_CUTOFF) {
 			fs_add_string(fs, "icmp_unreach_str", 
-				(char *) udp_dns_unreach_strings[icmp->icmp_code], 0);
+				(char *) udp_unreach_strings[icmp->icmp_code], 0);
 		} else {
 			fs_add_string(fs, "icmp_unreach_str", (char *) "unknown", 0);
 		}
@@ -339,8 +304,6 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 		fs_add_null(fs, "app_response_code");
 		fs_add_null(fs, "udp_pkt_size");
 		fs_add_null(fs, "data");
-
-	// other packet
 	} else {
 		fs_add_string(fs, "classification", (char *) "other", 0);
 		fs_add_uint64(fs, "success", 0);
@@ -361,7 +324,7 @@ int udp_dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
                 __attribute__((unused))uint32_t *src_ip, uint32_t *validation)
 {
         uint16_t dport, sport;
-	log_debug("udp_dns", "dns_validate_packet");
+	// log_debug("udp_dns", "dns_validate_packet");
         if (ip_hdr->ip_p == IPPROTO_UDP) {
                 if ((4*ip_hdr->ip_hl + sizeof(struct udphdr)) > len) {
                         // buffer not large enough to contain expected udp header
@@ -427,7 +390,7 @@ probe_module_t module_udp_dns = {
 	.name = "udp_dns",
 	.packet_length = 1,
 	.pcap_filter = "udp || icmp",
-	.pcap_snaplen = 1500,
+	.pcap_snaplen = 1500,			// TO BE CHANGED FOR EXSTIMATE REFLECTION SIZE
 	.port_args = 1,
 	.thread_initialize = &udp_dns_init_perthread,
 	.global_initialize = &udp_dns_global_initialize,

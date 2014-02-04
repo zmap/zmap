@@ -68,6 +68,6 @@ int udp_dns_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 int udp_dns_validate_packet(const struct ip *ip_hdr, uint32_t len, 
 		__attribute__((unused))uint32_t *src_ip, uint32_t *validation);
 
-extern const char *udp_dns_unreach_strings[];
+extern const char *udp_unreach_strings[];
 
 void udp_dns_set_num_ports(int x);
