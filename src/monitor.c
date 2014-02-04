@@ -26,7 +26,6 @@
 static double last_now = 0.0;
 static uint32_t last_sent = 0;
 static uint32_t last_rcvd = 0;
-static uint32_t last_rcvd_pkt = 0;
 static uint32_t last_drop = 0;
 static uint32_t last_failures = 0;
 
