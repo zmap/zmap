@@ -1,14 +1,14 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
+ * ZMap Copyright 2013 Regents of the University of Michigan
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-/* send module for performing massive UDP DNS OpenResolver scans */
-/* default will send type A query with Recursion Desired for www.google.com
-/* SUCCESS only for response msg with noerr response code */
+/* send module for performing massive UDP DNS OpenResolver scans
+ * default will send type A query with Recursion Desired for www.google.com
+ * SUCCESS only for response msg with noerr response code */
 
 #include <stdlib.h>
 #include <stdio.h>
