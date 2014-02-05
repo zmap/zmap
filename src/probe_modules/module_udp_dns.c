@@ -135,6 +135,7 @@ static int udp_dns_global_initialize(struct state_conf *conf) {
 
 		memcpy(udp_send_msg + sizeof(udp_dns_msg_default_head), dns_domain, dns_domain_len); // domain
 		memcpy(udp_send_msg + sizeof(udp_dns_msg_default_head) + dns_domain_len, udp_dns_msg_default_tail, sizeof(udp_dns_msg_default_tail)); // trailer
+		free(dns_domain);
 
 	} else if (strcmp(args, "file") == 0) {
 		inp = fopen(c, "rb");
