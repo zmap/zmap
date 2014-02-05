@@ -189,7 +189,7 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 			number_string((total_sent/age), send_avg, sizeof(send_avg));
 			fprintf(stderr,
 					"%5s %0.0f%%%s; send: %u %sp/s (%sp/s avg); "
-					"recv: %u %sp/s (%sp/s avg); "
+					"recv success: %u %sp/s (%sp/s avg); "
 					"drops: %sp/s (%sp/s avg); "
 					"hits: %0.2f%%\n", 
 					time_past,
@@ -209,7 +209,7 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 			number_string((total_sent/(zsend.finish - zsend.start)), send_avg, sizeof(send_avg));
 			fprintf(stderr, 
 					"%5s %0.0f%%%s; send: %u done (%sp/s avg); "
-					"recv: %u %sp/s (%sp/s avg); "
+					"recv success: %u %sp/s (%sp/s avg); "
 					"drops: %sp/s (%sp/s avg); "
 					"hits: %0.2f%%\n", 
 					time_past,
