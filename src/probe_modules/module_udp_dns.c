@@ -270,7 +270,7 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 		fs_add_string(fs, "classification", (char*) "udp_dns", 0);
 		// success is 1 if is application level success 
 		// response pkt is an answer and response code is no error
-		fs_add_uint64(fs, "success", 1));
+		fs_add_uint64(fs, "success", 1);
 		fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
 		fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
 		fs_add_null(fs, "icmp_responder");
