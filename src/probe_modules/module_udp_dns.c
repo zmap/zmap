@@ -270,13 +270,14 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 		fs_add_string(fs, "classification", (char*) "udp_dns", 0);
 		// success is 1 if is application level success 
 		// response pkt is an answer and response code is no error
-		fs_add_uint64(fs, "success", (dns_hdr->qr == DNS_QR_ANSWER) && (dns_hdr->rcode == DNS_RCODE_NOERR));
+		fs_add_uint64(fs, "success", 1));
 		fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
 		fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
 		fs_add_null(fs, "icmp_responder");
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
+		fs_add_uint64(fs, "app_response_success", (dns_hdr->qr == DNS_QR_ANSWER) && (dns_hdr->rcode == DNS_RCODE_NOERR));
 		fs_add_string(fs, "app_response_str", (char *) udp_dns_response_strings[dns_hdr->rcode], 0);
 		fs_add_uint64(fs, "app_response_code",dns_hdr->rcode);
 		fs_add_uint64(fs, "udp_pkt_size", ntohs(udp_hdr->uh_ulen));
@@ -301,6 +302,7 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 		} else {
 			fs_add_string(fs, "icmp_unreach_str", (char *) "unknown", 0);
 		}
+		fs_add_null(fs, "app_response_success");
 		fs_add_null(fs, "app_response_str");
 		fs_add_null(fs, "app_response_code");
 		fs_add_null(fs, "udp_pkt_size");
@@ -314,6 +316,7 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
+		fs_add_null(fs, "app_response_success");
 		fs_add_null(fs, "app_response_str");
 		fs_add_null(fs, "app_response_code");
 		fs_add_null(fs, "udp_pkt_size");
@@ -381,6 +384,7 @@ static fielddef_t fields[] = {
 	{.name = "icmp_type", .type = "int", .desc = "icmp message type"},
 	{.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
 	{.name = "icmp_unreach_str", .type = "string", .desc = "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"},
+	{.name = "app_response_success", .type = "int", .desc = "for valid DNS response msg with noerr response code is 1 - otherwise 0"},
 	{.name = "app_response_str", .type = "string", .desc = "for DNS responses, the response code meaning of dns answer pkt"},
 	{.name = "app_response_code", .type = "int", .desc = "for DNS responses, the RCODE of dns answer pkt"},
 	{.name = "udp_pkt_size", .type="int", .desc = "UDP packet lenght"},
