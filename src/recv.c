@@ -96,22 +96,22 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 	int is_success = fs_get_uint64_by_index(fs, success_index);
 
 	// APPLICATION LEVEL SUCCESS
-	int appsuccess_index = zconf.fsconf.appsuccess_index;
-	assert(appsuccess_index < fs->len);
-	int is_appsuccess = fs_get_uint64_by_index(fs, appsuccess_index);
+	int probeok_index = zconf.fsconf.probeok_index;
+	assert(probeok_index < fs->len);
+	int is_probeok = fs_get_uint64_by_index(fs, probeok_index);
 
 	if (is_success) {
 		zrecv.success_total++;
 
-		if (is_appsuccess) {
-			zrecv.appsuccess_total++;
+		if (is_probeok) {
+			zrecv.probeok_total++;
 		}
 
 		if (!is_repeat) {
 			zrecv.success_unique++;
 			pbm_set(seen, ntohl(src_ip));
-			if (is_appsuccess) {
-				zrecv.appsuccess_unique++;
+			if (is_probeok) {
+				zrecv.probeok_unique++;
 			}
 		}
 		if (zsend.complete) {
@@ -201,16 +201,16 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 	// initialize paged bitmap
 	seen = pbm_init();
 	if (zconf.filter_duplicates) {
-		log_debug("recv", "duplicate responses will be excluded from output"); 
+		log_debug("recv", "duplicate responses will be excluded from output");
 	} else {
-		log_debug("recv", "duplicate responses will be included in output"); 
+		log_debug("recv", "duplicate responses will be included in output");
 	}
 	if (zconf.filter_unsuccessful) {
-		log_debug("recv", "unsuccessful responses will be excluded from output"); 
+		log_debug("recv", "unsuccessful responses will be excluded from output");
 	} else {
-		log_debug("recv", "unsuccessful responses will be included in output"); 
+		log_debug("recv", "unsuccessful responses will be included in output");
 	}
-	
+
 	pthread_mutex_lock(recv_ready_mutex);
 	zconf.recv_ready = 1;
 	pthread_mutex_unlock(recv_ready_mutex);
@@ -218,7 +218,7 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 	if (zconf.max_results == 0) {
 		zconf.max_results = -1;
 	}
-	
+
 	do {
 		if (zconf.dryrun) {
 			sleep(1);

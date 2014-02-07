@@ -56,26 +56,26 @@ pthread_mutex_t recv_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // splits comma delimited string into char*[]. Does not handle
 // escaping or complicated setups: designed to process a set
-// of fields that the user wants output 
+// of fields that the user wants output
 static void split_string(char* in, int *len, char***results)
 {
 	char** fields = calloc(MAX_FIELDS, sizeof(char*));
 	memset(fields, 0, MAX_FIELDS*sizeof(fields));
 	int retvlen = 0;
-	char *currloc = in; 
+	char *currloc = in;
 	// parse csv into a set of strings
 	while (1) {
-		size_t len = strcspn(currloc, ", ");    
+		size_t len = strcspn(currloc, ", ");
 		if (len == 0) {
 			currloc++;
 		} else {
 			char *new = malloc(len+1);
 			assert(new);
 			strncpy(new, currloc, len);
-			new[len] = '\0';	     
+			new[len] = '\0';
 			fields[retvlen++] = new;
 			assert(fields[retvlen-1]);
-		}   
+		}
 		if (len == strlen(currloc)) {
 			break;
 		}
@@ -90,9 +90,9 @@ static void split_string(char* in, int *len, char***results)
 void fprintw(FILE *f, char *s, size_t w)
 {
 	if (strlen(s) <= w) {
-		fprintf(f, "%s", s); 
+		fprintf(f, "%s", s);
 		return;
-	}   
+	}
 	// process each line individually in order to
 	// respect existing line breaks in string.
 	char *news = strdup(s);
@@ -171,7 +171,7 @@ static void set_cpu(void)
 	pthread_mutex_lock(&cpu_affinity_mutex);
 	static int core=0;
 	int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
-	cpu_set_t cpuset;	
+	cpu_set_t cpuset;
 	CPU_ZERO(&cpuset);
 	CPU_SET(core, &cpuset);
 
@@ -219,7 +219,7 @@ static void drop_privs()
 			return; // success
 		}
 	}
-	log_fatal("zmap", "Couldn't change UID to 'nobody'");		
+	log_fatal("zmap", "Couldn't change UID to 'nobody'");
 }
 
 typedef struct mon_start_arg {
@@ -278,11 +278,12 @@ static void summary(void)
 	SU("exc", "first-scanned", zsend.first_scanned);
 	SD("exc", "hit-rate", hitrate);
 	SU("exc", "success-total", zrecv.success_total);
-	SU("exc", "appsuccess-total", zrecv.appsuccess_total);
 	SU("exc", "success-unique", zrecv.success_unique);
 	SU("exc", "success-cooldown-total", zrecv.cooldown_total);
 	SU("exc", "success-cooldown-unique", zrecv.cooldown_unique);
 	SU("exc", "failure-total", zrecv.failure_total);
+	SU("exc", "probeok-total", zrecv.probeok_total);
+	SU("exc", "probeok-unique", zrecv.probeok_unique);
 	SU("exc", "sendto-failures", zsend.sendto_failures);
 	SU("adv", "permutation-gen", zconf.generator);
 	SS("exc", "scan-type", zconf.probe_module->name);
@@ -317,7 +318,7 @@ static void json_metadata(FILE *file)
 			log_error("json-metadata", "unable to retrieve complete hostname");
 		}
 	}
-	
+
 	json_object_object_add(obj, "target-port",
 			json_object_new_int(zconf.target_port));
 	json_object_object_add(obj, "source-port-first",
@@ -353,11 +354,12 @@ static void json_metadata(FILE *file)
 	json_object_object_add(obj, "total-sent", json_object_new_int(zsend.sent));
 
 	json_object_object_add(obj, "success-total", json_object_new_int(zrecv.success_total));
-	json_object_object_add(obj, "appsuccess-total", json_object_new_int(zrecv.appsuccess_total));
 	json_object_object_add(obj, "success-unique", json_object_new_int(zrecv.success_unique));
 	json_object_object_add(obj, "success-cooldown-total", json_object_new_int(zrecv.cooldown_total));
 	json_object_object_add(obj, "success-cooldown-unique", json_object_new_int(zrecv.cooldown_unique));
 	json_object_object_add(obj, "failure-total", json_object_new_int(zrecv.failure_total));
+	json_object_object_add(obj, "probeok-total", json_object_new_int(zrecv.probeok_total));
+	json_object_object_add(obj, "probeok-unique", json_object_new_int(zrecv.probeok_unique));
 
 	json_object_object_add(obj, "packet-streams",
 			json_object_new_int(zconf.packet_streams));
@@ -365,7 +367,7 @@ static void json_metadata(FILE *file)
 			json_object_new_string(((probe_module_t *)zconf.probe_module)->name));
 	json_object_object_add(obj, "output-module",
 			json_object_new_string(((output_module_t *)zconf.output_module)->name));
-	
+
 	json_object_object_add(obj, "send-start-time",
 			json_object_new_string(send_start_time));
 	json_object_object_add(obj, "send-end-time",
@@ -520,9 +522,9 @@ static void start_zmap(void)
 					" Try setting default gateway mac address (-G).",
 					zconf.iface);
 		}
-		log_debug("zmap", "found gateway IP %s on %s", inet_ntoa(gw_ip), zconf.iface); 
+		log_debug("zmap", "found gateway IP %s on %s", inet_ntoa(gw_ip), zconf.iface);
 		zconf.gw_ip = gw_ip.s_addr;
-		
+
 		if (get_hw_addr(&gw_ip, zconf.iface, zconf.gw_mac)) {
 			log_fatal("zmap", "could not detect GW MAC address for %s on %s."
 					" Try setting default gateway mac address (-G).",
@@ -706,7 +708,7 @@ int main(int argc, char *argv[])
 	if (args.config_given || file_exists(args.config_arg)) {
 		params->initialize = 0;
 		params->override = 0;
-		if (cmdline_parser_config_file(args.config_arg, &args, params) 
+		if (cmdline_parser_config_file(args.config_arg, &args, params)
 				!= 0) {
 			exit(EXIT_FAILURE);
 		}
@@ -738,7 +740,7 @@ int main(int argc, char *argv[])
 		sprintf(fullpath, "%s/%s", zconf.log_directory, path);
 		log_location = fopen(fullpath, "w");
 		free(fullpath);
-		
+
 	} else {
 		log_location = stderr;
 	}
@@ -897,16 +899,19 @@ int main(int argc, char *argv[])
 	}
 	// find the fields we need for the framework
 	zconf.fsconf.success_index =
-			fds_get_index_by_name(fds, (char*) "success");	
+			fds_get_index_by_name(fds, (char*) "success");
 	if (zconf.fsconf.success_index < 0) {
 		log_fatal("fieldset", "probe module does not supply "
 				      "required success field.");
 	}
 	// APPLICATION LEVEL SUCCESS  (if available from probe module - otherwise is equal to success_index)
-	zconf.fsconf.appsuccess_index =
-			fds_get_index_by_name(fds, (char*) "appsuccess");
-	if (zconf.fsconf.success_index < 0) {
-		zconf.fsconf.appsuccess_index = zconf.fsconf.success_index;
+	zconf.fsconf.probeok_index =
+			fds_get_index_by_name(fds, (char*) "probeok");
+	if (zconf.fsconf.probeok_index < 0) {
+		log_debug("fieldset", "probe module does not supply "
+				      "application level success field.");
+		// probeok duplicate success
+		zconf.fsconf.probeok_index = zconf.fsconf.success_index;
 	}
 
 	zconf.fsconf.classification_index =
@@ -920,7 +925,7 @@ int main(int argc, char *argv[])
 		zconf.raw_output_fields = args.output_fields_arg;
 	} else if (!zconf.raw_output_fields) {
 		zconf.raw_output_fields = (char*) "saddr";
-	}	
+	}
 	if (!strcmp(zconf.raw_output_fields, "*")) {
 		zconf.output_fields_len = zconf.fsconf.defs.len;
 		zconf.output_fields = calloc(zconf.fsconf.defs.len, sizeof(char*));
@@ -931,7 +936,6 @@ int main(int argc, char *argv[])
 		fs_generate_full_fieldset_translation(&zconf.fsconf.translation,
 				&zconf.fsconf.defs);
 
-		
 	} else {
 		split_string(zconf.raw_output_fields, &(zconf.output_fields_len),
 				&(zconf.output_fields));
@@ -976,7 +980,7 @@ int main(int argc, char *argv[])
 
 	if (args.metadata_file_arg) {
 #ifdef JSON
-		zconf.metadata_filename = args.metadata_file_arg;				
+		zconf.metadata_filename = args.metadata_file_arg;
 		if (!strcmp(zconf.metadata_filename, "-")) {
 			zconf.metadata_file = stdout;
 		} else {
@@ -1007,7 +1011,7 @@ int main(int argc, char *argv[])
 				"editing the default ZMap configuration at /etc/zmap/zmap.conf.");
 	}
 	SET_IF_GIVEN(zconf.whitelist_filename, whitelist_file);
-	
+
 	if (zconf.probe_module->port_args) {
 		if (args.source_port_given) {
 			char *dash = strchr(args.source_port_arg, '-');
@@ -1079,7 +1083,7 @@ int main(int argc, char *argv[])
 	SET_IF_GIVEN(zconf.total_shards, shards);
 	if (zconf.shard_num >= zconf.total_shards) {
 		log_fatal("zmap", "With %hhu total shards, shard number (%hhu)"
-			  " must be in range [0, %hhu)", zconf.total_shards, 
+			  " must be in range [0, %hhu)", zconf.total_shards,
 			  zconf.shard_num, zconf.total_shards);
 	}
 

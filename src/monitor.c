@@ -26,7 +26,7 @@
 static double last_now = 0.0;
 static uint32_t last_sent = 0;
 static uint32_t last_rcvd = 0;
-static uint32_t last_apprcvd = 0;
+static uint32_t last_probeok = 0;
 static uint32_t last_drop = 0;
 static uint32_t last_failures = 0;
 
@@ -153,17 +153,17 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 
 		char send_rate[20], send_avg[20],
 			 recv_rate[20], recv_avg[20],
-			 apprecv_rate[20], apprecv_avg[20],
+			 probeok_rate[20], probeok_avg[20],
 			 pcap_drop[20], pcap_drop_avg[20];
 		// recv stats
 		number_string((zrecv.success_unique - last_rcvd)/delta,
 						recv_rate, sizeof(recv_rate));
 		number_string((zrecv.success_unique/age), recv_avg, sizeof(recv_avg));
 
-		// apprecv stats (APPLICATION LEVEL SUCCESS)
-		number_string((zrecv.appsuccess_unique - last_apprcvd)/delta,
-						apprecv_rate, sizeof(apprecv_rate));
-		number_string((zrecv.appsuccess_unique/age), apprecv_avg, sizeof(apprecv_avg));
+		// probeok stats (APPLICATION LEVEL SUCCESS)
+		number_string((zrecv.probeok_unique - last_probeok)/delta,
+						probeok_rate, sizeof(probeok_rate));
+		number_string((zrecv.probeok_unique/age), probeok_avg, sizeof(probeok_avg));
 
 		// dropped stats
 		number_string((zrecv.pcap_drop + zrecv.pcap_ifdrop - last_drop)/delta,
@@ -191,7 +191,7 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 			apphits = 0;
 		} else {
 			hits = zrecv.success_unique*100./total_sent;
-			apphits = zrecv.appsuccess_unique*100./total_sent;
+			apphits = zrecv.probeok_unique*100./total_sent;
 		}
 		if (!zsend.complete) {
 			// main display (during sending)
@@ -217,9 +217,9 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 					pcap_drop,
 					pcap_drop_avg,
 					hits,
-					zrecv.appsuccess_unique,
-					apprecv_rate,
-					apprecv_avg,
+					zrecv.probeok_unique,
+					probeok_rate,
+					probeok_avg,
 					apphits);
 		} else {
 		  	// alternate display (during cooldown)
@@ -242,16 +242,16 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 					pcap_drop,
 					pcap_drop_avg,
 					hits,
-					zrecv.appsuccess_unique,
-					apprecv_rate,
-					apprecv_avg,
+					zrecv.probeok_unique,
+					probeok_rate,
+					probeok_avg,
 					apphits);
 		}
 	}
 	last_now  = now();
 	last_sent = total_sent;
 	last_rcvd = zrecv.success_unique;
-	last_apprcvd = zrecv.appsuccess_unique;
+	last_probeok = zrecv.probeok_unique;
 	last_drop = zrecv.pcap_drop + zrecv.pcap_ifdrop;
 	last_failures = zsend.sendto_failures;
 }
