@@ -278,6 +278,7 @@ static void summary(void)
 	SU("exc", "first-scanned", zsend.first_scanned);
 	SD("exc", "hit-rate", hitrate);
 	SU("exc", "success-total", zrecv.success_total);
+	SU("exc", "appsuccess-total", zrecv.appsuccess_total);
 	SU("exc", "success-unique", zrecv.success_unique);
 	SU("exc", "success-cooldown-total", zrecv.cooldown_total);
 	SU("exc", "success-cooldown-unique", zrecv.cooldown_unique);
@@ -352,6 +353,7 @@ static void json_metadata(FILE *file)
 	json_object_object_add(obj, "total-sent", json_object_new_int(zsend.sent));
 
 	json_object_object_add(obj, "success-total", json_object_new_int(zrecv.success_total));
+	json_object_object_add(obj, "appsuccess-total", json_object_new_int(zrecv.appsuccess_total));
 	json_object_object_add(obj, "success-unique", json_object_new_int(zrecv.success_unique));
 	json_object_object_add(obj, "success-cooldown-total", json_object_new_int(zrecv.cooldown_total));
 	json_object_object_add(obj, "success-cooldown-unique", json_object_new_int(zrecv.cooldown_unique));
@@ -900,6 +902,13 @@ int main(int argc, char *argv[])
 		log_fatal("fieldset", "probe module does not supply "
 				      "required success field.");
 	}
+	// APPLICATION LEVEL SUCCESS  (if available from probe module - otherwise is equal to success_index)
+	zconf.fsconf.appsuccess_index =
+			fds_get_index_by_name(fds, (char*) "appsuccess");
+	if (zconf.fsconf.success_index < 0) {
+		zconf.fsconf.appsuccess_index = zconf.fsconf.success_index;
+	}
+
 	zconf.fsconf.classification_index =
 			fds_get_index_by_name(fds, (char*) "classification");
 	if (zconf.fsconf.classification_index < 0) {

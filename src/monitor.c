@@ -26,6 +26,7 @@
 static double last_now = 0.0;
 static uint32_t last_sent = 0;
 static uint32_t last_rcvd = 0;
+static uint32_t last_apprcvd = 0;
 static uint32_t last_drop = 0;
 static uint32_t last_failures = 0;
 
@@ -152,11 +153,18 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 
 		char send_rate[20], send_avg[20],
 			 recv_rate[20], recv_avg[20],
+			 apprecv_rate[20], apprecv_avg[20],
 			 pcap_drop[20], pcap_drop_avg[20];
 		// recv stats
 		number_string((zrecv.success_unique - last_rcvd)/delta,
 						recv_rate, sizeof(recv_rate));
 		number_string((zrecv.success_unique/age), recv_avg, sizeof(recv_avg));
+
+		// apprecv stats (APPLICATION LEVEL SUCCESS)
+		number_string((zrecv.appsuccess_unique - last_apprcvd)/delta,
+						apprecv_rate, sizeof(apprecv_rate));
+		number_string((zrecv.appsuccess_unique/age), apprecv_avg, sizeof(apprecv_avg));
+
 		// dropped stats
 		number_string((zrecv.pcap_drop + zrecv.pcap_ifdrop - last_drop)/delta,
 						pcap_drop, sizeof(pcap_drop));
@@ -168,7 +176,7 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 		if (drop_rate > (uint32_t)((zrecv.success_unique - last_rcvd) / delta) / 20) {
 			log_warn("monitor", "Dropped %d packets in the last second, (%d total dropped (pcap: %d + iface: %d))",
 					 drop_rate, zrecv.pcap_drop + zrecv.pcap_ifdrop, zrecv.pcap_drop, zrecv.pcap_ifdrop);
-		}	
+		}
 
 		// Warn if we fail to send > 1% of our average send rate
 		uint32_t fail_rate = (uint32_t)((zsend.sendto_failures - last_failures) / delta); // failures/sec
@@ -177,10 +185,13 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 					 fail_rate, zsend.sendto_failures);
 		}
 		float hits;
+		float apphits;
 		if (!total_sent) {
 			hits = 0;
+			apphits = 0;
 		} else {
 			hits = zrecv.success_unique*100./total_sent;
+			apphits = zrecv.appsuccess_unique*100./total_sent;
 		}
 		if (!zsend.complete) {
 			// main display (during sending)
@@ -191,7 +202,9 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 					"%5s %0.0f%%%s; send: %u %sp/s (%sp/s avg); "
 					"recv: %u %sp/s (%sp/s avg); "
 					"drops: %sp/s (%sp/s avg); "
-					"hits: %0.2f%%\n", 
+					"hits: %0.2f%%; "
+					"probe_ok: %u %sp/s (%sp/s avg); "
+					"probe_hits: %0.2f%%\n",
 					time_past,
 					percent_complete,
 					time_left,
@@ -203,15 +216,21 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 					recv_avg,
 					pcap_drop,
 					pcap_drop_avg,
-					hits);
+					hits,
+					zrecv.appsuccess_unique,
+					apprecv_rate,
+					apprecv_avg,
+					apphits);
 		} else {
 		  	// alternate display (during cooldown)
 			number_string((total_sent/(zsend.finish - zsend.start)), send_avg, sizeof(send_avg));
-			fprintf(stderr, 
+			fprintf(stderr,
 					"%5s %0.0f%%%s; send: %u done (%sp/s avg); "
 					"recv: %u %sp/s (%sp/s avg); "
 					"drops: %sp/s (%sp/s avg); "
-					"hits: %0.2f%%\n", 
+					"hits: %0.2f%%; "
+					"probe_ok: %u %sp/s (%sp/s avg); "
+					"probe_hits: %0.2f%%\n",
 					time_past,
 					percent_complete,
 					time_left,
@@ -222,12 +241,17 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 					recv_avg,
 					pcap_drop,
 					pcap_drop_avg,
-					hits);
+					hits,
+					zrecv.appsuccess_unique,
+					apprecv_rate,
+					apprecv_avg,
+					apphits);
 		}
 	}
 	last_now  = now();
 	last_sent = total_sent;
 	last_rcvd = zrecv.success_unique;
+	last_apprcvd = zrecv.appsuccess_unique;
 	last_drop = zrecv.pcap_drop + zrecv.pcap_ifdrop;
 	last_failures = zsend.sendto_failures;
 }

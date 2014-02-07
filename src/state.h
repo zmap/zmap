@@ -29,6 +29,7 @@ struct fieldset_conf {
 	fielddefset_t outdefs;
 	translation_t translation;
 	int success_index;
+	int appsuccess_index;
 	int classification_index;
 };
 
@@ -121,18 +122,23 @@ extern struct state_send zsend;
 // global receiver stats
 struct state_recv {
 	// valid responses classified as "success"
-	uint32_t success_total;   
+	uint32_t success_total;
 	// unique IPs that sent valid responses classified as "success"
-	uint32_t success_unique;  
+	uint32_t success_unique;
+	// APPLICATION LEVEL SUCCESS
+	// valid responses classified as "success" at application level
+	uint32_t appsuccess_total;
+	// unique IPs that sent valid responses classified as "success" at application level
+	uint32_t appsuccess_unique;
 	// valid responses classified as "success" received during cooldown
-	uint32_t cooldown_total;  
+	uint32_t cooldown_total;
 	// unique IPs that first sent valid "success"es during cooldown
 	uint32_t cooldown_unique;
 	// valid responses NOT classified as "success"
-	uint32_t failure_total;   
+	uint32_t failure_total;
 
-	int complete;  // has the scanner finished sending?	
-	double start;  // timestamp of when recv started	
+	int complete;  // has the scanner finished sending?
+	double start;  // timestamp of when recv started
 	double finish; // timestamp of when recv terminated
 
 	// number of packets captured by pcap filter
