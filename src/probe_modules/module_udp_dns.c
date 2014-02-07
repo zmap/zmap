@@ -57,7 +57,8 @@ const char *udp_dns_response_strings[] = {
         "DNS server failure",
         "DNS nxdomain",
         "DNS query type not implemented",
-        "DNS query refused"
+        "DNS query refused",
+	"DNS invalid rcode"
 };
 
 static int num_ports;
@@ -263,9 +264,10 @@ void udp_dns_print_packet(FILE *fp, void* packet)
 void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *fs)
 {
 	int app_success;
-	// log_debug("udp_dns", "dns_process_packet");
+	log_debug("udp_dns", "dns_process_packet");
 	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
+		//log_debug("udp_dns", "dns_process_packet - start udp pkt");
 		struct udphdr *udp_hdr = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
 		struct dnshdr *dns_hdr = (struct dnshdr *) ((char *) udp_hdr + 8);
 
@@ -282,12 +284,19 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
 		fs_add_uint64(fs, "probeok", app_success);
-		fs_add_string(fs, "app_rstr", (char *) udp_dns_response_strings[dns_hdr->rcode], 0);
-		fs_add_uint64(fs, "app_rcode",dns_hdr->rcode);
+		if (app_success) {
+			fs_add_string(fs, "app_rstr", (char *) udp_dns_response_strings[dns_hdr->rcode], 0);
+			fs_add_uint64(fs, "app_rcode", dns_hdr->rcode);
+		} else {
+			fs_add_null(fs, "app_rstr");
+			fs_add_null(fs, "app_rcode");
+		}
 		fs_add_uint64(fs, "udp_pkt_size", ntohs(udp_hdr->uh_ulen));
 		fs_add_binary(fs, "data", (ntohs(udp_hdr->uh_ulen) - sizeof(struct udphdr)), (void*) &udp_hdr[1], 0);
+		//log_debug("udp_dns", "dns_process_packet - end udp pkt");
 
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
+		//log_debug("udp_dns", "dns_process_packet - start icmp pkt");
 		struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
 		struct ip *ip_inner = (struct ip *) &icmp[1];
 		// ICMP unreach comes from another server (not the one we sent a probe to);
@@ -306,12 +315,15 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 		} else {
 			fs_add_string(fs, "icmp_unreach_str", (char *) "unknown", 0);
 		}
-		fs_add_null(fs, "probeok");
+		fs_add_uint64(fs, "probeok", 0);
 		fs_add_null(fs, "app_rstr");
 		fs_add_null(fs, "app_rcode");
 		fs_add_null(fs, "udp_pkt_size");
 		fs_add_null(fs, "data");
+		//log_debug("udp_dns", "dns_process_packet - end icmp pkt");
+
 	} else {
+		//log_debug("udp_dns", "dns_process_packet - start other pkt");
 		fs_add_string(fs, "classification", (char *) "other", 0);
 		fs_add_uint64(fs, "success", 0);
 		fs_add_null(fs, "sport");
@@ -320,11 +332,12 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
-		fs_add_null(fs, "probeok");
+		fs_add_uint64(fs, "probeok", 0);
 		fs_add_null(fs, "app_rstr");
 		fs_add_null(fs, "app_rcode");
 		fs_add_null(fs, "udp_pkt_size");
 		fs_add_null(fs, "data");
+		//log_debug("udp_dns", "dns_process_packet - end other pkt");
 	}
 }
 
