@@ -185,13 +185,13 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 					 fail_rate, zsend.sendto_failures);
 		}
 		float hits;
-		float apphits;
+		float probeok_hits;
 		if (!total_sent) {
 			hits = 0;
-			apphits = 0;
+			probeok_hits = 0;
 		} else {
 			hits = zrecv.success_unique*100./total_sent;
-			apphits = zrecv.probeok_unique*100./total_sent;
+			probeok_hits = zrecv.probeok_unique*100./total_sent;
 		}
 		if (!zsend.complete) {
 			// main display (during sending)
@@ -220,7 +220,7 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 					zrecv.probeok_unique,
 					probeok_rate,
 					probeok_avg,
-					apphits);
+					probeok_hits);
 		} else {
 		  	// alternate display (during cooldown)
 			number_string((total_sent/(zsend.finish - zsend.start)), send_avg, sizeof(send_avg));
@@ -245,7 +245,7 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 					zrecv.probeok_unique,
 					probeok_rate,
 					probeok_avg,
-					apphits);
+					probeok_hits);
 		}
 	}
 	last_now  = now();
