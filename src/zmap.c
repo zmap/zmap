@@ -913,7 +913,6 @@ int main(int argc, char *argv[])
 		// probeok duplicate success
 		zconf.fsconf.probeok_index = zconf.fsconf.success_index;
 	}
-
 	zconf.fsconf.classification_index =
 			fds_get_index_by_name(fds, (char*) "classification");
 	if (zconf.fsconf.classification_index < 0) {

@@ -90,7 +90,6 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 	}
 	zconf.probe_module->process_packet(bytes, buflen, fs);
 	fs_add_system_fields(fs, is_repeat, zsend.complete);
-
 	int success_index = zconf.fsconf.success_index;
 	assert(success_index < fs->len);
 	int is_success = fs_get_uint64_by_index(fs, success_index);
@@ -102,11 +101,9 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 
 	if (is_success) {
 		zrecv.success_total++;
-
 		if (is_probeok) {
 			zrecv.probeok_total++;
 		}
-
 		if (!is_repeat) {
 			zrecv.success_unique++;
 			pbm_set(seen, ntohl(src_ip));
