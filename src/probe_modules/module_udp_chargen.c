@@ -216,22 +216,22 @@ void udp_chargen_process_packet(const u_char *packet, UNUSED uint32_t len, field
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		struct udphdr *udp_hdr = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
 		char *payload = (char *) udp_hdr + 8;
-
 		// success is 1 if first 4 bytes of payload sequence are a valid chargen sequence (usually chargen sequence start byte 0x20 - end byte 0x7e)
 		app_success =   (  ((payload[1]==payload[0]+1) || (payload[1]==0x20 && payload[0]==0x7e)) \
 				&& ((payload[2]==payload[1]+1) || (payload[2]==0x20 && payload[1]==0x7e)) \
 				&& ((payload[3]==payload[2]+1) || (payload[3]==0x20 && payload[2]==0x7e)) \
 				&& ((payload[4]==payload[3]+1) || (payload[4]==0x20 && payload[3]==0x7e)) );
 		fs_add_string(fs, "classification", (char*) "udp_chargen", 0);
-		fs_add_uint64(fs, "success", app_success);
+		fs_add_uint64(fs, "success", 1);
 		fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
 		fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
 		fs_add_null(fs, "icmp_responder");
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
-		fs_add_string(fs, "app_response_str", (char *) udp_chargen_response_strings[app_success], 0);
-		fs_add_uint64(fs, "app_response_code",app_success);
+		fs_add_uint64(fs, "probeok", app_success);
+		fs_add_string(fs, "app_rstr", (char *) udp_chargen_response_strings[app_success], 0);
+		fs_add_uint64(fs, "app_rcode",app_success);
 		fs_add_uint64(fs, "udp_pkt_size", ntohs(udp_hdr->uh_ulen));
 		fs_add_binary(fs, "data", (ntohs(udp_hdr->uh_ulen) - sizeof(struct udphdr)), (void*) &udp_hdr[1], 0);
 
@@ -254,8 +254,9 @@ void udp_chargen_process_packet(const u_char *packet, UNUSED uint32_t len, field
 		} else {
 			fs_add_string(fs, "icmp_unreach_str", (char *) "unknown", 0);
 		}
-		fs_add_null(fs, "app_response_str");
-		fs_add_null(fs, "app_response_code");
+		fs_add_uint64(fs, "probeok", 0);
+		fs_add_null(fs, "app_rstr");
+		fs_add_null(fs, "app_rcode");
 		fs_add_null(fs, "udp_pkt_size");
 		fs_add_null(fs, "data");
 	} else {
@@ -267,8 +268,9 @@ void udp_chargen_process_packet(const u_char *packet, UNUSED uint32_t len, field
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
-		fs_add_null(fs, "app_response_str");
-		fs_add_null(fs, "app_response_code");
+		fs_add_uint64(fs, "probeok", 0);
+		fs_add_null(fs, "app_rstr");
+		fs_add_null(fs, "app_rcode");
 		fs_add_null(fs, "udp_pkt_size");
 		fs_add_null(fs, "data");
 	}
@@ -334,8 +336,9 @@ static fielddef_t fields[] = {
 	{.name = "icmp_type", .type = "int", .desc = "icmp message type"},
 	{.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
 	{.name = "icmp_unreach_str", .type = "string", .desc = "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"},
-	{.name = "app_response_str", .type = "string", .desc = "for CHARGEN responses, ERR invalid sequence - NOERR valid sequence"},
-	{.name = "app_response_code", .type = "int", .desc = "for CHARGEN responses, 0 invalid sequence - 1 valid sequence"},
+	{.name = "probeok", .type="int", .desc = "is response considered APPLICATION success"},
+	{.name = "app_rstr", .type = "string", .desc = "for udp_chargen module: ERR invalid sequence - NOERR valid sequence"},
+	{.name = "app_rcode", .type = "int", .desc = "for udp_chargen module:, 0 invalid sequence - 1 valid sequence"},
 	{.name = "udp_pkt_size", .type="int", .desc = "UDP packet lenght"},
 	{.name = "data", .type="binary", .desc = "UDP payload"}
 };
