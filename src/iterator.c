@@ -50,10 +50,10 @@ iterator_t* iterator_init(uint8_t num_threads, uint8_t shard,
 	uint64_t num_addrs = blacklist_count_allowed();
 	iterator_t *it = xmalloc(sizeof(struct iterator));
 	const cyclic_group_t *group = get_group(num_addrs);
-	if (group->prime > (1LL << 32)) {
+	if (num_addrs > (1LL << 32)) {
 		zsend.max_index = 0xFFFFFFFF;
 	} else {
-		zsend.max_index = (uint32_t) group->prime;
+		zsend.max_index = (uint32_t) num_addrs;
 	}
 	it->cycle = make_cycle(group);
 	it->num_threads = num_threads;
