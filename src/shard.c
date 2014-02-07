@@ -1,4 +1,3 @@
-
 #include <stdint.h>
 #include <assert.h>
 
@@ -100,7 +99,7 @@ uint32_t shard_get_next_ip(shard_t *shard)
 		if (candidate == shard->params.last) {
 			return 0;
 		}
-		if (candidate - 1 < zsend.targets) {
+		if (candidate - 1 < zsend.max_index) {
 			return blacklist_lookup_index(candidate - 1);
 		}
 		shard->state.blacklisted++;

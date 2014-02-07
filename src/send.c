@@ -253,7 +253,7 @@ int send_run(int sock, shard_t *s)
 			s->cb(s->id, s->arg);
 			break;
 		}
-		if (s->state.sent > max_targets) {
+		if (s->state.sent >= max_targets) {
 			s->cb(s->id, s->arg);
 			break;
 		}
