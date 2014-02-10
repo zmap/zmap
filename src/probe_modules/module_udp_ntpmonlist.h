@@ -12,14 +12,14 @@
 #include <unistd.h>
 #include <string.h>
 
-void udp_chargen_print_packet(FILE *fp, void* packet);
+void udp_ntpmonlist_print_packet(FILE *fp, void* packet);
 
-int udp_chargen_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip, 
+int udp_ntpmonlist_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip, 
 		uint32_t *validation, int probe_num);
 
-int udp_chargen_validate_packet(const struct ip *ip_hdr, uint32_t len, 
+int udp_ntpmonlist_validate_packet(const struct ip *ip_hdr, uint32_t len, 
 		__attribute__((unused))uint32_t *src_ip, uint32_t *validation);
 
 extern const char *udp_unreach_strings[];
 
-void udp_chargen_set_num_ports(int x);
+void udp_ntpmonlist_set_num_ports(int x);

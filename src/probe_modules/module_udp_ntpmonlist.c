@@ -228,7 +228,7 @@ void udp_ntpmonlist_process_packet(const u_char *packet, UNUSED uint32_t len, fi
 		struct udphdr *udp_hdr = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
 		char *payload = (char *) udp_hdr + 8;
 		// success is 1 if first 4 bytes of payload sequence are a valid NTP monlist answer (usually 0xd7-0x00-0x03-0x2a)
-		app_success = (  ((char)payload[0] == 0xd7) && ((char)payload[1] == 0) && ((char)payload[2] == 3) && ((char)payload[3] == 0x2a) );
+		app_success = (  ((unsigned char)payload[0] == 0xd7) && ((unsigned char)payload[1] == 0) && ((unsigned char)payload[2] == 3) && ((unsigned char)payload[3] == 0x2a) );
 
 		fs_add_string(fs, "classification", (char*) "udp_ntpmonlist", 0);
 		fs_add_uint64(fs, "success", 1);
