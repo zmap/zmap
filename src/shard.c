@@ -58,6 +58,11 @@ void shard_init(shard_t* shard,
 	//shard->params.last %= shard->params.modulus;
 	shard->current = shard->params.first;
 	shard->state.max_targets = zsend.targets / num_subshards;
+	uint32_t leftover = zsend.targets % num_subshards;
+	if (leftover > shard_id) {
+		shard->state.max_targets++;
+	}
+
 
 	// Set the (thread) id
 	shard->id = sub_id;
