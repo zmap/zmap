@@ -204,7 +204,7 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 					"drops: %sp/s (%sp/s avg); "
 					"hits: %0.2f%%; "
 					"probe_ok: %u %sp/s (%sp/s avg); "
-					"probe_hits: %0.2f%%\n",
+					"probe_hits: %0.4f%%\n",
 					time_past,
 					percent_complete,
 					time_left,
@@ -230,7 +230,7 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 					"drops: %sp/s (%sp/s avg); "
 					"hits: %0.2f%%; "
 					"probe_ok: %u %sp/s (%sp/s avg); "
-					"probe_hits: %0.2f%%\n",
+					"probe_hits: %0.4f%%\n",
 					time_past,
 					percent_complete,
 					time_left,
