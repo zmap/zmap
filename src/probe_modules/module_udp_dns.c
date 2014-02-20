@@ -284,7 +284,7 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
 		fs_add_uint64(fs, "probeok", app_success);
-		if (app_success) {
+		if (dns_hdr->rcode >= 0  && dns_hdr->rcode < 7) {
 			fs_add_string(fs, "app_rstr", (char *) udp_dns_response_strings[dns_hdr->rcode], 0);
 			fs_add_uint64(fs, "app_rcode", dns_hdr->rcode);
 		} else {
