@@ -87,14 +87,17 @@ endif()
 
 add_custom_command(OUTPUT zopt.h
 	COMMAND gengetopt -C --no-help --no-version --unamed-opts=SUBNETS -i "${CMAKE_CURRENT_SOURCE_DIR}/zopt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/zopt"
+	DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/zopt.ggo"
 	)
 
 add_custom_command(OUTPUT lexer.c
 	COMMAND flex -o "${CMAKE_CURRENT_BINARY_DIR}/lexer.c" --header-file="${CMAKE_CURRENT_BINARY_DIR}/lexer.h" "${CMAKE_CURRENT_SOURCE_DIR}/lexer.l"
+	DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/lexer.l"
 	)
 
 add_custom_command(OUTPUT parser.c
 	COMMAND byacc -d -o "${CMAKE_CURRENT_BINARY_DIR}/parser.c" "${CMAKE_CURRENT_SOURCE_DIR}/parser.y"
+	DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/parser.y"
 	)
 
 add_executable(zmap ${SOURCES})
