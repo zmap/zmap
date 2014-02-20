@@ -115,6 +115,7 @@ struct state_send {
 	uint32_t first_scanned;
 	uint32_t targets;
 	uint32_t sendto_failures;
+	uint32_t max_index;
 };
 extern struct state_send zsend;
 

@@ -22,7 +22,7 @@ the output filter lexer and parser. On Mac, ZMap uses libdnet for gateway and
 route detection. These packages can be installed on Debian-based systems by
 running:
 
-  sudo apt-get install libgmp3-dev gengetopt libpcap-dev flex byacc
+  sudo apt-get install build-essential cmake libgmp3-dev gengetopt libpcap-dev flex byacc
 
 or on RHEL- and Fedora-based systems by running:
 
@@ -52,8 +52,11 @@ with Redis, you will first need to install Hiredis. Then run cmake with
 
 JSON support is not enabled by default. If you are want to use ZMap
 with JSON output, you will first need to install json-c. Then, run cmake with
-"-DWITH_JSON=ON"
+"-DWITH_JSON=ON".
  
 Installing json-c from source requires git and autotools to be available. For
 more information on how to install json-c, please see
-http://github.com/json-c/json-c
+http://github.com/json-c/json-c. If you are running on Ubuntu, these dependencies
+can be installed by running:
+
+  sudo apt-get install pkg-config libjson0-dev 

@@ -1,4 +1,3 @@
-
 #include <stdint.h>
 #include <assert.h>
 
@@ -59,6 +58,11 @@ void shard_init(shard_t* shard,
 	//shard->params.last %= shard->params.modulus;
 	shard->current = shard->params.first;
 	shard->state.max_targets = zsend.targets / num_subshards;
+	uint32_t leftover = zsend.targets % num_subshards;
+	if (leftover > shard_id) {
+		shard->state.max_targets++;
+	}
+
 
 	// Set the (thread) id
 	shard->id = sub_id;
@@ -100,7 +104,7 @@ uint32_t shard_get_next_ip(shard_t *shard)
 		if (candidate == shard->params.last) {
 			return 0;
 		}
-		if (candidate - 1 < zsend.targets) {
+		if (candidate - 1 < zsend.max_index) {
 			return blacklist_lookup_index(candidate - 1);
 		}
 		shard->state.blacklisted++;

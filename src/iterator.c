@@ -47,9 +47,14 @@ void shard_complete(uint8_t thread_id, void *arg)
 iterator_t* iterator_init(uint8_t num_threads, uint8_t shard,
 			  uint8_t num_shards)
 {
-	uint64_t num_addrs = zsend.targets;
+	uint64_t num_addrs = blacklist_count_allowed();
 	iterator_t *it = xmalloc(sizeof(struct iterator));
 	const cyclic_group_t *group = get_group(num_addrs);
+	if (num_addrs > (1LL << 32)) {
+		zsend.max_index = 0xFFFFFFFF;
+	} else {
+		zsend.max_index = (uint32_t) num_addrs;
+	}
 	it->cycle = make_cycle(group);
 	it->num_threads = num_threads;
 	it->thread_shards = xcalloc(num_threads, sizeof(shard_t));
