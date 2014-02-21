@@ -50,12 +50,12 @@ void shard_init(shard_t* shard,
 	}
 	mpz_powm_ui(result, generator, begin_idx + 1, prime);
 	shard->params.first = (uint64_t) mpz_get_ui(result);
-	//shard->params.first *= cycle->offset;
-	//shard->params.first %= shard->params.modulus;
+	shard->params.first *= cycle->offset;
+	shard->params.first %= shard->params.modulus;
 	mpz_powm_ui(result, generator, end_idx + 1, prime);
 	shard->params.last = (uint64_t) mpz_get_ui(result);
-	//shard->params.last *= cycle->offset;
-	//shard->params.last %= shard->params.modulus;
+	shard->params.last *= cycle->offset;
+	shard->params.last %= shard->params.modulus;
 	shard->current = shard->params.first;
 	shard->state.max_targets = zsend.targets / num_subshards;
 	uint32_t leftover = zsend.targets % num_subshards;
