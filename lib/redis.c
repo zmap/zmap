@@ -232,7 +232,7 @@ int redis_pull(char *redisqueuename, void *buf,
 	assert(rctx);
 	long elems_in_redis = redis_get_sizeof_list(redisqueuename);
 	long num_to_add = MIN(elems_in_redis, maxload);
-	log_info("redis", "INFO: redis load called on %s. Transfering %li "
+	log_info("redis", "INFO: redis load called on %s. Transferring %li "
 			"of %li elements to in-memory queue.",
 			redisqueuename,
 			num_to_add, elems_in_redis);
