@@ -227,6 +227,7 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
+		fs_add_uint64(fs, "udp_pkt_size", ntohs(udp->uh_ulen));
 		fs_add_binary(fs, "data", (ntohs(udp->uh_ulen) - sizeof(struct udphdr)), (void*) &udp[1], 0);
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
@@ -247,6 +248,7 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 		} else {
 			fs_add_string(fs, "icmp_unreach_str", (char *) "unknown", 0);
 		}
+		fs_add_null(fs, "udp_pkt_size");
 		fs_add_null(fs, "data");
 	} else {
 		fs_add_string(fs, "classification", (char *) "other", 0);
@@ -257,6 +259,7 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
+		fs_add_null(fs, "udp_pkt_size");
 		fs_add_null(fs, "data");
 	}
 }
@@ -320,6 +323,7 @@ static fielddef_t fields[] = {
 	{.name = "icmp_type", .type = "int", .desc = "icmp message type"},
 	{.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
 	{.name = "icmp_unreach_str", .type = "string", .desc = "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"},
+        {.name = "udp_pkt_size", .type="int", .desc = "UDP packet lenght"},
 	{.name = "data", .type="binary", .desc = "UDP payload"}
 };
 
