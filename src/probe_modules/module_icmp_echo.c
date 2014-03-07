@@ -146,21 +146,27 @@ void icmp_echo_process_packet(const u_char *packet,
 		case ICMP_ECHOREPLY:
 			fs_add_string(fs, "classification", (char*) "echoreply", 0); 
 			fs_add_uint64(fs, "success", 1); 
+			break;
 		case ICMP_UNREACH: 
 			fs_add_string(fs, "classification", (char*) "unreach", 0); 
 			fs_add_uint64(fs, "success", 0); 
+			break;
 		case ICMP_SOURCEQUENCH:
 			fs_add_string(fs, "classification", (char*) "sourcequench", 0); 
 			fs_add_uint64(fs, "success", 0); 
+			break;
 		case ICMP_REDIRECT:
 			fs_add_string(fs, "classification", (char*) "redirect", 0); 
 			fs_add_uint64(fs, "success", 0); 
+			break;
 		case ICMP_TIMXCEED:
 			fs_add_string(fs, "classification", (char*) "timxceed", 0); 
 			fs_add_uint64(fs, "success", 0); 
+			break;
 		default:
 			fs_add_string(fs, "classification", (char*) "other", 0); 
 			fs_add_uint64(fs, "success", 0); 
+			break;
 	}
 }
 
