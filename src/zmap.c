@@ -268,6 +268,9 @@ static void summary(void)
 	SS("cnf", "send-interface", zconf.iface);
 	SI("cnf", "rate", zconf.rate);
 	SLU("cnf", "bandwidth", zconf.bandwidth);
+	SU("cnf", "shard-num", (unsigned) zconf.shard_num);
+	SU("cnf", "num-shards", (unsigned) zconf.total_shards);
+	SU("cnf", "senders", (unsigned) zconf.senders);
 	SU("env", "nprocessors", (unsigned) sysconf(_SC_NPROCESSORS_ONLN));
 	SS("exc", "send-start-time", send_start_time);
 	SS("exc", "send-end-time", send_end_time);
@@ -337,6 +340,8 @@ static void json_metadata(FILE *file)
 	json_object_object_add(obj, "seed", json_object_new_int(zconf.seed));
 	json_object_object_add(obj, "generator", json_object_new_int(zconf.generator));
 	json_object_object_add(obj, "hitrate", json_object_new_double(hitrate));
+	json_object_object_add(obj, "shard-num", json_object_new_int(zconf.shard_num));
+	json_object_object_add(obj, "total-shards", json_object_new_int(zconf.total_shards));
 
 	json_object_object_add(obj, "syslog", json_object_new_int(zconf.syslog));
 	json_object_object_add(obj, "filter-duplicates", json_object_new_int(zconf.filter_duplicates));
