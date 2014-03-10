@@ -75,3 +75,21 @@ BUGFIX	scans occasionally skip cooldown period due to lock issue
 
 FEATURE	added context to allow easier packaging in Debian and Ubuntu and Fedora and Brew and Macports
 
+FEATURE	remove dnet dependency for linux
+
+FEATURE remove random extra printed saddr
+
+FEATURE	build with optimizations by default
+
+FEATURE	added JSON metadata output
+
+FEATURE added syslog support
+
+FEATURE	added BSD/mac support
+
+BUGFIX	removed bizarre executible bits on random example code in git repo
+
+FEATURE	added support for scanning by FQDN
+
+FEATURE	adding sharding support
+
