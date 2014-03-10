@@ -528,7 +528,8 @@ static void start_zmap(void)
 		
 		if (get_hw_addr(&gw_ip, zconf.iface, zconf.gw_mac)) {
 			log_fatal("zmap", "could not detect GW MAC address for %s on %s."
-					" Try setting default gateway mac address (-G).",
+					" Try setting default gateway mac address (-G), or run"
+					" \"arp <gateway_ip>\" in terminal.",
 					inet_ntoa(gw_ip), zconf.iface);
 		}
 		zconf.gw_mac_set = 1;
