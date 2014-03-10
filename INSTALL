@@ -46,6 +46,9 @@ followed by:
 
   sudo make install
 
+Enabling development turns on debug symbols, and turns off optimizations.
+Release builds should but built with -DENABLE_DEVELOPMENT=OFF.
+
 Redis support is not enabled by default. If you are want to use ZMap
 with Redis, you will first need to install Hiredis. Then run cmake with
 "-DWITH_REDIS=ON".
