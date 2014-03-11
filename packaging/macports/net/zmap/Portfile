@@ -5,10 +5,10 @@ PortSystem          1.0
 PortGroup           cmake 1.0
 
 name                zmap
-version             v1.1.1.1
+version             v1.2.0
 fetch.type          git
 git.url             https://github.com/zmap/zmap.git
-git.branch          v1.1.1.1
+git.branch          v1.2.0
 
 categories          net
 platforms           darwin
