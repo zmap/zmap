@@ -146,6 +146,9 @@ iterator_t* send_init(void)
 			  "interface: %s", zconf.iface);
 		return NULL;
 	}
+     log_debug("send", "source MAC address %02x:%02x:%02x:%02x:%02x:%02x",
+           zconf.hw_mac[0], zconf.hw_mac[1], zconf.hw_mac[2],
+           zconf.hw_mac[3], zconf.hw_mac[4], zconf.hw_mac[5]);
 
 	if (zconf.dryrun) {
 		log_info("send", "dryrun mode -- won't actually send packets");
