@@ -95,20 +95,20 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 	int is_success = fs_get_uint64_by_index(fs, success_index);
 
 	// APPLICATION LEVEL SUCCESS
-	int probeok_index = zconf.fsconf.probeok_index;
-	assert(probeok_index < fs->len);
-	int is_probeok = fs_get_uint64_by_index(fs, probeok_index);
+	int app_success_index = zconf.fsconf.app_success_index;
+	assert(app_success_index < fs->len);
+	int is_app_success = fs_get_uint64_by_index(fs, app_success_index);
 
 	if (is_success) {
 		zrecv.success_total++;
-		if (is_probeok) {
-			zrecv.probeok_total++;
+		if (is_app_success) {
+			zrecv.app_success_total++;
 		}
 		if (!is_repeat) {
 			zrecv.success_unique++;
 			pbm_set(seen, ntohl(src_ip));
-			if (is_probeok) {
-				zrecv.probeok_unique++;
+			if (is_app_success) {
+				zrecv.app_success_unique++;
 			}
 		}
 		if (zsend.complete) {

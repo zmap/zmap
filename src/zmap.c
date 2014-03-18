@@ -282,8 +282,8 @@ static void summary(void)
 	SU("exc", "success-cooldown-total", zrecv.cooldown_total);
 	SU("exc", "success-cooldown-unique", zrecv.cooldown_unique);
 	SU("exc", "failure-total", zrecv.failure_total);
-	SU("exc", "probeok-total", zrecv.probeok_total);
-	SU("exc", "probeok-unique", zrecv.probeok_unique);
+	SU("exc", "app-success-total", zrecv.app_success_total);
+	SU("exc", "app-success-unique", zrecv.app_success_unique);
 	SU("exc", "sendto-failures", zsend.sendto_failures);
 	SU("adv", "permutation-gen", zconf.generator);
 	SS("exc", "scan-type", zconf.probe_module->name);
@@ -358,8 +358,8 @@ static void json_metadata(FILE *file)
 	json_object_object_add(obj, "success-cooldown-total", json_object_new_int(zrecv.cooldown_total));
 	json_object_object_add(obj, "success-cooldown-unique", json_object_new_int(zrecv.cooldown_unique));
 	json_object_object_add(obj, "failure-total", json_object_new_int(zrecv.failure_total));
-	json_object_object_add(obj, "probeok-total", json_object_new_int(zrecv.probeok_total));
-	json_object_object_add(obj, "probeok-unique", json_object_new_int(zrecv.probeok_unique));
+	json_object_object_add(obj, "app-success-total", json_object_new_int(zrecv.app_success_total));
+	json_object_object_add(obj, "app-success-unique", json_object_new_int(zrecv.app_success_unique));
 
 	json_object_object_add(obj, "packet-streams",
 			json_object_new_int(zconf.packet_streams));
@@ -905,13 +905,13 @@ int main(int argc, char *argv[])
 				      "required success field.");
 	}
 	// APPLICATION LEVEL SUCCESS  (if available from probe module - otherwise is equal to success_index)
-	zconf.fsconf.probeok_index =
-			fds_get_index_by_name(fds, (char*) "probeok");
-	if (zconf.fsconf.probeok_index < 0) {
+	zconf.fsconf.app_success_index =
+			fds_get_index_by_name(fds, (char*) "app_success");
+	if (zconf.fsconf.app_success_index < 0) {
 		log_debug("fieldset", "probe module does not supply "
 				      "application level success field.");
-		// probeok duplicate success
-		zconf.fsconf.probeok_index = zconf.fsconf.success_index;
+		// app_success duplicate success
+		zconf.fsconf.app_success_index = zconf.fsconf.success_index;
 	}
 	zconf.fsconf.classification_index =
 			fds_get_index_by_name(fds, (char*) "classification");
