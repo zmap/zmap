@@ -252,6 +252,7 @@ int send_nl_req(uint16_t msg_type, uint32_t seq,
 		return -1;
 	}
 	if (NLMSG_SPACE(payload_len) < payload_len) {
+		close(sock);
 		// Integer overflow
 		return -1;
 	}
@@ -425,8 +426,8 @@ int get_iface_ip(char *iface, struct in_addr *ip)
 	strncpy(ifr.ifr_name, iface, IFNAMSIZ-1);
 
 	if (ioctl(sock, SIOCGIFADDR, &ifr) < 0) {
-		log_fatal("get-iface-ip", "ioctl failure: %s", strerror(errno));
 		close(sock);
+		log_fatal("get-iface-ip", "ioctl failure: %s", strerror(errno));
 	}
 	ip->s_addr =  ((struct sockaddr_in*) &ifr.ifr_addr)->sin_addr.s_addr;
 	close(sock);
