@@ -7,8 +7,6 @@
 
 #include <string.h>
 
-extern int yyparse();
-
 node_t *zfilter;
 
 static int validate_node(node_t *node, fielddefset_t *fields)
