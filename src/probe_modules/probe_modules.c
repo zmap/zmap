@@ -1,6 +1,6 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -87,7 +87,7 @@ void fs_add_system_fields(fieldset_t *fs, int is_repeat, int in_cooldown)
 	fs_add_uint64(fs, "timestamp-us", (uint64_t) t.tv_usec);
 }
 
-int ip_fields_len = 6; 
+int ip_fields_len = 6;
 fielddef_t ip_fields[] = {
 	{.name="saddr", .type="string", .desc="source IP address of response"},
 	{.name="saddr-raw", .type="int", .desc="network order integer form of source IP address"},

@@ -1,12 +1,12 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-// probe module for performing TCP SYN scans 
+// probe module for performing TCP SYN scans
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -82,15 +82,15 @@ void synscan_print_packet(FILE *fp, void* packet)
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
-int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len, 
-		__attribute__((unused))uint32_t *src_ip, 
+int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
+		__attribute__((unused))uint32_t *src_ip,
 		uint32_t *validation)
 {
 	if (ip_hdr->ip_p != IPPROTO_TCP) {
 		return 0;
 	}
 	if ((4*ip_hdr->ip_hl + sizeof(struct tcphdr)) > len) {
-		// buffer not large enough to contain expected tcp header 
+		// buffer not large enough to contain expected tcp header
 		return 0;
 	}
 	struct tcphdr *tcp = (struct tcphdr*)((char *) ip_hdr + 4*ip_hdr->ip_hl);
@@ -115,10 +115,10 @@ void synscan_process_packet(const u_char *packet,
 		__attribute__((unused)) uint32_t len, fieldset_t *fs)
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
-	struct tcphdr *tcp = (struct tcphdr*)((char *)ip_hdr 
+	struct tcphdr *tcp = (struct tcphdr*)((char *)ip_hdr
 					+ 4*ip_hdr->ip_hl);
 
-	fs_add_uint64(fs, "sport", (uint64_t) ntohs(tcp->th_sport)); 
+	fs_add_uint64(fs, "sport", (uint64_t) ntohs(tcp->th_sport));
 	fs_add_uint64(fs, "dport", (uint64_t) ntohs(tcp->th_dport));
 	fs_add_uint64(fs, "seqnum", (uint64_t) ntohl(tcp->th_seq));
 	fs_add_uint64(fs, "acknum", (uint64_t) ntohl(tcp->th_ack));

@@ -1,6 +1,6 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -85,22 +85,22 @@ void icmp_echo_print_packet(FILE *fp, void* packet)
 
 
 
-int icmp_validate_packet(const struct ip *ip_hdr, 
+int icmp_validate_packet(const struct ip *ip_hdr,
 		uint32_t len, uint32_t *src_ip, uint32_t *validation)
 {
 	if (ip_hdr->ip_p != IPPROTO_ICMP) {
 		return 0;
 	}
-	
+
 	if (((uint32_t) 4 * ip_hdr->ip_hl + ICMP_SMALLEST_SIZE) > len) {
-		// buffer not large enough to contain expected icmp header 
+		// buffer not large enough to contain expected icmp header
 		return 0;
 	}
-	
+
 	struct icmp *icmp_h = (struct icmp *) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
 	uint16_t icmp_idnum = icmp_h->icmp_id;
 
-	// ICMP validation is tricky: for some packet types, we must look inside 
+	// ICMP validation is tricky: for some packet types, we must look inside
 	// the payload
 	if (icmp_h->icmp_type == ICMP_TIMXCEED || icmp_h->icmp_type == ICMP_UNREACH) {
 
@@ -124,7 +124,7 @@ int icmp_validate_packet(const struct ip *ip_hdr,
 		*src_ip = ip_inner->ip_dst.s_addr;
 		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
 			     (uint8_t *) validation);
-	} 
+	}
 
 	// validate icmp id
 	if (icmp_idnum != (validation[2] & 0xFFFF)) {
@@ -144,28 +144,28 @@ void icmp_echo_process_packet(const u_char *packet,
 	fs_add_uint64(fs, "seq", ntohs(icmp_hdr->icmp_seq));
 	switch (icmp_hdr->icmp_type) {
 		case ICMP_ECHOREPLY:
-			fs_add_string(fs, "classification", (char*) "echoreply", 0); 
-			fs_add_uint64(fs, "success", 1); 
+			fs_add_string(fs, "classification", (char*) "echoreply", 0);
+			fs_add_uint64(fs, "success", 1);
 			break;
-		case ICMP_UNREACH: 
-			fs_add_string(fs, "classification", (char*) "unreach", 0); 
-			fs_add_uint64(fs, "success", 0); 
+		case ICMP_UNREACH:
+			fs_add_string(fs, "classification", (char*) "unreach", 0);
+			fs_add_uint64(fs, "success", 0);
 			break;
 		case ICMP_SOURCEQUENCH:
-			fs_add_string(fs, "classification", (char*) "sourcequench", 0); 
-			fs_add_uint64(fs, "success", 0); 
+			fs_add_string(fs, "classification", (char*) "sourcequench", 0);
+			fs_add_uint64(fs, "success", 0);
 			break;
 		case ICMP_REDIRECT:
-			fs_add_string(fs, "classification", (char*) "redirect", 0); 
-			fs_add_uint64(fs, "success", 0); 
+			fs_add_string(fs, "classification", (char*) "redirect", 0);
+			fs_add_uint64(fs, "success", 0);
 			break;
 		case ICMP_TIMXCEED:
-			fs_add_string(fs, "classification", (char*) "timxceed", 0); 
-			fs_add_uint64(fs, "success", 0); 
+			fs_add_string(fs, "classification", (char*) "timxceed", 0);
+			fs_add_uint64(fs, "success", 0);
 			break;
 		default:
-			fs_add_string(fs, "classification", (char*) "other", 0); 
-			fs_add_uint64(fs, "success", 0); 
+			fs_add_string(fs, "classification", (char*) "other", 0);
+			fs_add_uint64(fs, "success", 0);
 			break;
 	}
 }

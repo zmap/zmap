@@ -1,6 +1,6 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -30,7 +30,7 @@ void print_macaddr(struct ifreq* i)
 }
 #endif /* NDEBUG */
 
-#define IP_ADDR_LEN_STR 20 
+#define IP_ADDR_LEN_STR 20
 
 void fprintf_ip_header(FILE *fp, struct ip *iph)
 {
@@ -80,11 +80,11 @@ void make_eth_header(struct ether_header *ethh, macaddr_t *src, macaddr_t *dst)
 }
 
 void make_ip_header(struct ip *iph, uint8_t protocol, uint16_t len)
-{	   
+{
 	iph->ip_hl = 5; // Internet Header Length
 	iph->ip_v = 4; // IPv4
 	iph->ip_tos = 0; // Type of Service
-	iph->ip_len = len; 
+	iph->ip_len = len;
 	iph->ip_id = htons(54321); // identification number
 	iph->ip_off = 0; //fragmentation falg
 	iph->ip_ttl = MAXTTL; // time to live (TTL)
@@ -107,7 +107,7 @@ void make_tcp_header(struct tcphdr *tcp_header, port_h_t dest_port)
     tcp_header->th_ack = 0;
     tcp_header->th_x2 = 0;
     tcp_header->th_off = 5; // data offset
-    tcp_header->th_flags = 0; 
+    tcp_header->th_flags = 0;
     tcp_header->th_flags |= TH_SYN;
     tcp_header->th_win = htons(65535); // largest possible window
     tcp_header->th_sum = 0;

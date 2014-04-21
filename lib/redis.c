@@ -1,11 +1,11 @@
 /*
- * ZMap Redis Helpers Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Redis Helpers Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
- 
+
 #include "redis.h"
 
 #include <string.h>
@@ -226,7 +226,7 @@ long redis_get_sizeof_set(const char *name)
 	return redis_get_sizeof("SCARD", name);
 }
 
-int redis_pull(char *redisqueuename, void *buf, 
+int redis_pull(char *redisqueuename, void *buf,
 		int maxload, size_t obj_size, int *numloaded, const char* cmd)
 {
 	assert(rctx);
@@ -251,7 +251,7 @@ int redis_pull(char *redisqueuename, void *buf,
 			return -1;
 		}
 		if (reply->type != REDIS_REPLY_STRING) {
-			log_fatal("redis", 
+			log_fatal("redis",
 					"unxpected reply type from redis.");
 			return -1;
 		}
@@ -267,27 +267,27 @@ int redis_pull(char *redisqueuename, void *buf,
 	return 0;
 }
 
-int redis_lpull(char *redisqueuename, void *buf, 
+int redis_lpull(char *redisqueuename, void *buf,
 		int maxload, size_t obj_size, int *numloaded)
 {
-	return redis_pull(redisqueuename, buf, 
+	return redis_pull(redisqueuename, buf,
 			maxload, obj_size, numloaded, "LPOP");
 }
 
-int redis_spull(char *redisqueuename, void *buf, 
+int redis_spull(char *redisqueuename, void *buf,
 		int maxload, size_t obj_size, int *numloaded)
 {
-	return redis_pull(redisqueuename, buf, 
+	return redis_pull(redisqueuename, buf,
 			maxload, obj_size, numloaded, "SRAND");
 }
 
-static int redis_push(char *redisqueuename, 
-		void *buf, int num, size_t len, const char *cmd) 
+static int redis_push(char *redisqueuename,
+		void *buf, int num, size_t len, const char *cmd)
 {
 	assert(rctx);
 	for (int i=0; i < num; i++) {
-		void* load = (void*)((intptr_t)buf + i*len);	
-		int rc = redisAppendCommand(rctx, "%s %s %b", 
+		void* load = (void*)((intptr_t)buf + i*len);
+		int rc = redisAppendCommand(rctx, "%s %s %b",
 				cmd, redisqueuename, load, len);
 		if (rc != REDIS_OK || rctx->err) {
 			log_fatal("redis", "%s", rctx->errstr);
@@ -296,7 +296,7 @@ static int redis_push(char *redisqueuename,
 	}
 	redisReply *reply;
 	for (int i=0; i < num; i++) {
-		if (redisGetReply(rctx, (void**) &reply) != REDIS_OK 
+		if (redisGetReply(rctx, (void**) &reply) != REDIS_OK
 				|| rctx->err) {
 			log_fatal("redis","%s", rctx->errstr);
 			return -1;
@@ -310,14 +310,14 @@ static int redis_push(char *redisqueuename,
 	return 0;
 }
 
-int redis_lpush(char *redisqueuename, 
-		void *buf, int num, size_t len) 
+int redis_lpush(char *redisqueuename,
+		void *buf, int num, size_t len)
 {
 	return redis_push(redisqueuename, buf, num, len, "RPUSH");
 }
 
-int redis_spush(char *redisqueuename, 
-		void *buf, int num, size_t len) 
+int redis_spush(char *redisqueuename,
+		void *buf, int num, size_t len)
 {
 	return redis_push(redisqueuename, buf, num, len, "SADD");
 }
