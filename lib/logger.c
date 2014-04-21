@@ -16,6 +16,7 @@
 #include <math.h>
 
 #include "logger.h"
+#include "xalloc.h"
 
 static enum LogLevel log_output_level = ZLOG_INFO;
 
@@ -99,7 +100,7 @@ int log_info(const char *name, const char *message, ...) {
 	int ret = LogLogVA(ZLOG_INFO, name, message, va);
 	va_end(va);
 
-	char *prefixed = malloc(strlen(name) + strlen(message) + 3);
+	char *prefixed = xmalloc(strlen(name) + strlen(message) + 3);
 	strcpy(prefixed, name);
 	strcat(prefixed, ": ");
 	strcat(prefixed, message);
@@ -119,7 +120,7 @@ int log_debug(const char *name, const char *message, ...) {
 	int ret = LogLogVA(ZLOG_DEBUG, name, message, va);
 	va_end(va);
 
-	char *prefixed = malloc(strlen(name) + strlen(message) + 3);
+	char *prefixed = xmalloc(strlen(name) + strlen(message) + 3);
 	strcpy(prefixed, name);
 	strcat(prefixed, ": ");
 	strcat(prefixed, message);

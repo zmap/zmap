@@ -13,6 +13,7 @@
 #include <assert.h>
 
 #include "../../lib/includes.h"
+#include "../../lib/xalloc.h"
 
 #include <sys/time.h>
 #include <sys/socket.h>
@@ -130,7 +131,7 @@ static void json_output_file_store_data(json_object *obj, const u_char *packet, 
 	unsigned int i;
 	char *buf;
 
-	buf = malloc((buflen*2)+1);
+	buf = xmalloc((buflen*2)+1);
 	buf[buflen*2] = 0;
 
 	for (i=0; i<buflen; i++)

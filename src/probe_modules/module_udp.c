@@ -16,6 +16,7 @@
 #include <assert.h>
 
 #include "../../lib/includes.h"
+#include "../../lib/xalloc.h"
 #include "probe_modules.h"
 #include "packet.h"
 #include "logger.h"
@@ -99,24 +100,14 @@ static int udp_global_initialize(struct state_conf *conf) {
 			exit(1);
 		}
 		free(udp_send_msg);
-		udp_send_msg = malloc(MAX_UDP_PAYLOAD_LEN);
-		if (! udp_send_msg) {
-			free(args);
-			log_fatal("udp", "failed to malloc payload buffer");
-			exit(1);
-		}
+		udp_send_msg = xmalloc(MAX_UDP_PAYLOAD_LEN);
 		udp_send_msg_len = fread(udp_send_msg, 1, MAX_UDP_PAYLOAD_LEN, inp);
 		fclose(inp);
 
 	} else if (strcmp(args, "hex") == 0) {
 		udp_send_msg_len = strlen(c) / 2;
 		free(udp_send_msg);
-		udp_send_msg = malloc(udp_send_msg_len);
-		if (! udp_send_msg) {
-			free(args);
-			log_fatal("udp", "failed to malloc payload buffer");
-			exit(1);
-		}
+		udp_send_msg = xmalloc(udp_send_msg_len);
 
 		for (i=0; i < udp_send_msg_len; i++) {
 			if (sscanf(c + (i*2), "%2x", &n) != 1) {

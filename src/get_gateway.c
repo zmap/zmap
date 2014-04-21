@@ -18,6 +18,7 @@
 
 #include "../lib/includes.h"
 #include "../lib/logger.h"
+#include "../lib/xalloc.h"
 
 #include <sys/ioctl.h>
 
@@ -155,8 +156,7 @@ int _get_default_gw(struct in_addr *gw, char **iface)
 				if (!sdl) {
 					log_fatal("get-gateway", "fuck");
 				}
-				char *_iface = malloc(sdl->sdl_nlen+1);
-				assert(_iface);
+				char *_iface = xmalloc(sdl->sdl_nlen+1);
 				memcpy(_iface, sdl->sdl_data, sdl->sdl_nlen);
 				_iface[sdl->sdl_nlen+1] = 0;
 				*iface = _iface;
@@ -256,10 +256,7 @@ int send_nl_req(uint16_t msg_type, uint32_t seq,
 		return -1;
 	}
 	struct nlmsghdr *nlmsg;
-	nlmsg = malloc(NLMSG_SPACE(payload_len));
-	if (!nlmsg) {
-		return -1;
-	}
+	nlmsg = xmalloc(NLMSG_SPACE(payload_len));
 
 	memset(nlmsg, 0, NLMSG_SPACE(payload_len));
 	memcpy(NLMSG_DATA(nlmsg), payload, payload_len);

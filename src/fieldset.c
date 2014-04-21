@@ -14,6 +14,7 @@
 #include <assert.h>
 
 #include "../lib/logger.h"
+#include "../lib/xalloc.h"
 
 void gen_fielddef_set(fielddefset_t *fds, fielddef_t fs[], int len)
 {
@@ -27,11 +28,7 @@ void gen_fielddef_set(fielddefset_t *fds, fielddef_t fs[], int len)
 
 fieldset_t *fs_new_fieldset(void)
 {
-	fieldset_t *f = malloc(sizeof(fieldset_t));
-	if (!f) {
-		log_fatal("fieldset", "unable to allocate new fieldset");
-	}
-	memset(f, 0, sizeof(fieldset_t));
+	fieldset_t *f = xcalloc(1, sizeof(fieldset_t));
 	return f;
 }
 
