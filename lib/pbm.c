@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #include "logger.h"
+#include "xalloc.h"
 
 #define NUM_VALUES 0xFFFFFFFF
 #define PAGE_SIZE_IN_BITS 0x10000
@@ -14,11 +15,7 @@
 
 uint8_t** pbm_init(void)
 {
-	uint8_t** retv = calloc(NUM_PAGES, sizeof(void*));
-	if (!retv) {
-		log_fatal("pbm", "unable to allocate "
-				"memory for base page table");
-	}
+	uint8_t** retv = xcalloc(NUM_PAGES, sizeof(void*));
 	return retv;
 }
 
@@ -48,11 +45,7 @@ void pbm_set(uint8_t **b, uint32_t v)
 	uint16_t top = (uint16_t) (v >> 16);
 	uint16_t bottom = (uint16_t) (v & PAGE_MASK);
 	if (!b[top]) {
-		uint8_t *bm = malloc(PAGE_SIZE_IN_BYTES);
-		if (!bm) {
-			log_fatal("bpm", "unable to allocate memory "
-					"for new bitmap page");
-		}
+		uint8_t *bm = xmalloc(PAGE_SIZE_IN_BYTES);
 		memset(bm, 0, PAGE_SIZE_IN_BYTES);
 		b[top] = bm;
 	}

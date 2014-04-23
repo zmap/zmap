@@ -21,6 +21,7 @@
 
 #include "constraint.h"
 #include "logger.h"
+#include "xalloc.h"
 
 #define ADDR_DISALLOWED 0
 #define ADDR_ALLOWED 1
@@ -41,8 +42,7 @@ static bl_ll_t *whitelisted_cidrs = NULL;
 void bl_ll_add(bl_ll_t *l, struct in_addr addr, uint16_t p)
 {
 	assert(l);
-        bl_cidr_node_t *new = malloc(sizeof(bl_cidr_node_t));
-        assert(new);
+        bl_cidr_node_t *new = xmalloc(sizeof(bl_cidr_node_t));
         new->next = NULL;
         new->ip_address = addr.s_addr;
 	new->prefix_len = p;
@@ -217,13 +217,9 @@ int blacklist_init(char *whitelist_filename, char *blacklist_filename,
 {
 	assert(!constraint);
 
-	blacklisted_cidrs = malloc(sizeof(bl_ll_t));
-	assert(blacklisted_cidrs);
-	memset(blacklisted_cidrs, 0, sizeof(bl_ll_t));
+	blacklisted_cidrs = xcalloc(1, sizeof(bl_ll_t));
 
-	whitelisted_cidrs = malloc(sizeof(bl_ll_t));
-	assert(whitelisted_cidrs);
-	memset(whitelisted_cidrs, 0, sizeof(bl_ll_t));
+	whitelisted_cidrs = xcalloc(1, sizeof(bl_ll_t));
 
 	if (whitelist_filename && whitelist_entries) {
 		log_warn("whitelist", "both a whitelist file and destination addresses "

@@ -16,6 +16,7 @@
 #include <arpa/inet.h>
 
 #include "../../lib/logger.h"
+#include "../../lib/xalloc.h"
 #include "../../lib/redis.h"
 
 #include "output_modules.h"
@@ -31,8 +32,7 @@ static int field_index = -1;
 
 int redismodule_init(struct state_conf *conf, char **fields, int fieldlens)
 {
-	buffer = calloc(BUFFER_SIZE, sizeof(uint32_t));
-	assert(buffer);
+	buffer = xcalloc(BUFFER_SIZE, sizeof(uint32_t));
 	buffer_fill = 0;
 	for (int i=0; i < fieldlens; i++) {
 		if (!strcmp(fields[i], "saddr-raw")) {

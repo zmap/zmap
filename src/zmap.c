@@ -59,8 +59,7 @@ pthread_mutex_t recv_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 // of fields that the user wants output 
 static void split_string(char* in, int *len, char***results)
 {
-	char** fields = calloc(MAX_FIELDS, sizeof(char*));
-	memset(fields, 0, MAX_FIELDS*sizeof(fields));
+	char** fields = xcalloc(MAX_FIELDS, sizeof(char*));
 	int retvlen = 0;
 	char *currloc = in; 
 	// parse csv into a set of strings
@@ -69,8 +68,7 @@ static void split_string(char* in, int *len, char***results)
 		if (len == 0) {
 			currloc++;
 		} else {
-			char *new = malloc(len+1);
-			assert(new);
+			char *new = xmalloc(len+1);
 			strncpy(new, currloc, len);
 			new[len] = '\0';	     
 			fields[retvlen++] = new;
@@ -506,7 +504,7 @@ static void start_zmap(void)
 	}
 	if (zconf.source_ip_first == NULL) {
 		struct in_addr default_ip;
-		zconf.source_ip_first = malloc(INET_ADDRSTRLEN);
+		zconf.source_ip_first = xmalloc(INET_ADDRSTRLEN);
 		zconf.source_ip_last = zconf.source_ip_first;
 		if (get_iface_ip(zconf.iface, &default_ip) < 0) {
 			log_fatal("zmap", "could not detect default IP address for for %s."
@@ -579,8 +577,7 @@ static void start_zmap(void)
 		}
 		pthread_mutex_unlock(&recv_ready_mutex);
 	}
-	tsend = malloc(zconf.senders * sizeof(pthread_t));
-	assert(tsend);
+	tsend = xmalloc(zconf.senders * sizeof(pthread_t));
 	for (uint8_t i = 0; i < zconf.senders; i++) {
 		int sock;
 		if (zconf.dryrun) {
@@ -738,7 +735,7 @@ int main(int argc, char *argv[])
 		struct tm *local = localtime(&now);
 		char path[100];
 		strftime(path, 100, "zmap-%Y-%m-%dT%H%M%S%z.log", local);
-		char *fullpath = malloc(strlen(zconf.log_directory) + strlen(path) + 2);
+		char *fullpath = xmalloc(strlen(zconf.log_directory) + strlen(path) + 2);
 		sprintf(fullpath, "%s/%s", zconf.log_directory, path);
 		log_location = fopen(fullpath, "w");
 		free(fullpath);
@@ -920,8 +917,7 @@ int main(int argc, char *argv[])
 	}	
 	if (!strcmp(zconf.raw_output_fields, "*")) {
 		zconf.output_fields_len = zconf.fsconf.defs.len;
-		zconf.output_fields = calloc(zconf.fsconf.defs.len, sizeof(char*));
-		assert(zconf.output_fields);
+		zconf.output_fields = xcalloc(zconf.fsconf.defs.len, sizeof(char*));
 		for (int i=0; i < zconf.fsconf.defs.len; i++) {
 			zconf.output_fields[i] = (char*) zconf.fsconf.defs.fielddefs[i].name;
 		}

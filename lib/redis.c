@@ -17,6 +17,7 @@
 #include <hiredis/hiredis.h>
 
 #include "logger.h"
+#include "xalloc.h"
 
 #define REDIS_TIMEOUT 2
 
@@ -27,12 +28,10 @@ static redisContext *rctx;
 
 redisconf_t *redis_parse_connstr(char *connstr)
 {
-	redisconf_t *retv = malloc(sizeof(redisconf_t));
+	redisconf_t *retv = xmalloc(sizeof(redisconf_t));
 	if (!strncmp("tcp://", connstr, 6)) {
-		char *servername = malloc(strlen(connstr));
-		assert(servername);
-		char *list_name = malloc(strlen(connstr));
-		assert(list_name);
+		char *servername = xmalloc(strlen(connstr));
+		char *list_name = xmalloc(strlen(connstr));
 		uint32_t port;
 		if (sscanf(connstr, "tcp://%[^:]:%u/%s", servername,
 						&port, list_name) != 3) {
@@ -48,10 +47,8 @@ redisconf_t *redis_parse_connstr(char *connstr)
 	} else if (!strncmp("local://", connstr, 8)) {
 		// looking for something along the lines of
 		// local:///tmp/redis.sock/list-name
-		char *path = malloc(strlen(connstr));
-		assert(path);
-		char *list_name = malloc(strlen(connstr));
-		assert(list_name);
+		char *path = xmalloc(strlen(connstr));
+		char *list_name = xmalloc(strlen(connstr));
 		connstr = connstr + (size_t) 8;
 		char *listname = strrchr(connstr, '/') + (size_t) 1;
 		connstr[strrchr(connstr, '/') - connstr] = '\0';
@@ -75,8 +72,7 @@ static redisContext* redis_connect(char *connstr)
 	// handle old behavior where we only connected to a specific
 	// socket that we #defined.
 	if (!connstr) {
-		c = malloc(sizeof(redisconf_t));
-		assert(c);
+		c = xmalloc(sizeof(redisconf_t));
 		c->type = T_LOCAL;
 		c->path = strdup("/tmp/redis.sock");
 	} else {
