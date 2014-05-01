@@ -132,8 +132,6 @@ void fprintw(FILE *f, char *s, size_t w)
 	free(news);
 }
 
-
-//#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
 #if defined(__APPLE__)
 static void set_cpu(void)
 {
