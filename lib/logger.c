@@ -1,11 +1,11 @@
 /*
- * Logger Copyright 2013 Regents of the University of Michigan 
- * 
+ * Logger Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
- 
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -22,7 +22,7 @@ static enum LogLevel log_output_level = ZLOG_INFO;
 
 static FILE *log_output_stream = NULL;
 
-static const char *log_level_name[] = { 
+static const char *log_level_name[] = {
 	"FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE" };
 
 static int LogLogVA(enum LogLevel level, const char *loggerName,
@@ -40,7 +40,7 @@ static int LogLogVA(enum LogLevel level, const char *loggerName,
 		time_t sec = now.tv_sec;
 		struct tm* ptm = localtime(&sec);
 		strftime(timestamp, 20, "%b %d %H:%M:%S", ptm);
-		fprintf(log_output_stream, "%s.%03ld [%s] ", 
+		fprintf(log_output_stream, "%s.%03ld [%s] ",
 				timestamp, (long) now.tv_usec/1000, levelName);
 		if (loggerName) {
 			fprintf(log_output_stream, "%s: ", loggerName);
@@ -155,8 +155,8 @@ int log_init(FILE *stream, enum LogLevel level,
 
 double now(void)
 {
-	struct timeval now;     
-	gettimeofday(&now, NULL);       
+	struct timeval now;
+	gettimeofday(&now, NULL);
 	return (double)now.tv_sec + (double)now.tv_usec/1000000.;
 }
 

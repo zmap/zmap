@@ -1,6 +1,6 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -51,7 +51,7 @@ int json_output_file_init(struct state_conf *conf, UNUSED char **fields, UNUSED 
 				exit(EXIT_FAILURE);
 			}
 		}
-	
+
 		// Create a header json object to describe this output file
 		json_object_object_add(obj, "type", json_object_new_string("header"));
 		json_object_object_add(obj, "log_level", json_object_new_int(conf->log_level));
@@ -81,7 +81,7 @@ int json_output_file_init(struct state_conf *conf, UNUSED char **fields, UNUSED 
 				json_object_new_string(((probe_module_t *)conf->probe_module)->name));
 		json_object_object_add(obj, "output_module",
 				json_object_new_string(((output_module_t *)conf->output_module)->name));
-		
+
 		if (conf->probe_args) {
 			json_object_object_add(obj, "probe_args",
 				json_object_new_string(conf->probe_args));
@@ -113,7 +113,7 @@ int json_output_file_init(struct state_conf *conf, UNUSED char **fields, UNUSED 
 		json_object_object_add(obj, "output_filename",
 				json_object_new_string(conf->output_filename));
 		if (conf->blacklist_filename) json_object_object_add(obj,
-				"blacklist_filename", 
+				"blacklist_filename",
 				json_object_new_string(conf->blacklist_filename));
 		if (conf->whitelist_filename) json_object_object_add(obj, "whitelist_filename", json_object_new_string(conf->whitelist_filename));
 		json_object_object_add(obj, "dryrun", json_object_new_int(conf->dryrun));
@@ -126,7 +126,7 @@ int json_output_file_init(struct state_conf *conf, UNUSED char **fields, UNUSED 
 	return EXIT_SUCCESS;
 }
 
-static void json_output_file_store_data(json_object *obj, const u_char *packet, size_t buflen) 
+static void json_output_file_store_data(json_object *obj, const u_char *packet, size_t buflen)
 {
 	unsigned int i;
 	char *buf;
@@ -139,7 +139,7 @@ static void json_output_file_store_data(json_object *obj, const u_char *packet, 
 	json_object_object_add(obj, "data", json_object_new_string(buf));
 	json_object_object_add(obj, "length", json_object_new_int(buflen));
 	free(buf);
-} 
+}
 
 int json_output_file_ip(fieldset_t *fs)
 {
@@ -158,7 +158,7 @@ int json_output_file_ip(fieldset_t *fs)
 					json_object_new_int((int) f->value.num));
 		} else if (f->type == FS_BINARY) {
 			json_output_file_store_data(obj,
-					(const u_char*) f->value.ptr, f->len); 
+					(const u_char*) f->value.ptr, f->len);
 		} else if (f->type == FS_NULL) {
 			// do nothing
 		} else {
@@ -173,7 +173,7 @@ int json_output_file_ip(fieldset_t *fs)
 	return EXIT_SUCCESS;
 }
 
-int json_output_file_close(UNUSED struct state_conf* c, 
+int json_output_file_close(UNUSED struct state_conf* c,
 		UNUSED struct state_send* s, UNUSED struct state_recv* r)
 {
 	if (file) {

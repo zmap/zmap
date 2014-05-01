@@ -28,7 +28,7 @@ int get_socket(void)
 		if (bpf != -1 || errno != EBUSY)
 			break;
 	}
-	
+
 	// Make sure it worked
 	if (bpf < 0)
 		return -1;

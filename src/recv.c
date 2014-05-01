@@ -1,6 +1,6 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -187,16 +187,16 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 	// initialize paged bitmap
 	seen = pbm_init();
 	if (zconf.filter_duplicates) {
-		log_debug("recv", "duplicate responses will be excluded from output"); 
+		log_debug("recv", "duplicate responses will be excluded from output");
 	} else {
-		log_debug("recv", "duplicate responses will be included in output"); 
+		log_debug("recv", "duplicate responses will be included in output");
 	}
 	if (zconf.filter_unsuccessful) {
-		log_debug("recv", "unsuccessful responses will be excluded from output"); 
+		log_debug("recv", "unsuccessful responses will be excluded from output");
 	} else {
-		log_debug("recv", "unsuccessful responses will be included in output"); 
+		log_debug("recv", "unsuccessful responses will be included in output");
 	}
-	
+
 	pthread_mutex_lock(recv_ready_mutex);
 	zconf.recv_ready = 1;
 	pthread_mutex_unlock(recv_ready_mutex);
@@ -204,7 +204,7 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 	if (zconf.max_results == 0) {
 		zconf.max_results = -1;
 	}
-	
+
 	do {
 		if (zconf.dryrun) {
 			sleep(1);

@@ -80,7 +80,7 @@ static __attribute__((unused)) uint16_t tcp_checksum(unsigned short len_tcp,
 static __attribute__((unused)) inline int check_dst_port(uint16_t port,
 				int num_ports, uint32_t *validation)
 {
-	if (port > zconf.source_port_last 
+	if (port > zconf.source_port_last
 					|| port < zconf.source_port_first) {
 		return -1;
 	}
@@ -91,7 +91,7 @@ static __attribute__((unused)) inline int check_dst_port(uint16_t port,
 	return (((max - min) % num_ports) >= ((to_validate - min) % num_ports));
 }
 
-static __attribute__((unused)) inline uint16_t get_src_port(int num_ports, 
+static __attribute__((unused)) inline uint16_t get_src_port(int num_ports,
 				int probe_num, uint32_t *validation)
 {
 	return zconf.source_port_first + ((validation[1] + probe_num) % num_ports);

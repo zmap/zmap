@@ -1,6 +1,6 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -119,8 +119,8 @@ iterator_t* send_init(void)
 	// concert specified bandwidth to packet rate
 	if (zconf.bandwidth > 0) {
 		int pkt_len = zconf.probe_module->packet_length;
-		pkt_len *= 8;	
-		pkt_len += 8*24;	// 7 byte MAC preamble, 1 byte Start frame, 
+		pkt_len *= 8;
+		pkt_len += 8*24;	// 7 byte MAC preamble, 1 byte Start frame,
 		                        // 4 byte CRC, 12 byte inter-frame gap
 		if (pkt_len < 84*8) {
 			pkt_len = 84*8;
@@ -157,7 +157,7 @@ iterator_t* send_init(void)
 	// initialize random validation key
 	validate_init();
 
-	zsend.start = now();	
+	zsend.start = now();
 	return it;
 }
 
@@ -166,7 +166,7 @@ static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
 	if (srcip_first == srcip_last) {
 		return srcip_first;
 	}
-	return htonl(((ntohl(dst) + srcip_offset + local_offset) 
+	return htonl(((ntohl(dst) + srcip_offset + local_offset)
 			% num_src_addrs)) + srcip_first;
 }
 
@@ -217,7 +217,7 @@ int send_run(int sock, shard_t *s)
 					      zconf.target_port);
 	}
 	pthread_mutex_unlock(&send_mutex);
-	
+
 	// adaptive timing to hit target rate
 	uint32_t count = 0;
 	uint32_t last_count = count;
@@ -244,7 +244,7 @@ int send_run(int sock, shard_t *s)
 				;
 			if (!interval || (count % interval == 0)) {
 				double t = now();
-				delay *= (double)(count - last_count) 
+				delay *= (double)(count - last_count)
 					/ (t - last_time) / (zconf.rate / zconf.senders);
 				if (delay < 1)
 					delay = 1;

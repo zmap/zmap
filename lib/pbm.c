@@ -26,7 +26,7 @@ static inline int bm_check(uint8_t *bm, uint16_t v)
 	return bm[page_idx] & (1 << bit_idx);
 }
 
-static inline void bm_set(uint8_t *bm, uint16_t v) 
+static inline void bm_set(uint8_t *bm, uint16_t v)
 {
 	uint16_t page_idx = (v >> 3);
 	uint8_t bit_idx = (uint8_t) (v & 0x07);

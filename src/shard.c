@@ -9,8 +9,8 @@
 #include "state.h"
 
 
-void shard_init(shard_t* shard, 
-		uint8_t shard_id, 
+void shard_init(shard_t* shard,
+		uint8_t shard_id,
 		uint8_t num_shards,
 		uint8_t sub_id,
 		uint8_t num_subshards,

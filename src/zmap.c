@@ -1,6 +1,6 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -56,24 +56,24 @@ pthread_mutex_t recv_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // splits comma delimited string into char*[]. Does not handle
 // escaping or complicated setups: designed to process a set
-// of fields that the user wants output 
+// of fields that the user wants output
 static void split_string(char* in, int *len, char***results)
 {
 	char** fields = xcalloc(MAX_FIELDS, sizeof(char*));
 	int retvlen = 0;
-	char *currloc = in; 
+	char *currloc = in;
 	// parse csv into a set of strings
 	while (1) {
-		size_t len = strcspn(currloc, ", ");    
+		size_t len = strcspn(currloc, ", ");
 		if (len == 0) {
 			currloc++;
 		} else {
 			char *new = xmalloc(len+1);
 			strncpy(new, currloc, len);
-			new[len] = '\0';	     
+			new[len] = '\0';
 			fields[retvlen++] = new;
 			assert(fields[retvlen-1]);
-		}   
+		}
 		if (len == strlen(currloc)) {
 			break;
 		}
@@ -88,9 +88,9 @@ static void split_string(char* in, int *len, char***results)
 void fprintw(FILE *f, char *s, size_t w)
 {
 	if (strlen(s) <= w) {
-		fprintf(f, "%s", s); 
+		fprintf(f, "%s", s);
 		return;
-	}   
+	}
 	// process each line individually in order to
 	// respect existing line breaks in string.
 	char *news = strdup(s);
@@ -100,7 +100,7 @@ void fprintw(FILE *f, char *s, size_t w)
 			printf("%s\n", pch);
 			pch = strtok(NULL, "\n");
 			continue;
-		}   
+		}
 		char *t = pch;
 		while (strlen(t)) {
 			size_t numchars = 0; //number of chars to print
@@ -108,7 +108,7 @@ void fprintw(FILE *f, char *s, size_t w)
 			while (1) {
 				size_t new = strcspn(tmp, " ") + 1;
 				if (new == strlen(tmp) || new > w) {
-					// there are no spaces in the string, so, just 
+					// there are no spaces in the string, so, just
 					// print the entire thing on one line;
 					numchars += new;
 					break;
@@ -119,16 +119,16 @@ void fprintw(FILE *f, char *s, size_t w)
 				} else {
 					tmp += (size_t) new;
 					numchars += new;
-				}   
-			}   
-			fprintf(f, "%.*s\n", (int) numchars, t); 
+				}
+			}
+			fprintf(f, "%.*s\n", (int) numchars, t);
 			t += (size_t) numchars;
 			if (t > pch + (size_t)strlen(pch)) {
 				break;
-			}   
-		}   
+			}
+		}
 		pch = strtok(NULL, "\n");
-	}   
+	}
 	free(news);
 }
 
@@ -169,7 +169,7 @@ static void set_cpu(void)
 	pthread_mutex_lock(&cpu_affinity_mutex);
 	static int core=0;
 	int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
-	cpu_set_t cpuset;	
+	cpu_set_t cpuset;
 	CPU_ZERO(&cpuset);
 	CPU_SET(core, &cpuset);
 
@@ -217,7 +217,7 @@ static void drop_privs()
 			return; // success
 		}
 	}
-	log_fatal("zmap", "Couldn't change UID to 'nobody'");		
+	log_fatal("zmap", "Couldn't change UID to 'nobody'");
 }
 
 typedef struct mon_start_arg {
@@ -317,7 +317,7 @@ static void json_metadata(FILE *file)
 			log_error("json-metadata", "unable to retrieve complete hostname");
 		}
 	}
-	
+
 	json_object_object_add(obj, "target-port",
 			json_object_new_int(zconf.target_port));
 	json_object_object_add(obj, "source-port-first",
@@ -366,7 +366,7 @@ static void json_metadata(FILE *file)
 			json_object_new_string(((probe_module_t *)zconf.probe_module)->name));
 	json_object_object_add(obj, "output-module",
 			json_object_new_string(((output_module_t *)zconf.output_module)->name));
-	
+
 	json_object_object_add(obj, "send-start-time",
 			json_object_new_string(send_start_time));
 	json_object_object_add(obj, "send-end-time",
@@ -388,7 +388,7 @@ static void json_metadata(FILE *file)
 
 	if (zconf.destination_cidrs_len) {
 		json_object *cli_dest_cidrs = json_object_new_array();
-		for (int i=0; i < zconf.destination_cidrs_len; i++) { 
+		for (int i=0; i < zconf.destination_cidrs_len; i++) {
 			json_object_array_add(cli_dest_cidrs, json_object_new_string(zconf.destination_cidrs[i]));
 		}
 		json_object_object_add(obj, "cli-cidr-destinations",
@@ -448,7 +448,7 @@ static void json_metadata(FILE *file)
 	}
 	if (zconf.blacklist_filename) {
 		json_object_object_add(obj,
-			"blacklist-filename", 
+			"blacklist-filename",
 			json_object_new_string(zconf.blacklist_filename));
 	}
 	if (zconf.whitelist_filename) {
@@ -521,9 +521,9 @@ static void start_zmap(void)
 					" Try setting default gateway mac address (-G).",
 					zconf.iface);
 		}
-		log_debug("zmap", "found gateway IP %s on %s", inet_ntoa(gw_ip), zconf.iface); 
+		log_debug("zmap", "found gateway IP %s on %s", inet_ntoa(gw_ip), zconf.iface);
 		zconf.gw_ip = gw_ip.s_addr;
-		
+
 		if (get_hw_addr(&gw_ip, zconf.iface, zconf.gw_mac)) {
 			log_fatal("zmap", "could not detect GW MAC address for %s on %s."
 					" Try setting default gateway mac address (-G), or run"
@@ -757,7 +757,7 @@ int main(int argc, char *argv[])
 	// specified and then map these into new-style output modules and warn
 	// users that they need to be switching to the new module interface.
 
-	// zmap's default behavior is to provide a simple file of the unique IP 
+	// zmap's default behavior is to provide a simple file of the unique IP
 	// addresses that responded successfully.
 	if (!strcmp(args.output_module_arg, "default")) {
 		log_debug("zmap", "no output module provided. will use csv.");
@@ -769,7 +769,7 @@ int main(int argc, char *argv[])
 		log_warn("zmap", "the simple_file output interface has been deprecated and "
 				 "will be removed in the future. Users should use the csv "
 				 "output module. Newer scan options such as output-fields "
-				 "are not supported with this output module."); 
+				 "are not supported with this output module.");
 		zconf.output_module = get_output_module_by_name("csv");
 		zconf.raw_output_fields = (char*) "saddr";
 		zconf.filter_duplicates = 1;
@@ -778,7 +778,7 @@ int main(int argc, char *argv[])
 		log_warn("zmap", "the extended_file output interface has been deprecated and "
 				 "will be removed in the future. Users should use the csv "
 				 "output module. Newer scan options such as output-fields "
-				 "are not supported with this output module."); 
+				 "are not supported with this output module.");
 		zconf.output_module = get_output_module_by_name("csv");
 		zconf.raw_output_fields = (char*) "classification, saddr, "
 						  "daddr, sport, dport, "
@@ -889,7 +889,7 @@ int main(int argc, char *argv[])
 	}
 	// find the fields we need for the framework
 	zconf.fsconf.success_index =
-			fds_get_index_by_name(fds, (char*) "success");	
+			fds_get_index_by_name(fds, (char*) "success");
 	if (zconf.fsconf.success_index < 0) {
 		log_fatal("fieldset", "probe module does not supply "
 				      "required success field.");
@@ -905,7 +905,7 @@ int main(int argc, char *argv[])
 		zconf.raw_output_fields = args.output_fields_arg;
 	} else if (!zconf.raw_output_fields) {
 		zconf.raw_output_fields = (char*) "saddr";
-	}	
+	}
 	if (!strcmp(zconf.raw_output_fields, "*")) {
 		zconf.output_fields_len = zconf.fsconf.defs.len;
 		zconf.output_fields = xcalloc(zconf.fsconf.defs.len, sizeof(char*));
@@ -914,8 +914,6 @@ int main(int argc, char *argv[])
 		}
 		fs_generate_full_fieldset_translation(&zconf.fsconf.translation,
 				&zconf.fsconf.defs);
-
-		
 	} else {
 		split_string(zconf.raw_output_fields, &(zconf.output_fields_len),
 				&(zconf.output_fields));
@@ -960,7 +958,7 @@ int main(int argc, char *argv[])
 
 	if (args.metadata_file_arg) {
 #ifdef JSON
-		zconf.metadata_filename = args.metadata_file_arg;				
+		zconf.metadata_filename = args.metadata_file_arg;
 		if (!strcmp(zconf.metadata_filename, "-")) {
 			zconf.metadata_file = stdout;
 		} else {
@@ -977,7 +975,6 @@ int main(int argc, char *argv[])
 #endif
 	}
 
-
 	// find if zmap wants any specific cidrs scanned instead
 	// of the entire Internet
 	zconf.destination_cidrs = args.inputs;
@@ -991,7 +988,7 @@ int main(int argc, char *argv[])
 				"editing the default ZMap configuration at /etc/zmap/zmap.conf.");
 	}
 	SET_IF_GIVEN(zconf.whitelist_filename, whitelist_file);
-	
+
 	if (zconf.probe_module->port_args) {
 		if (args.source_port_given) {
 			char *dash = strchr(args.source_port_arg, '-');
@@ -1033,7 +1030,7 @@ int main(int argc, char *argv[])
 	}
 	if (args.gateway_mac_given) {
 		if (!parse_mac(zconf.gw_mac, args.gateway_mac_arg)) {
-			fprintf(stderr, "%s: invalid MAC address `%s'\n", 
+			fprintf(stderr, "%s: invalid MAC address `%s'\n",
 				CMDLINE_PARSER_PACKAGE, args.gateway_mac_arg);
 			exit(EXIT_FAILURE);
 		}
@@ -1063,7 +1060,7 @@ int main(int argc, char *argv[])
 	SET_IF_GIVEN(zconf.total_shards, shards);
 	if (zconf.shard_num >= zconf.total_shards) {
 		log_fatal("zmap", "With %hhu total shards, shard number (%hhu)"
-			  " must be in range [0, %hhu)", zconf.total_shards, 
+			  " must be in range [0, %hhu)", zconf.total_shards,
 			  zconf.shard_num, zconf.total_shards);
 	}
 

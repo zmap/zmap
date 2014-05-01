@@ -1,11 +1,11 @@
 /*
- * Blacklist Copyright 2013 Regents of the University of Michigan 
- * 
+ * Blacklist Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
- 
+
 #include "blacklist.h"
 
 #include <errno.h>
@@ -82,9 +82,9 @@ static void _add_constraint(struct in_addr addr, int prefix_len, int value)
 	constraint_set(constraint, ntohl(addr.s_addr), prefix_len, value);
 	const char *name = (value == ADDR_DISALLOWED) ? "blacklisting" : "whitelisting";
 	if (value == ADDR_ALLOWED) {
-		bl_ll_add(whitelisted_cidrs, addr, prefix_len); 
+		bl_ll_add(whitelisted_cidrs, addr, prefix_len);
 	} else if (value == ADDR_DISALLOWED) {
-		bl_ll_add(blacklisted_cidrs, addr, prefix_len); 
+		bl_ll_add(blacklisted_cidrs, addr, prefix_len);
 	} else {
 		log_fatal("blacklist", "unknown type of blacklist operation specified");
 	}
@@ -116,11 +116,11 @@ static int init_from_string(char *ip, int value)
 {
 	int prefix_len = 32;
 	char *slash = strchr(ip, '/');
-	if (slash) {  // split apart network and prefix length 
+	if (slash) {  // split apart network and prefix length
 		*slash = '\0';
 		char *end;
 		char *len = slash+1;
-		errno = 0;			
+		errno = 0;
 		prefix_len = strtol(len, &end, 10);
 		if (end == len || errno != 0 || prefix_len < 0 || prefix_len > 32) {
 			log_fatal("constraint", "'%s' is not a valid prefix length", len);
@@ -252,7 +252,7 @@ int blacklist_init(char *whitelist_filename, char *blacklist_filename,
 	constraint_paint_value(constraint, ADDR_ALLOWED);
 	uint64_t allowed = blacklist_count_allowed();
 	log_debug("constraint", "%lu addresses (%0.0f%% of address "
-			"space) can be scanned", 
+			"space) can be scanned",
 			allowed, allowed*100./((long long int)1 << 32));
 	if (!allowed) {
 		log_error("blacklist", "no addresses are eligible to be scanned in the "
