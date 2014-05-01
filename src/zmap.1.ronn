@@ -7,9 +7,7 @@ zmap [ -p &lt;port> ] [ -o &lt;outfile&gt; ] [ OPTIONS... ] [ ip/hostname/range 
 
 ## DESCRIPTION
 
-*ZMap* is a network tool for scanning the entire Internet (or large samples).
-ZMap is capable of scanning the entire Internet in around 45 minutes on a
-gigabit network connection, reaching ~98% theoretical line speed.
+*ZMap* is a network tool for scanning the entire Internet (or large samples). ZMap is capable of scanning the entire Internet in around 45 minutes on a gigabit network connection, reaching ~98% theoretical line speed.
 
 ## OPTIONS
 
@@ -154,10 +152,5 @@ fields, and write filters over the output fields.
    * `-V`, `--version`:
      Print version and exit
 
-## AUTHORS
 
-ZMap is an original work by Zakir Durumeric, Eric Wustrow, and J. Alex
-Halderman at the University of Michigan. David Adrian fixed many bugs, added
-new features and maintained ZMap after release. HD Moore contributed the
-original JSON and UDP modules.
 
