@@ -31,7 +31,6 @@ SET(LIB_SOURCES
 
 # ADD YOUR PROBE MODULE HERE
 SET(EXTRA_PROBE_MODULES
-
 	)
 
 # ADD YOUR OUTPUT MODULE HERE
@@ -47,6 +46,7 @@ SET(PROBE_MODULE_SOURCES
 	probe_modules/module_icmp_echo.c
 	probe_modules/module_tcp_synscan.c
 	probe_modules/module_udp.c
+	probe_modules/module_udp_dns.c
 	probe_modules/packet.c
 	probe_modules/probe_modules.c
 	)
@@ -109,7 +109,7 @@ else()
 endif()
 
 target_link_libraries(
-	zmap 
+	zmap
 	pcap gmp m
 	${DNET_LIBRARIES}
 	${REDIS_LIBS}
