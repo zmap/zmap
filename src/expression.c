@@ -13,7 +13,7 @@ static int eval_lt_eq_node(node_t *node, fieldset_t *fields);
 static int eval_gt_eq_node(node_t *node, fieldset_t *fields);
 
 
-static node_t* alloc_node() 
+static node_t* alloc_node()
 {
 	node_t *node = xmalloc(sizeof(node_t));
 	return node;
@@ -69,7 +69,7 @@ static int eval_gt_eq_node(node_t *node, fieldset_t *fields)
 
 /* Exposed functions */
 
-node_t* make_op_node(enum operation op) 
+node_t* make_op_node(enum operation op)
 {
 	node_t* node = alloc_node();
 	node->type = OP;
@@ -77,7 +77,7 @@ node_t* make_op_node(enum operation op)
 	return node;
 }
 
-node_t* make_field_node(char *fieldname) 
+node_t* make_field_node(char *fieldname)
 {
 	node_t *node = alloc_node();
 	node->type = FIELD;
@@ -126,11 +126,11 @@ int evaluate_expression(node_t *root, fieldset_t *fields)
 	case GT_EQ:
 		return eval_gt_eq_node(root, fields);
 	case AND:
-		return (evaluate_expression(root->left_child, fields) 
+		return (evaluate_expression(root->left_child, fields)
 			&& evaluate_expression(root->right_child, fields));
 	case OR:
-		return (evaluate_expression(root->left_child, fields) 
-			|| evaluate_expression(root->right_child, fields));	
+		return (evaluate_expression(root->left_child, fields)
+			|| evaluate_expression(root->right_child, fields));
 	}
 	return 0;
 }

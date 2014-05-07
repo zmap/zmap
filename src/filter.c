@@ -23,7 +23,7 @@ static int validate_node(node_t *node, fielddefset_t *fields)
 		// Validate that the field (left child) exists in the fieldset
 		for (index = 0; index < fields->len; index++) {
 			if (fields->fielddefs[index].name) {
-				if (strcmp(fields->fielddefs[index].name, 
+				if (strcmp(fields->fielddefs[index].name,
 						node->left_child->value.field.fieldname) == 0) {
 					node->left_child->value.field.index = index;
 					found = 1;
@@ -32,7 +32,7 @@ static int validate_node(node_t *node, fielddefset_t *fields)
 			}
 		}
 		if (!found) {
-			fprintf(stderr, "Field '%s' does not exist\n", 
+			fprintf(stderr, "Field '%s' does not exist\n",
 					node->left_child->value.field.fieldname);
 			return 0;
 		}
@@ -42,7 +42,7 @@ static int validate_node(node_t *node, fielddefset_t *fields)
 			if (strcmp(fields->fielddefs[index].type, "string") == 0) {
 				return 1;
 			} else {
-				fprintf(stderr, "Field '%s' is not of type 'string'\n", 
+				fprintf(stderr, "Field '%s' is not of type 'string'\n",
 						fields->fielddefs[index].name);
 				return 0;
 			}
@@ -50,7 +50,7 @@ static int validate_node(node_t *node, fielddefset_t *fields)
 			if (strcmp(fields->fielddefs[index].type, "int") == 0) {
 				return 1;
 			} else {
-				fprintf(stderr, "Field '%s' is not of type 'int'\n", 
+				fprintf(stderr, "Field '%s' is not of type 'int'\n",
 						fields->fielddefs[index].name);
 				return 0;
 			}

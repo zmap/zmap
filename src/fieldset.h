@@ -1,6 +1,6 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -58,7 +58,7 @@ typedef struct fieldset {
 	field_t fields[MAX_FIELDS];
 } fieldset_t;
 
-// we pass a different fieldset to an output module than 
+// we pass a different fieldset to an output module than
 // the probe module generates for us because a user may
 // only want certain fields and will expect them in a certain
 // order. We generate a translated fieldset that contains
@@ -102,7 +102,7 @@ uint64_t fs_get_uint64_by_index(fieldset_t *fs, int index);
 
 void fs_free(fieldset_t *fs);
 
-void fs_generate_fieldset_translation(translation_t *t, 
+void fs_generate_fieldset_translation(translation_t *t,
 		fielddefset_t *avail, char** req, int reqlen);
 
 fieldset_t *translate_fieldset(fieldset_t *fs, translation_t *t);

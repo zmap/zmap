@@ -18,7 +18,7 @@ typedef int (*probe_make_packet_cb)(void* packetbuf, ipaddr_n_t src_ip,
 		uint32_t *validation, int probe_num);
 
 typedef void (*probe_print_packet_cb)(FILE *, void* packetbuf);
-typedef int (*probe_close_cb)(struct state_conf*, 
+typedef int (*probe_close_cb)(struct state_conf*,
 		struct state_send*, struct state_recv*);
 typedef int (*probe_validate_packet_cb)(const struct ip *ip_hdr,
 		uint32_t len, uint32_t *src_ip, uint32_t *validation);

@@ -1,6 +1,6 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -19,7 +19,7 @@ typedef int (*output_init_cb)(struct state_conf *, char **fields, int fieldslen)
 typedef int (*output_packet_cb)(fieldset_t *fs);
 
 // called periodically during the scan
-typedef int (*output_update_cb)(struct state_conf*, 
+typedef int (*output_update_cb)(struct state_conf*,
 		struct state_send*, struct state_recv*);
 
 typedef struct output_module {

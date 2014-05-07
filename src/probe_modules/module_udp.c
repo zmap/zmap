@@ -1,6 +1,6 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -16,6 +16,7 @@
 #include <assert.h>
 
 #include "../../lib/includes.h"
+#include "../../lib/xalloc.h"
 #include "probe_modules.h"
 #include "packet.h"
 #include "logger.h"
@@ -26,7 +27,7 @@
 static char *udp_send_msg = NULL;
 static int udp_send_msg_len = 0;
 
-static const char *udp_send_msg_default = "GET / HTTP/1.1\r\nHost: www\r\n\r\n"; 
+static const char *udp_send_msg_default = "GET / HTTP/1.1\r\nHost: www\r\n\r\n";
 
 const char *udp_unreach_strings[] = {
 	"network unreachable",
@@ -68,9 +69,9 @@ static int udp_global_initialize(struct state_conf *conf) {
 	udp_send_msg = strdup(udp_send_msg_default);
 	udp_send_msg_len = strlen(udp_send_msg);
 
-	if (!(conf->probe_args && strlen(conf->probe_args) > 0)) 
+	if (!(conf->probe_args && strlen(conf->probe_args) > 0))
 		return(0);
-	
+
 	args = strdup(conf->probe_args);
 	if (! args) exit(1);
 
@@ -99,24 +100,14 @@ static int udp_global_initialize(struct state_conf *conf) {
 			exit(1);
 		}
 		free(udp_send_msg);
-		udp_send_msg = malloc(MAX_UDP_PAYLOAD_LEN);
-		if (! udp_send_msg) {
-			free(args);
-			log_fatal("udp", "failed to malloc payload buffer");
-			exit(1);
-		}
+		udp_send_msg = xmalloc(MAX_UDP_PAYLOAD_LEN);
 		udp_send_msg_len = fread(udp_send_msg, 1, MAX_UDP_PAYLOAD_LEN, inp);
 		fclose(inp);
 
 	} else if (strcmp(args, "hex") == 0) {
 		udp_send_msg_len = strlen(c) / 2;
 		free(udp_send_msg);
-		udp_send_msg = malloc(udp_send_msg_len);
-		if (! udp_send_msg) {
-			free(args);
-			log_fatal("udp", "failed to malloc payload buffer");
-			exit(1);
-		}
+		udp_send_msg = xmalloc(udp_send_msg_len);
 
 		for (i=0; i < udp_send_msg_len; i++) {
 			if (sscanf(c + (i*2), "%2x", &n) != 1) {
@@ -138,7 +129,7 @@ static int udp_global_initialize(struct state_conf *conf) {
 
 	if (udp_send_msg_len > MAX_UDP_PAYLOAD_LEN) {
 		log_warn("udp", "warning: reducing UDP payload to %d "
-			        "bytes (from %d) to fit on the wire\n", 
+			        "bytes (from %d) to fit on the wire\n",
 				MAX_UDP_PAYLOAD_LEN, udp_send_msg_len);
 		udp_send_msg_len = MAX_UDP_PAYLOAD_LEN;
 	}
@@ -173,7 +164,7 @@ int udp_init_perthread(void* buf, macaddr_t *src,
 
 	char* payload = (char*)(&udp_header[1]);
 
-	module_udp.packet_length = sizeof(struct ether_header) + sizeof(struct ip) 
+	module_udp.packet_length = sizeof(struct ether_header) + sizeof(struct ip)
 				+ sizeof(struct udphdr) + udp_send_msg_len;
 	assert(module_udp.packet_length <= MAX_PACKET_SIZE);
 
@@ -182,7 +173,7 @@ int udp_init_perthread(void* buf, macaddr_t *src,
 	return EXIT_SUCCESS;
 }
 
-int udp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip, 
+int udp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 		uint32_t *validation, int probe_num)
 {
 	struct ether_header *eth_header = (struct ether_header *) buf;
@@ -227,7 +218,12 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
-		fs_add_binary(fs, "data", (ntohs(udp->uh_ulen) - sizeof(struct udphdr)), (void*) &udp[1], 0);
+		// Verify that the UDP length is big enough for the header and at least one byte
+		if (ntohs(udp->uh_ulen) > sizeof(struct udphdr))
+			fs_add_binary(fs, "data", (ntohs(udp->uh_ulen) - sizeof(struct udphdr)), (void*) &udp[1], 0);
+		// Some devices reply with a zero UDP length but still return data, ignore these
+		else fs_add_null(fs, "data");
+
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
 		struct ip *ip_inner = (struct ip *) &icmp[1];
@@ -242,7 +238,7 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 		fs_add_uint64(fs, "icmp_type", icmp->icmp_type);
 		fs_add_uint64(fs, "icmp_code", icmp->icmp_code);
 		if (icmp->icmp_code <= ICMP_UNREACH_PRECEDENCE_CUTOFF) {
-			fs_add_string(fs, "icmp_unreach_str", 
+			fs_add_string(fs, "icmp_unreach_str",
 				(char *) udp_unreach_strings[icmp->icmp_code], 0);
 		} else {
 			fs_add_string(fs, "icmp_unreach_str", (char *) "unknown", 0);
@@ -261,13 +257,13 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 	}
 }
 
-int udp_validate_packet(const struct ip *ip_hdr, uint32_t len, 
+int udp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		__attribute__((unused))uint32_t *src_ip, uint32_t *validation)
 {
 	uint16_t dport, sport;
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		if ((4*ip_hdr->ip_hl + sizeof(struct udphdr)) > len) {
-			// buffer not large enough to contain expected udp header 
+			// buffer not large enough to contain expected udp header
 			return 0;
 		}
 		struct udphdr *udp = (struct udphdr*) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
