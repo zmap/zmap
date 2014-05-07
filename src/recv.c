@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <assert.h>
+#include <time.h>
 
 #include <pcap.h>
 #include <pcap/pcap.h>
@@ -152,6 +153,32 @@ int recv_update_pcap_stats(void)
 	return EXIT_SUCCESS;
 }
 
+void msleep(unsigned long milisec)
+{
+	struct timespec ts = {0};
+	ts.tv_sec = milisec / 1000;
+	ts.tv_nsec = (milisec % 1000) * 1000L;
+	
+	/* we sleep until the time requested has passed */
+	while(nanosleep(&ts,&ts) == -1)
+		continue;
+}
+
+void *start_waiting_loop(void *arg) {
+	unsigned long wakeup_timeout = PCAP_TIMEOUT * 0.9;
+	while (!(zsend.complete && (now() - zsend.finish > zconf.cooldown_secs))
+		&& !(zconf.max_results && zrecv.success_unique >= zconf.max_results)) {
+		msleep(wakeup_timeout);
+	}
+
+	if (!zconf.dryrun) {
+		pcap_t *pc = (pcap_t *) arg;
+		pcap_breakloop(pc);
+	}
+
+	return NULL;
+}
+
 int recv_run(pthread_mutex_t *recv_ready_mutex)
 {
 	log_trace("recv", "recv thread started");
@@ -172,12 +199,6 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 		if (pcap_setfilter(pc, &bpf) < 0) {
 			log_fatal("recv", "couldn't install filter");
 		}
-		// set pcap_dispatch to not hang if it never receives any packets
-		// this could occur if you ever scan a small number of hosts as
-		// documented in issue #74.
-		if (pcap_setnonblock (pc, 1, errbuf) == -1) {
-			log_fatal("recv", "pcap_setnonblock error:%s", errbuf);
-		}
 	}
 	if (zconf.send_ip_pkts) {
 		struct ether_header *eth = (struct ether_header *) fake_eth_hdr;
@@ -196,6 +217,14 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 	} else {
 		log_debug("recv", "unsuccessful responses will be included in output");
 	}
+	
+	if (!zconf.dryrun) {
+		pthread_t tloop;
+		int r = pthread_create(&tloop, NULL, start_waiting_loop, pc);
+		if (r != 0) {
+			log_fatal("recv", "unable to create waiting thread");
+		}
+	}
 
 	pthread_mutex_lock(recv_ready_mutex);
 	zconf.recv_ready = 1;
@@ -205,18 +234,15 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 		zconf.max_results = -1;
 	}
 
-	do {
-		if (zconf.dryrun) {
-			sleep(1);
-		} else {
-			if (pcap_dispatch(pc, -1, packet_cb, NULL) == -1) {
-				log_fatal("recv", "pcap_dispatch error");
-			}
-			if (zconf.max_results && zrecv.success_unique >= zconf.max_results) {
-				break;
-			}
+	if (zconf.dryrun) {
+		start_waiting_loop(NULL);
+	} else {
+		int r = pcap_loop(pc, -1, packet_cb, NULL);
+		if (r == -1) {
+			log_fatal("recv", "pcap_dispatch error");
 		}
-	} while (!(zsend.complete && (now()-zsend.finish > zconf.cooldown_secs)));
+	}
+
 	zrecv.finish = now();
 	// get final pcap statistics before closing
 	recv_update_pcap_stats();
