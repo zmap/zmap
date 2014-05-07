@@ -132,7 +132,6 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 		double remaining_secs = compute_remaining_time(age, total_sent);
 		double percent_complete = 100.*age/(age + remaining_secs);
 
-
 		// ask pcap for fresh values
 		pthread_mutex_lock(recv_ready_mutex);
 		recv_update_pcap_stats();
@@ -144,7 +143,7 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 			time_left[0] = '\0';
 		} else {
 			char buf[20];
-			time_string((int)remaining_secs, 1, buf, sizeof(buf));
+			time_string(ceil(remaining_secs), 1, buf, sizeof(buf));
 			snprintf(time_left, sizeof(time_left), " (%s left)", buf);
 		}
 		char time_past[20];
