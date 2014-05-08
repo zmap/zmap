@@ -264,7 +264,7 @@ void udp_dns_print_packet(FILE *fp, void* packet)
 void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *fs)
 {
 	int app_success;
-	log_debug("udp_dns", "dns_process_packet");
+	//log_debug("udp_dns", "dns_process_packet");
 	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		//log_debug("udp_dns", "dns_process_packet - start udp pkt");
