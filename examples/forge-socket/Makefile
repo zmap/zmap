@@ -15,7 +15,7 @@ LDFLAGS+=$(LDHARDENING)
 
 all: forge-socket
 
-forge-socket: forge-socket.o logger.o
+forge-socket: forge-socket.o xalloc.o logger.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 clean:
