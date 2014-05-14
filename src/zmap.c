@@ -343,7 +343,7 @@ static void json_metadata(FILE *file)
 	json_object_object_add(obj, "senders", json_object_new_int(zconf.senders));
 	json_object_object_add(obj, "use-seed", json_object_new_int(zconf.use_seed));
 	json_object_object_add(obj, "seed", json_object_new_int(zconf.seed));
-	json_object_object_add(obj, "generator", json_object_new_int(zconf.generator));
+	json_object_object_add(obj, "generator", json_object_new_int64(zconf.generator));
 	json_object_object_add(obj, "hitrate", json_object_new_double(hitrate));
 	json_object_object_add(obj, "shard-num", json_object_new_int(zconf.shard_num));
 	json_object_object_add(obj, "total-shards", json_object_new_int(zconf.total_shards));
