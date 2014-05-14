@@ -54,6 +54,13 @@
 pthread_mutex_t cpu_affinity_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t recv_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+static int max(int a, int b) {
+	if (a >= b) {
+		return a;
+	}
+	return b;
+}
+
 // splits comma delimited string into char*[]. Does not handle
 // escaping or complicated setups: designed to process a set
 // of fields that the user wants output
@@ -945,7 +952,6 @@ int main(int argc, char *argv[])
 	SET_BOOL(zconf.quiet, quiet);
 	SET_BOOL(zconf.summary, summary);
 	zconf.cooldown_secs = args.cooldown_time_arg;
-	zconf.senders = args.sender_threads_arg;
 	SET_IF_GIVEN(zconf.output_filename, output_file);
 	SET_IF_GIVEN(zconf.blacklist_filename, blacklist_file);
 	SET_IF_GIVEN(zconf.probe_args, probe_args);
@@ -955,6 +961,18 @@ int main(int argc, char *argv[])
 	SET_IF_GIVEN(zconf.max_results, max_results);
 	SET_IF_GIVEN(zconf.rate, rate);
 	SET_IF_GIVEN(zconf.packet_streams, probes);
+
+	// Set the correct number of threads, default to num_cores - 1
+	if (args.sender_threads_given) {
+		zconf.senders = args.sender_threads_arg;
+	} else {
+		int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+		zconf.senders = max(num_cores - 1, 1);
+		if (!zconf.quiet) {
+			// If monitoring, save a core for the monitor thread
+			zconf.senders = max(zconf.senders - 1, 1);
+		}
+	}
 
 	if (args.metadata_file_arg) {
 #ifdef JSON
