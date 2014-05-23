@@ -29,7 +29,7 @@
 static char *udp_send_msg = NULL;
 static int udp_send_msg_len = 0;
 static int udp_send_substitutions = 0;
-static udp_payload_template_t *udp_template;
+static udp_payload_template_t *udp_template = NULL;
 
 static const char *udp_send_msg_default = "GET / HTTP/1.1\r\nHost: www\r\n\r\n";
 
@@ -194,8 +194,14 @@ int udp_global_cleanup(__attribute__((unused)) struct state_conf *zconf,
 {
 	if (udp_send_msg) {
 		free(udp_send_msg);
+		udp_send_msg = NULL;
 	}
-	udp_send_msg = NULL;
+
+	if (udp_template) {
+		udp_template_free(udp_template);
+		udp_template = NULL;
+	}
+
 	return EXIT_SUCCESS;
 }
 
