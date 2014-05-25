@@ -23,8 +23,10 @@ extern probe_module_t module_tcp_synscan;
 extern probe_module_t module_icmp_echo;
 extern probe_module_t module_udp;
 // ADD YOUR MODULE HERE
+extern probe_module_t module_udp_ntpmonlist;
 
 probe_module_t* probe_modules[] = {
+	&module_udp_ntpmonlist,
 	&module_tcp_synscan,
 	&module_icmp_echo,
 	&module_udp
