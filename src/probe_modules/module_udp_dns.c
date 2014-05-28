@@ -58,7 +58,7 @@ const char *udp_dns_response_strings[] = {
         "DNS nxdomain",
         "DNS query type not implemented",
         "DNS query refused",
-	"DNS invalid rcode"
+		"DNS invalid rcode"
 };
 
 static int num_ports;
@@ -271,9 +271,10 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 		struct udphdr *udp_hdr = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
 		struct dnshdr *dns_hdr = (struct dnshdr *) ((char *) udp_hdr + 8);
 
-		// success is 1 if is application level success 
-		// response pkt is an answer and response code is no error
-		app_success = (dns_hdr->qr == DNS_QR_ANSWER) && (dns_hdr->rcode == DNS_RCODE_NOERR);
+		// app_success is 1 if is application level success
+        // response pkt is an answer AND response code is no error AND tid=\xb0\x0b
+        // added tid check for more result confidence with dns response from src port other than 53
+        app_success = (dns_hdr->qr == DNS_QR_ANSWER) && (dns_hdr->rcode == DNS_RCODE_NOERR) && (dns_hdr->id == 0xb00b);
 
 		fs_add_string(fs, "classification", (char*) "udp_dns", 0);
 		fs_add_uint64(fs, "success", 1);
@@ -383,9 +384,12 @@ int udp_dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
         } else {
                 return 0;
         }
-        if (dport != zconf.target_port) {
-                return 0;
-        }
+		// remember sent perspective, switched sport/dport
+		// for dns answering from src port other than 53 following check is always true, so remove it
+		/*if (dport != zconf.target_port) {
+			return 0;
+		}*/
+
 	if (!check_dst_port(sport, num_ports, validation)) {
 		return 0;
 	}
