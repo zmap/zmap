@@ -1,6 +1,6 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -16,6 +16,7 @@
 #include <arpa/inet.h>
 
 #include "../../lib/logger.h"
+#include "../../lib/xalloc.h"
 #include "../../lib/redis.h"
 
 #include "output_modules.h"
@@ -31,8 +32,7 @@ static int field_index = -1;
 
 int redismodule_init(struct state_conf *conf, char **fields, int fieldlens)
 {
-	buffer = calloc(BUFFER_SIZE, sizeof(uint32_t));
-	assert(buffer);
+	buffer = xcalloc(BUFFER_SIZE, sizeof(uint32_t));
 	buffer_fill = 0;
 	for (int i=0; i < fieldlens; i++) {
 		if (!strcmp(fields[i], "saddr-raw")) {
@@ -44,11 +44,11 @@ int redismodule_init(struct state_conf *conf, char **fields, int fieldlens)
 		log_fatal("redis-module", "saddr-raw not included in output-fields");
 	}
 
-	if (conf->output_args) { 
+	if (conf->output_args) {
 		redisconf_t *rconf = redis_parse_connstr(conf->output_args);
 		if (rconf->type == T_TCP) {
 			log_info("redis-module", "{type: TCP, server: %s, "
-					"port: %u, list: %s}", rconf->server, 
+					"port: %u, list: %s}", rconf->server,
 					rconf->port, rconf->list_name);
 		} else {
 			log_info("redis-module", "{type: LOCAL, path: %s, "
@@ -83,7 +83,7 @@ int redismodule_process(fieldset_t *fs)
 	return EXIT_SUCCESS;
 }
 
-int redismodule_close(UNUSED struct state_conf* c, 
+int redismodule_close(UNUSED struct state_conf* c,
 		UNUSED struct state_send* s,
 		UNUSED struct state_recv* r)
 {

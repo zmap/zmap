@@ -1,6 +1,6 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -18,6 +18,7 @@
 
 #include "../lib/includes.h"
 #include "../lib/logger.h"
+#include "../lib/xalloc.h"
 
 #include <sys/ioctl.h>
 
@@ -53,13 +54,13 @@ int get_hw_addr(struct in_addr *gw_ip, UNUSED char *iface, unsigned char *hw_mac
 		log_error("get_hw_addr", "failed to open arp table");
 		return EXIT_FAILURE;
 	}
-	
+
 	// Convert gateway ip to dnet struct format
 	memset(&entry, 0, sizeof(struct arp_entry));
 	entry.arp_pa.addr_type = ADDR_TYPE_IP;
 	entry.arp_pa.addr_bits = IP_ADDR_BITS;
 	entry.arp_pa.addr_ip = gw_ip->s_addr;
-	
+
 	if (arp_get(arp, &entry) < 0) {
 		log_debug("get_hw_addr", "failed to fetch arp entry");
 		return EXIT_FAILURE;
@@ -80,21 +81,21 @@ int get_iface_ip(char *iface, struct in_addr *ip)
     if (getifaddrs(&ifaddr)) {
         log_fatal("get-iface-ip", "unable able to retrieve list of network interfaces: %s",
                         strerror(errno));
-    }   
+    }
     for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
         if (ifa->ifa_addr == NULL || ifa->ifa_addr->sa_family != AF_INET) {
             continue;
-        }   
+        }
         if (!strcmp(iface, ifa->ifa_name)) {
             struct sockaddr_in *sin = (struct sockaddr_in *)ifa->ifa_addr;
             ip->s_addr = sin->sin_addr.s_addr;
             log_debug("get-iface-ip", "ip address found for %s: %s",
                             iface, inet_ntoa(*ip));
             return EXIT_SUCCESS;
-        }   
-    }   
+        }
+    }
     log_fatal("get-iface-ip", "specified interface does not"
-                    " exist or have an IPv4 address"); 
+                    " exist or have an IPv4 address");
     return EXIT_FAILURE;
 }
 
@@ -130,7 +131,7 @@ int _get_default_gw(struct in_addr *gw, char **iface)
 	int fd = socket(PF_ROUTE, SOCK_RAW, 0);
 	assert (fd > 0);
 	if (!write(fd, (char*) rtm, sizeof(buf))) {
-		log_fatal("get-gateway", "unable to send request");	
+		log_fatal("get-gateway", "unable to send request");
 	}
 
 	size_t len;
@@ -155,15 +156,14 @@ int _get_default_gw(struct in_addr *gw, char **iface)
 				if (!sdl) {
 					log_fatal("get-gateway", "fuck");
 				}
-				char *_iface = malloc(sdl->sdl_nlen+1);
-				assert(_iface);
+				char *_iface = xmalloc(sdl->sdl_nlen+1);
 				memcpy(_iface, sdl->sdl_data, sdl->sdl_nlen);
 				_iface[sdl->sdl_nlen+1] = 0;
 				*iface = _iface;
 			}
 			if ((1<<i) == RTA_GATEWAY) {
 				struct sockaddr_in *sin = (struct sockaddr_in *) sa;
-				gw->s_addr = sin->sin_addr.s_addr; 
+				gw->s_addr = sin->sin_addr.s_addr;
 			}
 			// next element
 			sa = (struct sockaddr *)(ROUNDUP(sa->sa_len) + (char *)sa);
@@ -189,7 +189,7 @@ int get_default_gw(struct in_addr *gw, char *iface)
 		log_fatal("get-gateway", "interface specified (%s) does not match "
 				"the interface of the default gateway (%s). You will need "
 				"to manually specify the MAC address of your dateway.",
-				*iface_);	
+				*iface_);
 	}
 	return EXIT_SUCCESS;
 }
@@ -225,7 +225,7 @@ int read_nl_sock(int sock, char *buf, int buf_len)
 			return -1;
 		}
 		struct nlmsghdr *nlhdr = (struct nlmsghdr *)pbuf;
-		if (NLMSG_OK(nlhdr, ((unsigned int)len)) == 0 || 
+		if (NLMSG_OK(nlhdr, ((unsigned int)len)) == 0 ||
 						nlhdr->nlmsg_type == NLMSG_ERROR) {
 			log_debug("get-gw", "recv failed: %s", strerror(errno));
 			return -1;
@@ -235,7 +235,7 @@ int read_nl_sock(int sock, char *buf, int buf_len)
 		} else {
 			msg_len += len;
 			pbuf += len;
-		} 
+		}
 		if ((nlhdr->nlmsg_flags & NLM_F_MULTI) == 0) {
 			break;
 		}
@@ -252,14 +252,12 @@ int send_nl_req(uint16_t msg_type, uint32_t seq,
 		return -1;
 	}
 	if (NLMSG_SPACE(payload_len) < payload_len) {
+		close(sock);
 		// Integer overflow
 		return -1;
 	}
 	struct nlmsghdr *nlmsg;
-	nlmsg = malloc(NLMSG_SPACE(payload_len));
-	if (!nlmsg) {
-		return -1;
-	}
+	nlmsg = xmalloc(NLMSG_SPACE(payload_len));
 
 	memset(nlmsg, 0, NLMSG_SPACE(payload_len));
 	memcpy(NLMSG_DATA(nlmsg), payload, payload_len);
@@ -349,9 +347,9 @@ int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
 			memcpy(hw_mac, mac, IFHWADDRLEN);
 			return 0;
 		}
-		nlhdr = NLMSG_NEXT(nlhdr, nl_len);	
+		nlhdr = NLMSG_NEXT(nlhdr, nl_len);
 	}
-	return -1;	
+	return -1;
 }
 
 // gw and iface[IF_NAMESIZE] MUST be allocated
@@ -395,20 +393,20 @@ int get_default_gw(struct in_addr *gw, char *iface)
 		while (RTA_OK(rt_attr, rt_len)) {
 			switch (rt_attr->rta_type) {
 			case RTA_OIF:
-				if_indextoname(*(int *) RTA_DATA(rt_attr), iface); 
+				if_indextoname(*(int *) RTA_DATA(rt_attr), iface);
 				break;
 			case RTA_GATEWAY:
-				gw->s_addr = *(unsigned int *) RTA_DATA(rt_attr); 
+				gw->s_addr = *(unsigned int *) RTA_DATA(rt_attr);
 				has_gw = 1;
 				break;
 			}
 			rt_attr = RTA_NEXT(rt_attr, rt_len);
 		}
-	
+
 		if (has_gw) {
 			return 0;
 		}
-		nlhdr = NLMSG_NEXT(nlhdr, nl_len);	
+		nlhdr = NLMSG_NEXT(nlhdr, nl_len);
 	}
 	return -1;
 }
@@ -425,8 +423,8 @@ int get_iface_ip(char *iface, struct in_addr *ip)
 	strncpy(ifr.ifr_name, iface, IFNAMSIZ-1);
 
 	if (ioctl(sock, SIOCGIFADDR, &ifr) < 0) {
-		log_fatal("get-iface-ip", "ioctl failure: %s", strerror(errno));
 		close(sock);
+		log_fatal("get-iface-ip", "ioctl failure: %s", strerror(errno));
 	}
 	ip->s_addr =  ((struct sockaddr_in*) &ifr.ifr_addr)->sin_addr.s_addr;
 	close(sock);

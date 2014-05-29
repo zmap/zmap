@@ -1,6 +1,6 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -116,6 +116,7 @@ struct state_send {
 	uint32_t first_scanned;
 	uint32_t targets;
 	uint32_t sendto_failures;
+	uint32_t max_index;
 };
 extern struct state_send zsend;
 

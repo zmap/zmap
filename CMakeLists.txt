@@ -1,11 +1,12 @@
 cmake_minimum_required (VERSION 2.6)
 project (ZMAP C)
-SET (VERSION 1.1.1)
+SET (VERSION 1.2-RC2)
 
 option(WITH_REDIS "Build with support for Redis DB" OFF)
 option(WITH_JSON "Build with support for JSON" OFF)
 option(ENABLE_DEVELOPMENT "Enable development specific compiler and linker flags" OFF)
 option(RESPECT_INSTALL_PREFIX_CONFIG "Respect CMAKE_INSTALL_PREFIX for /etc" OFF)
+option(WITH_WERROR "Build with -Werror" OFF)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 	set(USING_CLANG "YES")
@@ -32,8 +33,11 @@ set(GCCWARNINGS
 # Fix line breaks
 string(REPLACE ";" " "  GCCWARNINGS "${GCCWARNINGS}")
 
-if(ENABLE_DEVELOPMENT)
+if(WITH_WERROR)
 	set(GCCWARNINGS "${GCCWARNINGS} -Werror")
+endif()
+
+if(ENABLE_DEVELOPMENT)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ggdb")
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -g")
 else()
@@ -85,10 +89,6 @@ endif()
 add_subdirectory(src)
 
 # Install conf files
-#FILE(GLOB CONF_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/conf" "conf/*")
-#message(STATUS "${CONF_FILES}")
-#configure_file(zmap_conf_install.cmake.in zmap_conf_install.cmake)
-#install(SCRIPT "${PROJECT_SOURCE_DIR}/zmap_conf_install.cmake")
 
 FILE(GLOB CONF_FILES "${PROJECT_SOURCE_DIR}/conf/*")
 if (RESPECT_INSTALL_PREFIX_CONFIG)
@@ -124,4 +124,3 @@ SET (CPACK_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}_${VERSION}_${CPACK_DEBIAN_AR
 SET (CPACK_COMPONENTS_ALL Libraries ApplicationData)
 
 INCLUDE(CPack)
-

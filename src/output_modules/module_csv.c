@@ -1,6 +1,6 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -52,8 +52,8 @@ int csv_init(struct state_conf *conf, char **fields, int fieldlens)
 	return EXIT_SUCCESS;
 }
 
-int csv_close(__attribute__((unused)) struct state_conf* c, 
-	__attribute__((unused)) struct state_send* s, 
+int csv_close(__attribute__((unused)) struct state_conf* c,
+	__attribute__((unused)) struct state_send* s,
 	__attribute__((unused)) struct state_recv* r)
 {
 	if (file) {
@@ -63,11 +63,11 @@ int csv_close(__attribute__((unused)) struct state_conf* c,
 	return EXIT_SUCCESS;
 }
 
-static void hex_encode(FILE *f, unsigned char* readbuf, size_t len) 
-{ 
-	for(size_t i=0; i < len; i++) { 
-		fprintf(f, "%02x", readbuf[i]); 
-	} 
+static void hex_encode(FILE *f, unsigned char* readbuf, size_t len)
+{
+	for(size_t i=0; i < len; i++) {
+		fprintf(f, "%02x", readbuf[i]);
+	}
 }
 
 int csv_process(fieldset_t *fs)

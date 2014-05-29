@@ -10,6 +10,7 @@
 
 #include "../lib/constraint.h"
 #include "../lib/logger.h"
+#include "../lib/xalloc.h"
 
 //
 // Efficient address-space constraints  (AH 7/2013)
@@ -39,8 +40,8 @@
 //
 
 /*
- * Constraint Copyright 2013 Regents of the University of Michigan 
- * 
+ * Constraint Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -72,8 +73,7 @@ struct _constraint {
 // Allocate a new leaf with the given value
 static node_t* _create_leaf(value_t value)
 {
-	node_t *node = malloc(sizeof(node_t));
-	assert(node);
+	node_t *node = xmalloc(sizeof(node_t));
 	node->l = NULL;
 	node->r = NULL;
 	node->value = value;
@@ -332,10 +332,9 @@ uint64_t constraint_count_ips(constraint_t *con, value_t value)
 // All addresses will initally have the given value.
 constraint_t* constraint_init(value_t value)
 {
-	constraint_t* con = malloc(sizeof(constraint_t));
+	constraint_t* con = xmalloc(sizeof(constraint_t));
 	con->root = _create_leaf(value);
-	con->radix = calloc(sizeof(uint32_t), 1 << RADIX_LENGTH);
-	assert(con->radix);
+	con->radix = xcalloc(sizeof(uint32_t), 1 << RADIX_LENGTH);
 	con->painted = 0;
 	return con;
 }

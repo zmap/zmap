@@ -23,10 +23,10 @@ void xfree(void *ptr)
 void* xmalloc(size_t size)
 {
 	void* res = malloc(size);
-	memset(res, 0 , size);
 	if (res == NULL) {
 		die();
 	}
+	memset(res, 0 , size);
 	return res;
 }
 

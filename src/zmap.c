@@ -1,6 +1,6 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -54,13 +54,19 @@
 pthread_mutex_t cpu_affinity_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t recv_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+static int max(int a, int b) {
+	if (a >= b) {
+		return a;
+	}
+	return b;
+}
+
 // splits comma delimited string into char*[]. Does not handle
 // escaping or complicated setups: designed to process a set
 // of fields that the user wants output
 static void split_string(char* in, int *len, char***results)
 {
-	char** fields = calloc(MAX_FIELDS, sizeof(char*));
-	memset(fields, 0, MAX_FIELDS*sizeof(fields));
+	char** fields = xcalloc(MAX_FIELDS, sizeof(char*));
 	int retvlen = 0;
 	char *currloc = in;
 	// parse csv into a set of strings
@@ -69,8 +75,7 @@ static void split_string(char* in, int *len, char***results)
 		if (len == 0) {
 			currloc++;
 		} else {
-			char *new = malloc(len+1);
-			assert(new);
+			char *new = xmalloc(len+1);
 			strncpy(new, currloc, len);
 			new[len] = '\0';
 			fields[retvlen++] = new;
@@ -102,7 +107,7 @@ void fprintw(FILE *f, char *s, size_t w)
 			printf("%s\n", pch);
 			pch = strtok(NULL, "\n");
 			continue;
-		}   
+		}
 		char *t = pch;
 		while (strlen(t)) {
 			size_t numchars = 0; //number of chars to print
@@ -110,7 +115,7 @@ void fprintw(FILE *f, char *s, size_t w)
 			while (1) {
 				size_t new = strcspn(tmp, " ") + 1;
 				if (new == strlen(tmp) || new > w) {
-					// there are no spaces in the string, so, just 
+					// there are no spaces in the string, so, just
 					// print the entire thing on one line;
 					numchars += new;
 					break;
@@ -121,16 +126,16 @@ void fprintw(FILE *f, char *s, size_t w)
 				} else {
 					tmp += (size_t) new;
 					numchars += new;
-				}   
-			}   
-			fprintf(f, "%.*s\n", (int) numchars, t); 
+				}
+			}
+			fprintf(f, "%.*s\n", (int) numchars, t);
 			t += (size_t) numchars;
 			if (t > pch + (size_t)strlen(pch)) {
 				break;
-			}   
-		}   
+			}
+		}
 		pch = strtok(NULL, "\n");
-	}   
+	}
 	free(news);
 }
 
@@ -268,6 +273,9 @@ static void summary(void)
 	SS("cnf", "send-interface", zconf.iface);
 	SI("cnf", "rate", zconf.rate);
 	SLU("cnf", "bandwidth", zconf.bandwidth);
+	SU("cnf", "shard-num", (unsigned) zconf.shard_num);
+	SU("cnf", "num-shards", (unsigned) zconf.total_shards);
+	SU("cnf", "senders", (unsigned) zconf.senders);
 	SU("env", "nprocessors", (unsigned) sysconf(_SC_NPROCESSORS_ONLN));
 	SS("exc", "send-start-time", send_start_time);
 	SS("exc", "send-end-time", send_end_time);
@@ -337,8 +345,10 @@ static void json_metadata(FILE *file)
 	json_object_object_add(obj, "senders", json_object_new_int(zconf.senders));
 	json_object_object_add(obj, "use-seed", json_object_new_int(zconf.use_seed));
 	json_object_object_add(obj, "seed", json_object_new_int(zconf.seed));
-	json_object_object_add(obj, "generator", json_object_new_int(zconf.generator));
+	json_object_object_add(obj, "generator", json_object_new_int64(zconf.generator));
 	json_object_object_add(obj, "hitrate", json_object_new_double(hitrate));
+	json_object_object_add(obj, "shard-num", json_object_new_int(zconf.shard_num));
+	json_object_object_add(obj, "total-shards", json_object_new_int(zconf.total_shards));
 
 	json_object_object_add(obj, "syslog", json_object_new_int(zconf.syslog));
 	json_object_object_add(obj, "filter-duplicates", json_object_new_int(zconf.filter_duplicates));
@@ -389,7 +399,7 @@ static void json_metadata(FILE *file)
 
 	if (zconf.destination_cidrs_len) {
 		json_object *cli_dest_cidrs = json_object_new_array();
-		for (int i=0; i < zconf.destination_cidrs_len; i++) { 
+		for (int i=0; i < zconf.destination_cidrs_len; i++) {
 			json_object_array_add(cli_dest_cidrs, json_object_new_string(zconf.destination_cidrs[i]));
 		}
 		json_object_object_add(obj, "cli-cidr-destinations",
@@ -449,7 +459,7 @@ static void json_metadata(FILE *file)
 	}
 	if (zconf.blacklist_filename) {
 		json_object_object_add(obj,
-			"blacklist-filename", 
+			"blacklist-filename",
 			json_object_new_string(zconf.blacklist_filename));
 	}
 	if (zconf.whitelist_filename) {
@@ -505,7 +515,7 @@ static void start_zmap(void)
 	}
 	if (zconf.source_ip_first == NULL) {
 		struct in_addr default_ip;
-		zconf.source_ip_first = malloc(INET_ADDRSTRLEN);
+		zconf.source_ip_first = xmalloc(INET_ADDRSTRLEN);
 		zconf.source_ip_last = zconf.source_ip_first;
 		if (get_iface_ip(zconf.iface, &default_ip) < 0) {
 			log_fatal("zmap", "could not detect default IP address for for %s."
@@ -527,7 +537,8 @@ static void start_zmap(void)
 
 		if (get_hw_addr(&gw_ip, zconf.iface, zconf.gw_mac)) {
 			log_fatal("zmap", "could not detect GW MAC address for %s on %s."
-					" Try setting default gateway mac address (-G).",
+					" Try setting default gateway mac address (-G), or run"
+					" \"arp <gateway_ip>\" in terminal.",
 					inet_ntoa(gw_ip), zconf.iface);
 		}
 		zconf.gw_mac_set = 1;
@@ -577,8 +588,7 @@ static void start_zmap(void)
 		}
 		pthread_mutex_unlock(&recv_ready_mutex);
 	}
-	tsend = malloc(zconf.senders * sizeof(pthread_t));
-	assert(tsend);
+	tsend = xmalloc(zconf.senders * sizeof(pthread_t));
 	for (uint8_t i = 0; i < zconf.senders; i++) {
 		int sock;
 		if (zconf.dryrun) {
@@ -657,15 +667,6 @@ static void enforce_range(const char *name, int v, int min, int max)
 	}
 }
 
-static int file_exists(char *name)
-{
-	FILE *file = fopen(name, "r");
-	if (!file)
-		return 0;
-	fclose(file);
-	return 1;
-}
-
 #define MAC_LEN ETHER_ADDR_LEN
 int parse_mac(macaddr_t *out, char *in)
 {
@@ -705,7 +706,7 @@ int main(int argc, char *argv[])
 	if (cmdline_parser_ext(argc, argv, &args, params) != 0) {
 		exit(EXIT_SUCCESS);
 	}
-	if (args.config_given || file_exists(args.config_arg)) {
+	if (args.config_given) {
 		params->initialize = 0;
 		params->override = 0;
 		if (cmdline_parser_config_file(args.config_arg, &args, params)
@@ -736,7 +737,7 @@ int main(int argc, char *argv[])
 		struct tm *local = localtime(&now);
 		char path[100];
 		strftime(path, 100, "zmap-%Y-%m-%dT%H%M%S%z.log", local);
-		char *fullpath = malloc(strlen(zconf.log_directory) + strlen(path) + 2);
+		char *fullpath = xmalloc(strlen(zconf.log_directory) + strlen(path) + 2);
 		sprintf(fullpath, "%s/%s", zconf.log_directory, path);
 		log_location = fopen(fullpath, "w");
 		free(fullpath);
@@ -767,7 +768,7 @@ int main(int argc, char *argv[])
 	// specified and then map these into new-style output modules and warn
 	// users that they need to be switching to the new module interface.
 
-	// zmap's default behavior is to provide a simple file of the unique IP 
+	// zmap's default behavior is to provide a simple file of the unique IP
 	// addresses that responded successfully.
 	if (!strcmp(args.output_module_arg, "default")) {
 		log_debug("zmap", "no output module provided. will use csv.");
@@ -779,7 +780,7 @@ int main(int argc, char *argv[])
 		log_warn("zmap", "the simple_file output interface has been deprecated and "
 				 "will be removed in the future. Users should use the csv "
 				 "output module. Newer scan options such as output-fields "
-				 "are not supported with this output module."); 
+				 "are not supported with this output module.");
 		zconf.output_module = get_output_module_by_name("csv");
 		zconf.raw_output_fields = (char*) "saddr";
 		zconf.filter_duplicates = 1;
@@ -788,7 +789,7 @@ int main(int argc, char *argv[])
 		log_warn("zmap", "the extended_file output interface has been deprecated and "
 				 "will be removed in the future. Users should use the csv "
 				 "output module. Newer scan options such as output-fields "
-				 "are not supported with this output module."); 
+				 "are not supported with this output module.");
 		zconf.output_module = get_output_module_by_name("csv");
 		zconf.raw_output_fields = (char*) "classification, saddr, "
 						  "daddr, sport, dport, "
@@ -927,14 +928,12 @@ int main(int argc, char *argv[])
 	}
 	if (!strcmp(zconf.raw_output_fields, "*")) {
 		zconf.output_fields_len = zconf.fsconf.defs.len;
-		zconf.output_fields = calloc(zconf.fsconf.defs.len, sizeof(char*));
-		assert(zconf.output_fields);
+		zconf.output_fields = xcalloc(zconf.fsconf.defs.len, sizeof(char*));
 		for (int i=0; i < zconf.fsconf.defs.len; i++) {
 			zconf.output_fields[i] = (char*) zconf.fsconf.defs.fielddefs[i].name;
 		}
 		fs_generate_full_fieldset_translation(&zconf.fsconf.translation,
 				&zconf.fsconf.defs);
-
 	} else {
 		split_string(zconf.raw_output_fields, &(zconf.output_fields_len),
 				&(zconf.output_fields));
@@ -966,7 +965,6 @@ int main(int argc, char *argv[])
 	SET_BOOL(zconf.quiet, quiet);
 	SET_BOOL(zconf.summary, summary);
 	zconf.cooldown_secs = args.cooldown_time_arg;
-	zconf.senders = args.sender_threads_arg;
 	SET_IF_GIVEN(zconf.output_filename, output_file);
 	SET_IF_GIVEN(zconf.blacklist_filename, blacklist_file);
 	SET_IF_GIVEN(zconf.probe_args, probe_args);
@@ -976,6 +974,18 @@ int main(int argc, char *argv[])
 	SET_IF_GIVEN(zconf.max_results, max_results);
 	SET_IF_GIVEN(zconf.rate, rate);
 	SET_IF_GIVEN(zconf.packet_streams, probes);
+
+	// Set the correct number of threads, default to num_cores - 1
+	if (args.sender_threads_given) {
+		zconf.senders = args.sender_threads_arg;
+	} else {
+		int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+		zconf.senders = max(num_cores - 1, 1);
+		if (!zconf.quiet) {
+			// If monitoring, save a core for the monitor thread
+			zconf.senders = max(zconf.senders - 1, 1);
+		}
+	}
 
 	if (args.metadata_file_arg) {
 #ifdef JSON
@@ -995,7 +1005,6 @@ int main(int argc, char *argv[])
 				"Metadata output not supported.");
 #endif
 	}
-
 
 	// find if zmap wants any specific cidrs scanned instead
 	// of the entire Internet
@@ -1052,7 +1061,7 @@ int main(int argc, char *argv[])
 	}
 	if (args.gateway_mac_given) {
 		if (!parse_mac(zconf.gw_mac, args.gateway_mac_arg)) {
-			fprintf(stderr, "%s: invalid MAC address `%s'\n", 
+			fprintf(stderr, "%s: invalid MAC address `%s'\n",
 				CMDLINE_PARSER_PACKAGE, args.gateway_mac_arg);
 			exit(EXIT_FAILURE);
 		}
