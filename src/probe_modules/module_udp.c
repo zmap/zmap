@@ -222,7 +222,7 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 		// Verify that the UDP length is big enough for the header and at least one byte
 		uint16_t data_len = ntohs(udp->uh_ulen);
 		if (data_len > sizeof(struct udphdr)) {
-			uint32_t overhead = (sizeof(struct ip) + sizeof(struct udphdr) + (ip_hdr->ip_hl * 4));
+			uint32_t overhead = (sizeof(struct udphdr) + (ip_hdr->ip_hl * 4));
 			uint32_t max_rlen = len - overhead;
 			uint32_t max_ilen = ntohs(ip_hdr->ip_len) - overhead;
 
