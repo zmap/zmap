@@ -237,7 +237,6 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 				data_len = max_ilen;
 
 			fs_add_binary(fs, "data", data_len, (void*) &udp[1], 0);
-		
 		// Some devices reply with a zero UDP length but still return data, ignore the data
 		} else fs_add_null(fs, "data");
 
