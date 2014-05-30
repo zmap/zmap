@@ -209,6 +209,7 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 {
 	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
+		uint16_t data_len;
 		struct udphdr *udp = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
 		fs_add_string(fs, "classification", (char*) "udp", 0);
 		fs_add_uint64(fs, "success", 1);
@@ -218,11 +219,28 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
+		
+		data_len = ntohs(udp->uh_ulen);
+
 		// Verify that the UDP length is big enough for the header and at least one byte
-		if (ntohs(udp->uh_ulen) > sizeof(struct udphdr))
-			fs_add_binary(fs, "data", (ntohs(udp->uh_ulen) - sizeof(struct udphdr)), (void*) &udp[1], 0);
-		// Some devices reply with a zero UDP length but still return data, ignore these
-		else fs_add_null(fs, "data");
+		if (data_len > sizeof(struct udphdr)) {
+			uint32_t overhead = (sizeof(struct ip) + sizeof(struct udphdr) + (ip_hdr->ip_hl * 4));
+			uint32_t max_rlen = len - overhead;
+			uint32_t max_ilen = ntohs(ip_hdr->ip_len) - overhead;
+			
+
+			// Verify that the UDP length is inside of our received buffer
+			if (data_len > max_rlen)
+				data_len = max_rlen;
+
+			// Verify that the UDP length is inside of our IP packet
+			if (data_len > max_ilen)
+				data_len = max_ilen;
+
+			fs_add_binary(fs, "data", data_len, (void*) &udp[1], 0);
+		
+		// Some devices reply with a zero UDP length but still return data, ignore the data
+		} else fs_add_null(fs, "data");
 
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
@@ -270,6 +288,7 @@ int udp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 
 		sport = ntohs(udp->uh_dport);
 		dport = ntohs(udp->uh_sport);
+
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		// UDP can return ICMP Destination unreach
 		// IP( ICMP( IP( UDP ) ) ) for a destination unreach
