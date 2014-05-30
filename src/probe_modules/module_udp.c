@@ -227,7 +227,6 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 			uint32_t overhead = (sizeof(struct ip) + sizeof(struct udphdr) + (ip_hdr->ip_hl * 4));
 			uint32_t max_rlen = len - overhead;
 			uint32_t max_ilen = ntohs(ip_hdr->ip_len) - overhead;
-			
 
 			// Verify that the UDP length is inside of our received buffer
 			if (data_len > max_rlen)
