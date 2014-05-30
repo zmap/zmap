@@ -287,7 +287,6 @@ int udp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 
 		sport = ntohs(udp->uh_dport);
 		dport = ntohs(udp->uh_sport);
-
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		// UDP can return ICMP Destination unreach
 		// IP( ICMP( IP( UDP ) ) ) for a destination unreach
