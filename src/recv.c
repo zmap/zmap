@@ -204,16 +204,18 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 	if (zconf.max_results == 0) {
 		zconf.max_results = -1;
 	}
-
+	int ret;
 	do {
 		if (zconf.dryrun) {
 			sleep(1);
 		} else {
-			if (pcap_dispatch(pc, -1, packet_cb, NULL) == -1) {
+			ret = pcap_dispatch(pc, -1, packet_cb, NULL);
+			if (ret == -1) {
 				log_fatal("recv", "pcap_dispatch error");
-			}
-			if (zconf.max_results && zrecv.success_unique >= zconf.max_results) {
+			} else if (zconf.max_results && zrecv.success_unique >= zconf.max_results) {
 				break;
+			} else if (ret == 0) {
+				usleep(1000);
 			}
 		}
 	} while (!(zsend.complete && (now()-zsend.finish > zconf.cooldown_secs)));
