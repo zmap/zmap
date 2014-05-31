@@ -19,6 +19,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+#include "state.h"
 #include "constraint.h"
 #include "logger.h"
 #include "xalloc.h"
@@ -181,8 +182,10 @@ static int init_from_file(char *file, const char *name, int value)
 			continue;
 		}
 		if (init_from_string(ip, value)) {
-			log_fatal(name, "unable to parse %s file: %s",
-					name, file);
+			if (!zconf.ignore_invalid_hosts) {
+				log_fatal(name, "unable to parse %s file: %s",
+						name, file);
+			}
 		}
 	}
 	fclose(fp);
