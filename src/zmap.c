@@ -556,12 +556,7 @@ static void start_zmap(void)
 		zconf.output_module->init(&zconf, zconf.output_fields,
 				zconf.output_fields_len);
 	}
-	// blacklist
-	if (blacklist_init(zconf.whitelist_filename, zconf.blacklist_filename,
-			   zconf.destination_cidrs, zconf.destination_cidrs_len,
-			   NULL, 0)) {
-		log_fatal("zmap", "unable to initialize blacklist / whitelist");
-	}
+
 	iterator_t *it = send_init();
 	if (!it) {
 		log_fatal("zmap", "unable to initialize sending component");
@@ -962,18 +957,6 @@ int main(int argc, char *argv[])
 	SET_IF_GIVEN(zconf.rate, rate);
 	SET_IF_GIVEN(zconf.packet_streams, probes);
 
-	// Set the correct number of threads, default to num_cores - 1
-	if (args.sender_threads_given) {
-		zconf.senders = args.sender_threads_arg;
-	} else {
-		int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
-		zconf.senders = max(num_cores - 1, 1);
-		if (!zconf.quiet) {
-			// If monitoring, save a core for the monitor thread
-			zconf.senders = max(zconf.senders - 1, 1);
-		}
-	}
-
 	if (args.metadata_file_arg) {
 #ifdef JSON
 		zconf.metadata_filename = args.metadata_file_arg;
@@ -1133,6 +1116,41 @@ int main(int argc, char *argv[])
 		} else {
 			zconf.max_targets = v;
 		}
+	}
+
+	// blacklist
+	if (blacklist_init(zconf.whitelist_filename, zconf.blacklist_filename,
+			   zconf.destination_cidrs, zconf.destination_cidrs_len,
+			   NULL, 0)) {
+		log_fatal("zmap", "unable to initialize blacklist / whitelist");
+	}
+
+	// compute number of targets
+	uint64_t allowed = blacklist_count_allowed();
+	assert(allowed <= (1LL << 32));
+	if (allowed == (1LL << 32)) {
+		zsend.targets = 0xFFFFFFFF;
+	} else {
+		zsend.targets = allowed;
+	}
+	if (zsend.targets > zconf.max_targets) {
+		zsend.targets = zconf.max_targets;
+	}
+
+	// Set the correct number of threads, default to num_cores - 1
+	if (args.sender_threads_given) {
+		zconf.senders = args.sender_threads_arg;
+	} else {
+		int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+		zconf.senders = max(num_cores - 1, 1);
+		if (!zconf.quiet) {
+			// If monitoring, save a core for the monitor thread
+			zconf.senders = max(zconf.senders - 1, 1);
+		}
+	}
+
+	if (zconf.senders > zsend.targets) {
+		zconf.senders = max(zsend.targets, 1);
 	}
 
 	start_zmap();
