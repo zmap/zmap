@@ -109,6 +109,18 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 	} else {
 		zrecv.failure_total++;
 	}
+	// probe module includes app_success field
+	if (zconf.fsconf.app_success_index >= 0) {
+		int is_app_success = fs_get_uint64_by_index(fs, 
+				zconf.fsconf.app_success_index);
+		if (is_app_success) {
+			zrecv.app_success_total++;
+			if (!is_repeat) {
+				zrecv.app_success_unique++;
+			}
+		}
+	}
+	
 	fieldset_t *o = NULL;
 	// we need to translate the data provided by the probe module
 	// into a fieldset that can be used by the output module

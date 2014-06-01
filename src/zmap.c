@@ -901,6 +901,15 @@ int main(int argc, char *argv[])
 		log_fatal("fieldset", "probe module does not supply "
 				      "required success field.");
 	}
+	zconf.fsconf.app_success_index =
+			fds_get_index_by_name(fds, (char*) "app_success");
+	if (zconf.fsconf.app_success_index < 0) {
+		log_trace("fieldset", "probe module does not supply "
+				      "application success field.");
+	} else {
+		log_trace("fieldset", "probe module supplies app_success"
+				" output field. It will be included in monitor output");
+	}
 	zconf.fsconf.classification_index =
 			fds_get_index_by_name(fds, (char*) "classification");
 	if (zconf.fsconf.classification_index < 0) {
