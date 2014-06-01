@@ -287,6 +287,11 @@ static void summary(void)
 	SD("exc", "hit-rate", hitrate);
 	SU("exc", "success-total", zrecv.success_total);
 	SU("exc", "success-unique", zrecv.success_unique);
+	// if there are application-level status messages, output
+	if (zconf.fsconf.app_success_index >= 0) {
+		SU("exc", "app-success-total", zrecv.app_success_total);
+		SU("exc", "app-success-unique", zrecv.app_success_unique);
+	}
 	SU("exc", "success-cooldown-total", zrecv.cooldown_total);
 	SU("exc", "success-cooldown-unique", zrecv.cooldown_unique);
 	SU("exc", "failure-total", zrecv.failure_total);
@@ -363,6 +368,10 @@ static void json_metadata(FILE *file)
 
 	json_object_object_add(obj, "success-total", json_object_new_int(zrecv.success_total));
 	json_object_object_add(obj, "success-unique", json_object_new_int(zrecv.success_unique));
+	if (zconf.fsconf.app_success_index >= 0) {
+		json_object_object_add(obj, "app-success-total", json_object_new_int(zrecv.app_success_total));
+		json_object_object_add(obj, "app-success-unique", json_object_new_int(zrecv.app_success_unique));
+	}
 	json_object_object_add(obj, "success-cooldown-total", json_object_new_int(zrecv.cooldown_total));
 	json_object_object_add(obj, "success-cooldown-unique", json_object_new_int(zrecv.cooldown_unique));
 	json_object_object_add(obj, "failure-total", json_object_new_int(zrecv.failure_total));
