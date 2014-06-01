@@ -98,6 +98,7 @@ struct state_conf {
 	int dryrun;
 	int summary;
 	int quiet;
+	int ignore_invalid_hosts;
 	int syslog;
 	int filter_duplicates;
 	int filter_unsuccessful;

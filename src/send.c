@@ -61,17 +61,6 @@ static uint16_t num_src_ports;
 // global sender initialize (not thread specific)
 iterator_t* send_init(void)
 {
-	// compute number of targets
-	uint64_t allowed = blacklist_count_allowed();
-	assert(allowed <= (1LL << 32));
-	if (allowed == (1LL << 32)) {
-		zsend.targets = 0xFFFFFFFF;
-	} else {
-		zsend.targets = allowed;
-	}
-	if (zsend.targets > zconf.max_targets) {
-		zsend.targets = zconf.max_targets;
-	}
 
 	// generate a new primitive root and starting position
 	iterator_t *it;
