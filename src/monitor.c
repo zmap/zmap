@@ -1,6 +1,6 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -132,7 +132,6 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 		double remaining_secs = compute_remaining_time(age, total_sent);
 		double percent_complete = 100.*age/(age + remaining_secs);
 
-
 		// ask pcap for fresh values
 		pthread_mutex_lock(recv_ready_mutex);
 		recv_update_pcap_stats();
@@ -144,7 +143,7 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 			time_left[0] = '\0';
 		} else {
 			char buf[20];
-			time_string((int)remaining_secs, 1, buf, sizeof(buf));
+			time_string(ceil(remaining_secs), 1, buf, sizeof(buf));
 			snprintf(time_left, sizeof(time_left), " (%s left)", buf);
 		}
 		char time_past[20];
@@ -168,7 +167,7 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 		if (drop_rate > (uint32_t)((zrecv.success_unique - last_rcvd) / delta) / 20) {
 			log_warn("monitor", "Dropped %d packets in the last second, (%d total dropped (pcap: %d + iface: %d))",
 					 drop_rate, zrecv.pcap_drop + zrecv.pcap_ifdrop, zrecv.pcap_drop, zrecv.pcap_ifdrop);
-		}	
+		}
 
 		// Warn if we fail to send > 1% of our average send rate
 		uint32_t fail_rate = (uint32_t)((zsend.sendto_failures - last_failures) / delta); // failures/sec
@@ -191,7 +190,7 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 					"%5s %0.0f%%%s; send: %u %sp/s (%sp/s avg); "
 					"recv: %u %sp/s (%sp/s avg); "
 					"drops: %sp/s (%sp/s avg); "
-					"hits: %0.2f%%\n", 
+					"hits: %0.2f%%\n",
 					time_past,
 					percent_complete,
 					time_left,
@@ -207,11 +206,11 @@ static void monitor_update(iterator_t *it, pthread_mutex_t *recv_ready_mutex)
 		} else {
 		  	// alternate display (during cooldown)
 			number_string((total_sent/(zsend.finish - zsend.start)), send_avg, sizeof(send_avg));
-			fprintf(stderr, 
+			fprintf(stderr,
 					"%5s %0.0f%%%s; send: %u done (%sp/s avg); "
 					"recv: %u %sp/s (%sp/s avg); "
 					"drops: %sp/s (%sp/s avg); "
-					"hits: %0.2f%%\n", 
+					"hits: %0.2f%%\n",
 					time_past,
 					percent_complete,
 					time_left,

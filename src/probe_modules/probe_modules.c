@@ -1,6 +1,6 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -14,6 +14,7 @@
 
 #include "../../lib/includes.h"
 #include "../../lib/logger.h"
+#include "../../lib/xalloc.h"
 #include "../fieldset.h"
 #include "probe_modules.h"
 #include "packet.h"
@@ -70,12 +71,8 @@ void fs_add_system_fields(fieldset_t *fs, int is_repeat, int in_cooldown)
 	fs_add_uint64(fs, "repeat", is_repeat);
 	fs_add_uint64(fs, "cooldown", in_cooldown);
 
-	char *timestr = malloc(TIMESTR_LEN+1);
-	char *timestr_ms = malloc(TIMESTR_LEN+1);
-	if (!timestr || !timestr_ms) {
-		log_fatal("recv", "unable to allocate memory for "
-				  "timestamp string in fieldset.");
-	}
+	char *timestr = xmalloc(TIMESTR_LEN+1);
+	char *timestr_ms = xmalloc(TIMESTR_LEN+1);
 	struct timeval t;
 	gettimeofday(&t, NULL);
 	struct tm *ptm = localtime(&t.tv_sec);
@@ -87,7 +84,7 @@ void fs_add_system_fields(fieldset_t *fs, int is_repeat, int in_cooldown)
 	fs_add_uint64(fs, "timestamp-us", (uint64_t) t.tv_usec);
 }
 
-int ip_fields_len = 6; 
+int ip_fields_len = 6;
 fielddef_t ip_fields[] = {
 	{.name="saddr", .type="string", .desc="source IP address of response"},
 	{.name="saddr-raw", .type="int", .desc="network order integer form of source IP address"},

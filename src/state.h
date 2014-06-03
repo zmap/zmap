@@ -1,6 +1,6 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -97,6 +97,7 @@ struct state_conf {
 	int dryrun;
 	int summary;
 	int quiet;
+	int ignore_invalid_hosts;
 	int syslog;
 	int filter_duplicates;
 	int filter_unsuccessful;
@@ -122,18 +123,18 @@ extern struct state_send zsend;
 // global receiver stats
 struct state_recv {
 	// valid responses classified as "success"
-	uint32_t success_total;   
+	uint32_t success_total;
 	// unique IPs that sent valid responses classified as "success"
-	uint32_t success_unique;  
+	uint32_t success_unique;
 	// valid responses classified as "success" received during cooldown
-	uint32_t cooldown_total;  
+	uint32_t cooldown_total;
 	// unique IPs that first sent valid "success"es during cooldown
 	uint32_t cooldown_unique;
 	// valid responses NOT classified as "success"
-	uint32_t failure_total;   
+	uint32_t failure_total;
 
-	int complete;  // has the scanner finished sending?	
-	double start;  // timestamp of when recv started	
+	int complete;  // has the scanner finished sending?
+	double start;  // timestamp of when recv started
 	double finish; // timestamp of when recv terminated
 
 	// number of packets captured by pcap filter

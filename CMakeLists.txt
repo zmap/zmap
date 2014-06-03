@@ -6,6 +6,7 @@ option(WITH_REDIS "Build with support for Redis DB" OFF)
 option(WITH_JSON "Build with support for JSON" OFF)
 option(ENABLE_DEVELOPMENT "Enable development specific compiler and linker flags" OFF)
 option(RESPECT_INSTALL_PREFIX_CONFIG "Respect CMAKE_INSTALL_PREFIX for /etc" OFF)
+option(WITH_WERROR "Build with -Werror" OFF)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 	set(USING_CLANG "YES")
@@ -32,8 +33,11 @@ set(GCCWARNINGS
 # Fix line breaks
 string(REPLACE ";" " "  GCCWARNINGS "${GCCWARNINGS}")
 
-if(ENABLE_DEVELOPMENT)
+if(WITH_WERROR)
 	set(GCCWARNINGS "${GCCWARNINGS} -Werror")
+endif()
+
+if(ENABLE_DEVELOPMENT)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ggdb")
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -g")
 else()

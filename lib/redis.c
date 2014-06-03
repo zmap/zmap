@@ -1,11 +1,11 @@
 /*
- * ZMap Redis Helpers Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Redis Helpers Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
- 
+
 #include "redis.h"
 
 #include <string.h>
@@ -17,6 +17,7 @@
 #include <hiredis/hiredis.h>
 
 #include "logger.h"
+#include "xalloc.h"
 
 #define REDIS_TIMEOUT 2
 
@@ -27,12 +28,10 @@ static redisContext *rctx;
 
 redisconf_t *redis_parse_connstr(char *connstr)
 {
-	redisconf_t *retv = malloc(sizeof(redisconf_t));
+	redisconf_t *retv = xmalloc(sizeof(redisconf_t));
 	if (!strncmp("tcp://", connstr, 6)) {
-		char *servername = malloc(strlen(connstr));
-		assert(servername);
-		char *list_name = malloc(strlen(connstr));
-		assert(list_name);
+		char *servername = xmalloc(strlen(connstr));
+		char *list_name = xmalloc(strlen(connstr));
 		uint32_t port;
 		if (sscanf(connstr, "tcp://%[^:]:%u/%s", servername,
 						&port, list_name) != 3) {
@@ -48,10 +47,8 @@ redisconf_t *redis_parse_connstr(char *connstr)
 	} else if (!strncmp("local://", connstr, 8)) {
 		// looking for something along the lines of
 		// local:///tmp/redis.sock/list-name
-		char *path = malloc(strlen(connstr));
-		assert(path);
-		char *list_name = malloc(strlen(connstr));
-		assert(list_name);
+		char *path = xmalloc(strlen(connstr));
+		char *list_name = xmalloc(strlen(connstr));
 		connstr = connstr + (size_t) 8;
 		char *listname = strrchr(connstr, '/') + (size_t) 1;
 		connstr[strrchr(connstr, '/') - connstr] = '\0';
@@ -75,8 +72,7 @@ static redisContext* redis_connect(char *connstr)
 	// handle old behavior where we only connected to a specific
 	// socket that we #defined.
 	if (!connstr) {
-		c = malloc(sizeof(redisconf_t));
-		assert(c);
+		c = xmalloc(sizeof(redisconf_t));
 		c->type = T_LOCAL;
 		c->path = strdup("/tmp/redis.sock");
 	} else {
@@ -226,7 +222,7 @@ long redis_get_sizeof_set(const char *name)
 	return redis_get_sizeof("SCARD", name);
 }
 
-int redis_pull(char *redisqueuename, void *buf, 
+int redis_pull(char *redisqueuename, void *buf,
 		int maxload, size_t obj_size, int *numloaded, const char* cmd)
 {
 	assert(rctx);
@@ -251,7 +247,7 @@ int redis_pull(char *redisqueuename, void *buf,
 			return -1;
 		}
 		if (reply->type != REDIS_REPLY_STRING) {
-			log_fatal("redis", 
+			log_fatal("redis",
 					"unxpected reply type from redis.");
 			return -1;
 		}
@@ -267,27 +263,27 @@ int redis_pull(char *redisqueuename, void *buf,
 	return 0;
 }
 
-int redis_lpull(char *redisqueuename, void *buf, 
+int redis_lpull(char *redisqueuename, void *buf,
 		int maxload, size_t obj_size, int *numloaded)
 {
-	return redis_pull(redisqueuename, buf, 
+	return redis_pull(redisqueuename, buf,
 			maxload, obj_size, numloaded, "LPOP");
 }
 
-int redis_spull(char *redisqueuename, void *buf, 
+int redis_spull(char *redisqueuename, void *buf,
 		int maxload, size_t obj_size, int *numloaded)
 {
-	return redis_pull(redisqueuename, buf, 
+	return redis_pull(redisqueuename, buf,
 			maxload, obj_size, numloaded, "SRAND");
 }
 
-static int redis_push(char *redisqueuename, 
-		void *buf, int num, size_t len, const char *cmd) 
+static int redis_push(char *redisqueuename,
+		void *buf, int num, size_t len, const char *cmd)
 {
 	assert(rctx);
 	for (int i=0; i < num; i++) {
-		void* load = (void*)((intptr_t)buf + i*len);	
-		int rc = redisAppendCommand(rctx, "%s %s %b", 
+		void* load = (void*)((intptr_t)buf + i*len);
+		int rc = redisAppendCommand(rctx, "%s %s %b",
 				cmd, redisqueuename, load, len);
 		if (rc != REDIS_OK || rctx->err) {
 			log_fatal("redis", "%s", rctx->errstr);
@@ -296,7 +292,7 @@ static int redis_push(char *redisqueuename,
 	}
 	redisReply *reply;
 	for (int i=0; i < num; i++) {
-		if (redisGetReply(rctx, (void**) &reply) != REDIS_OK 
+		if (redisGetReply(rctx, (void**) &reply) != REDIS_OK
 				|| rctx->err) {
 			log_fatal("redis","%s", rctx->errstr);
 			return -1;
@@ -310,14 +306,14 @@ static int redis_push(char *redisqueuename,
 	return 0;
 }
 
-int redis_lpush(char *redisqueuename, 
-		void *buf, int num, size_t len) 
+int redis_lpush(char *redisqueuename,
+		void *buf, int num, size_t len)
 {
 	return redis_push(redisqueuename, buf, num, len, "RPUSH");
 }
 
-int redis_spush(char *redisqueuename, 
-		void *buf, int num, size_t len) 
+int redis_spush(char *redisqueuename,
+		void *buf, int num, size_t len)
 {
 	return redis_push(redisqueuename, buf, num, len, "SADD");
 }

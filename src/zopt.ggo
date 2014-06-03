@@ -131,6 +131,8 @@ option "summary"		g "Print configuration and summary at end of scan"
 option "metadata-file"		- "Output file for scan metadata (JSON)"
 	typestr="name"
 	optional string
+option "ignore-invalid-hosts"	- "Ignore invalid hosts in whitelist/blacklist file"
+	optional
 option "disable-syslog"		- "Disables logging messages to syslog"
 	optional
 option "verbosity"		v "Level of log detail (0-5)"

@@ -62,7 +62,7 @@ int send_run_init(int sock)
 
 int send_packet(int fd, void *buf, int len)
 {
-	return sendto(fd, buf, len, 0, 
+	return sendto(fd, buf, len, 0,
 		      (struct sockaddr *) &sockaddr,
 		      sizeof(struct sockaddr_ll));
 }

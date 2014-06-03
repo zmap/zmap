@@ -1,6 +1,6 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -10,12 +10,12 @@
  * cyclic provides an inexpensive approach to iterating over the IPv4 address
  * space in a random(-ish) manner such that we connect to every host once in
  * a scan execution without having to keep track of the IPs that have been
- * scanned or need to be scanned and such that each scan has a different 
- * ordering. We accomplish this by utilizing a cyclic multiplicative group 
+ * scanned or need to be scanned and such that each scan has a different
+ * ordering. We accomplish this by utilizing a cyclic multiplicative group
  * of integers modulo a prime and generating a new primitive root (generator)
  * for each scan.
  *
- * We know that 3 is a generator of (Z mod 2^32 + 15 - {0}, *) 
+ * We know that 3 is a generator of (Z mod 2^32 + 15 - {0}, *)
  * and that we have coverage over the entire address space because 2**32 + 15
  * is prime and ||(Z mod PRIME - {0}, *)|| == PRIME - 1. Therefore, we
  * just need to find a new generator (primitive root) of the cyclic group for
@@ -31,7 +31,7 @@
  * p - 1 and randomly checking random numbers against the psub1_f until
  * we find one that is coprime and map it into Zp*. Because
  * totient(totient(p)) ~= 10^9, this should take relatively few
- * iterations to find a new generator. 
+ * iterations to find a new generator.
  */
 
 #include "cyclic.h"

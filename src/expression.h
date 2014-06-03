@@ -22,7 +22,7 @@ struct field_id {
 };
 
 union node_value {
-	struct field_id field; 
+	struct field_id field;
 	char *string_literal;
 	uint64_t int_literal;
 	enum operation op;

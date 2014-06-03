@@ -1,6 +1,6 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -14,6 +14,7 @@
 #include <assert.h>
 
 #include "../lib/logger.h"
+#include "../lib/xalloc.h"
 
 void gen_fielddef_set(fielddefset_t *fds, fielddef_t fs[], int len)
 {
@@ -21,17 +22,13 @@ void gen_fielddef_set(fielddefset_t *fds, fielddef_t fs[], int len)
 		log_fatal("fieldset", "out of room in field def set");
 	}
 	fielddef_t *open = &(fds->fielddefs[fds->len]);
-	memcpy(open, fs, len*sizeof(fielddef_t)); 
+	memcpy(open, fs, len*sizeof(fielddef_t));
 	fds->len += len;
 }
 
 fieldset_t *fs_new_fieldset(void)
 {
-	fieldset_t *f = malloc(sizeof(fieldset_t));
-	if (!f) {
-		log_fatal("fieldset", "unable to allocate new fieldset");
-	}
-	memset(f, 0, sizeof(fieldset_t));
+	fieldset_t *f = xcalloc(1, sizeof(fieldset_t));
 	return f;
 }
 
@@ -154,7 +151,7 @@ void fs_free(fieldset_t *fs)
 	free(fs);
 }
 
-void fs_generate_fieldset_translation(translation_t *t, 
+void fs_generate_fieldset_translation(translation_t *t,
 		fielddefset_t *avail, char** req, int reqlen)
 {
 	memset(t, 0, sizeof(translation_t));
