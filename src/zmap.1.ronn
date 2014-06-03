@@ -67,7 +67,8 @@ zmap [ -p &lt;port> ] [ -o &lt;outfile&gt; ] [ OPTIONS... ] [ ip/hostname/range 
      **--seed** is required.
 
    * `-T`, `--sender-threads=n`:
-     Threads used to send packets (default=1)
+     Threads used to send packets. ZMap will attempt to detect the optimal
+     number of send threads based on the number of processor cores. 
 
    * `-P`, `--probes=n`:
      Number of probes to send to each IP (default=1)

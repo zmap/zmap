@@ -61,7 +61,7 @@
 
   <ol class='man-decor man-head man head'>
     <li class='tl'>zmap(1)</li>
-    <li class='tc'>zmap</li>
+    <li class='tc'></li>
     <li class='tr'>zmap(1)</li>
   </ol>
 
@@ -114,7 +114,8 @@
 <dt> <code>--shard=n</code></dt><dd><p> Set which shard to scan (default=0). Shards are 0-indexed in the range
  [0, N), where N is the    total number of shards. When sharding
  <strong>--seed</strong> is required.</p></dd>
-<dt> <code>-T</code>, <code>--sender-threads=n</code></dt><dd><p> Threads used to send packets (default=1)</p></dd>
+<dt> <code>-T</code>, <code>--sender-threads=n</code></dt><dd><p> Threads used to send packets. ZMap will attempt to detect the optimal
+ number of send threads based on the number of processor cores.</p></dd>
 <dt> <code>-P</code>, <code>--probes=n</code></dt><dd><p> Number of probes to send to each IP (default=1)</p></dd>
 <dt> <code>-d</code>, <code>--dryrun</code></dt><dd><p> Print out each packet to stdout instead of sending it (useful for
  debugging)</p></dd>
@@ -178,7 +179,7 @@ fields, and write filters over the output fields.</p>
 
   <ol class='man-decor man-foot man foot'>
     <li class='tl'></li>
-    <li class='tc'>March 2014</li>
+    <li class='tc'>June 2014</li>
     <li class='tr'>zmap(1)</li>
   </ol>
 
