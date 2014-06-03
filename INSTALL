@@ -31,10 +31,6 @@ or on RHEL- and Fedora-based systems by running:
 or on Mac OS systems (brew):
 
   brew install cmake gmp gengetopt json-c byacc libdnet
-  
-or
-
-  sudo port install gmp libdnet byacc flex gengetopt cmake
 
 Once these prerequisites have been installed, ZMap can be installed
 by running:

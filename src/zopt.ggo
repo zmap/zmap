@@ -5,7 +5,7 @@
 # zmap option description to be processed by gengetopt
 
 package "zmap"
-version "1.2.0"
+version "1.2.1"
 purpose "A fast Internet-wide scanner."
 
 section "Basic arguments"
