@@ -393,13 +393,16 @@ static void json_metadata(FILE *file)
 			json_object_new_string(recv_end_time));
 
 	if (zconf.output_filter_str) {
-		json_object_object_add(obj, "output-filter", json_object_new_string(zconf.output_filter_str));
+		json_object_object_add(obj, "output-filter",
+				json_object_new_string(zconf.output_filter_str));
 	}
 	if (zconf.log_file) {
-		json_object_object_add(obj, "log-file", json_object_new_string(zconf.log_file));
+		json_object_object_add(obj, "log-file",
+				json_object_new_string(zconf.log_file));
 	}
 	if (zconf.log_directory) {
-		json_object_object_add(obj, "log-directory", json_object_new_string(zconf.log_directory));
+		json_object_object_add(obj, "log-directory",
+				json_object_new_string(zconf.log_directory));
 	}
 
 	if (zconf.destination_cidrs_len) {
@@ -975,6 +978,7 @@ int main(int argc, char *argv[])
 	SET_IF_GIVEN(zconf.max_results, max_results);
 	SET_IF_GIVEN(zconf.rate, rate);
 	SET_IF_GIVEN(zconf.packet_streams, probes);
+	SET_IF_GIVEN(zconf.status_updates_file, status_updates_file);
 
 	if (args.metadata_file_arg) {
 #ifdef JSON

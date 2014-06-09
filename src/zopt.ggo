@@ -124,14 +124,14 @@ option "log-file"		l "Write log entries to file"
 option "log-directory"		L "Write log entries to a timestamped file in this directory"
 	typestr="directory"
 	optional string
-option "status-updates-file" - "Write scan progress updates to CSV file"
+option "status-updates-file" u "Write scan progress updates to CSV file"
 	typestr="name"
 	optional string
 option "quiet"			q "Do not print status updates"
 	optional
 option "summary"		g "Print configuration and summary at end of scan"
 	optional
-option "metadata-file"		- "Output file for scan metadata (JSON)"
+option "metadata-file"		m "Output file for scan metadata (JSON)"
 	typestr="name"
 	optional string
 option "ignore-invalid-hosts"	- "Ignore invalid hosts in whitelist/blacklist file"

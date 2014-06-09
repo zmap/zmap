@@ -388,7 +388,7 @@ static FILE* init_status_update_file(char *path)
 				zconf.status_updates_file);
 		fprintf(f, 
 				"real-time,time-elapsed,time-remaining,"
-				"percent-complete,active-send-threads"
+				"percent-complete,active-send-threads,"
 				"sent-total,sent-last-one-sec,sent-avg-per-sec," 
 				"recv-success-total,recv-success-last-one-sec,recv-success-avg-per-sec," 
 				"pcap-drop-total,drop-last-one-sec,drop-avg-per-sec,"
