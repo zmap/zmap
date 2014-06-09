@@ -93,3 +93,21 @@ FEATURE	added support for scanning by FQDN
 
 FEATURE	adding sharding support
 
+1.2.1	2014-06-09
+FEATURE	autodetect number of sender threads
+
+FEATURE add ignore-invalid-hosts option for blacklist
+
+BUGFIX	UDP scans sometimes double-counted IP header length
+
+BUGFIX	Properly check UDP packet length
+
+BUGFIX	Integer overflow in json metadata when printing generator
+
+BUGFIX	All calls to malloc checked for failure
+
+
+
+
+
+
