@@ -137,6 +137,7 @@ typedef struct export_scan_status {
 	uint32_t recv_success_unique;
 	uint32_t app_recv_success_unique;
 	uint32_t complete;
+	uint32_t send_threads;
 	double percent_complete;
 	
 	float hitrate; // network, e.g. SYN-ACK vs RST
@@ -204,7 +205,6 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp, iterator_t 
 	double remaining_secs = compute_remaining_time(age, total_sent);
 
 	// export amount of time the scan has been running
-	
 	if (age < 5) {
 		exp->time_remaining_str[0] = '\0';
 	} else {
@@ -216,7 +216,6 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp, iterator_t 
 	exp->time_remaining = remaining_secs;
 	time_string((int)age, 0, exp->time_past_str, NUMBER_STR_LEN);
 	
-
 	// export recv statistics
 	exp->recv_rate = (zrecv.success_unique - intrnl->last_recv_net_success)/delta;
 	number_string(exp->recv_rate, exp->recv_rate_str, NUMBER_STR_LEN);
@@ -267,6 +266,9 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp, iterator_t 
 	exp->fail_total = zsend.sendto_failures;
 	exp->fail_last = (zsend.sendto_failures - intrnl->last_send_failures) / delta;
 	exp->fail_avg = zsend.sendto_failures/age;
+	
+	// misc
+	exp->send_threads = iterator_get_curr_send_threads(it);
 	
 }
 

@@ -93,3 +93,9 @@ shard_t* get_shard(iterator_t *it, uint8_t thread_id)
 	assert(thread_id < it->num_threads);
 	return &it->thread_shards[thread_id];
 }
+
+uint32_t iterator_get_curr_send_threads(iterator_t *it)
+{
+	assert(it);
+	return it->curr_threads;
+}
