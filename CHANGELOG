@@ -64,3 +64,50 @@ BUGFIX	CMake correctly installs files into /etc/zmap
 
 1.1.2	2014-01-21
 BUGFIX	Off-by-one error in paged bitmap
+
+
+1.2.0	2014-03-10
+BUGFIX	ICMP values added incorrectly, timestamp unavailable
+
+BUGFIX	setting fixed number of probes may inadverantly target specific networks
+
+BUGFIX	scans occasionally skip cooldown period due to lock issue
+
+FEATURE	added context to allow easier packaging in Debian and Ubuntu and Fedora and Brew and Macports
+
+FEATURE	remove dnet dependency for linux
+
+FEATURE remove random extra printed saddr
+
+FEATURE	build with optimizations by default
+
+FEATURE	added JSON metadata output
+
+FEATURE added syslog support
+
+FEATURE	added BSD/mac support
+
+BUGFIX	removed bizarre executible bits on random example code in git repo
+
+FEATURE	added support for scanning by FQDN
+
+FEATURE	adding sharding support
+
+1.2.1	2014-06-09
+FEATURE	autodetect number of sender threads
+
+FEATURE add ignore-invalid-hosts option for blacklist
+
+BUGFIX	UDP scans sometimes double-counted IP header length
+
+BUGFIX	Properly check UDP packet length
+
+BUGFIX	Integer overflow in json metadata when printing generator
+
+BUGFIX	All calls to malloc checked for failure
+
+
+
+
+
+
