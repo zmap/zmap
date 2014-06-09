@@ -47,6 +47,7 @@ struct state_conf zconf = {
 	.output_fields_len = 0,
 	.log_file = NULL,
 	.log_directory = NULL,
+	.status_updates_file = NULL,
 	.dryrun = 0,
 	.quiet = 0,
 	.summary = 0,

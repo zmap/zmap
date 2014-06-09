@@ -633,7 +633,7 @@ static void start_zmap(void)
 		log_fatal("zmap", "unable to join recv thread");
 		exit(EXIT_FAILURE);
 	}
-	if (!zconf.quiet) {
+	if (!zconf.quiet || !zconf.status_updates_file) {
 		pthread_join(tmon, NULL);
 		if (r != 0) {
 			log_fatal("zmap", "unable to join monitor thread");

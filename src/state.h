@@ -95,6 +95,7 @@ struct state_conf {
 	int output_fields_len;
 	char *log_file;
 	char *log_directory;
+	char *status_updates_file;
 	int dryrun;
 	int summary;
 	int quiet;
