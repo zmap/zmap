@@ -172,7 +172,7 @@ typedef struct export_scan_status {
 	uint32_t time_past;
 	char time_past_str[NUMBER_STR_LEN];
 	
-	float fail_total;
+	uint32_t fail_total;
 	float fail_avg;
 	float fail_last;
 		
@@ -389,10 +389,10 @@ static FILE* init_status_update_file(char *path)
 		fprintf(f, 
 				"real-time,time-elapsed,time-remaining,"
 				"percent-complete,active-send-threads"
-				"sent-total,sent-last-one-sec,sent-avg-per-sec,"
-				"recv-success-total,recv-success-last-one-sec,recv-success-avg-per-sec,"
-				"recv-all-total,recv-all-last-one-sec,recv-all-avg-per-sec,"
-				"drop-total,drop-last-one-sec,drop-avg-per-sec\n"
+				"sent-total,sent-last-one-sec,sent-avg-per-sec," 
+				"recv-success-total,recv-success-last-one-sec,recv-success-avg-per-sec," 
+				"pcap-drop-total,drop-last-one-sec,drop-avg-per-sec,"
+				"sendto-fail-total,sendto-fail-last-one-sec,sendto-fail-avg-per-sec\n"
 			);
 		fflush(f);
 		return f;
@@ -408,9 +408,13 @@ static void update_status_updates_file(export_status_t *exp, FILE *f)
 	strftime(timestamp, 20, "%Y-%m-%d %H:%M:%S", ptm);
 	
 	fprintf(f,
-			"%s,%u,%u",
-			timestamp, exp->time_past, exp->time_remaining
-	);
+			"%s,%u,%u,%f,%u,%u,%f,%f,%u,%f,%f,%u,%f,%f,%u,%f,%f\n",
+			timestamp, exp->time_past, exp->time_remaining,
+			exp->percent_complete, exp->send_threads,
+			exp->total_sent, exp->send_rate, exp->send_rate_avg,
+			exp->recv_success_unique, exp->recv_rate, exp->recv_avg,
+			exp->pcap_drop_total, exp->pcap_drop_last, exp->pcap_drop_avg,
+			exp->fail_total, exp->fail_last, exp->fail_avg);
 	fflush(f);
 }
 
