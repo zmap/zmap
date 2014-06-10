@@ -5,6 +5,7 @@
 
 #include "../lib/includes.h"
 
+#include "aesrand.h"
 #include "cyclic.h"
 #include "shard.h"
 

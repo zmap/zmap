@@ -268,7 +268,7 @@ static void summary(void)
 	SU("cnf", "maximum-targets", zconf.max_targets);
 	SU("cnf", "maximum-runtime", zconf.max_runtime);
 	SU("cnf", "maximum-results", zconf.max_results);
-	SU("cnf", "permutation-seed", zconf.seed);
+	SLU("cnf", "permutation-seed", zconf.seed);
 	SI("cnf", "cooldown-period", zconf.cooldown_secs);
 	SS("cnf", "send-interface", zconf.iface);
 	SI("cnf", "rate", zconf.rate);
@@ -557,14 +557,6 @@ static void start_zmap(void)
 		  zconf.gw_mac[0], zconf.gw_mac[1], zconf.gw_mac[2],
 		  zconf.gw_mac[3], zconf.gw_mac[4], zconf.gw_mac[5]);
 	// Initialization
-
-	// Seed the RNG
-	if (zconf.use_seed) {
-		aesrand_init(zconf.seed + 1);
-	} else {
-		aesrand_init(0);
-	}
-
 	log_info("zmap", "output module: %s", zconf.output_module->name);
 	if (zconf.output_module && zconf.output_module->init) {
 		zconf.output_module->init(&zconf, zconf.output_fields,
@@ -1068,10 +1060,19 @@ int main(int argc, char *argv[])
 		}
 		zconf.gw_mac_set = 1;
 	}
+
+	// Check for a random seed
 	if (args.seed_given) {
 		zconf.seed = args.seed_arg;
 		zconf.use_seed = 1;
 	}
+	// Seed the RNG
+	if (zconf.use_seed) {
+		zconf.aes = aesrand_init_from_seed(zconf.seed);
+	} else {
+		zconf.aes = aesrand_init_from_random();
+	}
+
 	// Set up sharding
 	zconf.shard_num = 0;
 	zconf.total_shards = 1;

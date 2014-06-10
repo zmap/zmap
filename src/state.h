@@ -11,9 +11,10 @@
 
 #include "../lib/includes.h"
 
-#include "types.h"
+#include "aesrand.h"
 #include "fieldset.h"
 #include "filter.h"
+#include "types.h"
 
 #ifndef STATE_H
 #define STATE_H
@@ -61,7 +62,8 @@ struct state_conf {
 	// should use CLI provided randomization seed instead of generating
 	// a random seed.
 	int use_seed;
-	uint32_t seed;
+	uint64_t seed;
+	aesrand_t *aes;
 	// generator of the cyclic multiplicative group that is utilized for
 	// address generation
 	uint32_t generator;
@@ -158,4 +160,3 @@ struct state_recv {
 extern struct state_recv zrecv;
 
 #endif // _STATE_H
-

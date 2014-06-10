@@ -88,7 +88,7 @@ iterator_t* send_init(void)
 		uint32_t ip_last = ntohl(srcip_last);
 		assert(ip_first && ip_last);
 		assert(ip_last > ip_first);
-		uint32_t offset = (uint32_t) (aesrand_getword() & 0xFFFFFFFF);
+		uint32_t offset = (uint32_t) (aesrand_getword(zconf.aes) & 0xFFFFFFFF);
 		srcip_offset = offset % (srcip_last - srcip_first);
 		num_src_addrs = ip_last - ip_first + 1;
 	}
@@ -298,4 +298,3 @@ int send_run(int sock, shard_t *s)
 	log_debug("send", "thread %hu finished", s->id);
 	return EXIT_SUCCESS;
 }
-
