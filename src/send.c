@@ -135,7 +135,7 @@ iterator_t* send_init(void)
 			  "interface: %s", zconf.iface);
 		return NULL;
 	}
-     log_debug("send", "source MAC address %02x:%02x:%02x:%02x:%02x:%02x",
+	log_debug("send", "source MAC address %02x:%02x:%02x:%02x:%02x:%02x",
            zconf.hw_mac[0], zconf.hw_mac[1], zconf.hw_mac[2],
            zconf.hw_mac[3], zconf.hw_mac[4], zconf.hw_mac[5]);
 
@@ -201,9 +201,10 @@ int send_run(int sock, shard_t *s)
 	}
 	log_debug("send", "source MAC address %s",
 			mac_buf);
+	void *probe_data;
 	if (zconf.probe_module->thread_initialize) {
 		zconf.probe_module->thread_initialize(buf, zconf.hw_mac, zconf.gw_mac,
-					      zconf.target_port);
+					      zconf.target_port, &probe_data);
 	}
 	pthread_mutex_unlock(&send_mutex);
 
@@ -264,7 +265,7 @@ int send_run(int sock, shard_t *s)
 
 		  	uint32_t validation[VALIDATE_BYTES/sizeof(uint32_t)];
 			validate_gen(src_ip, curr, (uint8_t *)validation);
-			zconf.probe_module->make_packet(buf, src_ip, curr, validation, i);
+			zconf.probe_module->make_packet(buf, src_ip, curr, validation, i, probe_data);
 
 			if (zconf.dryrun) {
 				pthread_mutex_lock(&send_mutex);
