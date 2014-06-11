@@ -8,12 +8,14 @@
 
 // module responsible for printing on-screen updates during the scan process
 
+#include "monitor.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <math.h>
-
-#include "monitor.h"
+#include <time.h>
+#include <sys/time.h>
 
 #include "iterator.h"
 #include "recv.h"
@@ -24,6 +26,64 @@
 
 #define UPDATE_INTERVAL 1 //seconds
 #define NUMBER_STR_LEN 20
+
+// internal monitor status that is used to track deltas
+typedef struct internal_scan_status {
+	double   last_now;
+	uint32_t last_sent;
+	uint32_t last_send_failures;
+	uint32_t last_recv_net_success;
+	uint32_t last_recv_app_success;
+	uint32_t last_pcap_drop;
+	
+} int_status_t;
+
+// exportable status information that can be printed to screen
+typedef struct export_scan_status {
+	uint32_t total_sent;
+	uint32_t recv_success_unique;
+	uint32_t app_recv_success_unique;
+	uint32_t complete;
+	uint32_t send_threads;
+	double percent_complete;
+	
+	float hitrate; // network, e.g. SYN-ACK vs RST
+	float app_hitrate; // application level, e.g. DNS response versus correct lookup.
+	
+	float send_rate;
+	char send_rate_str[NUMBER_STR_LEN];
+	float send_rate_avg;
+	char send_rate_avg_str[NUMBER_STR_LEN];
+	
+	float recv_rate;
+	char recv_rate_str[NUMBER_STR_LEN];
+	float recv_avg;
+	char recv_avg_str[NUMBER_STR_LEN];
+	
+	float app_success_rate;
+	char app_success_rate_str[NUMBER_STR_LEN];
+	float app_success_avg;
+	char app_success_avg_str[NUMBER_STR_LEN];
+	
+	uint32_t pcap_drop;
+	uint32_t pcap_ifdrop;
+	uint32_t pcap_drop_total;
+	char pcap_drop_total_str[NUMBER_STR_LEN];
+	float pcap_drop_last;
+	char pcap_drop_last_str[NUMBER_STR_LEN];
+	float pcap_drop_avg;
+	char pcap_drop_avg_str[NUMBER_STR_LEN];
+	
+	uint32_t time_remaining;
+	char time_remaining_str[NUMBER_STR_LEN];
+	uint32_t time_past;
+	char time_past_str[NUMBER_STR_LEN];
+	
+	uint32_t fail_total;
+	float fail_avg;
+	float fail_last;
+		
+} export_status_t;
 
 // find minimum of an array of doubles
 static double min_d(double array[], int n)
@@ -120,64 +180,6 @@ double compute_remaining_time(double age, uint64_t sent)
 	}
 }
 
-// internal monitor status that is used to track deltas
-typedef struct internal_scan_status {
-	double   last_now;
-	uint32_t last_sent;
-	uint32_t last_send_failures;
-	uint32_t last_recv_net_success;
-	uint32_t last_recv_app_success;
-	uint32_t last_pcap_drop;
-	
-} int_status_t;
-
-// exportable status information that can be printed to screen
-typedef struct export_scan_status {
-	uint32_t total_sent;
-	uint32_t recv_success_unique;
-	uint32_t app_recv_success_unique;
-	uint32_t complete;
-	uint32_t send_threads;
-	double percent_complete;
-	
-	float hitrate; // network, e.g. SYN-ACK vs RST
-	float app_hitrate; // application level, e.g. DNS response versus correct lookup.
-	
-	float send_rate;
-	char send_rate_str[NUMBER_STR_LEN];
-	float send_rate_avg;
-	char send_rate_avg_str[NUMBER_STR_LEN];
-	
-	float recv_rate;
-	char recv_rate_str[NUMBER_STR_LEN];
-	float recv_avg;
-	char recv_avg_str[NUMBER_STR_LEN];
-	
-	float app_success_rate;
-	char app_success_rate_str[NUMBER_STR_LEN];
-	float app_success_avg;
-	char app_success_avg_str[NUMBER_STR_LEN];
-	
-	uint32_t pcap_drop;
-	uint32_t pcap_ifdrop;
-	uint32_t pcap_drop_total;
-	char pcap_drop_total_str[NUMBER_STR_LEN];
-	float pcap_drop_last;
-	char pcap_drop_last_str[NUMBER_STR_LEN];
-	float pcap_drop_avg;
-	char pcap_drop_avg_str[NUMBER_STR_LEN];
-	
-	uint32_t time_remaining;
-	char time_remaining_str[NUMBER_STR_LEN];
-	uint32_t time_past;
-	char time_past_str[NUMBER_STR_LEN];
-	
-	uint32_t fail_total;
-	float fail_avg;
-	float fail_last;
-		
-} export_status_t;
-
 
 static void update_stats(int_status_t *intrnl, iterator_t *it)
 {
@@ -269,7 +271,6 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp, iterator_t 
 	
 	// misc
 	exp->send_threads = iterator_get_curr_send_threads(it);
-	
 }
 
 static void log_drop_warnings(export_status_t *exp)
