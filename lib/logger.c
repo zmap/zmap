@@ -1,12 +1,13 @@
 /*
  * Logger Copyright 2013 Regents of the University of Michigan
- *
+*
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
 #include <stdlib.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -21,9 +22,20 @@
 static enum LogLevel log_output_level = ZLOG_INFO;
 
 static FILE *log_output_stream = NULL;
+static int color = 0;
 
 static const char *log_level_name[] = {
 	"FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE" };
+
+#define RED     "\x1b[31m"
+#define GREEN   "\x1b[32m"
+#define YELLOW  "\x1b[33m"
+#define BLUE    "\x1b[34m"
+#define MAGENTA "\x1b[35m"
+#define CYAN    "\x1b[36m"
+#define RESET   "\x1b[0m"
+
+#define COLOR(x) do { if(color) fprintf(log_output_stream, x); } while (0)
 
 static int LogLogVA(enum LogLevel level, const char *loggerName,
 		const char *logMessage, va_list args)
@@ -51,12 +63,14 @@ static int LogLogVA(enum LogLevel level, const char *loggerName,
 		if (loggerName || logMessage) {
 			fputs("\n", log_output_stream);
 		}
-		fflush(log_output_stream);
 	}
+	COLOR(RESET);
+	fflush(log_output_stream);
 	return 0;
 }
 
 int log_fatal(const char *name, const char *message, ...) {
+	COLOR(RED);
 	va_list va;
 	va_start(va, message);
 	LogLogVA(ZLOG_FATAL, name, message, va);
@@ -70,6 +84,7 @@ int log_fatal(const char *name, const char *message, ...) {
 }
 
 int log_error(const char *name, const char *message, ...) {
+	COLOR(MAGENTA);	
 	va_list va;
 	va_start(va, message);
 	int ret = LogLogVA(ZLOG_ERROR, name, message, va);
@@ -83,6 +98,7 @@ int log_error(const char *name, const char *message, ...) {
 }
 
 int log_warn(const char *name, const char *message, ...) {
+	COLOR(MAGENTA);
 	va_list va;
 	va_start(va, message);
 	int ret = LogLogVA(ZLOG_WARN, name, message, va);
@@ -95,6 +111,7 @@ int log_warn(const char *name, const char *message, ...) {
 }
 
 int log_info(const char *name, const char *message, ...) {
+	COLOR(GREEN);
 	va_list va;
 	va_start(va, message);
 	int ret = LogLogVA(ZLOG_INFO, name, message, va);
@@ -115,6 +132,7 @@ int log_info(const char *name, const char *message, ...) {
 }
 
 int log_debug(const char *name, const char *message, ...) {
+	COLOR(BLUE);
 	va_list va;
 	va_start(va, message);
 	int ret = LogLogVA(ZLOG_DEBUG, name, message, va);
@@ -149,6 +167,9 @@ int log_init(FILE *stream, enum LogLevel level,
 	log_output_level = level;
 	if (syslog_enabled) {
 		openlog(appname, 0, LOG_USER); //no options
+	}
+	if (isatty(fileno(log_output_stream))) {
+		color = 1;
 	}
 	return 0;
 }

@@ -10,7 +10,7 @@ purpose "A fast Internet-wide scanner."
 
 section "Basic arguments"
 
-option "target-port"    	p "TCP port number to scan (for SYN scans)"
+option "target-port"    	p "port number to scan (for TCP and UDP scans)"
 	typestr="port"
 	optional int
 option "output-file"  		o "Output file"
@@ -22,24 +22,29 @@ option "blacklist-file"		b "File of subnets to exclude, in CIDR notation, e.g. 1
 option "whitelist-file"		w "File of subnets to constrain scan to, in CIDR notation, e.g. 192.168.0.0/16"
 	typestr="path"
 	optional string
+option "dryrun"			d "Don't actually send packets"
+	optional
 
 section "Scan options"
-
-option "max-targets"		n "Cap number of targets to probe (as a number or a percentage of the address space)"
-	typestr="n"
-	optional string
-option "max-results"		N "Cap number of results to return"
-	typestr="n"
-	optional int
-option "max-runtime"		t "Cap length of time for sending packets"
-	typestr="ses"
-	optional int
 option "rate"           	r "Set send rate in packets/sec"
 	typestr="pps"
 	optional int
 option "bandwidth"		B "Set send rate in bits/second (supports suffixes G, M and K)"
 	typestr="bps"
 	optional string
+option "max-targets"		n "Cap number of targets to probe (as a number or a percentage of the address space)"
+	typestr="n"
+	optional string
+option "max-runtime"		t "Cap length of time for sending packets"
+	typestr="ses"
+	optional int
+option "max-results"		N "Cap number of results to return"
+	typestr="n"
+	optional int
+option "probes"			P "Number of probes to send to each IP"
+	typestr="n"
+	default="1"
+	optional int
 option "cooldown-time"  	c "How long to continue receiving after sending last probe"
 	typestr="secs"
 	default="8"
@@ -47,12 +52,6 @@ option "cooldown-time"  	c "How long to continue receiving after sending last pr
 option "seed"           	e "Seed used to select address permutation"
 	typestr="n"
 	optional int
-option "probes"			P "Number of probes to send to each IP"
-	typestr="n"
-	default="1"
-	optional int
-option "dryrun"			d "Don't actually send packets"
-	optional
 option "shards"			- "Set the total number of shards"
 	typestr="N"
 	optional int
@@ -78,7 +77,20 @@ option "interface"		i "Specify network interface to use"
 	optional string
 option "vpn"		X "Sends IP packets instead of Ethernet (for VPNs)"
 	optional
-	
+
+section "Probe Modules"
+option "probe-module"		M "Select probe module"
+	typestr="name"
+	default="tcp_synscan"
+	optional string
+
+option "probe-args"		- "Arguments to pass to probe module"
+	typestr="args"
+	optional string
+
+option "list-probe-modules"	- "List available probe modules"
+        optional
+
 section "Data Output"	
 option "output-fields"		f "Fields that should be output in result set"
 	typestr="fields"
@@ -112,7 +124,7 @@ option "log-directory"		L "Write log entries to a timestamped file in this direc
 option "metadata-file"		m "Output file for scan metadata (JSON)"
 	typestr="name"
 	optional string
-option "status-updates-file" u "Write scan progress updates to CSV file"
+option "status-updates-file"    u "Write scan progress updates to CSV file"
 	typestr="name"
 	optional string
 option "quiet"			q "Do not print status updates"
@@ -122,22 +134,6 @@ option "summary"		g "Print configuration and summary at end of scan"
 option "disable-syslog"		- "Disables logging messages to syslog"
 	optional
 	
-section "Advanced options"
-option "sender-threads"		T "Threads used to send packets"
-	typestr="n"
-	default="1"
-	optional int
-option "probe-module"		M "Select probe module"
-	typestr="name"
-	default="tcp_synscan"
-	optional string
-
-option "probe-args"		- "Arguments to pass to probe module"
-	typestr="args"
-	optional string
-
-option "list-probe-modules"	- "List available probe modules"
-        optional
 				
 				
 section "Additional options"
@@ -145,6 +141,11 @@ option "config"			C "Read a configuration file, which can specify any of these o
 	typestr="filename"
 	default="/etc/zmap/zmap.conf"
 	optional string
+
+option "sender-threads"		T "Threads used to send packets"
+	typestr="n"
+	default="1"
+	optional int
 
 option "ignore-invalid-hosts"	- "Ignore invalid hosts in whitelist/blacklist file"
 	optional

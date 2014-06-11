@@ -380,7 +380,7 @@ static void onscreen_generic(export_status_t *exp)
 
 static FILE* init_status_update_file(char *path)
 {
-		FILE *f = fopen(path, "w");
+		FILE *f = fopen(path, "wb");
 		if (!f) {
 			log_fatal("csv", "could not open output file (%s)",
 					zconf.status_updates_file);
