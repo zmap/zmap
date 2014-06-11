@@ -58,6 +58,10 @@ option "probes"			P "Number of probes to send to each IP"
 	typestr="n"
 	default="1"
 	optional int
+option "retries"		- "Max number of times to try to send packet if send fails"
+	typestr="n"
+	default="10"
+	optional int
 option "dryrun"			d "Don't actually send packets"
 	optional
 option "shards"			- "Set the total number of shards"
