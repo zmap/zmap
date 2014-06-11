@@ -29,6 +29,7 @@ struct fieldset_conf {
 	fielddefset_t outdefs;
 	translation_t translation;
 	int success_index;
+	int app_success_index;
 	int classification_index;
 };
 
@@ -94,6 +95,7 @@ struct state_conf {
 	int output_fields_len;
 	char *log_file;
 	char *log_directory;
+	char *status_updates_file;
 	int dryrun;
 	int summary;
 	int quiet;
@@ -126,6 +128,10 @@ struct state_recv {
 	uint32_t success_total;
 	// unique IPs that sent valid responses classified as "success"
 	uint32_t success_unique;
+	// valid responses classified as "success"
+	uint32_t app_success_total;
+	// unique IPs that sent valid responses classified as "success"
+	uint32_t app_success_unique;
 	// valid responses classified as "success" received during cooldown
 	uint32_t cooldown_total;
 	// unique IPs that first sent valid "success"es during cooldown

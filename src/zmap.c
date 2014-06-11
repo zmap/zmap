@@ -287,6 +287,11 @@ static void summary(void)
 	SD("exc", "hit-rate", hitrate);
 	SU("exc", "success-total", zrecv.success_total);
 	SU("exc", "success-unique", zrecv.success_unique);
+	// if there are application-level status messages, output
+	if (zconf.fsconf.app_success_index >= 0) {
+		SU("exc", "app-success-total", zrecv.app_success_total);
+		SU("exc", "app-success-unique", zrecv.app_success_unique);
+	}
 	SU("exc", "success-cooldown-total", zrecv.cooldown_total);
 	SU("exc", "success-cooldown-unique", zrecv.cooldown_unique);
 	SU("exc", "failure-total", zrecv.failure_total);
@@ -363,6 +368,10 @@ static void json_metadata(FILE *file)
 
 	json_object_object_add(obj, "success-total", json_object_new_int(zrecv.success_total));
 	json_object_object_add(obj, "success-unique", json_object_new_int(zrecv.success_unique));
+	if (zconf.fsconf.app_success_index >= 0) {
+		json_object_object_add(obj, "app-success-total", json_object_new_int(zrecv.app_success_total));
+		json_object_object_add(obj, "app-success-unique", json_object_new_int(zrecv.app_success_unique));
+	}
 	json_object_object_add(obj, "success-cooldown-total", json_object_new_int(zrecv.cooldown_total));
 	json_object_object_add(obj, "success-cooldown-unique", json_object_new_int(zrecv.cooldown_unique));
 	json_object_object_add(obj, "failure-total", json_object_new_int(zrecv.failure_total));
@@ -384,13 +393,16 @@ static void json_metadata(FILE *file)
 			json_object_new_string(recv_end_time));
 
 	if (zconf.output_filter_str) {
-		json_object_object_add(obj, "output-filter", json_object_new_string(zconf.output_filter_str));
+		json_object_object_add(obj, "output-filter",
+				json_object_new_string(zconf.output_filter_str));
 	}
 	if (zconf.log_file) {
-		json_object_object_add(obj, "log-file", json_object_new_string(zconf.log_file));
+		json_object_object_add(obj, "log-file",
+				json_object_new_string(zconf.log_file));
 	}
 	if (zconf.log_directory) {
-		json_object_object_add(obj, "log-directory", json_object_new_string(zconf.log_directory));
+		json_object_object_add(obj, "log-directory",
+				json_object_new_string(zconf.log_directory));
 	}
 
 	if (zconf.destination_cidrs_len) {
@@ -624,7 +636,7 @@ static void start_zmap(void)
 		log_fatal("zmap", "unable to join recv thread");
 		exit(EXIT_FAILURE);
 	}
-	if (!zconf.quiet) {
+	if (!zconf.quiet || !zconf.status_updates_file) {
 		pthread_join(tmon, NULL);
 		if (r != 0) {
 			log_fatal("zmap", "unable to join monitor thread");
@@ -896,6 +908,15 @@ int main(int argc, char *argv[])
 		log_fatal("fieldset", "probe module does not supply "
 				      "required success field.");
 	}
+	zconf.fsconf.app_success_index =
+			fds_get_index_by_name(fds, (char*) "app_success");
+	if (zconf.fsconf.app_success_index < 0) {
+		log_trace("fieldset", "probe module does not supply "
+				      "application success field.");
+	} else {
+		log_trace("fieldset", "probe module supplies app_success"
+				" output field. It will be included in monitor output");
+	}
 	zconf.fsconf.classification_index =
 			fds_get_index_by_name(fds, (char*) "classification");
 	if (zconf.fsconf.classification_index < 0) {
@@ -957,6 +978,7 @@ int main(int argc, char *argv[])
 	SET_IF_GIVEN(zconf.max_results, max_results);
 	SET_IF_GIVEN(zconf.rate, rate);
 	SET_IF_GIVEN(zconf.packet_streams, probes);
+	SET_IF_GIVEN(zconf.status_updates_file, status_updates_file);
 
 	if (args.metadata_file_arg) {
 #ifdef JSON

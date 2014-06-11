@@ -10,7 +10,7 @@ purpose "A fast Internet-wide scanner."
 
 section "Basic arguments"
 
-option "target-port"    	p "TCP port number to scan (for SYN scans)"
+option "target-port"    	p "port number to scan (for TCP and UDP scans)"
 	typestr="port"
 	optional int
 option "output-file"  		o "Output file"
@@ -22,27 +22,29 @@ option "blacklist-file"		b "File of subnets to exclude, in CIDR notation, e.g. 1
 option "whitelist-file"		w "File of subnets to constrain scan to, in CIDR notation, e.g. 192.168.0.0/16"
 	typestr="path"
 	optional string
-option "output-fields"		f "Fields that should be output in result set"
-	typestr="fields"
-	optional string
+option "dryrun"			d "Don't actually send packets"
+	optional
 
 section "Scan options"
-
-option "max-targets"		n "Cap number of targets to probe (as a number or a percentage of the address space)"
-	typestr="n"
-	optional string
-option "max-results"		N "Cap number of results to return"
-	typestr="n"
-	optional int
-option "max-runtime"		t "Cap length of time for sending packets"
-	typestr="ses"
-	optional int
 option "rate"           	r "Set send rate in packets/sec"
 	typestr="pps"
 	optional int
 option "bandwidth"		B "Set send rate in bits/second (supports suffixes G, M and K)"
 	typestr="bps"
 	optional string
+option "max-targets"		n "Cap number of targets to probe (as a number or a percentage of the address space)"
+	typestr="n"
+	optional string
+option "max-runtime"		t "Cap length of time for sending packets"
+	typestr="ses"
+	optional int
+option "max-results"		N "Cap number of results to return"
+	typestr="n"
+	optional int
+option "probes"			P "Number of probes to send to each IP"
+	typestr="n"
+	default="1"
+	optional int
 option "cooldown-time"  	c "How long to continue receiving after sending last probe"
 	typestr="secs"
 	default="8"
@@ -50,16 +52,6 @@ option "cooldown-time"  	c "How long to continue receiving after sending last pr
 option "seed"           	e "Seed used to select address permutation"
 	typestr="n"
 	optional int
-option "sender-threads"		T "Threads used to send packets"
-	typestr="n"
-	default="1"
-	optional int
-option "probes"			P "Number of probes to send to each IP"
-	typestr="n"
-	default="1"
-	optional int
-option "dryrun"			d "Don't actually send packets"
-	optional
 option "shards"			- "Set the total number of shards"
 	typestr="N"
 	optional int
@@ -86,59 +78,77 @@ option "interface"		i "Specify network interface to use"
 option "vpn"		X "Sends IP packets instead of Ethernet (for VPNs)"
 	optional
 
-section "Advanced options"
-
+section "Probe Modules"
 option "probe-module"		M "Select probe module"
 	typestr="name"
 	default="tcp_synscan"
+	optional string
+
+option "probe-args"		- "Arguments to pass to probe module"
+	typestr="args"
+	optional string
+
+option "list-probe-modules"	- "List available probe modules"
+        optional
+
+section "Data Output"	
+option "output-fields"		f "Fields that should be output in result set"
+	typestr="fields"
 	optional string
 option "output-module"		O "Select output module"
 	typestr="name"
 	default="default"
 	optional string
-option "probe-args"		- "Arguments to pass to probe module"
-	typestr="args"
-	optional string
 option "output-args"		- "Arguments to pass to output module"
 	typestr="args"
 	optional string
-option "output-filter"          - "Specify a filter over the response fields to limit what responses get sent to the output module"
+option "output-filter"  - "Specify a filter over the response fields to limit what responses get sent to the output module"
 	typestr="filter"
 	optional string
 option "list-output-modules"	- "List available output modules"
         optional
-option "list-probe-modules"	- "List available probe modules"
-        optional
 option "list-output-fields" 	- "List all fields that can be output by selected probe module"
 	optional
 
-section "Additional options"
-
-option "config"			C "Read a configuration file, which can specify any of these options"
-	typestr="filename"
-	default="/etc/zmap/zmap.conf"
-	optional string
+section "Logging and Metadata"
+option "verbosity"		v "Level of log detail (0-5)"
+	typestr="n"
+	default="3"
+	optional int
 option "log-file"		l "Write log entries to file"
 	typestr="name"
 	optional string
 option "log-directory"		L "Write log entries to a timestamped file in this directory"
 	typestr="directory"
 	optional string
+option "metadata-file"		m "Output file for scan metadata (JSON)"
+	typestr="name"
+	optional string
+option "status-updates-file"    u "Write scan progress updates to CSV file"
+	typestr="name"
+	optional string
 option "quiet"			q "Do not print status updates"
 	optional
 option "summary"		g "Print configuration and summary at end of scan"
 	optional
-option "metadata-file"		- "Output file for scan metadata (JSON)"
-	typestr="name"
-	optional string
-option "ignore-invalid-hosts"	- "Ignore invalid hosts in whitelist/blacklist file"
-	optional
 option "disable-syslog"		- "Disables logging messages to syslog"
 	optional
-option "verbosity"		v "Level of log detail (0-5)"
+	
+				
+				
+section "Additional options"
+option "config"			C "Read a configuration file, which can specify any of these options"
+	typestr="filename"
+	default="/etc/zmap/zmap.conf"
+	optional string
+
+option "sender-threads"		T "Threads used to send packets"
 	typestr="n"
-	default="3"
+	default="1"
 	optional int
+
+option "ignore-invalid-hosts"	- "Ignore invalid hosts in whitelist/blacklist file"
+	optional
 option "help"	   		h "Print help and exit"
 	optional
 option "version"   		V "Print version and exit"
