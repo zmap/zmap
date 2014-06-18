@@ -376,6 +376,7 @@ static void onscreen_generic(export_status_t *exp)
 				exp->pcap_drop_avg_str,
 				exp->hitrate);
 	}
+	fflush(stderr);
 }
 
 static FILE* init_status_update_file(char *path)

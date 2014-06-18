@@ -27,6 +27,7 @@ SET(LIB_SOURCES
 	${PROJECT_SOURCE_DIR}/lib/random.c
 	${PROJECT_SOURCE_DIR}/lib/rijndael-alg-fst.c
 	${PROJECT_SOURCE_DIR}/lib/xalloc.c
+	${PROJECT_SOURCE_DIR}/lib/lockfd.c
 )
 
 # ADD YOUR PROBE MODULE HERE

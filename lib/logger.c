@@ -5,7 +5,6 @@
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
-
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -18,6 +17,7 @@
 
 #include "logger.h"
 #include "xalloc.h"
+#include "lockfd.h"
 
 static enum LogLevel log_output_level = ZLOG_INFO;
 
@@ -33,7 +33,7 @@ static const char *log_level_name[] = {
 #define BLUE    "\x1b[34m"
 #define MAGENTA "\x1b[35m"
 #define CYAN    "\x1b[36m"
-#define RESET   "\x1b[0m"
+#define RESET   "\033[0m"
 
 #define COLOR(x) do { if(color) fprintf(log_output_stream, x); } while (0)
 
@@ -43,9 +43,12 @@ static int LogLogVA(enum LogLevel level, const char *loggerName,
 	if (!log_output_stream) {
 		log_output_stream = stdout;
 	}
+	if (log_output_stream == stdout || log_output_stream == stderr) {
+		lock_file(log_output_stream);
+	}
 	if (level <= log_output_level) {
+		
 		const char *levelName = log_level_name[level];
-
 		struct timeval now;
 		char timestamp[256];
 		gettimeofday(&now, NULL);
@@ -63,10 +66,14 @@ static int LogLogVA(enum LogLevel level, const char *loggerName,
 		if (loggerName || logMessage) {
 			fputs("\n", log_output_stream);
 		}
+
 	}
 	COLOR(RESET);
 	fflush(log_output_stream);
-	return 0;
+	if (log_output_stream == stdout || log_output_stream == stderr) {
+		unlock_file(log_output_stream);
+	}
+	return EXIT_SUCCESS;
 }
 
 int log_fatal(const char *name, const char *message, ...) {
