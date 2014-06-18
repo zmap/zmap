@@ -23,6 +23,7 @@
 
 #include "../lib/logger.h"
 #include "../lib/xalloc.h"
+#include "../lib/lockfd.h"
 
 #define UPDATE_INTERVAL 1 //seconds
 #define NUMBER_STR_LEN 20
@@ -436,11 +437,13 @@ void monitor_run(iterator_t *it, pthread_mutex_t *lock)
 		export_stats(internal_status, export_status, it);
 		log_drop_warnings(export_status);
 		if (!zconf.quiet) {
+			lock_file(stderr);
 			if (zconf.fsconf.app_success_index >= 0) {
 				onscreen_appsuccess(export_status);
 			} else {
 				onscreen_generic(export_status);
 			}
+			unlock_file(stderr);
 		}
 		if (f) {
 			update_status_updates_file(export_status, f);
