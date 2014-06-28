@@ -22,8 +22,6 @@ option "blacklist-file"		b "File of subnets to exclude, in CIDR notation, e.g. 1
 option "whitelist-file"		w "File of subnets to constrain scan to, in CIDR notation, e.g. 192.168.0.0/16"
 	typestr="path"
 	optional string
-option "dryrun"			d "Don't actually send packets"
-	optional
 
 section "Scan options"
 option "rate"           	r "Set send rate in packets/sec"
@@ -52,6 +50,12 @@ option "cooldown-time"  	c "How long to continue receiving after sending last pr
 option "seed"           	e "Seed used to select address permutation"
 	typestr="n"
 	optional int
+option "retries"		- "Max number of times to try to send packet if send fails"
+	typestr="n"
+	default="10"
+	optional int
+option "dryrun"			d "Don't actually send packets"
+	optional
 option "shards"			- "Set the total number of shards"
 	typestr="N"
 	optional int

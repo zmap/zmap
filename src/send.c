@@ -225,6 +225,7 @@ int send_run(int sock, shard_t *s)
 		last_time = now();
 	}
 	uint32_t curr = shard_get_cur_ip(s);
+	int attempts = zconf.num_retries + 1;
 	while (1) {
 		// adaptive timing delay
 		if (delay > 0) {
@@ -272,13 +273,17 @@ int send_run(int sock, shard_t *s)
 			} else {
 				int length = zconf.probe_module->packet_length;
 				void *contents = buf + zconf.send_ip_pkts*sizeof(struct ether_header);
-				int rc = send_packet(sock, contents, length);
-				if (rc < 0) {
-					struct in_addr addr;
-					addr.s_addr = curr;
-					log_debug("send", "send_packet failed for %s. %s",
-							  inet_ntoa(addr), strerror(errno));
-					s->state.failures++;
+				for (int i = 0; i < attempts; ++i) {
+					int rc = send_packet(sock, contents, length);
+					if (rc < 0) {
+						struct in_addr addr;
+						addr.s_addr = curr;
+						log_debug("send", "send_packet failed for %s. %s",
+								  inet_ntoa(addr), strerror(errno));
+						s->state.failures++;
+					} else {
+						break;
+					}
 				}
 			}
 		}
