@@ -742,7 +742,7 @@ static fielddef_t fields[] = {
 	{.name = "icmp_type", .type = "int", .desc = "icmp message type"},
 	{.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
 	{.name = "icmp_unreach_str", .type = "string", .desc = "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"},
-	{.name = "udp_pkt_size", .type="int", .desc = "UDP packet lenght"},
+	{.name = "udp_pkt_size", .type="int", .desc = "UDP packet length"},
 	{.name = "data", .type="binary", .desc = "UDP payload"}
 };
 
