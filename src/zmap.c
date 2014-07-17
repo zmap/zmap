@@ -283,6 +283,7 @@ static void summary(void)
 	SS("exc", "recv-end-time", recv_end_time);
 	SU("exc", "sent", zsend.sent);
 	SU("exc", "blacklisted", zsend.blacklisted);
+	SU("exc", "whitelisted", zsend.whitelisted);
 	SU("exc", "first-scanned", zsend.first_scanned);
 	SD("exc", "hit-rate", hitrate);
 	SU("exc", "success-total", zrecv.success_total);
@@ -362,6 +363,7 @@ static void json_metadata(FILE *file)
 	json_object_object_add(obj, "pcap-ifdrop", json_object_new_int(zrecv.pcap_ifdrop));
 
 	json_object_object_add(obj, "blacklisted", json_object_new_int(zsend.blacklisted));
+	json_object_object_add(obj, "whitelisted", json_object_new_int(zsend.whitelisted));
 	json_object_object_add(obj, "first-scanned", json_object_new_int(zsend.first_scanned));
 	json_object_object_add(obj, "send-to-failures", json_object_new_int(zsend.sendto_failures));
 	json_object_object_add(obj, "total-sent", json_object_new_int(zsend.sent));

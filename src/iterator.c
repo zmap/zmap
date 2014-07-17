@@ -33,6 +33,7 @@ void shard_complete(uint8_t thread_id, void *arg)
 	shard_t *s = &it->thread_shards[thread_id];
 	zsend.sent += s->state.sent;
 	zsend.blacklisted += s->state.blacklisted;
+	zsend.whitelisted += s->state.whitelisted;
 	zsend.sendto_failures += s->state.failures;
 	uint8_t done = 1;
 	for (uint8_t i = 0; done && (i < it->num_threads); ++i) {
