@@ -115,6 +115,7 @@ struct state_send {
 	double finish;
 	uint32_t sent;
 	uint32_t blacklisted;
+	uint32_t whitelisted;
 	int complete;
 	uint32_t first_scanned;
 	uint32_t targets;

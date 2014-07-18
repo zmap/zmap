@@ -65,6 +65,7 @@ struct state_send zsend = {
 	.finish = 0.0,
 	.sent = 0,
 	.blacklisted = 0,
+	.whitelisted = 0,
 	.complete = 0,
 	.sendto_failures = 0,
 	.targets = 0,
