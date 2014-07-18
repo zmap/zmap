@@ -105,6 +105,7 @@ uint32_t shard_get_next_ip(shard_t *shard)
 			return 0;
 		}
 		if (candidate - 1 < zsend.max_index) {
+			shard->state.whitelisted++;
 			return blacklist_lookup_index(candidate - 1);
 		}
 		shard->state.blacklisted++;
