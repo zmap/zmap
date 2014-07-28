@@ -714,7 +714,7 @@ int main(int argc, char *argv[])
 	if (args.config_given) {
 		params->initialize = 0;
 		params->override = 0;
-		if (cmdline_parser_config_file(args.config_arg, &args, params) 
+		if (cmdline_parser_config_file(args.config_arg, &args, params)
 				!= 0) {
 			exit(EXIT_FAILURE);
 		}
@@ -746,7 +746,7 @@ int main(int argc, char *argv[])
 		sprintf(fullpath, "%s/%s", zconf.log_directory, path);
 		log_location = fopen(fullpath, "w");
 		free(fullpath);
-		
+
 	} else {
 		log_location = stderr;
 	}
@@ -757,6 +757,7 @@ int main(int argc, char *argv[])
 	}
 	log_init(log_location, zconf.log_level, zconf.syslog, "zmap");
 	log_trace("zmap", "zmap main thread started");
+	log_debug("zmap", "Loaded configuration file %s", args.config_arg);
 	if (zconf.syslog) {
 		log_debug("zmap", "syslog support enabled");
 	} else {
@@ -1191,4 +1192,3 @@ int main(int argc, char *argv[])
 	free(params);
 	return EXIT_SUCCESS;
 }
-
