@@ -156,13 +156,14 @@ char* get_default_iface(void)
 
 int get_default_gw(struct in_addr *gw, char *iface)
 {
-	char** iface_ = &iface;
-	_get_default_gw(gw, iface_);
-	if (strcmp(*iface_, iface) != 0) {
-		log_fatal("get-gateway", "interface specified (%s) does not match "
-				"the interface of the default gateway (%s). You will need "
-				"to manually specify the MAC address of your dateway.",
-				*iface_);
-	}
+    char _iface[IF_NAMESIZE];
+	_get_default_gw(gw, _iface);
+	//if (strcmp(iface, _iface) != 0) {
+	//	log_fatal("get-gateway", "interface specified (%s) does not match "
+	//			"the interface of the default gateway (%s). You will need "
+	//			"to manually specify the MAC address of your dateway.",
+	//			iface, _iface);
+	//}
 	return EXIT_SUCCESS;
 }
+

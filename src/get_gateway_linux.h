@@ -122,8 +122,9 @@ int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
 			case NDA_LLADDR:
 				if (RTA_PAYLOAD(rt_attr) != IFHWADDRLEN) {
 					// could be using a VPN
-					log_fatal("get_gateway", "Unexpected hardware address length (%d).\n\n" \
-						"    If you are using a VPN, supply the --vpn flag (and provide an interface via -i)",
+					log_fatal("get_gateway", "Unexpected hardware address length (%d).\n\n" 
+						"    If you are using a VPN, supply the --vpn flag (and provide an"
+                        " interface via -i)",
 						RTA_PAYLOAD(rt_attr));
 					exit(1);
 				}
@@ -132,8 +133,9 @@ int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
 			case NDA_DST:
 				if (RTA_PAYLOAD(rt_attr) != sizeof(dst_ip)) {
 					// could be using a VPN
-					log_fatal("get_gateway", "Unexpected IP address length (%d).\n" \
-						"    If you are using a VPN, supply the --vpn flag (and provide an interface via -i)",
+					log_fatal("get_gateway", "Unexpected IP address length (%d).\n"
+						"    If you are using a VPN, supply the --vpn flag"
+                        " (and provide an interface via -i)",
 						RTA_PAYLOAD(rt_attr));
 					exit(1);
 				}
@@ -155,7 +157,7 @@ int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
 }
 
 // gw and iface[IF_NAMESIZE] MUST be allocated
-int get_default_gw(struct in_addr *gw, char *iface)
+int _get_default_gw(struct in_addr *gw, char *iface)
 {
 	struct rtmsg req;
 	unsigned int nl_len;
@@ -213,6 +215,20 @@ int get_default_gw(struct in_addr *gw, char *iface)
 	return -1;
 }
 
+int get_default_gw(struct in_addr *gw, char *iface)
+{
+    // _get_default_gw uses
+    char _iface[IF_NAMESIZE];
+    _get_default_gw(gw, _iface);
+	if (strcmp(iface, _iface) != 0) {
+		log_fatal("get-gateway", "interface specified (%s) does not match "
+				"the interface of the default gateway (%s). You will need "
+				"to manually specify the MAC address of your dateway.",
+				iface, *iface_);
+	}
+	return EXIT_SUCCESS;
+}
+
 int get_iface_ip(char *iface, struct in_addr *ip)
 {
 	int sock;
@@ -252,5 +268,4 @@ int get_iface_hw_addr(char *iface, unsigned char *hw_mac)
 	memcpy(hw_mac, buffer.ifr_hwaddr.sa_data, 6);
 	return EXIT_SUCCESS;
 }
-
 

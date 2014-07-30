@@ -60,6 +60,4 @@ int send_packet(int fd, void *buf, int len)
 	return write(fd, buf, len);
 }
 
-
-
 #endif /* ZMAP_SEND_BSD_H */
