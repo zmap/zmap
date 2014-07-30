@@ -11,6 +11,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include "aesrand.h"
+
 // Represents a multiplicative cyclic group (Z/pZ)*
 typedef struct cyclic_group {
 	uint64_t prime;			// p
@@ -31,7 +33,7 @@ typedef struct cycle {
 const cyclic_group_t* get_group(uint64_t min_size);
 
 // Generate cycle (find generator and inverse)
-cycle_t make_cycle(const cyclic_group_t* group);
+cycle_t make_cycle(const cyclic_group_t* group, aesrand_t *aes);
 
 // Perform the isomorphism from (Z/pZ)+ to (Z/pZ)*
 // Given known primitive root of (Z/pZ)* n, with x in (Z/pZ)+, do:

@@ -58,7 +58,7 @@ iterator_t* iterator_init(uint8_t num_threads, uint8_t shard,
 	} else {
 		zsend.max_index = (uint32_t) num_addrs;
 	}
-	it->cycle = make_cycle(group);
+	it->cycle = make_cycle(group, zconf.aes);
 	it->num_threads = num_threads;
 	it->curr_threads = num_threads;
 	it->thread_shards = xcalloc(num_threads, sizeof(shard_t));

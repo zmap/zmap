@@ -51,7 +51,7 @@ option "cooldown-time"          c "How long to continue receiving after sending 
     optional int
 option "seed"                   e "Seed used to select address permutation"
     typestr="n"
-    optional int
+    optional longlong
 option "retries"                - "Max number of times to try to send packet if send fails"
     typestr="n"
     default="10"

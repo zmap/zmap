@@ -11,8 +11,14 @@
 #ifndef AESRAND_H
 #define AESRAND_H
 
-void aesrand_init(uint32_t seed);
+typedef struct aesrand aesrand_t;
 
-uint64_t aesrand_getword(void);
+aesrand_t* aesrand_init_from_random();
+
+aesrand_t* aesrand_init_from_seed(uint64_t);
+
+uint64_t aesrand_getword(aesrand_t *aes);
+
+aesrand_t* aesrand_free(aesrand_t *aes);
 
 #endif

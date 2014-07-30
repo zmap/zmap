@@ -48,7 +48,6 @@
 
 #include "../lib/includes.h"
 #include "../lib/logger.h"
-#include "aesrand.h"
 
 // We will pick the first cyclic group from this list that is
 // larger than the number of IPs in our whitelist. E.g. for an
@@ -108,9 +107,9 @@ static int check_coprime(uint64_t check, const cyclic_group_t *group)
 
 // Return a (random) number coprime with (p - 1) of the group,
 // which is a generator of the additive group mod (p - 1)
-static uint32_t find_primroot(const cyclic_group_t *group)
+static uint32_t find_primroot(const cyclic_group_t *group, aesrand_t *aes)
 {
-	uint32_t candidate = (uint32_t) ((aesrand_getword() & 0xFFFFFFFF) % group->prime);
+	uint32_t candidate = (uint32_t) ((aesrand_getword(aes) & 0xFFFFFFFF) % group->prime);
 	if (candidate == 0) {
 		++candidate;
 	}
@@ -132,12 +131,12 @@ const cyclic_group_t* get_group(uint64_t min_size)
 	assert(0);
 }
 
-cycle_t make_cycle(const cyclic_group_t* group)
+cycle_t make_cycle(const cyclic_group_t* group, aesrand_t *aes)
 {
 	cycle_t cycle;
 	cycle.group = group;
-	cycle.generator = find_primroot(group);
-	cycle.offset = (uint32_t) (aesrand_getword() & 0xFFFFFFFF);
+	cycle.generator = find_primroot(group, aes);
+	cycle.offset = (uint32_t) (aesrand_getword(aes) & 0xFFFFFFFF);
 	cycle.offset %= group->prime;
 	return cycle;
 }
