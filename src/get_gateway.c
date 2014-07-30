@@ -24,7 +24,7 @@
 
 
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
-#include "get_gateway_bsd.h"
+#include "get_gateway-bsd.h"
 #else // (linux)
-#include "get_gateway_linux.h"
+#include "get_gateway-linux.h"
 #endif
