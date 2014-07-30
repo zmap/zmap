@@ -161,11 +161,10 @@ char* get_default_iface(void)
 	return retv;
 }
 
-int get_default_gw(struct in_addr *gw, char *iface)
+int get_default_gw(struct in_addr *gw, UNUSED char *iface)
 {
-	char _iface[IF_NAMESIZE];
-	memset(_iface, 0, IF_NAMESIZE);
-	_get_default_gw(gw, _iface);
+	char *_iface = NULL;
+	_get_default_gw(gw, &_iface);
 	return EXIT_SUCCESS;
 }
 
