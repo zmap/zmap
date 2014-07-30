@@ -80,7 +80,9 @@ int send_nl_req(uint16_t msg_type, uint32_t seq,
 int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
 {
 	char buf[8192];
+	memset(&buf, 0, 8192);
 	struct ndmsg req;
+	memset(&req, 0, sizeof(struct ndmsg));
 	struct nlmsghdr *nlhdr;
 
 	if (!gw_ip || !hw_mac) {
@@ -217,9 +219,10 @@ int _get_default_gw(struct in_addr *gw, char *iface)
 
 int get_default_gw(struct in_addr *gw, char *iface)
 {
-    // _get_default_gw uses
-    char _iface[IF_NAMESIZE];
-    _get_default_gw(gw, _iface);
+	char _iface[IF_NAMESIZE];
+	memset(_iface, 0, IF_NAMESIZE);
+
+	_get_default_gw(gw, _iface);
 	if (strcmp(iface, _iface) != 0) {
 		log_fatal("get-gateway", "interface specified (%s) does not match "
 				"the interface of the default gateway (%s). You will need "

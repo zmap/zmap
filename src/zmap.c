@@ -537,6 +537,7 @@ static void start_zmap(void)
 	}
 	if (!zconf.gw_mac_set) {
 		struct in_addr gw_ip;
+		memset(&gw_ip, 0, sizeof(struct in_addr));
 		if (get_default_gw(&gw_ip, zconf.iface) < 0) {
 			log_fatal("zmap", "could not detect default gateway address for %s."
 					" Try setting default gateway mac address (-G).",
@@ -544,7 +545,8 @@ static void start_zmap(void)
 		}
 		log_debug("zmap", "found gateway IP %s on %s", inet_ntoa(gw_ip), zconf.iface);
 		zconf.gw_ip = gw_ip.s_addr;
-
+#define MAC_ADDR_LEN_BYTES 6
+		memset(&zconf.gw_mac, 0, MAC_ADDR_LEN_BYTES);
 		if (get_hw_addr(&gw_ip, zconf.iface, zconf.gw_mac)) {
 			log_fatal("zmap", "could not detect GW MAC address for %s on %s."
 					" Try setting default gateway mac address (-G), or run"
