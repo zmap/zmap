@@ -666,6 +666,15 @@ static void enforce_range(const char *name, int v, int min, int max)
 	}
 }
 
+static int file_exists(char *name)
+{
+	FILE *file = fopen(name, "r");
+	if (!file)
+		return 0;
+	fclose(file);
+	return 1;
+}
+
 #define MAC_LEN ETHER_ADDR_LEN
 int parse_mac(macaddr_t *out, char *in)
 {
@@ -705,7 +714,7 @@ int main(int argc, char *argv[])
 	if (cmdline_parser_ext(argc, argv, &args, params) != 0) {
 		exit(EXIT_SUCCESS);
 	}
-	if (args.config_given) {
+	if (args.config_given || file_exists(args.config_arg)) {
 		params->initialize = 0;
 		params->override = 0;
 		if (cmdline_parser_config_file(args.config_arg, &args, params)
