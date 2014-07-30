@@ -1,3 +1,10 @@
+#ifndef ZMAP_GET_GATEWAY_LINUX_H
+#define ZMAP_GET_GATEWAY_LINUX_H
+
+#ifdef ZMAP_GET_GATEWAY_BSD_H
+#error "Don't include both get_gateway-bsd.h and get_gateway-linux.h"
+#endif
+
 #include <sys/ioctl.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
@@ -124,7 +131,7 @@ int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
 			case NDA_LLADDR:
 				if (RTA_PAYLOAD(rt_attr) != IFHWADDRLEN) {
 					// could be using a VPN
-					log_fatal("get_gateway", "Unexpected hardware address length (%d).\n\n" 
+					log_fatal("get_gateway", "Unexpected hardware address length (%d).\n\n"
 						"    If you are using a VPN, supply the --vpn flag (and provide an"
                         " interface via -i)",
 						RTA_PAYLOAD(rt_attr));
@@ -272,3 +279,4 @@ int get_iface_hw_addr(char *iface, unsigned char *hw_mac)
 	return EXIT_SUCCESS;
 }
 
+#endif /* ZMAP_GET_GATEWAY_LINUX_H */

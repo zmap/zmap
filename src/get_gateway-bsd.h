@@ -1,3 +1,10 @@
+#ifndef ZMAP_GET_GATEWAY_BSD_H
+#define ZMAP_GET_GATEWAY_BSD_H
+
+#ifdef ZMAP_GET_GATEWAY_LINUX_H
+#error "Don't include both get_gateway-bsd.h and get_gateway-linux.h"
+#endif
+
 #include <net/route.h>
 #include <net/if.h>
 #include <net/if_dl.h>
@@ -162,3 +169,4 @@ int get_default_gw(struct in_addr *gw, char *iface)
 	return EXIT_SUCCESS;
 }
 
+#endif /* ZMAP_GET_GATEWAY_BSD_H */
