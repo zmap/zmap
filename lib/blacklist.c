@@ -196,7 +196,11 @@ static int init_from_file(char *file, const char *name, int value)
 static void init_from_array(char **cidrs, size_t len, int value)
 {
 	for (int i=0; i < (int) len; i++) {
-		init_from_string(cidrs[i], value);
+		int ret = init_from_string(cidrs[i], value);
+                if (ret && !zconf.ignore_invalid_hosts) {
+			log_fatal("constraint",
+					"Unable to init from CIDR list");
+                }
 	}
 }
 
@@ -268,4 +272,3 @@ int blacklist_init(char *whitelist_filename, char *blacklist_filename,
 	}
 	return EXIT_SUCCESS;
 }
-
