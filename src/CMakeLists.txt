@@ -65,6 +65,7 @@ SET(SOURCES
 	send.c
 	shard.c
 	state.c
+	summary.c
 	validate.c
 	zmap.c
 	zopt_compat.c
@@ -110,7 +111,7 @@ else()
 endif()
 
 target_link_libraries(
-	zmap 
+	zmap
 	pcap gmp m
 	${DNET_LIBRARIES}
 	${REDIS_LIBS}

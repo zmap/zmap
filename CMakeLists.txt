@@ -20,7 +20,7 @@ endif()
 
 # Hardening and warnings for building with gcc
 # Maybe add -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations
-set(GCCWARNINGS 
+set(GCCWARNINGS
 	"-Wall -Wformat=2 -Wno-format-nonliteral"
 	"-pedantic -fno-strict-aliasing"
 	"-Wextra"
