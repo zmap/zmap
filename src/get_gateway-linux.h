@@ -243,6 +243,7 @@ int get_iface_ip(char *iface, struct in_addr *ip)
 {
 	int sock;
 	struct ifreq ifr;
+	memset(&ifr, 0, sizeof(struct ifreq));
 	sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock < 0) {
 		log_fatal("get-iface-ip", "failure opening socket: %s", strerror(errno));
