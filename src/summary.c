@@ -125,7 +125,7 @@ void json_metadata(FILE *file)
 	json_object_object_add(obj, "cooldown-secs", json_object_new_int(zconf.cooldown_secs));
 	json_object_object_add(obj, "senders", json_object_new_int(zconf.senders));
 	json_object_object_add(obj, "use-seed", json_object_new_int(zconf.use_seed));
-	json_object_object_add(obj, "seed", json_object_new_int(zconf.seed));
+	json_object_object_add(obj, "seed", json_object_new_int64(zconf.seed));
 	json_object_object_add(obj, "generator", json_object_new_int64(zconf.generator));
 	json_object_object_add(obj, "hitrate", json_object_new_double(hitrate));
 	json_object_object_add(obj, "shard-num", json_object_new_int(zconf.shard_num));
@@ -139,21 +139,21 @@ void json_metadata(FILE *file)
 	json_object_object_add(obj, "pcap-drop", json_object_new_int(zrecv.pcap_drop));
 	json_object_object_add(obj, "pcap-ifdrop", json_object_new_int(zrecv.pcap_ifdrop));
 
-	json_object_object_add(obj, "blacklisted", json_object_new_int(zsend.blacklisted));
-	json_object_object_add(obj, "whitelisted", json_object_new_int(zsend.whitelisted));
-	json_object_object_add(obj, "first-scanned", json_object_new_int(zsend.first_scanned));
-	json_object_object_add(obj, "send-to-failures", json_object_new_int(zsend.sendto_failures));
-	json_object_object_add(obj, "total-sent", json_object_new_int(zsend.sent));
+	json_object_object_add(obj, "blacklisted", json_object_new_int64(zsend.blacklisted));
+	json_object_object_add(obj, "whitelisted", json_object_new_int64(zsend.whitelisted));
+	json_object_object_add(obj, "first-scanned", json_object_new_int64(zsend.first_scanned));
+	json_object_object_add(obj, "send-to-failures", json_object_new_int64(zsend.sendto_failures));
+	json_object_object_add(obj, "total-sent", json_object_new_int64(zsend.sent));
 
-	json_object_object_add(obj, "success-total", json_object_new_int(zrecv.success_total));
-	json_object_object_add(obj, "success-unique", json_object_new_int(zrecv.success_unique));
+	json_object_object_add(obj, "success-total", json_object_new_int64(zrecv.success_total));
+	json_object_object_add(obj, "success-unique", json_object_new_int64(zrecv.success_unique));
 	if (zconf.fsconf.app_success_index >= 0) {
-		json_object_object_add(obj, "app-success-total", json_object_new_int(zrecv.app_success_total));
-		json_object_object_add(obj, "app-success-unique", json_object_new_int(zrecv.app_success_unique));
+		json_object_object_add(obj, "app-success-total", json_object_new_int64(zrecv.app_success_total));
+		json_object_object_add(obj, "app-success-unique", json_object_new_int64(zrecv.app_success_unique));
 	}
-	json_object_object_add(obj, "success-cooldown-total", json_object_new_int(zrecv.cooldown_total));
-	json_object_object_add(obj, "success-cooldown-unique", json_object_new_int(zrecv.cooldown_unique));
-	json_object_object_add(obj, "failure-total", json_object_new_int(zrecv.failure_total));
+	json_object_object_add(obj, "success-cooldown-total", json_object_new_int64(zrecv.cooldown_total));
+	json_object_object_add(obj, "success-cooldown-unique", json_object_new_int64(zrecv.cooldown_unique));
+	json_object_object_add(obj, "failure-total", json_object_new_int64(zrecv.failure_total));
 
 	json_object_object_add(obj, "packet-streams",
 			json_object_new_int(zconf.packet_streams));
