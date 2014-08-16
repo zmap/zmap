@@ -35,6 +35,7 @@ typedef struct internal_scan_status {
 	uint32_t last_send_failures;
 	uint32_t last_recv_net_success;
 	uint32_t last_recv_app_success;
+	uint32_t last_recv_total;
 	uint32_t last_pcap_drop;
 
 } int_status_t;
@@ -44,35 +45,38 @@ typedef struct export_scan_status {
 	uint32_t total_sent;
 	uint32_t recv_success_unique;
 	uint32_t app_recv_success_unique;
+	uint32_t total_recv;
 	uint32_t complete;
 	uint32_t send_threads;
 	double percent_complete;
 
-	float hitrate; // network, e.g. SYN-ACK vs RST
-	float app_hitrate; // application level, e.g. DNS response versus correct lookup.
+	double hitrate; // network, e.g. SYN-ACK vs RST
+	double app_hitrate; // application level, e.g. DNS response versus correct lookup.
 
-	float send_rate;
+	double send_rate;
 	char send_rate_str[NUMBER_STR_LEN];
-	float send_rate_avg;
+	double send_rate_avg;
 	char send_rate_avg_str[NUMBER_STR_LEN];
 
-	float recv_rate;
+	double recv_rate;
 	char recv_rate_str[NUMBER_STR_LEN];
-	float recv_avg;
+	double recv_avg;
 	char recv_avg_str[NUMBER_STR_LEN];
+	double recv_total_rate;
+	double recv_total_avg;
 
-	float app_success_rate;
+	double app_success_rate;
 	char app_success_rate_str[NUMBER_STR_LEN];
-	float app_success_avg;
+	double app_success_avg;
 	char app_success_avg_str[NUMBER_STR_LEN];
 
 	uint32_t pcap_drop;
 	uint32_t pcap_ifdrop;
 	uint32_t pcap_drop_total;
 	char pcap_drop_total_str[NUMBER_STR_LEN];
-	float pcap_drop_last;
+	double pcap_drop_last;
 	char pcap_drop_last_str[NUMBER_STR_LEN];
-	float pcap_drop_avg;
+	double pcap_drop_avg;
 	char pcap_drop_avg_str[NUMBER_STR_LEN];
 
 	uint32_t time_remaining;
@@ -81,8 +85,8 @@ typedef struct export_scan_status {
 	char time_past_str[NUMBER_STR_LEN];
 
 	uint32_t fail_total;
-	float fail_avg;
-	float fail_last;
+	double fail_avg;
+	double fail_last;
 
 } export_status_t;
 
@@ -190,19 +194,23 @@ static void update_stats(int_status_t *intrnl, iterator_t *it)
 	intrnl->last_recv_app_success = zrecv.app_success_unique;
 	intrnl->last_pcap_drop = zrecv.pcap_drop + zrecv.pcap_ifdrop;
 	intrnl->last_send_failures = zsend.sendto_failures;
-}	
+	intrnl->last_recv_total = zrecv.pcap_recv;
+}
 
 static void update_pcap_stats(pthread_mutex_t *recv_ready_mutex)
 {
 	// ask pcap for fresh values
 	pthread_mutex_lock(recv_ready_mutex);
 	recv_update_pcap_stats();
-	pthread_mutex_unlock(recv_ready_mutex);	
+	pthread_mutex_unlock(recv_ready_mutex);
 }
 
 static void export_stats(int_status_t *intrnl, export_status_t *exp, iterator_t *it)
 {
 	uint32_t total_sent = iterator_get_sent(it);
+	uint32_t total_recv = zrecv.pcap_recv;
+	uint32_t recv_success = zrecv.success_unique;
+	uint32_t app_success = zrecv.app_success_unique;
 	double age = now() - zsend.start; // time of entire scan
 	double delta = now() - intrnl->last_now; // time since the last time we updated
 	double remaining_secs = compute_remaining_time(age, total_sent);
@@ -220,16 +228,18 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp, iterator_t 
 	time_string((int)age, 0, exp->time_past_str, NUMBER_STR_LEN);
 
 	// export recv statistics
-	exp->recv_rate = (zrecv.success_unique - intrnl->last_recv_net_success)/delta;
+	exp->recv_rate = (recv_success - intrnl->last_recv_net_success)/delta;
 	number_string(exp->recv_rate, exp->recv_rate_str, NUMBER_STR_LEN);
-	exp->recv_avg = zrecv.success_unique/age;
+	exp->recv_avg = recv_success/age;
 	number_string(exp->recv_avg, exp->recv_avg_str, NUMBER_STR_LEN);
+	exp->recv_total_rate = (total_recv - intrnl->last_recv_total)/delta;
+	exp->recv_total_avg = total_recv/age;
 
 	// application level statistics
 	if (zconf.fsconf.app_success_index >= 0) {
-		exp->app_success_rate = (zrecv.app_success_unique - intrnl->last_recv_app_success)/delta;
+		exp->app_success_rate = (app_success - intrnl->last_recv_app_success)/delta;
 		number_string(exp->app_success_rate, exp->app_success_rate_str, NUMBER_STR_LEN);
-		exp->app_success_avg = (zrecv.app_success_unique/age);
+		exp->app_success_avg = (app_success/age);
 		number_string(exp->app_success_avg, exp->app_success_avg_str, NUMBER_STR_LEN);
 	}
 
@@ -237,8 +247,8 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp, iterator_t 
 		exp->hitrate = 0;
 		exp->app_hitrate = 0;
 	} else {
-		exp->hitrate = zrecv.success_unique*100./total_sent;
-		exp->app_hitrate = zrecv.app_success_unique*100./total_sent;
+		exp->hitrate = recv_success*100.0/total_sent;
+		exp->app_hitrate = app_success*100.0/total_sent;
 	}
 
 	if (!zsend.complete) {
@@ -253,8 +263,9 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp, iterator_t 
 	// export other pre-calculated values
 	exp->total_sent = total_sent;
 	exp->percent_complete = 100.*age/(age + remaining_secs);
-	exp->recv_success_unique = zrecv.success_unique;
-	exp->app_recv_success_unique = zrecv.app_success_unique;
+	exp->recv_success_unique = recv_success;
+	exp->app_recv_success_unique = app_success;
+	exp->total_recv = total_recv;
 	exp->complete = zsend.complete;
 
 	// pcap dropped packets
@@ -390,11 +401,12 @@ static FILE* init_status_update_file(char *path)
 		}
 		log_trace("monitor", "status updates CSV will be saved to %s",
 				zconf.status_updates_file);
-		fprintf(f, 
+		fprintf(f,
 				"real-time,time-elapsed,time-remaining,"
 				"percent-complete,active-send-threads,"
-				"sent-total,sent-last-one-sec,sent-avg-per-sec," 
-				"recv-success-total,recv-success-last-one-sec,recv-success-avg-per-sec," 
+				"sent-total,sent-last-one-sec,sent-avg-per-sec,"
+				"recv-success-total,recv-success-last-one-sec,recv-success-avg-per-sec,"
+				"recv-total,recv-total-last-one-sec,recv-total-avg-per-sec,"
 				"pcap-drop-total,drop-last-one-sec,drop-avg-per-sec,"
 				"sendto-fail-total,sendto-fail-last-one-sec,sendto-fail-avg-per-sec\n"
 			);
@@ -410,13 +422,20 @@ static void update_status_updates_file(export_status_t *exp, FILE *f)
 	time_t sec = now.tv_sec;
 	struct tm* ptm = localtime(&sec);
 	strftime(timestamp, 20, "%Y-%m-%d %H:%M:%S", ptm);
-	
+
 	fprintf(f,
-			"%s,%u,%u,%f,%u,%u,%f,%f,%u,%f,%f,%u,%f,%f,%u,%f,%f\n",
+			"%s,%u,%u,"
+			"%f,%u,"
+			"%u,%.0f,%.0f,"
+			"%u,%.0f,%.0f,"
+			"%u,%.0f,%.0f,"
+			"%u,%.0f,%.0f,"
+			"%u,%.0f,%.0f\n",
 			timestamp, exp->time_past, exp->time_remaining,
 			exp->percent_complete, exp->send_threads,
 			exp->total_sent, exp->send_rate, exp->send_rate_avg,
 			exp->recv_success_unique, exp->recv_rate, exp->recv_avg,
+			exp->total_recv, exp->recv_total_rate, exp->recv_total_avg,
 			exp->pcap_drop_total, exp->pcap_drop_last, exp->pcap_drop_avg,
 			exp->fail_total, exp->fail_last, exp->fail_avg);
 	fflush(f);
@@ -460,4 +479,3 @@ void monitor_run(iterator_t *it, pthread_mutex_t *lock)
 		fclose(f);
 	}
 }
-
