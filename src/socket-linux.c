@@ -1,5 +1,8 @@
 #include "socket.h"
 
+#include <string.h>
+#include <errno.h>
+
 #include "../lib/includes.h"
 #include "../lib/logger.h"
 
