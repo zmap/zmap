@@ -74,7 +74,9 @@ if(WITH_JSON)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${JSON_CFLAGS}")
 endif()
 
-
+if(WITH_PFRING)
+	add_definitions("-DPFRING")
+endif()
 
 # Standard FLAGS
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")

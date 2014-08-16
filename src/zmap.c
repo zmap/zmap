@@ -315,7 +315,7 @@ static void start_zmap(void)
 		if (zconf.dryrun) {
 			sock = get_dryrun_socket();
 		} else {
-			sock = get_socket();
+			sock = get_socket(i);
 		}
 		send_arg_t *arg = xmalloc(sizeof(send_arg_t));
 		arg->sock = sock;

@@ -13,7 +13,7 @@
 
 #include "state.h"
 
-sock_t get_socket(void)
+sock_t get_socket(UNUSED uint32_t id)
 {
 	char file[32];
 	int bpf;

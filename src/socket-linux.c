@@ -6,7 +6,7 @@
 #include "../lib/includes.h"
 #include "../lib/logger.h"
 
-sock_t get_socket(void)
+sock_t get_socket(UNUSED uint32_t id)
 {
 	int sock = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (sock <= 0) {
