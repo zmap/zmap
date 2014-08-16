@@ -166,9 +166,19 @@ int recv_update_pcap_stats(void)
 
 int recv_run(pthread_mutex_t *recv_ready_mutex)
 {
+	char *final_pcap_filter;
+	const char *format_final_pcap_filter = "not src host %s and not dst net 224.0.0.0/4 and (%s)";
+	size_t final_pcap_len = 0;
+
 	log_trace("recv", "recv thread started");
 	num_src_ports = zconf.source_port_last - zconf.source_port_first + 1;
 	log_debug("recv", "capturing responses on %s", zconf.iface);
+
+	final_pcap_len = strlen(zconf.probe_module->pcap_filter) + strlen(zconf.source_ip_first) + strlen(format_final_pcap_filter);
+	final_pcap_filter = malloc(final_pcap_len);
+	snprintf(final_pcap_filter, final_pcap_len, format_final_pcap_filter , zconf.source_ip_first, zconf.probe_module->pcap_filter);
+	log_debug("recv", "capturing filter is %s", final_pcap_filter);
+
 	if (!zconf.dryrun) {
 		char errbuf[PCAP_ERRBUF_SIZE];
 		pc = pcap_open_live(zconf.iface, zconf.probe_module->pcap_snaplen,
@@ -178,7 +188,13 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 							zconf.iface, errbuf);
 		}
 		struct bpf_program bpf;
-		if (pcap_compile(pc, &bpf, zconf.probe_module->pcap_filter, 1, 0) < 0) {
+
+		// improve pcap filter to avoid processing
+		// - pkt sent from scan host (pkt src ip != scan src ip list)
+		// - pkt received to multicast ip addr 224.0.0.0/4
+
+		// if (pcap_compile(pc, &bpf, zconf.probe_module->pcap_filter, 1, 0) < 0) {
+		if (pcap_compile(pc, &bpf, final_pcap_filter, 1, 0) < 0) {
 			log_fatal("recv", "couldn't compile filter");
 		}
 		if (pcap_setfilter(pc, &bpf) < 0) {
