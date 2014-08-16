@@ -64,6 +64,7 @@ SET(SOURCES
 	recv.c
 	send.c
 	shard.c
+	socket.c
 	state.c
 	summary.c
 	validate.c
@@ -77,7 +78,15 @@ SET(SOURCES
 	${PROBE_MODULE_SOURCES}
 	${OUTPUT_MODULE_SOURCES}
 	${LIB_SOURCES}
-	)
+)
+
+if (WITH_PFRING)
+	SET(SOURCES ${SOURCES} socket-pfring.c)
+elseif (APPLE OR BSD)
+	SET(SOURCES ${SOURCES} socket-bsd.c)
+else()
+	SET(SOURCES ${SOURCES} socket-linux.c)
+endif()
 
 if (WITH_JSON)
 	SET(SOURCES ${SOURCES} output_modules/module_json.c)

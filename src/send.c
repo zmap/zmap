@@ -34,7 +34,7 @@
 
 // OS specific functions called by send_run
 static inline int send_packet(int fd, void *buf, int len);
-static inline int send_run_init(int sock);
+static inline int send_run_init(sock_t sock);
 
 
 // Include the right implementations
@@ -159,31 +159,18 @@ static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
 			% num_src_addrs)) + srcip_first;
 }
 
-int get_dryrun_socket(void)
-{
-	// we need a socket in order to gather details about the system
-	// such as source MAC address and IP address. However, because
-	// we don't want to require root access in order to run dryrun,
-	// we just create a TCP socket.
-	int sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (sock <= 0) {
-		log_fatal("send", "couldn't create socket. "
-			  "Error: %s\n", strerror(errno));
-	}
-	return sock;
-}
-
 // one sender thread
-int send_run(int sock, shard_t *s)
+int send_run(sock_t st, shard_t *s)
 {
 	log_trace("send", "send thread started");
 	pthread_mutex_lock(&send_mutex);
 	// Allocate a buffer to hold the outgoing packet
 	char buf[MAX_PACKET_SIZE];
 	memset(buf, 0, MAX_PACKET_SIZE);
+	int sock = st.sock;
 
 	// OS specific per-thread init
-	if (send_run_init(sock)) {
+	if (send_run_init(st)) {
 		return -1;
 	}
 

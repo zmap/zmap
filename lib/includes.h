@@ -23,3 +23,5 @@
 #include <arpa/inet.h>
 
 #define MAC_ADDR_LEN 6
+
+#define UNUSED __attribute__((unused))

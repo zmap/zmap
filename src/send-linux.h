@@ -13,19 +13,10 @@
 // Dummy sockaddr for sendto
 static struct sockaddr_ll sockaddr;
 
-
-int get_socket(void)
+int send_run_init(sock_t s)
 {
-	int sock = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-	if (sock <= 0) {
-		log_fatal("send", "couldn't create socket. "
-			  "Are you root? Error: %s\n", strerror(errno));
-	}
-	return sock;
-}
-
-int send_run_init(int sock)
-{
+	// Get the actual socket
+	int sock = s.sock;
 	// get source interface index
 	struct ifreq if_idx;
 	memset(&if_idx, 0, sizeof(struct ifreq));

@@ -188,7 +188,7 @@ static void set_cpu(void)
 #endif
 
 typedef struct send_arg {
-	int sock;
+	sock_t sock;
 	shard_t *shard;
 } send_arg_t;
 
@@ -311,7 +311,7 @@ static void start_zmap(void)
 	}
 	tsend = xmalloc(zconf.senders * sizeof(pthread_t));
 	for (uint8_t i = 0; i < zconf.senders; i++) {
-		int sock;
+		sock_t sock;
 		if (zconf.dryrun) {
 			sock = get_dryrun_socket();
 		} else {
