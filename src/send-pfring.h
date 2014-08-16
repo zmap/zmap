@@ -8,14 +8,6 @@
 #error "Don't include send-bsd.h or send-linux.h with send-pfring.h"
 #endif
 
-sock_t get_socket(uint32_t id)
-{
-	sock_t sock;
-	sock.pf.queue = zconf.pf_queues[id];
-	sock.pf.buffers = zconf.pf_buffers + 256*id;
-	return sock;
-}
-
 int send_run_init(sock_t socket)
 {
 	(void) socket;

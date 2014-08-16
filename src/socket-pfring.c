@@ -1,9 +1,14 @@
-#ifndef ZMAP_SOCKET_PFRING_H
-#define ZMAP_SOCKET_PFRING_H
+#include "socket.h"
 
-#ifdef ZMAP_SOCKET_KERNEL_H
-#error "Don't include socket-kernel.h and socket-pfring.h at the same time"
-#endif
+#include "../lib/includes.h"
+#include "state.h"
 
+#include <pfring_zc.h>
 
-#endif /* ZMAP_SOCKET_PFRING_H */
+sock_t get_socket(uint32_t id)
+{
+	sock_t sock;
+	sock.pf.queue = zconf.pf_queues[id];
+	sock.pf.buffers = zconf.pf_buffers + 256*id;
+	return sock;
+}
