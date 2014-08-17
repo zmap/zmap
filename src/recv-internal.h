@@ -6,4 +6,4 @@ void recv_init();
 void recv_packets();
 void recv_cleanup();
 
-#endif
+#endif /* ZMAP_RECV_INTERNAL_H */
