@@ -80,12 +80,21 @@ SET(SOURCES
 	${LIB_SOURCES}
 )
 
-if (WITH_PFRING)
+
+# Handle various versions of socket
+if(WITH_PFRING)
 	SET(SOURCES ${SOURCES} socket-pfring.c)
 elseif (APPLE OR BSD)
 	SET(SOURCES ${SOURCES} socket-bsd.c)
 else()
 	SET(SOURCES ${SOURCES} socket-linux.c)
+endif()
+
+# Handle various versions of recv
+if(WITH_PFRING)
+	SET(SOURCES ${SOURCES} recv-pfring.c)
+else()
+	SET(SOURCES ${SOURCES} recv-pcap.c)
 endif()
 
 if (WITH_JSON)

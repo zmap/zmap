@@ -201,7 +201,7 @@ static void update_pcap_stats(pthread_mutex_t *recv_ready_mutex)
 {
 	// ask pcap for fresh values
 	pthread_mutex_lock(recv_ready_mutex);
-	recv_update_pcap_stats();
+	recv_update_stats();
 	pthread_mutex_unlock(recv_ready_mutex);
 }
 
