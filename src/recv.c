@@ -24,6 +24,11 @@
 #include "probe_modules/probe_modules.h"
 #include "output_modules/output_modules.h"
 
+static u_char fake_eth_hdr[65535];
+
+// bitmap of observed IP addresses
+static uint8_t **seen = NULL;
+
 void handle_packet(uint32_t buflen, const u_char *bytes) {
 	if ((sizeof(struct ip) + (zconf.send_ip_pkts ? 0 : sizeof(struct ether_header))) > buflen) {
 		// buffer not large enough to contain ethernet
