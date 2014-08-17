@@ -4,6 +4,7 @@
 #include "../lib/includes.h"
 #include "../lib/logger.h"
 
+#include <errno.h>
 #include <unistd.h>
 
 #include <pfring_zc.h>
@@ -17,7 +18,7 @@ void recv_init()
 {
 	// Get the socket and packet handle
 	pf_recv = zconf.pf.recv;
-	pf_buffer = pfring_zc_get_packet_handle(zconf.pf_cluster);
+	pf_buffer = pfring_zc_get_packet_handle(zconf.pf.cluster);
 	if (pf_buffer == NULL) {
 		log_fatal("recv", "Could not get packet handle: %s",
 				strerror(errno));
@@ -58,7 +59,7 @@ int recv_update_stats(void)
 		return EXIT_FAILURE;
 	}
 	pfring_zc_stat pfst;
-	if (pfring_zc_stats(sock.pfring_sock, &pfst)) {
+	if (pfring_zc_stats(pf_recv, &pfst)) {
 		log_error("recv", "unable to retrieve pfring statistics");
 		return EXIT_FAILURE;
 	} else {
