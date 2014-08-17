@@ -26,12 +26,8 @@
 #include "../lib/blacklist.h"
 #include "../lib/logger.h"
 #include "../lib/random.h"
+#include "../lib/util.h"
 #include "../lib/xalloc.h"
-
-
-#if defined(__APPLE__)
-#include <mach/thread_act.h>
-#endif
 
 #include "aesrand.h"
 #include "zopt.h"
@@ -47,183 +43,37 @@
 #include "probe_modules/probe_modules.h"
 
 
-pthread_mutex_t cpu_affinity_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t recv_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-static int max(int a, int b) {
-	if (a >= b) {
-		return a;
-	}
-	return b;
-}
-
-// splits comma delimited string into char*[]. Does not handle
-// escaping or complicated setups: designed to process a set
-// of fields that the user wants output
-static void split_string(char* in, int *len, char***results)
-{
-	char** fields = xcalloc(MAX_FIELDS, sizeof(char*));
-	int retvlen = 0;
-	char *currloc = in;
-	// parse csv into a set of strings
-	while (1) {
-		size_t len = strcspn(currloc, ", ");
-		if (len == 0) {
-			currloc++;
-		} else {
-			char *new = xmalloc(len+1);
-			strncpy(new, currloc, len);
-			new[len] = '\0';
-			fields[retvlen++] = new;
-			assert(fields[retvlen-1]);
-		}
-		if (len == strlen(currloc)) {
-			break;
-		}
-		currloc += len;
-	}
-	*results = fields;
-	*len = retvlen;
-}
-
-// print a string using w length long lines
-// attempting to break on spaces.
-void fprintw(FILE *f, char *s, size_t w)
-{
-	if (strlen(s) <= w) {
-		fprintf(f, "%s", s);
-		return;
-	}
-	// process each line individually in order to
-	// respect existing line breaks in string.
-	char *news = strdup(s);
-	char *pch = strtok(news, "\n");
-	while (pch) {
-		if (strlen(pch) <= w) {
-			printf("%s\n", pch);
-			pch = strtok(NULL, "\n");
-			continue;
-		}
-		char *t = pch;
-		while (strlen(t)) {
-			size_t numchars = 0; //number of chars to print
-			char *tmp = t;
-			while (1) {
-				size_t new = strcspn(tmp, " ") + 1;
-				if (new == strlen(tmp) || new > w) {
-					// there are no spaces in the string, so, just
-					// print the entire thing on one line;
-					numchars += new;
-					break;
-				} else if (numchars + new > w) {
-					// if we added any more, we'd be over w chars so
-					// time to print the line and move on to the next.
-					break;
-				} else {
-					tmp += (size_t) new;
-					numchars += new;
-				}
-			}
-			fprintf(f, "%.*s\n", (int) numchars, t);
-			t += (size_t) numchars;
-			if (t > pch + (size_t)strlen(pch)) {
-				break;
-			}
-		}
-		pch = strtok(NULL, "\n");
-	}
-	free(news);
-}
-
-
-//#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
-#if defined(__APPLE__)
-static void set_cpu(void)
-{
-	pthread_mutex_lock(&cpu_affinity_mutex);
-	static int core=0;
-	int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
-
-	mach_port_t tid = pthread_mach_thread_np(pthread_self());
-	struct thread_affinity_policy policy;
-	policy.affinity_tag = core;
-	kern_return_t ret = thread_policy_set(tid,THREAD_AFFINITY_POLICY,
-					(thread_policy_t) &policy,THREAD_AFFINITY_POLICY_COUNT);
-	if (ret != KERN_SUCCESS) {
-		log_error("zmap", "can't set thread CPU affinity");
-	}
-	log_trace("zmap", "set thread %u affinity to core %d",
-			pthread_self(), core);
-	core = (core + 1) % num_cores;
-
-	pthread_mutex_unlock(&cpu_affinity_mutex);
-}
-
-#else
-
-#if defined(__FreeBSD__) || defined(__NetBSD__)
-#include <sys/param.h>
-#include <sys/cpuset.h>
-#define cpu_set_t cpuset_t
-#endif
-
-static void set_cpu(void)
-{
-	pthread_mutex_lock(&cpu_affinity_mutex);
-	static int core=0;
-	int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
-	cpu_set_t cpuset;
-	CPU_ZERO(&cpuset);
-	CPU_SET(core, &cpuset);
-
-	if (pthread_setaffinity_np(pthread_self(),
-				sizeof(cpu_set_t), &cpuset) != 0) {
-		log_error("zmap", "can't set thread CPU affinity");
-	}
-	log_trace("zmap", "set thread %u affinity to core %d",
-			pthread_self(), core);
-	core = (core + 1) % num_cores;
-	pthread_mutex_unlock(&cpu_affinity_mutex);
-}
-#endif
-
 typedef struct send_arg {
+	uint32_t cpu;
 	sock_t sock;
 	shard_t *shard;
 } send_arg_t;
 
+typedef struct recv_arg {
+	uint32_t cpu;
+} recv_arg_t;
+
 static void* start_send(void *arg)
 {
-	send_arg_t *v = (send_arg_t *) arg;
-	set_cpu();
-	send_run(v->sock, v->shard);
-	free(v);
+	send_arg_t *s = (send_arg_t *) arg;
+	set_cpu(s->cpu);
+	send_run(s->sock, s->shard);
+	free(s);
 	return NULL;
 }
 
-static void* start_recv(__attribute__((unused)) void *arg)
+static void* start_recv(void *arg)
 {
-	set_cpu();
+	recv_arg_t *r = (recv_arg_t *) arg;
+	set_cpu(r->cpu);
 	recv_run(&recv_ready_mutex);
 	return NULL;
 }
 
-static void drop_privs()
-{
-	struct passwd *pw;
-	if (geteuid() != 0) {
-		log_warn("zmap", "unable to drop privs, not root");
-		return;
-	}
-	if ((pw = getpwnam("nobody")) != NULL) {
-		if (setuid(pw->pw_uid) == 0) {
-			return; // success
-		}
-	}
-	log_fatal("zmap", "Couldn't change UID to 'nobody'");
-}
-
 typedef struct mon_start_arg {
+	uint32_t core;
 	iterator_t *it;
 	pthread_mutex_t *recv_ready_mutex;
 } mon_start_arg_t;
@@ -231,7 +81,7 @@ typedef struct mon_start_arg {
 static void *start_mon(void *arg)
 {
 	mon_start_arg_t *mon_arg = (mon_start_arg_t *) arg;
-	set_cpu();
+	set_cpu(mon_arg->core);
 	monitor_run(mon_arg->it, mon_arg->recv_ready_mutex);
 	free(mon_arg);
 	return NULL;
@@ -913,15 +763,15 @@ int main(int argc, char *argv[])
 		zconf.senders = args.sender_threads_arg;
 	} else {
 		int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
-		zconf.senders = max(num_cores - 1, 1);
+		zconf.senders = max_int(num_cores - 1, 1);
 		if (!zconf.quiet) {
 			// If monitoring, save a core for the monitor thread
-			zconf.senders = max(zconf.senders - 1, 1);
+			zconf.senders = max_int(zconf.senders - 1, 1);
 		}
 	}
 
 	if (zconf.senders > zsend.targets) {
-		zconf.senders = max(zsend.targets, 1);
+		zconf.senders = max_int(zsend.targets, 1);
 	}
 
 	start_zmap();
