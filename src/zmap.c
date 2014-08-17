@@ -55,6 +55,20 @@ typedef struct recv_arg {
 	uint32_t cpu;
 } recv_arg_t;
 
+typedef struct mon_start_arg {
+	uint32_t core;
+	iterator_t *it;
+	pthread_mutex_t *recv_ready_mutex;
+} mon_start_arg_t;
+
+static void enforce_range(const char *name, int v, int min, int max)
+{
+	if (check_range(v, min, max) == EXIT_FAILURE) {
+		log_fatal("zmap", "argument `%s' must be between %d and %d\n",
+			name, min, max);
+	}
+}
+
 static void* start_send(void *arg)
 {
 	send_arg_t *s = (send_arg_t *) arg;
@@ -71,12 +85,6 @@ static void* start_recv(void *arg)
 	recv_run(&recv_ready_mutex);
 	return NULL;
 }
-
-typedef struct mon_start_arg {
-	uint32_t core;
-	iterator_t *it;
-	pthread_mutex_t *recv_ready_mutex;
-} mon_start_arg_t;
 
 static void *start_mon(void *arg)
 {
@@ -117,8 +125,7 @@ static void start_zmap(void)
 		}
 		log_debug("zmap", "found gateway IP %s on %s", inet_ntoa(gw_ip), zconf.iface);
 		zconf.gw_ip = gw_ip.s_addr;
-#define MAC_ADDR_LEN_BYTES 6
-		memset(&zconf.gw_mac, 0, MAC_ADDR_LEN_BYTES);
+		memset(&zconf.gw_mac, 0, MAC_ADDR_LEN);
 		if (get_hw_addr(&gw_ip, zconf.iface, zconf.gw_mac)) {
 			log_fatal("zmap", "could not detect GW MAC address for %s on %s."
 					" Try setting default gateway mac address (-G), or run"
@@ -228,45 +235,6 @@ static void start_zmap(void)
 		zconf.probe_module->close(&zconf, &zsend, &zrecv);
 	}
 	log_info("zmap", "completed");
-}
-
-static void enforce_range(const char *name, int v, int min, int max)
-{
-	if (v < min || v > max) {
-	  	log_fatal("zmap", "argument `%s' must be between %d and %d\n",
-			name, min, max);
-	}
-}
-
-static int file_exists(char *name)
-{
-	FILE *file = fopen(name, "r");
-	if (!file)
-		return 0;
-	fclose(file);
-	return 1;
-}
-
-#define MAC_LEN ETHER_ADDR_LEN
-int parse_mac(macaddr_t *out, char *in)
-{
-	if (strlen(in) < MAC_LEN*3-1)
-		return 0;
-	char octet[4];
-	octet[2] = '\0';
-	for (int i=0; i < MAC_LEN; i++) {
-		if (i < MAC_LEN-1 && in[i*3+2] != ':') {
-			return 0;
-		}
-		strncpy(octet, &in[i*3], 2);
-		char *err = NULL;
-		long b = strtol(octet, &err, 16);
-		if (err && *err != '\0') {
-			return 0;
-		}
-		out[i] = b & 0xFF;
-	}
-	return 1;
 }
 
 #define SET_IF_GIVEN(DST,ARG) \
@@ -463,7 +431,7 @@ int main(int argc, char *argv[])
 	if (args.vpn_given) {
 		zconf.send_ip_pkts = 1;
 		zconf.gw_mac_set = 1;
-		memset(zconf.gw_mac, 0, MAC_LEN);
+		memset(zconf.gw_mac, 0, MAC_ADDR_LEN);
 	}
 	if (cmdline_parser_required(&args, CMDLINE_PARSER_PACKAGE) != 0) {
 		exit(EXIT_FAILURE);

@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include "types.h"
+
 int max_int(int a, int b);
 
 // Splits comma delimited string into char*[]. Does not handle
@@ -14,6 +16,13 @@ void split_string(char *in, int *len, char ***results);
 // Print a string using w length long lines, attempting to break on
 // spaces
 void fprintw(FILE *f, char *s, size_t w);
+
+// Convert a string representation of a MAC address to a byte array
+int parse_mac(macaddr_t *out, char *in);
+
+int check_range(int v, int min, int max);
+
+int file_exists(char *name);
 
 // If running as root, drops priviledges to that of user "nobody".
 // Otherwise, does nothing.

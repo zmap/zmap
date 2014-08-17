@@ -5,6 +5,9 @@
 #include <string.h>
 #include <assert.h>
 
+#include "includes.h"
+#include "xalloc.h"
+
 #include <unistd.h>
 #include <sched.h>
 #include <pthread.h>
@@ -12,7 +15,6 @@
 #include <pwd.h>
 #include <uuid/uuid.h>
 
-#include "xalloc.h"
 
 #define MAX_SPLITS 128
 
@@ -95,6 +97,44 @@ void fprintw(FILE *f, char *s, size_t w)
 		pch = strtok(NULL, "\n");
 	}
 	free(news);
+}
+
+int parse_mac(macaddr_t *out, char *in)
+{
+	if (strlen(in) < MAC_ADDR_LEN*3-1)
+		return 0;
+	char octet[4];
+	octet[2] = '\0';
+	for (int i=0; i < MAC_ADDR_LEN; i++) {
+		if (i < MAC_ADDR_LEN-1 && in[i*3+2] != ':') {
+			return 0;
+		}
+		strncpy(octet, &in[i*3], 2);
+		char *err = NULL;
+		long b = strtol(octet, &err, 16);
+		if (err && *err != '\0') {
+			return 0;
+		}
+		out[i] = b & 0xFF;
+	}
+	return 1;
+}
+
+int check_range(int v, int min, int max)
+{
+	if (v < min || v > max) {
+		return EXIT_FAILURE;
+	}
+	return EXIT_SUCCESS;
+}
+
+int file_exists(char *name)
+{
+	FILE *file = fopen(name, "r");
+	if (!file)
+		return 0;
+	fclose(file);
+	return 1;
 }
 
 int drop_privs()

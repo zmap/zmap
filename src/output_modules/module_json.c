@@ -31,8 +31,6 @@
 #include "../probe_modules/probe_modules.h"
 
 static FILE *file = NULL;
-#define UNUSED __attribute__((unused))
-#define MAC_ADDR_LEN 6
 
 int json_output_file_init(struct state_conf *conf, UNUSED char **fields, UNUSED int fieldlens)
 {
@@ -193,4 +191,3 @@ output_module_t module_json_file = {
 	.process_ip = &json_output_file_ip,
 	.helptext = NULL
 };
-
