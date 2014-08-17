@@ -130,6 +130,7 @@ endif()
 
 target_link_libraries(
 	zmap
+	${PFRING_LIBRARIES}
 	pcap gmp m
 	${DNET_LIBRARIES}
 	${REDIS_LIBS}

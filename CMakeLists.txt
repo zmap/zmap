@@ -76,6 +76,7 @@ endif()
 
 if(WITH_PFRING)
 	add_definitions("-DPFRING")
+	set(PFRING_LIBRARIES pfring rt numa)
 endif()
 
 # Standard FLAGS
