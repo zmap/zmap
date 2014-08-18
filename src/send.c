@@ -33,12 +33,14 @@
 #include "validate.h"
 
 // OS specific functions called by send_run
-static inline int send_packet(int fd, void *buf, int len);
+static inline int send_packet(int fd, void *buf, int len, uint32_t idx);
 static inline int send_run_init(sock_t sock);
 
 
 // Include the right implementations
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(PFRING)
+#include "send-pfring.h"
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
 #include "send-bsd.h"
 #else /* LINUX */
 #include "send-linux.h"
@@ -214,6 +216,7 @@ int send_run(sock_t st, shard_t *s)
 	}
 	uint32_t curr = shard_get_cur_ip(s);
 	int attempts = zconf.num_retries + 1;
+	uint32_t idx = 0;
 	while (1) {
 		// adaptive timing delay
 		if (delay > 0) {
@@ -262,7 +265,7 @@ int send_run(sock_t st, shard_t *s)
 				int length = zconf.probe_module->packet_length;
 				void *contents = buf + zconf.send_ip_pkts*sizeof(struct ether_header);
 				for (int i = 0; i < attempts; ++i) {
-					int rc = send_packet(sock, contents, length);
+					int rc = send_packet(sock, contents, length, idx);
 					if (rc < 0) {
 						struct in_addr addr;
 						addr.s_addr = curr;
@@ -273,8 +276,11 @@ int send_run(sock_t st, shard_t *s)
 						break;
 					}
 				}
+				idx++;
+				idx &= 0xFF;
 			}
 		}
+
 		curr = shard_get_next_ip(s);
 	}
 	if (zconf.dryrun) {
