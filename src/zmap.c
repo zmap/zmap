@@ -717,7 +717,67 @@ int main(int argc, char *argv[])
 			zconf.max_targets = v;
 		}
 	}
+	// PFRING
+#ifdef PFRING
+#define MAX_CARD_SLOTS 32768
+#define QUEUE_LEN 8192
+#define ZMAP_PF_BUFFER_SIZE 1536
+#define ZMAP_PF_ZC_CLUSTER_ID 9627
+	uint32_t user_buffers = zconf.senders*256;
+	uint32_t queue_buffers = zconf.senders*QUEUE_LEN;
+	uint32_t card_buffers = 2*MAX_CARD_SLOTS;
+	uint32_t total_buffers = user_buffers + queue_buffers + card_buffers + 2;
+	uint32_t metadata_len = 0;
+	uint32_t numa_node = 0; // TODO
+	zconf.pf.cluster = pfring_zc_create_cluster(
+			ZMAP_PF_ZC_CLUSTER_ID,
+			ZMAP_PF_BUFFER_SIZE,
+			metadata_len,
+			total_buffers,
+			numa_node,
+			NULL);
+	if (zconf.pf.cluster == NULL) {
+		log_fatal("zmap", "Could not create zc cluster: %s", strerror(errno));
+	}
 
+	zconf.pf.buffers = xcalloc(user_buffers, sizeof(pfring_zc_pkt_buff *));
+	for (uint32_t i = 0; i < user_buffers; ++i) {
+		zconf.pf.buffers[i] = pfring_zc_get_packet_handle(zconf.pf.cluster);
+		if (zconf.pf.buffers[i] == NULL) {
+			log_fatal("zmap", "Could not get ZC packet handle");
+		}
+	}
+
+	zconf.pf.send = pfring_zc_open_device(zconf.pf.cluster, zconf.iface,
+			tx_only, 0);
+	if (zconf.pf_send == NULL) {
+		log_fatal("zmap", "Could not open device %s for TX. [%s]",
+				zconf.iface, strerror(errno));
+	}
+
+	zconf.pf.recv = pfring_zc_open_device(zconf.pf.cluster, zconf.iface,
+			rx_only, 0);
+	if (zconf.pf.recv == NULL) {
+		log_fatal("zmap", "Could not open device %s for RX. [%s]",
+				zconf.iface, strerror(errno));
+	}
+
+	zconf.pf.queues = xcalloc(zconf.senders, sizeof(pfring_zc_queue *));
+	for (uint32_t i = 0; i < zconf.senders; ++i) {
+		zconf.pf.queues[i] = pfring_zc_create_queue(zconf.pf.cluster,
+				QUEUE_LEN);
+		if (zconf.pf.queues[i] == NULL) {
+			log_fatal("zmap", "Could not create queue: %s",
+					strerror(errno));
+		}
+	}
+
+	zconf.pf.prefetch = pfring_zc_create_buffer_pool(zconf.pf.cluster, 8);
+	if (zconf.pf.prefetch == NULL) {
+		log_fatal("zmap", "Could not open prefetch pool: %s",
+				strerror(errno));
+	}
+#endif
 	// blacklist
 	if (blacklist_init(zconf.whitelist_filename, zconf.blacklist_filename,
 			   zconf.destination_cidrs, zconf.destination_cidrs_len,
@@ -737,6 +797,7 @@ int main(int argc, char *argv[])
 		zsend.targets = zconf.max_targets;
 	}
 
+#ifndef PFRING
 	// Set the correct number of threads, default to num_cores - 1
 	if (args.sender_threads_given) {
 		zconf.senders = args.sender_threads_arg;
@@ -752,7 +813,7 @@ int main(int argc, char *argv[])
 	if (zconf.senders > zsend.targets) {
 		zconf.senders = max_int(zsend.targets, 1);
 	}
-
+#endif
 	start_zmap();
 
 	fclose(log_location);
