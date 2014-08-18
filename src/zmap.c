@@ -172,6 +172,21 @@ static void start_zmap(void)
 		}
 		pthread_mutex_unlock(&recv_ready_mutex);
 	}
+#ifdef PFRING
+	pfring_zc_worker *zw = pfring_zc_run_balancer(zconf.pf.queues,
+		&zconf.pf.send,
+		zconf.senders,
+		1,
+		zconf.pf.prefetches,
+		round_robin_bursts_policy,
+		NULL,
+		distrib_func,
+		NULL,
+		0,
+		cpu);
+	cpu += 1;
+	cpu %= ncpu;
+#endif
 	tsend = xmalloc(zconf.senders * sizeof(pthread_t));
 	for (uint8_t i = 0; i < zconf.senders; i++) {
 		sock_t sock;
@@ -206,7 +221,9 @@ static void start_zmap(void)
 		}
 	}
 
+#ifndef PFRING
 	drop_privs();
+#endif
 
 	// wait for completion
 	for (uint8_t i = 0; i < zconf.senders; i++) {
@@ -217,6 +234,11 @@ static void start_zmap(void)
 		}
 	}
 	log_debug("zmap", "senders finished");
+#ifdef PFRING
+	pfring_zc_kill_worker(zw);
+	pfring_zc_sync_queue(zconf.pf.send, tx_only);
+	log_debug("zmap", "send queue flushed");
+#endif
 	r = pthread_join(trecv, NULL);
 	if (r != 0) {
 		log_fatal("zmap", "unable to join recv thread");
@@ -245,6 +267,9 @@ static void start_zmap(void)
 	if (zconf.probe_module && zconf.probe_module->close) {
 		zconf.probe_module->close(&zconf, &zsend, &zrecv);
 	}
+#ifdef PFRING
+	pfring_zc_destroy_cluster(zconf.pf.cluster);
+#endif
 	log_info("zmap", "completed");
 }
 
