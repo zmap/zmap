@@ -751,6 +751,46 @@ int main(int argc, char *argv[])
 			zconf.max_targets = v;
 		}
 	}
+
+	// blacklist
+	if (blacklist_init(zconf.whitelist_filename, zconf.blacklist_filename,
+			zconf.destination_cidrs, zconf.destination_cidrs_len,
+			NULL, 0)) {
+		log_fatal("zmap", "unable to initialize blacklist / whitelist");
+	}
+
+	// compute number of targets
+	uint64_t allowed = blacklist_count_allowed();
+	assert(allowed <= (1LL << 32));
+	if (allowed == (1LL << 32)) {
+		zsend.targets = 0xFFFFFFFF;
+	} else {
+		zsend.targets = allowed;
+	}
+	if (zsend.targets > zconf.max_targets) {
+		zsend.targets = zconf.max_targets;
+	}
+
+#ifndef PFRING
+	// Set the correct number of threads, default to num_cores - 1
+	if (args.sender_threads_given) {
+		zconf.senders = args.sender_threads_arg;
+	} else {
+		int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+		zconf.senders = max_int(num_cores - 1, 1);
+		if (!zconf.quiet) {
+			// If monitoring, save a core for the monitor thread
+			zconf.senders = max_int(zconf.senders - 1, 1);
+		}
+	}
+
+	if (zconf.senders > zsend.targets) {
+		zconf.senders = max_int(zsend.targets, 1);
+	}
+#else
+	zconf.senders = args.sender_threads_arg;
+#endif
+
 	// PFRING
 #ifdef PFRING
 #define MAX_CARD_SLOTS 32768
@@ -811,44 +851,6 @@ int main(int argc, char *argv[])
 		log_fatal("zmap", "Could not open prefetch pool: %s",
 				strerror(errno));
 	}
-#endif
-	// blacklist
-	if (blacklist_init(zconf.whitelist_filename, zconf.blacklist_filename,
-			   zconf.destination_cidrs, zconf.destination_cidrs_len,
-			   NULL, 0)) {
-		log_fatal("zmap", "unable to initialize blacklist / whitelist");
-	}
-
-	// compute number of targets
-	uint64_t allowed = blacklist_count_allowed();
-	assert(allowed <= (1LL << 32));
-	if (allowed == (1LL << 32)) {
-		zsend.targets = 0xFFFFFFFF;
-	} else {
-		zsend.targets = allowed;
-	}
-	if (zsend.targets > zconf.max_targets) {
-		zsend.targets = zconf.max_targets;
-	}
-
-#ifndef PFRING
-	// Set the correct number of threads, default to num_cores - 1
-	if (args.sender_threads_given) {
-		zconf.senders = args.sender_threads_arg;
-	} else {
-		int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
-		zconf.senders = max_int(num_cores - 1, 1);
-		if (!zconf.quiet) {
-			// If monitoring, save a core for the monitor thread
-			zconf.senders = max_int(zconf.senders - 1, 1);
-		}
-	}
-
-	if (zconf.senders > zsend.targets) {
-		zconf.senders = max_int(zsend.targets, 1);
-	}
-#else
-	zconf.senders = args.sender_threads_arg;
 #endif
 	start_zmap();
 
