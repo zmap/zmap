@@ -23,7 +23,7 @@ int send_packet(sock_t sock, void *buf, int len, uint32_t idx)
 	int ret;
 	do {
 		ret = pfring_zc_send_pkt(sock.pf.queue, &sock.pf.buffers[idx], 0);
-	} while (unlikely(ret < 0));
+	} while (ret < 0);
 	return ret;
 }
 
