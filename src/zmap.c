@@ -42,6 +42,15 @@
 #include "output_modules/output_modules.h"
 #include "probe_modules/probe_modules.h"
 
+#ifdef PFRING
+#include <pfring_zc.h>
+static int32_t distrib_func(pfring_zc_pkt_buff *pkt, void *arg) {
+	(void) pkt;
+	(void) arg;
+	return 0;
+}
+#endif
+
 
 pthread_mutex_t recv_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 
