@@ -56,7 +56,7 @@ typedef struct recv_arg {
 } recv_arg_t;
 
 typedef struct mon_start_arg {
-	uint32_t core;
+	uint32_t cpu;
 	iterator_t *it;
 	pthread_mutex_t *recv_ready_mutex;
 } mon_start_arg_t;
@@ -89,7 +89,7 @@ static void* start_recv(void *arg)
 static void *start_mon(void *arg)
 {
 	mon_start_arg_t *mon_arg = (mon_start_arg_t *) arg;
-	set_cpu(mon_arg->core);
+	set_cpu(mon_arg->cpu);
 	monitor_run(mon_arg->it, mon_arg->recv_ready_mutex);
 	free(mon_arg);
 	return NULL;
@@ -153,8 +153,14 @@ static void start_zmap(void)
 	}
 
 	// start threads
+	uint32_t ncpu = sysconf(_SC_NPROCESSORS_ONLN);
+	uint32_t cpu = 0;
 	pthread_t *tsend, trecv, tmon;
-	int r = pthread_create(&trecv, NULL, start_recv, NULL);
+	recv_arg_t *recv_arg = xmalloc(sizeof(recv_arg_t));
+	recv_arg->cpu = cpu;
+	cpu += 1;
+	cpu %= ncpu;
+	int r = pthread_create(&trecv, NULL, start_recv, recv_arg);
 	if (r != 0) {
 		log_fatal("zmap", "unable to create recv thread");
 	}
@@ -175,8 +181,12 @@ static void start_zmap(void)
 			sock = get_socket(i);
 		}
 		send_arg_t *arg = xmalloc(sizeof(send_arg_t));
+
 		arg->sock = sock;
 		arg->shard = get_shard(it, i);
+		arg->cpu = cpu;
+		cpu += 1;
+		cpu %= ncpu;
 		int r = pthread_create(&tsend[i], NULL, start_send, arg);
 		if (r != 0) {
 			log_fatal("zmap", "unable to create send thread");
@@ -188,6 +198,7 @@ static void start_zmap(void)
 		mon_start_arg_t *mon_arg = xmalloc(sizeof(mon_start_arg_t));
 		mon_arg->it = it;
 		mon_arg->recv_ready_mutex = &recv_ready_mutex;
+		mon_arg->cpu = cpu;
 		int r = pthread_create(&tmon, NULL, start_mon, mon_arg);
 		if (r != 0) {
 			log_fatal("zmap", "unable to create monitor thread");
