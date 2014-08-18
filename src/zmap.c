@@ -847,6 +847,8 @@ int main(int argc, char *argv[])
 	if (zconf.senders > zsend.targets) {
 		zconf.senders = max_int(zsend.targets, 1);
 	}
+#else
+	zconf.senders = args.sender_threads_arg;
 #endif
 	start_zmap();
 
