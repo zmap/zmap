@@ -750,7 +750,7 @@ int main(int argc, char *argv[])
 
 	zconf.pf.send = pfring_zc_open_device(zconf.pf.cluster, zconf.iface,
 			tx_only, 0);
-	if (zconf.pf_send == NULL) {
+	if (zconf.pf.send == NULL) {
 		log_fatal("zmap", "Could not open device %s for TX. [%s]",
 				zconf.iface, strerror(errno));
 	}
@@ -772,8 +772,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	zconf.pf.prefetch = pfring_zc_create_buffer_pool(zconf.pf.cluster, 8);
-	if (zconf.pf.prefetch == NULL) {
+	zconf.pf.prefetches = pfring_zc_create_buffer_pool(zconf.pf.cluster, 8);
+	if (zconf.pf.prefetches == NULL) {
 		log_fatal("zmap", "Could not open prefetch pool: %s",
 				strerror(errno));
 	}

@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "util.h"
 
 #include <stdio.h>
@@ -13,7 +14,6 @@
 #include <pthread.h>
 #include <sys/types.h>
 #include <pwd.h>
-#include <uuid/uuid.h>
 
 
 #define MAX_SPLITS 128
@@ -137,6 +137,10 @@ int file_exists(char *name)
 	return 1;
 }
 
+#if defined(__APPLE__)
+#include <uuid/uuid.h>
+#endif
+
 int drop_privs()
 {
 	struct passwd *pw;
@@ -176,6 +180,7 @@ int set_cpu(uint32_t core)
 #include <sys/cpuset.h>
 #define cpu_set_t cpuset_t
 #endif
+
 
 int set_cpu(uint32_t core)
 {
