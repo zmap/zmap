@@ -33,7 +33,7 @@
 #include "validate.h"
 
 // OS specific functions called by send_run
-static inline int send_packet(int fd, void *buf, int len, uint32_t idx);
+static inline int send_packet(sock_t sock, void *buf, int len, uint32_t idx);
 static inline int send_run_init(sock_t sock);
 
 
@@ -169,7 +169,6 @@ int send_run(sock_t st, shard_t *s)
 	// Allocate a buffer to hold the outgoing packet
 	char buf[MAX_PACKET_SIZE];
 	memset(buf, 0, MAX_PACKET_SIZE);
-	int sock = st.sock;
 
 	// OS specific per-thread init
 	if (send_run_init(st)) {
@@ -265,7 +264,7 @@ int send_run(sock_t st, shard_t *s)
 				int length = zconf.probe_module->packet_length;
 				void *contents = buf + zconf.send_ip_pkts*sizeof(struct ether_header);
 				for (int i = 0; i < attempts; ++i) {
-					int rc = send_packet(sock, contents, length, idx);
+					int rc = send_packet(st, contents, length, idx);
 					if (rc < 0) {
 						struct in_addr addr;
 						addr.s_addr = curr;

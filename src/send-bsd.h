@@ -22,9 +22,9 @@ int send_run_init(UNUSED sock_t sock)
 	return EXIT_SUCCESS;
 }
 
-int send_packet(int fd, void *buf, int len, UNUSED uint32_t idx)
+int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 {
-	return write(fd, buf, len);
+	return write(sock.sock, buf, len);
 }
 
 #endif /* ZMAP_SEND_BSD_H */

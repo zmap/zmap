@@ -51,9 +51,9 @@ int send_run_init(sock_t s)
 	return EXIT_SUCCESS;
 }
 
-int send_packet(int fd, void *buf, int len, UNUSED uint32_t idx)
+int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 {
-	return sendto(fd, buf, len, 0,
+	return sendto(sock.sock, buf, len, 0,
 		      (struct sockaddr *) &sockaddr,
 		      sizeof(struct sockaddr_ll));
 }
