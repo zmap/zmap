@@ -132,11 +132,19 @@ iterator_t* send_init(void)
 
 	// Get the source hardware address, and give it to the probe
 	// module
-	if (get_iface_hw_addr(zconf.iface, zconf.hw_mac)) {
-		log_fatal("send", "could not retrieve hardware address for "
-			  "interface: %s", zconf.iface);
-		return NULL;
-	}
+    if (!zconf.hw_mac_set) {
+	    if (get_iface_hw_addr(zconf.iface, zconf.hw_mac)) {
+	    	log_fatal("send", "could not retrieve hardware address for "
+	    		  "interface: %s", zconf.iface);
+	    	return NULL;
+	    }
+        log_debug("send", "no source MAC provided. "
+                "automatically detected %02x:%02x:%02x:%02x:%02x:%02x as hw "
+                "interface for %s",
+                zconf.hw_mac[0], zconf.hw_mac[1], zconf.hw_mac[2],
+                zconf.hw_mac[3], zconf.hw_mac[4], zconf.hw_mac[5],
+                zconf.iface);
+    }
 	log_debug("send", "source MAC address %02x:%02x:%02x:%02x:%02x:%02x",
            zconf.hw_mac[0], zconf.hw_mac[1], zconf.hw_mac[2],
            zconf.hw_mac[3], zconf.hw_mac[4], zconf.hw_mac[5]);

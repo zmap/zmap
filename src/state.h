@@ -82,6 +82,7 @@ struct state_conf {
 	macaddr_t hw_mac[MAC_ADDR_LEN_BYTES];
 	uint32_t gw_ip;
 	int gw_mac_set;
+	int hw_mac_set;
 	int send_ip_pkts;
 	char *source_ip_first;
 	char *source_ip_last;

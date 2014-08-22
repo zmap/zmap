@@ -662,7 +662,19 @@ int main(int argc, char *argv[])
 		}
 		zconf.gw_mac_set = 1;
 	}
+    if (args.source_mac_given) {
+		if (!parse_mac(zconf.hw_mac, args.source_mac_arg)) {
+			fprintf(stderr, "%s: invalid MAC address `%s'\n",
+				CMDLINE_PARSER_PACKAGE, args.gateway_mac_arg);
+			exit(EXIT_FAILURE);
+		}
+        log_debug("send", "source MAC address specified on CLI: "
+                "%02x:%02x:%02x:%02x:%02x:%02x",
+                zconf.hw_mac[0], zconf.hw_mac[1], zconf.hw_mac[2],
+                zconf.hw_mac[3], zconf.hw_mac[4], zconf.hw_mac[5]);
 
+		zconf.hw_mac_set = 1;
+	}
 	// Check for a random seed
 	if (args.seed_given) {
 		zconf.seed = args.seed_arg;

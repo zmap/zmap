@@ -78,6 +78,9 @@ option "source-ip"              S "Source address(es) for scan packets"
 option "gateway-mac"            G "Specify gateway MAC address"
     typestr="addr"
     optional string
+option "source-mac"             - "Source MAC address"
+    typestr="addr"
+    optional string
 option "interface"              i "Specify network interface to use"
     typestr="name"
     optional string

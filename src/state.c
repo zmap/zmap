@@ -38,6 +38,7 @@ struct state_conf zconf = {
 	.gw_ip = 0,
 	.hw_mac = {0},
 	.gw_mac_set = 0,
+	.hw_mac_set = 0,
 	.send_ip_pkts = 0,
 	.source_ip_first = NULL,
 	.source_ip_last = NULL,
