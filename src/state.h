@@ -92,8 +92,8 @@ struct state_conf {
 #ifdef JSON
 	char *metadata_filename;
 	FILE *metadata_file;
-    char *notes;
-    char *custom_metadata_str;
+	char *notes;
+	char *custom_metadata_str;
 #endif
 	char **destination_cidrs;
 	int destination_cidrs_len;
