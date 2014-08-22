@@ -89,8 +89,12 @@ struct state_conf {
 	char *output_filename;
 	char *blacklist_filename;
 	char *whitelist_filename;
+#ifdef JSON
 	char *metadata_filename;
 	FILE *metadata_file;
+    char *notes;
+    char *custom_metadata_str;
+#endif
 	char **destination_cidrs;
 	int destination_cidrs_len;
 	char *raw_output_fields;

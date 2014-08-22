@@ -55,9 +55,13 @@ struct state_conf zconf = {
 	.syslog = 1,
 	.filter_duplicates = 0,
 	.filter_unsuccessful = 0,
-	.recv_ready = 0,
+#ifdef JSON
 	.metadata_file = NULL,
-	.metadata_filename = NULL
+	.metadata_filename = NULL,
+    .notes = NULL,
+    .custom_metadata_str = NULL,
+#endif
+	.recv_ready = 0
 };
 
 // global sender stats and defaults
