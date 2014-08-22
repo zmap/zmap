@@ -142,8 +142,12 @@ option "summary"                g "Print configuration and summary at end of sca
     optional
 option "disable-syslog"         - "Disables logging messages to syslog"
     optional
-
-
+option "notes"                  - "Inject user-specified notes into scan metadata"
+    typestr="notes"
+    optional string
+option "user-metadata"          - "Inject user-specified JSON metadata into scan metadata"
+    typestr="json"
+    optional string
 
 section "Additional options"
 option "config"                 C "Read a configuration file, which can specify any of these options"
