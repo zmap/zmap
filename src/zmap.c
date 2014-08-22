@@ -603,7 +603,13 @@ int main(int argc, char *argv[])
 
     if (args.user_metadata_given) {
 #ifdef JSON
+#include <json.h>
         zconf.custom_metadata_str = args.user_metadata_arg;
+        if (!json_tokener_parse(zconf.custom_metadata_str)) {
+            log_fatal("metadata", "unable to parse custom user metadata");
+        } else {
+            log_debug("metadata", "user metadata validated successfully");
+        }
 #else
     	log_fatal("zmap", "JSON support not compiled into ZMap. "
 				"Metadata output not supported.");
