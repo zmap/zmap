@@ -601,6 +601,24 @@ int main(int argc, char *argv[])
 #endif
 	}
 
+    if (args.user_metadata_given) {
+#ifdef JSON
+        zconf.custom_metadata_str = args.user_metadata_arg;
+#else
+    	log_fatal("zmap", "JSON support not compiled into ZMap. "
+				"Metadata output not supported.");
+#endif
+    }
+    if (args.notes_given) {
+#ifdef JSON
+        zconf.notes = args.notes_arg;
+#else
+    	log_fatal("zmap", "JSON support not compiled into ZMap. "
+				"Metadata output and note injection are not supported.");
+#endif
+    }
+
+
 	// find if zmap wants any specific cidrs scanned instead
 	// of the entire Internet
 	zconf.destination_cidrs = args.inputs;
