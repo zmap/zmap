@@ -81,6 +81,7 @@ static void enforce_range(const char *name, int v, int min, int max)
 static void* start_send(void *arg)
 {
 	send_arg_t *s = (send_arg_t *) arg;
+	log_trace("zmap", "Pinning a send thread to core %u", s->cpu);
 	set_cpu(s->cpu);
 	send_run(s->sock, s->shard);
 	free(s);
@@ -90,6 +91,7 @@ static void* start_send(void *arg)
 static void* start_recv(void *arg)
 {
 	recv_arg_t *r = (recv_arg_t *) arg;
+	log_trace("zmap", "Pinning receive thread to core %u", r->cpu);
 	set_cpu(r->cpu);
 	recv_run(&recv_ready_mutex);
 	return NULL;
@@ -98,6 +100,7 @@ static void* start_recv(void *arg)
 static void *start_mon(void *arg)
 {
 	mon_start_arg_t *mon_arg = (mon_start_arg_t *) arg;
+	log_trace("zmap", "Pinning monitor thread to core %u", mon_arg->cpu);
 	set_cpu(mon_arg->cpu);
 	monitor_run(mon_arg->it, mon_arg->recv_ready_mutex);
 	free(mon_arg);
@@ -162,13 +165,11 @@ static void start_zmap(void)
 	}
 
 	// start threads
-	uint32_t ncpu = sysconf(_SC_NPROCESSORS_ONLN);
 	uint32_t cpu = 0;
 	pthread_t *tsend, trecv, tmon;
 	recv_arg_t *recv_arg = xmalloc(sizeof(recv_arg_t));
-	recv_arg->cpu = cpu;
+	recv_arg->cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
 	cpu += 1;
-	cpu %= ncpu;
 	int r = pthread_create(&trecv, NULL, start_recv, recv_arg);
 	if (r != 0) {
 		log_fatal("zmap", "unable to create recv thread");
@@ -192,9 +193,8 @@ static void start_zmap(void)
 		distrib_func,
 		NULL,
 		0,
-		cpu);
+		zconf.pin_cores[cpu & zconf.pin_cores_len]);
 	cpu += 1;
-	cpu %= ncpu;
 #endif
 	tsend = xmalloc(zconf.senders * sizeof(pthread_t));
 	for (uint8_t i = 0; i < zconf.senders; i++) {
@@ -208,9 +208,8 @@ static void start_zmap(void)
 
 		arg->sock = sock;
 		arg->shard = get_shard(it, i);
-		arg->cpu = cpu;
+		arg->cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
 		cpu += 1;
-		cpu %= ncpu;
 		int r = pthread_create(&tsend[i], NULL, start_send, arg);
 		if (r != 0) {
 			log_fatal("zmap", "unable to create send thread");
@@ -222,7 +221,7 @@ static void start_zmap(void)
 		mon_start_arg_t *mon_arg = xmalloc(sizeof(mon_start_arg_t));
 		mon_arg->it = it;
 		mon_arg->recv_ready_mutex = &recv_ready_mutex;
-		mon_arg->cpu = cpu;
+		mon_arg->cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
 		int r = pthread_create(&tmon, NULL, start_mon, mon_arg);
 		if (r != 0) {
 			log_fatal("zmap", "unable to create monitor thread");
@@ -826,6 +825,26 @@ int main(int argc, char *argv[])
 #else
 	zconf.senders = args.sender_threads_arg;
 #endif
+	// Figure out what cores to bind to
+	if (args.cores_given) {
+		char **core_list = NULL;
+		int len = 0;
+		split_string(args.cores_arg, &len, &core_list);
+		zconf.pin_cores_len = (uint32_t) len;
+		zconf.pin_cores = xcalloc(zconf.pin_cores_len,
+			sizeof(uint32_t));
+		for (uint32_t i = 0; i < zconf.pin_cores_len; ++i) {
+			zconf.pin_cores[i] = atoi(core_list[i]);
+		}
+	} else {
+		int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+		zconf.pin_cores_len = (uint32_t) num_cores;
+		zconf.pin_cores = xcalloc(zconf.pin_cores_len,
+			sizeof(uint32_t));
+		for (uint32_t i = 0; i < zconf.pin_cores_len; ++i) {
+			zconf.pin_cores[i] = i;
+		}
+	}
 
 	// PFRING
 #ifdef PFRING
