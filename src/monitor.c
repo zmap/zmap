@@ -472,7 +472,9 @@ void monitor_run(iterator_t *it, pthread_mutex_t *lock)
 		sleep(UPDATE_INTERVAL);
 	}
 	if (!zconf.quiet) {
+		lock_file(stderr);
 		fflush(stderr);
+		unlock_file(stderr);
 	}
 	if (f) {
 		fflush(f);
