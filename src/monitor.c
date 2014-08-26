@@ -287,11 +287,11 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp, iterator_t 
 static void log_drop_warnings(export_status_t *exp)
 {
 	if (exp->pcap_drop_last/exp->recv_rate > 0.05) {
-		log_warn("monitor", "Dropped %d packets in the last second, (%d total dropped (pcap: %d + iface: %d))",
+		log_warn("monitor", "Dropped %.0f packets in the last second, (%u total dropped (pcap: %u + iface: %u))",
 				 exp->pcap_drop_last, exp->pcap_drop_total, exp->pcap_drop, exp->pcap_ifdrop);
 	}
 	if (exp->fail_last/exp->send_rate > 0.01) {
-		log_warn("monitor", "Failed to send %d packets/sec (%d total failures)",
+		log_warn("monitor", "Failed to send %.0f packets/sec (%u total failures)",
 				 exp->fail_last, exp->fail_total);
 	}
 }
