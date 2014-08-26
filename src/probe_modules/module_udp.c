@@ -770,6 +770,10 @@ probe_module_t module_udp = {
 	.validate_packet = &udp_validate_packet,
 	.process_packet = &udp_process_packet,
 	.close = &udp_global_cleanup,
+	.helptext = "Probe module that sends UDP packets to hosts. Packets can "
+	            "optionally be templated based on destination host. Specify"
+	            " packet file with --probe-args=file:/path_to_packet_file "
+	            "and templates with template:/path_to_template_file.",
 	.fields = fields,
 	.numfields = sizeof(fields)/sizeof(fields[0])
 };
