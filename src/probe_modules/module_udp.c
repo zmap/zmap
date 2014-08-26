@@ -17,6 +17,7 @@
 
 #include "../../lib/includes.h"
 #include "../../lib/xalloc.h"
+#include "../../lib/lockfd.h"
 #include "logger.h"
 #include "probe_modules.h"
 #include "packet.h"
@@ -54,7 +55,7 @@ const char *udp_unreach_strings[] = {
 };
 
 const char *udp_usage_error =
-	"unknown UDP probe specification (expected file:/path or text:STRING or hex:01020304 or template:/path)";
+	"unknown UDP probe specification (expected file:/path or text:STRING or hex:01020304 or template:/path or template-fields)";
 
 const unsigned char *charset_alphanum = (unsigned char *)"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 const unsigned char *charset_alpha    = (unsigned char *)"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -87,6 +88,7 @@ static int num_ports;
 probe_module_t module_udp;
 
 // Field definitions for template parsing and displaying usage
+static uint32_t udp_num_template_field_types = 12;
 static udp_payload_field_type_def_t udp_payload_template_fields[] = {
 	{.name = "SADDR_N", .ftype=UDP_SADDR_N, .desc = "Source IP address in network byte order"},
 	{.name = "SADDR",   .ftype=UDP_SADDR_A, .desc = "Source IP address in dotted-quad format"},
@@ -124,6 +126,20 @@ static int udp_global_initialize(struct state_conf *conf) {
 
 	args = strdup(conf->probe_args);
 	if (! args) exit(1);
+
+	if (strcmp(args, "template-fields") == 0) {
+		lock_file(stderr);
+		fprintf(stderr, "%s",
+			"List of allowed UDP template fields (name: description)\n\n");
+		for (uint32_t i = 0; i < udp_num_template_field_types; ++i) {
+			fprintf(stderr, "%s: %s\n",
+				udp_payload_template_fields[i].name,
+				udp_payload_template_fields[i].desc);
+		}
+		fprintf(stderr, "%s\n" ,"");
+		unlock_file(stderr);
+		exit(0);
+	}
 
 	c = strchr(args, ':');
 	if (! c) {

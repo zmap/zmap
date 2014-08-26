@@ -7,7 +7,9 @@ zmap [ -p &lt;port> ] [ -o &lt;outfile&gt; ] [ OPTIONS... ] [ ip/hostname/range 
 
 ## DESCRIPTION
 
-*ZMap* is a network tool for scanning the entire Internet (or large samples). ZMap is capable of scanning the entire Internet in around 45 minutes on a gigabit network connection, reaching ~98% theoretical line speed.
+*ZMap* is a network tool for scanning the entire Internet (or large samples).
+ZMap is capable of scanning the entire Internet in around 45 minutes on a
+gigabit network connection, reaching ~98% theoretical line speed.
 
 ## OPTIONS
 
@@ -36,7 +38,7 @@ zmap [ -p &lt;port> ] [ -o &lt;outfile&gt; ] [ OPTIONS... ] [ ip/hostname/range 
      Cap the number of targets to probe. This can either be a number (e.g. -n
      1000) or a percentage (e.g. -n 0.1%) of the scannable address space
      (after excluding blacklist)
-   
+
    * `-N`, `--max-results=n`:
      Exit after receiving this many results
 
@@ -56,11 +58,11 @@ zmap [ -p &lt;port> ] [ -o &lt;outfile&gt; ] [ OPTIONS... ] [ ip/hostname/range 
    * `-e`, `--seed=n`:
      Seed used to select address permutation. Use this if you want to scan
      addresses in the same order for multiple ZMap runs.
-   
+
    * `--shards=N`:
      Split the scan up into N shards/partitions among different instances of
      zmap (default=1). When sharding, **--seed** is required.
-   
+
    * `--shard=n`:
      Set which shard to scan (default=0). Shards are 0-indexed in the range
      [0, N), where N is the    total number of shards. When sharding
@@ -68,7 +70,7 @@ zmap [ -p &lt;port> ] [ -o &lt;outfile&gt; ] [ OPTIONS... ] [ ip/hostname/range 
 
    * `-T`, `--sender-threads=n`:
      Threads used to send packets. ZMap will attempt to detect the optimal
-     number of send threads based on the number of processor cores. 
+     number of send threads based on the number of processor cores.
 
    * `-P`, `--probes=n`:
      Number of probes to send to each IP (default=1)
@@ -131,7 +133,7 @@ fields, and write filters over the output fields.
      Comma-separated list of fields to output
 
    * `--output-filter`:
-     Specify an output filter over the fields defined by the probe module 
+     Specify an output filter over the fields defined by the probe module
 
 ### ADDITIONAL OPTIONS ###
 
@@ -142,7 +144,7 @@ fields, and write filters over the output fields.
      Do not print status updates once per second
 
    * `-g`, `--summary`:
-     Print configuration and summary of results at the end of the scan 
+     Print configuration and summary of results at the end of the scan
 
    * `-v`, `--verbosity=n`:
      Level of log detail (0-5, default=3)
@@ -153,5 +155,23 @@ fields, and write filters over the output fields.
    * `-V`, `--version`:
      Print version and exit
 
+### UDP PROBE MODULE OPTIONS ###
 
+These arguments are all passed using the `--probe-args=args` option. Only one
+argument may be passed at a time.
 
+   * `file:/path/to/file`:
+     Path to payload file to send to each host over UDP.
+
+   * `template:/path/to/template`:
+     Path to template file. For each destination host, the template file is
+     populated, set as the UDP payload, and sent.
+
+   * `text:<text>`:
+     ASCII text to send to each destination host
+
+   * `hex:<hex>`:
+    Hex-encoded binary to send to each destination host
+
+   * `template-fields`:
+     Print information about the allowed template fields and exit.
