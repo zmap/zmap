@@ -74,9 +74,11 @@ void summary(void)
 	SU("exc", "sendto-failures", zsend.sendto_failures);
 	SU("adv", "permutation-gen", zconf.generator);
 	SS("exc", "scan-type", zconf.probe_module->name);
+#ifdef JSON
     if (zconf.notes) {
 	    SS("exc", "notes", zconf.notes);
     }
+#endif
 }
 
 #ifdef JSON
@@ -102,11 +104,11 @@ void json_metadata(FILE *file)
 		log_error("json-metadata", "unable to retrieve local hostname");
 	} else {
 		hostname[1023] = '\0';
-		json_object_object_add(obj, "local-hostname", 
+		json_object_object_add(obj, "local-hostname",
                 json_object_new_string(hostname));
 		struct hostent* h = gethostbyname(hostname);
 		if (h) {
-			json_object_object_add(obj, "full-hostname", 
+			json_object_object_add(obj, "full-hostname",
                     json_object_new_string(h->h_name));
 		} else {
 			log_error("json-metadata", "unable to retrieve complete hostname");
@@ -129,65 +131,65 @@ void json_metadata(FILE *file)
 		json_object_object_add(obj, "iface",
                 json_object_new_string(zconf.iface));
 	}
-	json_object_object_add(obj, "rate", 
+	json_object_object_add(obj, "rate",
             json_object_new_int(zconf.rate));
-	json_object_object_add(obj, "bandwidth", 
+	json_object_object_add(obj, "bandwidth",
             json_object_new_int(zconf.bandwidth));
-	json_object_object_add(obj, "cooldown-secs", 
+	json_object_object_add(obj, "cooldown-secs",
             json_object_new_int(zconf.cooldown_secs));
-	json_object_object_add(obj, "senders", 
+	json_object_object_add(obj, "senders",
             json_object_new_int(zconf.senders));
-	json_object_object_add(obj, "use-seed", 
+	json_object_object_add(obj, "use-seed",
             json_object_new_int(zconf.use_seed));
-	json_object_object_add(obj, "seed", 
+	json_object_object_add(obj, "seed",
             json_object_new_int64(zconf.seed));
-	json_object_object_add(obj, "generator", 
+	json_object_object_add(obj, "generator",
             json_object_new_int64(zconf.generator));
-	json_object_object_add(obj, "hitrate", 
+	json_object_object_add(obj, "hitrate",
             json_object_new_double(hitrate));
-	json_object_object_add(obj, "shard-num", 
+	json_object_object_add(obj, "shard-num",
             json_object_new_int(zconf.shard_num));
-	json_object_object_add(obj, "total-shards", 
+	json_object_object_add(obj, "total-shards",
             json_object_new_int(zconf.total_shards));
 
-	json_object_object_add(obj, "syslog", 
+	json_object_object_add(obj, "syslog",
             json_object_new_int(zconf.syslog));
-	json_object_object_add(obj, "filter-duplicates", 
+	json_object_object_add(obj, "filter-duplicates",
             json_object_new_int(zconf.filter_duplicates));
-	json_object_object_add(obj, "filter-unsuccessful", 
+	json_object_object_add(obj, "filter-unsuccessful",
             json_object_new_int(zconf.filter_unsuccessful));
 
-	json_object_object_add(obj, "pcap-recv", 
+	json_object_object_add(obj, "pcap-recv",
             json_object_new_int(zrecv.pcap_recv));
-	json_object_object_add(obj, "pcap-drop", 
+	json_object_object_add(obj, "pcap-drop",
             json_object_new_int(zrecv.pcap_drop));
-	json_object_object_add(obj, "pcap-ifdrop", 
+	json_object_object_add(obj, "pcap-ifdrop",
             json_object_new_int(zrecv.pcap_ifdrop));
 
-	json_object_object_add(obj, "blacklisted", 
+	json_object_object_add(obj, "blacklisted",
             json_object_new_int64(zsend.blacklisted));
-	json_object_object_add(obj, "whitelisted", 
+	json_object_object_add(obj, "whitelisted",
             json_object_new_int64(zsend.whitelisted));
-	json_object_object_add(obj, "first-scanned", 
+	json_object_object_add(obj, "first-scanned",
             json_object_new_int64(zsend.first_scanned));
-	json_object_object_add(obj, "send-to-failures", 
+	json_object_object_add(obj, "send-to-failures",
             json_object_new_int64(zsend.sendto_failures));
-	json_object_object_add(obj, "total-sent", 
+	json_object_object_add(obj, "total-sent",
             json_object_new_int64(zsend.sent));
 
-	json_object_object_add(obj, "success-total", 
+	json_object_object_add(obj, "success-total",
             json_object_new_int64(zrecv.success_total));
-	json_object_object_add(obj, "success-unique", 
+	json_object_object_add(obj, "success-unique",
             json_object_new_int64(zrecv.success_unique));
 	if (zconf.fsconf.app_success_index >= 0) {
-		json_object_object_add(obj, "app-success-total", 
+		json_object_object_add(obj, "app-success-total",
                 json_object_new_int64(zrecv.app_success_total));
-		json_object_object_add(obj, "app-success-unique", 
+		json_object_object_add(obj, "app-success-unique",
                 json_object_new_int64(zrecv.app_success_unique));
 	}
-	json_object_object_add(obj, "success-cooldown-total", 
+	json_object_object_add(obj, "success-cooldown-total",
             json_object_new_int64(zrecv.cooldown_total));
-	json_object_object_add(obj, "success-cooldown-unique", 
+	json_object_object_add(obj, "success-cooldown-unique",
             json_object_new_int64(zrecv.cooldown_unique));
 	json_object_object_add(obj, "failure-total",
             json_object_new_int64(zrecv.failure_total));
@@ -291,27 +293,27 @@ void json_metadata(FILE *file)
 			"whitelist-filename",
 			json_object_new_string(zconf.whitelist_filename));
 	}
-	json_object_object_add(obj, "dryrun", 
+	json_object_object_add(obj, "dryrun",
             json_object_new_int(zconf.dryrun));
-	json_object_object_add(obj, "summary", 
+	json_object_object_add(obj, "summary",
             json_object_new_int(zconf.summary));
-	json_object_object_add(obj, "quiet", 
+	json_object_object_add(obj, "quiet",
             json_object_new_int(zconf.quiet));
-	json_object_object_add(obj, "log_level", 
+	json_object_object_add(obj, "log_level",
             json_object_new_int(zconf.log_level));
-    
+
     // parse out JSON metadata that was supplied on the command-line
     if (zconf.custom_metadata_str) {
         json_object *user = json_tokener_parse(zconf.custom_metadata_str);
         if (!user) {
             log_error("json-metadata", "unable to parse user metadata");
         } else {
-	        json_object_object_add(obj, "user-metadata", user); 
+	        json_object_object_add(obj, "user-metadata", user);
         }
     }
 
     if (zconf.notes) {
-        json_object_object_add(obj, "notes", 
+        json_object_object_add(obj, "notes",
                 json_object_new_string(zconf.notes));
     }
 
