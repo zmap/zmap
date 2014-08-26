@@ -66,8 +66,11 @@ void recv_init()
 
 void recv_packets()
 {
-	if (pcap_dispatch(pc, -1, packet_cb, NULL) == -1) {
+	int ret = pcap_dispatch(pc, -1, packet_cb, NULL);
+	if (ret == -1) {
 		log_fatal("recv", "pcap_dispatch error");
+	} else if (ret == 0) {
+		usleep(1000);
 	}
 }
 
