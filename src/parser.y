@@ -22,7 +22,7 @@ extern node_t *zfilter;
 %union {
 	int int_literal;
 	char *string_literal;
-	struct node *expr; 
+	struct node_st *expr; 
 }
 
 %token '(' ')' T_AND T_OR
