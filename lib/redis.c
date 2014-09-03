@@ -318,3 +318,8 @@ int redis_spush(char *redisqueuename,
 	return redis_push(redisqueuename, buf, num, len, "SADD");
 }
 
+static int redis_push_strings(char *redisqueuename, char **buf, int num)
+{
+
+}
+
