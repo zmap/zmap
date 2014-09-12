@@ -109,7 +109,7 @@ void udp_set_num_ports(int x)
 	num_ports = x;
 }
 
-static int udp_global_initialize(struct state_conf *conf) {
+int udp_global_initialize(struct state_conf *conf) {
 	char *args, *c;
 	int i;
 	unsigned int n;
@@ -242,7 +242,6 @@ int udp_init_perthread(void* buf, macaddr_t *src,
 	module_udp.packet_length = sizeof(struct ether_header) + sizeof(struct ip)
 				+ sizeof(struct udphdr) + udp_send_msg_len;
 	assert(module_udp.packet_length <= MAX_PACKET_SIZE);
-
 	memcpy(payload, udp_send_msg, udp_send_msg_len);
 
 	// Seed our random number generator with the global generator

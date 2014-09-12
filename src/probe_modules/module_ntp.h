@@ -1,0 +1,37 @@
+//don't forget copyright license here 
+#include "../state.h"
+#include "../fieldset.h"
+
+#ifndef MODULE_NTP_H
+#define MODULE_NTP_H
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <string.h>
+
+struct __attribute__((__packed__)) ntphdr{//typedef
+   uint8_t LI_VN_MODE;
+   uint8_t stratum;
+   uint8_t poll;
+   uint8_t precision;
+   uint32_t root_delay;
+   uint32_t root_dispersion;
+   uint32_t ref_ID;
+   uint64_t reference_timestamp;
+   uint64_t origin_timestamp;
+   uint64_t receive_timestamp;
+   uint64_t transmit_timestamp;
+   //uint32_t key_ID;
+   //uint64_t dgst_1;
+   //uint64_t dgst_2;
+   
+   
+};
+
+void ntp_process_packet(const u_char *packet, __attribute__((unused)) uint32_t len, fieldset_t *fs);
+int ntp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw, __attribute__((unused)) port_h_t dst_port);
+void ntp_print_packet (FILE *fp, void *packet);
+
+#endif
