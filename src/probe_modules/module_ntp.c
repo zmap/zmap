@@ -42,6 +42,8 @@ int ntp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *) ip_header);
 
+    //Sets LI_VN_MODE to 11100011
+    //Sends a packet with NTP version 4 and as a client (to a server)
     ntp->LI_VN_MODE = 227;
     
 	return EXIT_SUCCESS;
@@ -50,12 +52,18 @@ int ntp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 void ntp_process_packet(const u_char *packet, __attribute__((unused)) uint32_t len, fieldset_t *fs){
     struct ip *ip_hdr =  (struct ip *) &packet[sizeof(struct ether_header)];
     int *ptr;
-    uint64_t line;
+    uint64_t line, temp64;
+    uint8_t temp8;
+    uint32_t temp32;
+
+    uint8_t testing8 = 1;
+    uint32_t testing32 = 1;
+    uint64_t testing64 = 1;
     if(ip_hdr->ip_p ==  IPPROTO_UDP){
         struct udphdr *udp = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
         struct module_ntp *ntp = (struct module_ntp *) &udp[1];
-
-        fs_add_string(fs, "classification", (char*) "udp", 0);
+        
+        fs_add_string(fs, "classification", (char*) "ntp", 0);
         fs_add_uint64(fs, "success", 1);
         fs_add_uint64(fs, "sport", ntohs(udp->uh_sport));
         fs_add_uint64(fs, "dport", ntohs(udp->uh_dport));
@@ -66,52 +74,31 @@ void ntp_process_packet(const u_char *packet, __attribute__((unused)) uint32_t l
         
         ptr = &ntp;
 
+        temp8 = *((uint8_t *)ptr); 
+        fs_add_uint64(fs, "LI_VN_MODE", temp8);
+        temp8 = *((uint8_t *)ptr +1);
+        fs_add_uint64(fs, "stratum", temp8);
+        temp8 = *((uint8_t *)ptr +2);
+        fs_add_uint64(fs, "poll", temp8);
+        temp8 = *((uint8_t *)ptr + 3);
+        fs_add_uint64(fs, "precision", temp8);
+    
+        temp32 = *((uint32_t *)ptr + 4);
+        fs_add_uint64(fs, "root_delay", temp32);
+        temp32 = *((uint32_t *)ptr + 8);
+        fs_add_uint64(fs, "root_dispersion", temp32);
+        temp32 = *((uint32_t *)ptr + 12);
+        fs_add_uint64(fs, "reference_clock_identifier", temp32);
 
-        line = *((uint32_t *)ptr + 13);
-        fs_add_uint64(fs, "reference_ID", line);
+        temp64 = *((uint64_t *)ptr + 16);
+        fs_add_uint64(fs, "reference_timestamp", temp64);
+        temp64 = *((uint64_t *)ptr + 24);
+        fs_add_uint64(fs, "originate_timestap", temp64);
+        temp64 = *((uint64_t *)ptr + 32);
+        fs_add_uint64(fs, "receive_timestamp", temp64);
+        temp64 = *((uint64_t *)ptr + 40);
+        fs_add_uint64(fs, "transmit_timestamp", temp64);
 
-        line = *((uint32_t *)ptr + 12);
-        uint32_t second_line = *((uint32_t *)ptr + 11);
-
-        line = (uint64_t)ptr;
-        line = line << 32;
-        line = line + second_line;
-        fs_add_uint64(fs, "reference_timestamp", line);
-
-        line = *((uint32_t *)ptr + 10);
-        second_line = *((uint32_t *)ptr +9);
-        
-        line = (uint64_t)ptr;
-        line = line << 32;
-        line = line + second_line;
-        fs_add_uint64(fs, "origin_timestamp", line);
-
-        line = *((uint32_t *)ptr + 8);
-        second_line = *((uint32_t *)ptr + 7);
-
-        line = (uint64_t)ptr;
-        line = line << 32;
-        line = line+second_line;
-        fs_add_uint64(fs, "receive_timestamp", line);
-
-        line = *((uint32_t *)ptr + 6);
-        second_line = *((uint32_t *)ptr + 5);
-
-        line = (uint64_t)ptr;
-        line = line <<32;
-        line = line+second_line;
-        fs_add_uint64(fs, "transmit_timestamp", line);
-
-        line = *((uint32_t *)ptr + 4);
-        fs_add_uint64(fs, "key_identifier", line);
-
-        uint64_t *arr;
-        uint64_t fake_arr[2];
-        arr = fake_arr;
-        arr[0] = *((uint64_t *)ptr + 1);
-        arr[1] = *((uint64_t *)ptr);
-
-        fs_add_binary(fs, "dsrt", 2 * sizeof(uint64_t), arr, 0);
 
     }else if(ip_hdr->ip_p ==  IPPROTO_ICMP){
         struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr -> ip_hl + 4);
@@ -173,66 +160,9 @@ int ntp_init_perthread(void *buf, macaddr_t *src,
 	return EXIT_SUCCESS;
 }
 
+//print packet taken out for lack of need
 void ntp_print_packet(FILE *fp, void *packet){
-    int *ptr;
-    uint64_t line, tt, ret, ot, rt;
 
-    line = *((uint32_t *)ptr + 13);
-
-    line = *((uint32_t *)ptr + 12);
-    uint32_t second_line = *((uint32_t *)ptr + 11);
-
-    line = (uint64_t)ptr;
-    line = line << 32;
-    line = line + second_line;
-    rt = line;
-
-    line = *((uint32_t *)ptr + 10);
-    second_line = *((uint32_t *)ptr +9);
-
-    line = (uint64_t)ptr;
-    line = line << 32;
-    line = line + second_line;
-    ot = line;
-
-    line = *((uint32_t *)ptr + 8);
-    second_line = *((uint32_t *)ptr + 7);
-
-    line = (uint64_t)ptr;
-    line = line << 32;
-    line = line+second_line;
-    ret = line;
-
-    line = *((uint32_t *)ptr + 6);
-    second_line = *((uint32_t *)ptr + 5);
-
-    line = (uint64_t)ptr;
-    line = line <<32;
-    line = line+second_line;
-    tt = line;
-
-	fprintf(fp, "ntp { transmit timestamp: %u | receive_timestamp: %u | originate_timestamp: %u | reference_timestamp: %u }\n",
-        tt, ret, ot, rt);
-
-    line = *((uint32_t *)ptr + 4);
-
-    uint64_t *arr;
-    uint64_t fake_arr[2];
-    arr = fake_arr;
-    arr[0] = *((uint64_t *)ptr + 1);
-    arr[1] = *((uint64_t *)ptr);
-
-
-
-	/*fprintf(fp, "udp { source: %u | dest: %u | checksum: %u }\n",
-		ntohs(udph->uh_sport),
-		ntohs(udph->uh_dport),
-		ntohl(udph->uh_sum));
-
-
-	fprintf_ip_header(fp, iph);
-	fprintf_eth_header(fp, ethh);*/
-	fprintf(fp, "------------------------------------------------------\n");
 }
 
 static fielddef_t fields[] = {
@@ -244,9 +174,7 @@ static fielddef_t fields[] = {
     {.name = "icmp_type", .type = "int", .desc = "icmp message type"},
     {.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
     {.name = "icmp_unreach_str", .type = "string", .desc = "for icmp_unreach responses, the string version of icmp_code "},
-    {.name = "LI", .type = "int", .desc = "leap indication"},
-    {.name = "VN", .type = "int", .desc = "version number"},
-    {.name = "mode", .type = "int", .desc = "mode"},
+    {.name = "LI_VN_MODE", .type = "int", .desc = "leap indication, version number, mode"},
     {.name = "stratum", .type = "int", .desc = "stratum"},
     {.name = "poll", .type ="int", .desc = "poll"},
     {.name = "precision", .type = "int", .desc = "precision"},
@@ -257,9 +185,6 @@ static fielddef_t fields[] = {
     {.name = "originate_timestamp", .type = "int", .desc = "local time at which request deparated client for service"},
     {.name = "receive_timestamp", .type = "int", .desc = "local time at which request arrvied at service host"},
     {.name = "transmit_timestamp", .type = "int", .desc = "local time which reply departed service host for client"},
-    {.name = "keyid", .type = "int", .desc = "key ID"}, 
-    {.name = "dgst1", .type = "int", .desc = "first half of message digest"},
-    {.name = "dgst2", .type = "int", .desc = "last half of message digest"},
 
 };
 
