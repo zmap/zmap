@@ -31,7 +31,7 @@ struct __attribute__((__packed__)) ntphdr{//typedef
 };
 
 void ntp_process_packet(const u_char *packet, __attribute__((unused)) uint32_t len, fieldset_t *fs);
-int ntp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw, __attribute__((unused)) port_h_t dst_port);
-void ntp_print_packet (FILE *fp, void *packet);
+int ntp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw, __attribute__((unused)) port_h_t dst_port, void **arg);
+//void ntp_print_packet (FILE *fp, void *packet);
 
 #endif
