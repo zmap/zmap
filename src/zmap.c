@@ -790,7 +790,8 @@ int main(int argc, char *argv[])
 	// blacklist
 	if (blacklist_init(zconf.whitelist_filename, zconf.blacklist_filename,
 			zconf.destination_cidrs, zconf.destination_cidrs_len,
-			NULL, 0)) {
+			NULL, 0,
+            zconf.ignore_invalid_hosts)) {
 		log_fatal("zmap", "unable to initialize blacklist / whitelist");
 	}
 

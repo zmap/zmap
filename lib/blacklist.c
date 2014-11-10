@@ -19,7 +19,6 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
-#include "state.h"
 #include "constraint.h"
 #include "logger.h"
 #include "xalloc.h"
@@ -46,7 +45,7 @@ void bl_ll_add(bl_ll_t *l, struct in_addr addr, uint16_t p)
         bl_cidr_node_t *new = xmalloc(sizeof(bl_cidr_node_t));
         new->next = NULL;
         new->ip_address = addr.s_addr;
-	new->prefix_len = p;
+    	new->prefix_len = p;
         if (!l->first) {
                 l->first = new;
         } else {
@@ -107,11 +106,7 @@ void whitelist_prefix(char *ip, int prefix_len)
 	struct in_addr addr;
 	addr.s_addr = inet_addr(ip);
 	_add_constraint(addr, prefix_len, ADDR_ALLOWED);
-
 }
-
-
-
 
 static int init_from_string(char *ip, int value)
 {
@@ -160,8 +155,7 @@ static int init_from_string(char *ip, int value)
 	return ret;
 }
 
-
-static int init_from_file(char *file, const char *name, int value)
+static int init_from_file(char *file, const char *name, int value, int ignore_invalid_hosts)
 {
 	FILE *fp;
 	char line[1000];
@@ -182,7 +176,7 @@ static int init_from_file(char *file, const char *name, int value)
 			continue;
 		}
 		if (init_from_string(ip, value)) {
-			if (!zconf.ignore_invalid_hosts) {
+			if (!ignore_invalid_hosts) {
 				log_fatal(name, "unable to parse %s file: %s",
 						name, file);
 			}
@@ -193,13 +187,13 @@ static int init_from_file(char *file, const char *name, int value)
 	return 0;
 }
 
-static void init_from_array(char **cidrs, size_t len, int value)
+static void init_from_array(char **cidrs, size_t len, int value, int ignore_invalid_hosts)
 {
 	for (int i=0; i < (int) len; i++) {
 		int ret = init_from_string(cidrs[i], value);
-                if (ret && !zconf.ignore_invalid_hosts) {
-			log_fatal("constraint",
-					"Unable to init from CIDR list");
+                if (ret && !ignore_invalid_hosts) {
+        			log_fatal("constraint",
+		        			"Unable to init from CIDR list");
                 }
 	}
 }
@@ -220,7 +214,8 @@ uint64_t blacklist_count_not_allowed()
 // Either can be set to NULL to omit.
 int blacklist_init(char *whitelist_filename, char *blacklist_filename,
 		char **whitelist_entries, size_t whitelist_entries_len,
-		char **blacklist_entries, size_t blacklist_entries_len)
+		char **blacklist_entries, size_t blacklist_entries_len,
+        int ignore_invalid_hosts)
 {
 	assert(!constraint);
 
@@ -238,22 +233,26 @@ int blacklist_init(char *whitelist_filename, char *blacklist_filename,
 		constraint = constraint_init(ADDR_DISALLOWED);
 		log_debug("constraint", "blacklisting 0.0.0.0/0");
 		if (whitelist_filename) {
-			init_from_file(whitelist_filename, "whitelist", ADDR_ALLOWED);
+			init_from_file(whitelist_filename, "whitelist", ADDR_ALLOWED,
+                    ignore_invalid_hosts);
 		}
 		if (whitelist_entries) {
 			init_from_array(whitelist_entries,
-					whitelist_entries_len, ADDR_ALLOWED);
+					whitelist_entries_len, ADDR_ALLOWED,
+                    ignore_invalid_hosts);
 		}
 	} else {
 		// no whitelist, so default to allowing everything
 		constraint = constraint_init(ADDR_ALLOWED);
 	}
 	if (blacklist_filename) {
-		init_from_file(blacklist_filename, "blacklist", ADDR_DISALLOWED);
+		init_from_file(blacklist_filename, "blacklist", 
+                ADDR_DISALLOWED, ignore_invalid_hosts);
 	}
 	if (blacklist_entries) {
 		init_from_array(blacklist_entries,
-				blacklist_entries_len, ADDR_DISALLOWED);
+				blacklist_entries_len, ADDR_DISALLOWED,
+                ignore_invalid_hosts);
 	}
 	init_from_string(strdup("0.0.0.0"), ADDR_DISALLOWED);
 	constraint_paint_value(constraint, ADDR_ALLOWED);
