@@ -31,7 +31,7 @@ static char *queue_name = NULL;
 
 int rediscsvmodule_init(struct state_conf *conf, UNUSED char **fields, UNUSED int fieldlens)
 {
-	buffer = xcalloc(BUFFER_SIZE, sizeof(varchar_t));
+	buffer = xcalloc(BUFFER_SIZE, sizeof(char*));
 	buffer_fill = 0;
 	if (conf->output_args) {
 		redisconf_t *rconf = redis_parse_connstr(conf->output_args);
@@ -118,7 +118,7 @@ void make_csv_string(fieldset_t *fs, char *out, size_t len)
             if (strlen(temp) + INT_STR_LEN >= len) {
                 log_fatal("redis-csv", "out of memory---will overflow");
             }
-            sprintf(temp, "%lu" PRIu64, (uint64_t) f->value.num);
+            sprintf(temp, "%" PRIu64, (uint64_t) f->value.num);
         } else if (f->type == FS_BINARY) {
             if (strlen(temp) + 2*f->len >= len) {
                 log_fatal("redis-csv", "out of memory---will overflow");
@@ -136,7 +136,7 @@ int rediscsvmodule_process(fieldset_t *fs)
 {
     size_t reqd_space = guess_csv_string_length(fs);
 	char *x = xmalloc(reqd_space);
-    make_csv_string(fs, buffer[buffer_fill].str, buffer[buffer_fill].len);    
+    make_csv_string(fs, x, reqd_space);
 	buffer[buffer_fill] = x;
     // if full, flush all to redis
 	if (++buffer_fill == BUFFER_SIZE) {
@@ -162,7 +162,7 @@ int rediscsvmodule_close(UNUSED struct state_conf* c,
 
 output_module_t module_redis_csv = {
 	.name = "redis-csv",
-	.init = &rediscsmodule_init,
+	.init = &rediscsvmodule_init,
 	.start = NULL,
 	.update = NULL,
 	.update_interval = 0,

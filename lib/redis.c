@@ -287,18 +287,15 @@ static int redis_push(char *redisqueuename,
 				cmd, redisqueuename, load, len);
 		if (rc != REDIS_OK || rctx->err) {
 			log_fatal("redis", "%s", rctx->errstr);
-			return -1;
 		}
 	}
 	redisReply *reply;
 	for (int i=0; i < num; i++) {
 		if (redisGetReply(rctx, (void**) &reply) != REDIS_OK || rctx->err) {
 			log_fatal("redis","%s", rctx->errstr);
-			return -1;
 		}
 		if (reply->type == REDIS_REPLY_ERROR) {
 			log_fatal("redis", "%s", rctx->errstr);
-			return -1;
 		}
 		freeReplyObject(reply);
 	}
@@ -319,16 +316,34 @@ int redis_spush(char *redisqueuename,
 
 static int redis_push_strings(char *redisqueuename, char **buf, int num, const char *cmd)
 {
+	assert(rctx);
+	for (int i=0; i < num; i++) {
+		int rc = redisAppendCommand(rctx, "%s %s %s", cmd, redisqueuename, buf[i]);
+		if (rc != REDIS_OK || rctx->err) {
+			log_fatal("redis", "%s", rctx->errstr);
+		}
+	}
+	redisReply *reply;
+	for (int i=0; i < num; i++) {
+		if (redisGetReply(rctx, (void**) &reply) != REDIS_OK || rctx->err) {
+			log_fatal("redis","%s", rctx->errstr);
+		}
+		if (reply->type == REDIS_REPLY_ERROR) {
+			log_fatal("redis", "%s", rctx->errstr);
+		}
+		freeReplyObject(reply);
+	}
+	return 0;
 
 }
 
 int redis_lpush_strings(char *redisqueuename, char **buf, int num)
 {
-	return redis_push_strings(redisqueuename, buf, num, len, "RPUSH");
+	return redis_push_strings(redisqueuename, buf, num, "RPUSH");
 }
 
 int redis_spush_strings(char *redisqueuename, char **buf, int num)
 {
-	return redis_push_strings(redisqueuename, buf, num, len, "SADD");
+	return redis_push_strings(redisqueuename, buf, num, "SADD");
 }
 
