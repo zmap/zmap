@@ -82,6 +82,10 @@ SET(SOURCES
 	${LIB_SOURCES}
 )
 
+SET(ZBLSOURCES
+	zblacklist.c
+	${LIB_SOURCES}
+)
 
 # Handle various versions of socket
 if(WITH_PFRING)
@@ -123,6 +127,7 @@ add_custom_command(OUTPUT parser.c
 	)
 
 add_executable(zmap ${SOURCES})
+add_executable(zblacklist ${ZBLSOURCES})
 
 if (APPLE OR BSD)
 	set(DNET_LIBRARIES "dnet")
@@ -143,6 +148,7 @@ target_link_libraries(
 install(
 	TARGETS
 	zmap
+    zblacklist
 	RUNTIME DESTINATION sbin
 )
 
