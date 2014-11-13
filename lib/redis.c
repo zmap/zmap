@@ -292,8 +292,7 @@ static int redis_push(char *redisqueuename,
 	}
 	redisReply *reply;
 	for (int i=0; i < num; i++) {
-		if (redisGetReply(rctx, (void**) &reply) != REDIS_OK
-				|| rctx->err) {
+		if (redisGetReply(rctx, (void**) &reply) != REDIS_OK || rctx->err) {
 			log_fatal("redis","%s", rctx->errstr);
 			return -1;
 		}
@@ -318,8 +317,18 @@ int redis_spush(char *redisqueuename,
 	return redis_push(redisqueuename, buf, num, len, "SADD");
 }
 
-static int redis_push_strings(char *redisqueuename, char **buf, int num)
+static int redis_push_strings(char *redisqueuename, char **buf, int num, const char *cmd)
 {
 
+}
+
+int redis_lpush_strings(char *redisqueuename, char **buf, int num)
+{
+	return redis_push_strings(redisqueuename, buf, num, len, "RPUSH");
+}
+
+int redis_spush_strings(char *redisqueuename, char **buf, int num)
+{
+	return redis_push_strings(redisqueuename, buf, num, len, "SADD");
 }
 

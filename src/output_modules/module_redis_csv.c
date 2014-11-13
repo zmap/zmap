@@ -24,28 +24,15 @@
 #define UNUSED __attribute__((unused))
 
 #define BUFFER_SIZE 500
-#define DEFAULT_STR_LEN 1024
 
-typedef struct varchar {
-    size_t len;
-    char *str;
-} varchar_t;
-
-static varchar_t *buffer;
-static char **buffer_export;
+static char **buffer;
 static int buffer_fill = 0;
 static char *queue_name = NULL;
 
-int redisstrmodule_init(struct state_conf *conf, UNUSED char **fields, UNUSED int fieldlens)
+int rediscsvmodule_init(struct state_conf *conf, UNUSED char **fields, UNUSED int fieldlens)
 {
 	buffer = xcalloc(BUFFER_SIZE, sizeof(varchar_t));
-	buffer_export = xcalloc(BUFFER_SIZE, sizeof(char*));
 	buffer_fill = 0;
-    // initialize queue
-    for (int i=0; i < BUFFER_SIZE; i++) {
-        buffer[i].len = DEFAULT_STR_LEN;
-        buffer_export[i] = buffer[i].str = xmalloc(DEFAULT_STR_LEN);
-    }
 	if (conf->output_args) {
 		redisconf_t *rconf = redis_parse_connstr(conf->output_args);
 		if (rconf->type == T_TCP) {
@@ -63,10 +50,13 @@ int redisstrmodule_init(struct state_conf *conf, UNUSED char **fields, UNUSED in
 	return redis_init(conf->output_args);
 }
 
-static int redisstrmodule_flush(void)
+static int rediscsvmodule_flush(void)
 {
-	if (redis_lpush_strings((char*) queue_name, buffer_export, buffer_fill)) {
+	if (redis_lpush_strings((char*) queue_name, buffer, buffer_fill)) {
 		return EXIT_FAILURE;
+	}
+	for (int i=0; i < buffer_fill; i++) {
+		free(buffer[i]);
 	}
 	buffer_fill = 0;
 	return EXIT_SUCCESS;
@@ -112,12 +102,12 @@ void make_csv_string(fieldset_t *fs, char *out, size_t len)
     for (int i=0; i < fs->len; i++) {
         char *temp = out + (size_t) strlen(out);
         field_t *f = &(fs->fields[i]);
-        if (i) {
+        if (i) { // only add comma if not first element
             sprintf(temp, ",");
         }
         if (f->type == FS_STRING) {
             if (strlen(temp) + strlen((char*) f->value.ptr) >= len) {
-                log_fatal("redis-str", "out of memory---will overflow");
+                log_fatal("redis-csv", "out of memory---will overflow");
             }
             if (strchr((char*) f->value.ptr, ',')) {
                 sprintf(temp, "\"%s\"", (char*) f->value.ptr);
@@ -126,47 +116,42 @@ void make_csv_string(fieldset_t *fs, char *out, size_t len)
             }
         } else if (f->type == FS_UINT64) {
             if (strlen(temp) + INT_STR_LEN >= len) {
-                log_fatal("redis-str", "out of memory---will overflow");
+                log_fatal("redis-csv", "out of memory---will overflow");
             }
-            sprintf(temp, "%" PRIu64, (uint64_t) f->value.num);
+            sprintf(temp, "%lu" PRIu64, (uint64_t) f->value.num);
         } else if (f->type == FS_BINARY) {
             if (strlen(temp) + 2*f->len >= len) {
-                log_fatal("redis-str", "out of memory---will overflow");
+                log_fatal("redis-csv", "out of memory---will overflow");
             }
             hex_encode_str(out, (unsigned char*) f->value.ptr, f->len);
         } else if (f->type == FS_NULL) {
             // do nothing
         } else {
-            log_fatal("csv", "received unknown output type");
+            log_fatal("redis-csv", "received unknown output type");
         }
     }
 }
 
-int redisstrmodule_process(fieldset_t *fs)
+int rediscsvmodule_process(fieldset_t *fs)
 {
     size_t reqd_space = guess_csv_string_length(fs);
-    size_t curr_length = buffer[buffer_fill].len;
-    // do we have enough space in buffer? if not allocate more.
-    if (reqd_space > curr_length) {
-        free(buffer[buffer_fill].str);
-        buffer[buffer_fill].str = xmalloc(reqd_space);
-        buffer_export[buffer_fill] = buffer[buffer_fill].str;
-    }
+	char *x = xmalloc(reqd_space);
     make_csv_string(fs, buffer[buffer_fill].str, buffer[buffer_fill].len);    
+	buffer[buffer_fill] = x;
     // if full, flush all to redis
 	if (++buffer_fill == BUFFER_SIZE) {
-		if (redisstrmodule_flush()) {
+		if (rediscsvmodule_flush()) {
 			return EXIT_FAILURE;
 		}
 	}
 	return EXIT_SUCCESS;
 }
 
-int redisstrmodule_close(UNUSED struct state_conf* c,
+int rediscsvmodule_close(UNUSED struct state_conf* c,
 		UNUSED struct state_send *s,
 		UNUSED struct state_recv *r)
 {
-	if (redisstrmodule_flush()) {
+	if (rediscsvmodule_flush()) {
 		return EXIT_FAILURE;
 	}
 	if (redis_close()) {
@@ -175,14 +160,14 @@ int redisstrmodule_close(UNUSED struct state_conf* c,
 	return EXIT_SUCCESS;
 }
 
-output_module_t module_redis_str = {
-	.name = "redis-string",
-	.init = &redisstrmodule_init,
+output_module_t module_redis_csv = {
+	.name = "redis-csv",
+	.init = &rediscsmodule_init,
 	.start = NULL,
 	.update = NULL,
 	.update_interval = 0,
-	.close = &redisstrmodule_close,
-	.process_ip = &redisstrmodule_process,
+	.close = &rediscsvmodule_close,
+	.process_ip = &rediscsvmodule_process,
 	.helptext = NULL
 };
 

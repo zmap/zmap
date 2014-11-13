@@ -102,7 +102,7 @@ if (WITH_JSON)
 endif()
 
 if (WITH_REDIS)
-	SET(SOURCES ${SOURCES} ${PROJECT_SOURCE_DIR}/lib/redis.c output_modules/module_redis.c output_modules/module_csvredis.c output_modules/module_redis_str.c)
+	SET(SOURCES ${SOURCES} ${PROJECT_SOURCE_DIR}/lib/redis.c output_modules/module_redis.c output_modules/module_csvredis.c output_modules/module_redis_csv.c)
 endif()
 
 add_custom_command(OUTPUT zopt.h
