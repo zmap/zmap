@@ -51,7 +51,7 @@ SET(PROBE_MODULE_SOURCES
 	probe_modules/module_udp.c
 	probe_modules/packet.c
 	probe_modules/probe_modules.c
-    probe_modules/module_ntp.c
+	probe_modules/module_ntp.c
 	)
 
 SET(SOURCES
@@ -148,7 +148,7 @@ target_link_libraries(
 install(
 	TARGETS
 	zmap
-    zblacklist
+	zblacklist
 	RUNTIME DESTINATION sbin
 )
 
