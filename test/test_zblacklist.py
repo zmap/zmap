@@ -58,6 +58,13 @@ class ZBlacklistTest(unittest.TestCase):
         "141.212.12.6"
     ]
 
+    COMMENT_STRS = [
+        "# some comment here",
+        " # some comment here",
+        ",google.com,data",
+        "\t#some comment here"
+    ] 
+
     def setUp(self):
         global executable_path
         self.path = executable_path
@@ -70,6 +77,10 @@ class ZBlacklistTest(unittest.TestCase):
         with open("/tmp/ips", "w") as fd:
             for line in self.IPS:
                 fd.write("%s\n" % line)
+        with open("/tmp/ips-commented", "w") as fd:
+            for line in self.IPS:
+                for comment in self.COMMENT_STRS:
+                    fd.write("%s%s\n" % (line, comment))
 
     def tearDown(self):
         if os.path.exists("/tmp/blacklist"):
@@ -78,11 +89,14 @@ class ZBlacklistTest(unittest.TestCase):
             os.remove("/tmp/whitelist")
         if os.path.exists("/tmp/ips"):
             os.remove("/tmp/ips")
+        if os.path.exists("/tmp/ips-commented"):
+            os.remove("/tmp/ips-commented")
 
-    def execute(self, whitelist, blacklist, numtimestocat=1):
+
+    def execute(self, whitelist, blacklist, ipsfile="/tmp/ips", numtimestocat=1):
         cmd = "cat"
-        for _ in range(0,numtimestocat):
-            cmd += " /tmp/ips"
+        for _ in range(0, numtimestocat):
+            cmd += " %s" % ipsfile
         cmd += " | %s" % self.path
         if whitelist:
             cmd = cmd + " -w %s" % whitelist
@@ -105,11 +119,15 @@ class ZBlacklistTest(unittest.TestCase):
         self.assertEqual(set(res), set(self.WL_IPS_MINUS_BL))
 
     def testDuplicateChecking(self):
-        res = self.execute(None, "/tmp/blacklist", 5)
+        res = self.execute(None, "/tmp/blacklist", numtimestocat=5)
         self.assertEqual(len(res), len(self.IPS_MINUS_BL))
         self.assertEqual(set(res), set(self.IPS_MINUS_BL))
 
+    def testCommentCharacters(self):
+        res = self.execute(None, "/tmp/blacklist", ipsfile="/tmp/ips-commented")
+        self.assertEqual(set(res), set(self.IPS_MINUS_BL))
 
+        
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print "USAGE: %s zblacklist" % sys.argv[0]

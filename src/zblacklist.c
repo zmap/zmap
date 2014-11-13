@@ -43,6 +43,18 @@
 //	uint32_t duplicates;
 //};
 
+#undef  MIN
+#define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
+
+static inline char* zmin(char *a, char *b) {
+    if (a && !b)
+        return a;
+    else if (b && !a)
+        return b;
+    else
+        return MIN(a,b);
+}
+
 struct zbl_conf {
 	char *blacklist_filename;
 	char *whitelist_filename;
@@ -160,7 +172,11 @@ int main(int argc, char **argv)
 	char line[1000]; 
 	while (fgets(line, sizeof(line), stdin) != NULL) {
 		// remove new line
-		char *n = strchr(line, '\n');
+		char *n = zmin(zmin(zmin(zmin(strchr(line, '\n'), 
+                        strchr(line, ',')), 
+                        strchr(line, '\t')),
+                        strchr(line, ' ')), 
+                        strchr(line, '#'));
 		assert(n);
 		n[0] = 0;
 		log_trace("zblacklist", "input value %s", line);
