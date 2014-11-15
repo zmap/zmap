@@ -144,6 +144,10 @@ target_link_libraries(
 	${JSON_LIBRARIES}
 	)
 
+target_link_libraries(
+	zblacklist
+	m
+	)
 # Install binary
 install(
 	TARGETS
