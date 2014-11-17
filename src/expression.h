@@ -28,9 +28,9 @@ union node_value {
 	enum operation op;
 };
 
-typedef struct node {
-	struct node *left_child;
-	struct node *right_child;
+typedef struct node_st {
+	struct node_st *left_child;
+	struct node_st *right_child;
 	enum node_type type;
 	union node_value value;
 } node_t;

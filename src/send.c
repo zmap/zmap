@@ -22,6 +22,7 @@
 #include "../lib/logger.h"
 #include "../lib/random.h"
 #include "../lib/blacklist.h"
+#include "../lib/lockfd.h"
 
 #include "aesrand.h"
 #include "get_gateway.h"
@@ -265,9 +266,9 @@ int send_run(sock_t st, shard_t *s)
 			zconf.probe_module->make_packet(buf, src_ip, curr, validation, i, probe_data);
 
 			if (zconf.dryrun) {
-				pthread_mutex_lock(&send_mutex);
+				lock_file(stdout);
 				zconf.probe_module->print_packet(stdout, buf);
-				pthread_mutex_unlock(&send_mutex);
+				unlock_file(stdout);
 			} else {
 				int length = zconf.probe_module->packet_length;
 				void *contents = buf + zconf.send_ip_pkts*sizeof(struct ether_header);

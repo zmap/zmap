@@ -19,3 +19,4 @@ install_manifest.txt
 _CPack_Packages/*
 *.deb
 !.gitignore
+src/zblacklist

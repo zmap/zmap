@@ -154,11 +154,13 @@ option "config"                 C "Read a configuration file, which can specify 
     typestr="filename"
     default="/etc/zmap/zmap.conf"
     optional string
-
 option "sender-threads"         T "Threads used to send packets"
     typestr="n"
     default="1"
     optional int
+option "cores"                 - "Comma-separated list of cores to pin to"
+    optional string
+
 
 option "ignore-invalid-hosts"   - "Ignore invalid hosts in whitelist/blacklist file"
     optional

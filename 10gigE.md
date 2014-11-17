@@ -35,8 +35,9 @@ $ make
 ### Running
 
 You'll have to carefully select the number of threads to use, as well as specify
-as zero-copy interface, e.g. `zc:eth1`.
-
+as zero-copy interface, e.g. `zc:eth1`. Use the `--cores` option to pick which
+cores to pin to. Make sure to pin to different physical cores, and note that
+some machines interleave physical and "virtual" cores. 
 ```
 $ sudo ./src/zmap -p 80 -i zc:eth7 -o output.csv -T 5
 ```

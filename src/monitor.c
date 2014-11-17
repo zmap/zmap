@@ -185,18 +185,6 @@ double compute_remaining_time(double age, uint64_t sent)
 	}
 }
 
-
-static void update_stats(int_status_t *intrnl, iterator_t *it)
-{
-	intrnl->last_now = now();
-	intrnl->last_sent = iterator_get_sent(it);
-	intrnl->last_recv_net_success = zrecv.success_unique;
-	intrnl->last_recv_app_success = zrecv.app_success_unique;
-	intrnl->last_pcap_drop = zrecv.pcap_drop + zrecv.pcap_ifdrop;
-	intrnl->last_send_failures = zsend.sendto_failures;
-	intrnl->last_recv_total = zrecv.pcap_recv;
-}
-
 static void update_pcap_stats(pthread_mutex_t *recv_ready_mutex)
 {
 	// ask pcap for fresh values
@@ -211,8 +199,9 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp, iterator_t 
 	uint32_t total_recv = zrecv.pcap_recv;
 	uint32_t recv_success = zrecv.success_unique;
 	uint32_t app_success = zrecv.app_success_unique;
-	double age = now() - zsend.start; // time of entire scan
-	double delta = now() - intrnl->last_now; // time since the last time we updated
+	double cur_time = now();
+	double age = cur_time - zsend.start; // time of entire scan
+	double delta = cur_time - intrnl->last_now; // time since the last time we updated
 	double remaining_secs = compute_remaining_time(age, total_sent);
 
 	// export amount of time the scan has been running
@@ -271,29 +260,38 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp, iterator_t 
 	// pcap dropped packets
 	exp->pcap_drop = zrecv.pcap_drop;
 	exp->pcap_ifdrop = zrecv.pcap_ifdrop;
-	exp->pcap_drop_total = zrecv.pcap_drop + zrecv.pcap_ifdrop;
-	exp->pcap_drop_last = (zrecv.pcap_drop + zrecv.pcap_ifdrop - intrnl->last_pcap_drop)/delta;
-	exp->pcap_drop_avg = (zrecv.pcap_drop + zrecv.pcap_ifdrop)/age;
+	exp->pcap_drop_total = exp->pcap_drop + exp->pcap_ifdrop;
+	exp->pcap_drop_last = (exp->pcap_drop_total - intrnl->last_pcap_drop)/delta;
+	exp->pcap_drop_avg = exp->pcap_drop_total/age;
 	number_string(exp->pcap_drop_total, exp->pcap_drop_total_str, NUMBER_STR_LEN);
 	number_string(exp->pcap_drop_last, exp->pcap_drop_last_str, NUMBER_STR_LEN);
 	number_string(exp->pcap_drop_avg, exp->pcap_drop_avg_str, NUMBER_STR_LEN);
 
 	exp->fail_total = zsend.sendto_failures;
-	exp->fail_last = (zsend.sendto_failures - intrnl->last_send_failures) / delta;
-	exp->fail_avg = zsend.sendto_failures/age;
+	exp->fail_last = (exp->fail_total - intrnl->last_send_failures) / delta;
+	exp->fail_avg = exp->fail_total/age;
 
 	// misc
 	exp->send_threads = iterator_get_curr_send_threads(it);
+
+	// Update internal stats
+	intrnl->last_now = cur_time;
+	intrnl->last_sent = exp->total_sent;
+	intrnl->last_recv_net_success = exp->recv_success_unique;
+	intrnl->last_recv_app_success = exp->app_recv_success_unique;
+	intrnl->last_pcap_drop = exp->pcap_drop_total;
+	intrnl->last_send_failures = exp->fail_total;
+	intrnl->last_recv_total = exp->total_recv;
 }
 
 static void log_drop_warnings(export_status_t *exp)
 {
 	if (exp->pcap_drop_last/exp->recv_rate > 0.05) {
-		log_warn("monitor", "Dropped %d packets in the last second, (%d total dropped (pcap: %d + iface: %d))",
+		log_warn("monitor", "Dropped %.0f packets in the last second, (%u total dropped (pcap: %u + iface: %u))",
 				 exp->pcap_drop_last, exp->pcap_drop_total, exp->pcap_drop, exp->pcap_ifdrop);
 	}
 	if (exp->fail_last/exp->send_rate > 0.01) {
-		log_warn("monitor", "Failed to send %d packets/sec (%d total failures)",
+		log_warn("monitor", "Failed to send %.0f packets/sec (%u total failures)",
 				 exp->fail_last, exp->fail_total);
 	}
 }
@@ -468,11 +466,12 @@ void monitor_run(iterator_t *it, pthread_mutex_t *lock)
 		if (f) {
 			update_status_updates_file(export_status, f);
 		}
-		update_stats(internal_status, it);
 		sleep(UPDATE_INTERVAL);
 	}
 	if (!zconf.quiet) {
+		lock_file(stderr);
 		fflush(stderr);
+		unlock_file(stderr);
 	}
 	if (f) {
 		fflush(f);

@@ -51,6 +51,7 @@ SET(PROBE_MODULE_SOURCES
 	probe_modules/module_udp.c
 	probe_modules/packet.c
 	probe_modules/probe_modules.c
+	probe_modules/module_ntp.c
 	)
 
 SET(SOURCES
@@ -78,6 +79,11 @@ SET(SOURCES
 	${EXTRA_OUTPUT_MODULES}
 	${PROBE_MODULE_SOURCES}
 	${OUTPUT_MODULE_SOURCES}
+	${LIB_SOURCES}
+)
+
+SET(ZBLSOURCES
+	zblacklist.c
 	${LIB_SOURCES}
 )
 
@@ -121,6 +127,7 @@ add_custom_command(OUTPUT parser.c
 	)
 
 add_executable(zmap ${SOURCES})
+add_executable(zblacklist ${ZBLSOURCES})
 
 if (APPLE OR BSD)
 	set(DNET_LIBRARIES "dnet")
@@ -137,10 +144,15 @@ target_link_libraries(
 	${JSON_LIBRARIES}
 	)
 
+target_link_libraries(
+	zblacklist
+	m
+	)
 # Install binary
 install(
 	TARGETS
 	zmap
+	zblacklist
 	RUNTIME DESTINATION sbin
 )
 

@@ -62,6 +62,8 @@ struct state_conf {
 	int cooldown_secs;
 	// number of sending threads
 	uint8_t senders;
+	uint32_t pin_cores_len;
+	uint32_t *pin_cores;
 	// should use CLI provided randomization seed instead of generating
 	// a random seed.
 	int use_seed;
@@ -92,8 +94,8 @@ struct state_conf {
 #ifdef JSON
 	char *metadata_filename;
 	FILE *metadata_file;
-    char *notes;
-    char *custom_metadata_str;
+	char *notes;
+	char *custom_metadata_str;
 #endif
 	char **destination_cidrs;
 	int destination_cidrs_len;

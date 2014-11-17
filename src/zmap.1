@@ -167,4 +167,27 @@ Print help and exit
 .TP
 \fB\-V\fR, \fB\-\-version\fR
 Print version and exit
+.
+.SS "UDP PROBE MODULE OPTIONS"
+These arguments are all passed using the \fB\-\-probe\-args=args\fR option\. Only one argument may be passed at a time\.
+.
+.TP
+\fBfile:/path/to/file\fR
+Path to payload file to send to each host over UDP\.
+.
+.TP
+\fBtemplate:/path/to/template\fR
+Path to template file\. For each destination host, the template file is populated, set as the UDP payload, and sent\.
+.
+.TP
+\fBtext:<text>\fR
+ASCII text to send to each destination host
+.
+.TP
+\fBhex:<hex>\fR
+Hex\-encoded binary to send to each destination host
+.
+.TP
+\fBtemplate\-fields\fR
+Print information about the allowed template fields and exit\.
 
