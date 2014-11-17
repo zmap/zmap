@@ -103,25 +103,27 @@ void make_csv_string(fieldset_t *fs, char *out, size_t len)
     for (int i=0; i < fs->len; i++) {
         char *temp = out + (size_t) strlen(out);
         field_t *f = &(fs->fields[i]);
+	char *dataloc = temp;
         if (i) { // only add comma if not first element
             sprintf(temp, ",");
+		dataloc += (size_t) 1;
         }
         if (f->type == FS_STRING) {
-            if (strlen(temp) + strlen((char*) f->value.ptr) >= len) {
+            if (strlen(dataloc) + strlen((char*) f->value.ptr) >= len) {
                 log_fatal("redis-csv", "out of memory---will overflow");
             }
             if (strchr((char*) f->value.ptr, ',')) {
-                sprintf(temp, "\"%s\"", (char*) f->value.ptr);
+                sprintf(dataloc, "\"%s\"", (char*) f->value.ptr);
             } else {
-                sprintf(temp, "%s", (char*) f->value.ptr);
+                sprintf(dataloc, "%s", (char*) f->value.ptr);
             }
         } else if (f->type == FS_UINT64) {
-            if (strlen(temp) + INT_STR_LEN >= len) {
+            if (strlen(dataloc) + INT_STR_LEN >= len) {
                 log_fatal("redis-csv", "out of memory---will overflow");
             }
-            sprintf(temp, "%" PRIu64, (uint64_t) f->value.num);
+            sprintf(dataloc, "%" PRIu64, (uint64_t) f->value.num);
         } else if (f->type == FS_BINARY) {
-            if (strlen(temp) + 2*f->len >= len) {
+            if (strlen(dataloc) + 2*f->len >= len) {
                 log_fatal("redis-csv", "out of memory---will overflow");
             }
             hex_encode_str(out, (unsigned char*) f->value.ptr, f->len);
