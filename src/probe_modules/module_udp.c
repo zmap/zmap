@@ -299,7 +299,7 @@ void udp_print_packet(FILE *fp, void* packet)
 {
 	struct ether_header *ethh = (struct ether_header *) packet;
 	struct ip *iph = (struct ip *) &ethh[1];
-	struct udphdr *udph = (struct udphdr*) (iph + 4*iph->ip_hl);
+    struct udphdr *udph = (struct udphdr*)(&iph[1]); 
 	fprintf(fp, "udp { source: %u | dest: %u | checksum: %u }\n",
 		ntohs(udph->uh_sport),
 		ntohs(udph->uh_dport),

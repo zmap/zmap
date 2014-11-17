@@ -28,7 +28,7 @@ output_module_t* output_modules[] = {
 #ifdef REDIS
 	&module_redis,
 	&module_csv_redis,
-	&module_redis_csv
+	&module_redis_csv,
 #endif
 #ifdef JSON
 	&module_json_file
