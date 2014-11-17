@@ -24,7 +24,7 @@
 
 #define UNUSED __attribute__((unused))
 
-#define BUFFER_SIZE 500
+#define BUFFER_SIZE 1000
 
 static char **buffer;
 static int buffer_fill = 0;
@@ -48,6 +48,18 @@ int rediscsvmodule_init(struct state_conf *conf, UNUSED char **fields, UNUSED in
 	} else {
 		queue_name = strdup("zmap");
 	}
+	// generate field names CSV list to be logged.
+	char *fieldstring = xcalloc(1000, fieldlens);
+	memset(fieldstring, 0, sizeof(fields));
+        for (int i=0; i < fieldlens; i++) {
+                if (i) {
+                        strcat(fieldstring, ", ");
+                }
+		strcat(fieldstring, fields[i]);
+        }
+	log_info("redis-csv", "the following fields will be output to redis: %s.",
+			fieldstring);
+	free(fields);
 	return redis_init(conf->output_args);
 }
 
@@ -67,81 +79,81 @@ static int rediscsvmodule_flush(void)
 
 static size_t guess_csv_string_length(fieldset_t *fs)
 {
-    size_t len = 0;
-    for (int i=0; i < fs->len; i++) {
-        field_t *f = &(fs->fields[i]);
-        if (f->type == FS_STRING) {
-            len += strlen(f->value.ptr);
-            len += 2; // potential quotes
-        } else if (f->type == FS_UINT64) {
-            len += INT_STR_LEN;
-        } else if (f->type == FS_BINARY) {
-            len += 2*f->len;
-        } else if (f->type == FS_NULL) {
-            // do nothing
-        } else {
-            log_fatal("csv", "received unknown output type "
-                    "(not str, binary, null, or uint64_t)");
-        }
-    }
-    // estimated length + number of commas
-    return len + (size_t) len + 256;
+	size_t len = 0;
+	for (int i=0; i < fs->len; i++) {
+		field_t *f = &(fs->fields[i]);
+		if (f->type == FS_STRING) {
+			len += strlen(f->value.ptr);
+			len += 2; // potential quotes
+		} else if (f->type == FS_UINT64) {
+			len += INT_STR_LEN;
+		} else if (f->type == FS_BINARY) {
+			len += 2*f->len;
+		} else if (f->type == FS_NULL) {
+			// do nothing
+		} else {
+			log_fatal("csv", "received unknown output type "
+					"(not str, binary, null, or uint64_t)");
+		}
+	}
+	// estimated length + number of commas
+	return len + (size_t) len + 256;
 }
 
 static void hex_encode_str(char *f, unsigned char* readbuf, size_t len)
 {
-    char *temp = f;
-    for(size_t i=0; i < len; i++) {
-        sprintf(temp, "%02x", readbuf[i]);
-        temp += (size_t) 2*sizeof(char);
-    }
+	char *temp = f;
+	for(size_t i=0; i < len; i++) {
+		sprintf(temp, "%02x", readbuf[i]);
+		temp += (size_t) 2*sizeof(char);
+	}
 }
 
 void make_csv_string(fieldset_t *fs, char *out, size_t len)
 {
-    memset(out, 0, len);
-    for (int i=0; i < fs->len; i++) {
-        char *temp = out + (size_t) strlen(out);
-        field_t *f = &(fs->fields[i]);
+	memset(out, 0, len);
+	for (int i=0; i < fs->len; i++) {
+		char *temp = out + (size_t) strlen(out);
+		field_t *f = &(fs->fields[i]);
 	char *dataloc = temp;
-        if (i) { // only add comma if not first element
-            sprintf(temp, ",");
+		if (i) { // only add comma if not first element
+			sprintf(temp, ",");
 		dataloc += (size_t) 1;
-        }
-        if (f->type == FS_STRING) {
-            if (strlen(dataloc) + strlen((char*) f->value.ptr) >= len) {
-                log_fatal("redis-csv", "out of memory---will overflow");
-            }
-            if (strchr((char*) f->value.ptr, ',')) {
-                sprintf(dataloc, "\"%s\"", (char*) f->value.ptr);
-            } else {
-                sprintf(dataloc, "%s", (char*) f->value.ptr);
-            }
-        } else if (f->type == FS_UINT64) {
-            if (strlen(dataloc) + INT_STR_LEN >= len) {
-                log_fatal("redis-csv", "out of memory---will overflow");
-            }
-            sprintf(dataloc, "%" PRIu64, (uint64_t) f->value.num);
-        } else if (f->type == FS_BINARY) {
-            if (strlen(dataloc) + 2*f->len >= len) {
-                log_fatal("redis-csv", "out of memory---will overflow");
-            }
-            hex_encode_str(out, (unsigned char*) f->value.ptr, f->len);
-        } else if (f->type == FS_NULL) {
-            // do nothing
-        } else {
-            log_fatal("redis-csv", "received unknown output type");
-        }
-    }
+		}
+		if (f->type == FS_STRING) {
+			if (strlen(dataloc) + strlen((char*) f->value.ptr) >= len) {
+				log_fatal("redis-csv", "out of memory---will overflow");
+			}
+			if (strchr((char*) f->value.ptr, ',')) {
+				sprintf(dataloc, "\"%s\"", (char*) f->value.ptr);
+			} else {
+				sprintf(dataloc, "%s", (char*) f->value.ptr);
+			}
+		} else if (f->type == FS_UINT64) {
+			if (strlen(dataloc) + INT_STR_LEN >= len) {
+				log_fatal("redis-csv", "out of memory---will overflow");
+			}
+			sprintf(dataloc, "%" PRIu64, (uint64_t) f->value.num);
+		} else if (f->type == FS_BINARY) {
+			if (strlen(dataloc) + 2*f->len >= len) {
+				log_fatal("redis-csv", "out of memory---will overflow");
+			}
+			hex_encode_str(out, (unsigned char*) f->value.ptr, f->len);
+		} else if (f->type == FS_NULL) {
+			// do nothing
+		} else {
+			log_fatal("redis-csv", "received unknown output type");
+		}
+	}
 }
 
 int rediscsvmodule_process(fieldset_t *fs)
 {
-    size_t reqd_space = guess_csv_string_length(fs);
+	size_t reqd_space = guess_csv_string_length(fs);
 	char *x = xmalloc(reqd_space);
-    make_csv_string(fs, x, reqd_space);
+	make_csv_string(fs, x, reqd_space);
 	buffer[buffer_fill] = x;
-    // if full, flush all to redis
+	// if full, flush all to redis
 	if (++buffer_fill == BUFFER_SIZE) {
 		if (rediscsvmodule_flush()) {
 			return EXIT_FAILURE;
