@@ -3,7 +3,7 @@ project (ZMAP C)
 SET (VERSION 1.2.1)
 
 option(WITH_REDIS "Build with support for Redis DB" OFF)
-option(WITH_JSON "Build with support for JSON" OFF)
+option(WITH_JSON "Build with support for JSON" ON)
 option(ENABLE_DEVELOPMENT "Enable development specific compiler and linker flags" OFF)
 option(RESPECT_INSTALL_PREFIX_CONFIG "Respect CMAKE_INSTALL_PREFIX for /etc" OFF)
 option(WITH_WERROR "Build with -Werror" OFF)
