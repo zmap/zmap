@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 2.6)
 project (ZMAP C)
-SET (VERSION 1.2.1)
+SET (VERSION 2.0.0)
 
 option(WITH_REDIS "Build with support for Redis DB" OFF)
 option(WITH_JSON "Build with support for JSON" ON)
