@@ -11,47 +11,61 @@
 #include <assert.h>
 #include <string.h>
 
-#include "../lib/rijndael-alg-fst.h"
-#include "../lib/random.h"
-#include "../lib/logger.h"
+#include "rijndael-alg-fst.h"
+#include "random.h"
+#include "logger.h"
+#include "xalloc.h"
+
+#include "aesrand.h"
 
 #define AES_ROUNDS 10
 #define AES_BLOCK_WORDS  4
 #define AES_KEY_BYTES 16
+#define AES_KEY_BITS (AES_KEY_BYTES*8)
 #define OUTPUT_BYTES 16
 
-static uint32_t aes_input[AES_BLOCK_WORDS];
-static uint32_t aes_sched[(AES_ROUNDS+1)*4];
-static uint8_t aes_output[OUTPUT_BYTES];
-static int init = 0;
+struct aesrand {
+	uint32_t input[AES_BLOCK_WORDS];
+	uint32_t sched[(AES_ROUNDS+1)*4];
+	uint8_t output[OUTPUT_BYTES];
+};
 
-void aesrand_init(uint32_t seed)
+static aesrand_t* _aesrand_init(uint8_t *key)
 {
-	memset(&aes_input, 0, sizeof(aes_input));
-	uint8_t key[AES_KEY_BYTES];
-	if (seed) {
-		memset(key, 0, AES_KEY_BYTES*sizeof(uint8_t));
-		memcpy(key, &seed, sizeof(uint32_t));
-	} else {
-		if (!random_bytes(key, AES_KEY_BYTES)) {
-    		log_fatal("aesrand", "couldn't get random bytes");
-  		}
-	}
-	if (rijndaelKeySetupEnc(aes_sched, key, AES_KEY_BYTES*8) != AES_ROUNDS) {
+	aesrand_t *aes = xmalloc(sizeof(aesrand_t));
+	memset(&aes->input, 0, AES_BLOCK_WORDS*4);
+	if (rijndaelKeySetupEnc(aes->sched, key, AES_KEY_BITS) != AES_ROUNDS) {
 		log_fatal("aesrand", "could not initialize AES key");
 	}
-	memset(aes_output, 0, OUTPUT_BYTES*sizeof(uint8_t));
-	init = 1;
+	memset(aes->output, 0, OUTPUT_BYTES);
+	return aes;
 }
 
-uint64_t aesrand_getword(void)
+aesrand_t* aesrand_init_from_seed(uint64_t seed)
 {
-	assert(init);
-	memcpy(aes_input, aes_output, sizeof(aes_input));
-	rijndaelEncrypt(aes_sched, AES_ROUNDS,
-		(uint8_t *)aes_input, aes_output);
+	uint8_t key[AES_KEY_BYTES];
+	memset(key, 0, AES_KEY_BYTES);
+	for (uint8_t i = 0; i < sizeof(seed); ++i) {
+		key[i] = (uint8_t) ((seed >> 8*i) & 0xFF);
+	}
+	return _aesrand_init(key);
+}
+
+aesrand_t* aesrand_init_from_random()
+{
+	uint8_t key[AES_KEY_BYTES];
+	if (!random_bytes(key, AES_KEY_BYTES)) {
+		log_fatal("aesrand", "Couldn't get random bytes");
+	}
+	return _aesrand_init(key);
+}
+
+uint64_t aesrand_getword(aesrand_t *aes)
+{
+	memcpy(aes->input, aes->output, sizeof(aes->input));
+	rijndaelEncrypt(aes->sched, AES_ROUNDS,
+		(uint8_t *)aes->input, aes->output);
 	uint64_t retval;
-	memcpy(&retval, aes_output, sizeof(retval));
+	memcpy(&retval, aes->output, sizeof(retval));
 	return retval;
 }
-

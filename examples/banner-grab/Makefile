@@ -15,7 +15,7 @@ LDFLAGS+=$(LDHARDENING)
 
 all: banner-grab-tcp
 
-banner-grab-tcp: banner-grab-tcp.o logger.o xalloc.o
+banner-grab-tcp: banner-grab-tcp.o logger.o xalloc.o lockfd.o
 	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 clean:

@@ -27,7 +27,8 @@
 probe_module_t module_icmp_echo;
 
 int icmp_echo_init_perthread(void* buf, macaddr_t *src,
-		macaddr_t *gw, __attribute__((unused)) port_h_t dst_port)
+		macaddr_t *gw, __attribute__((unused)) port_h_t dst_port,
+		__attribute__((unused)) void **arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 
@@ -45,7 +46,8 @@ int icmp_echo_init_perthread(void* buf, macaddr_t *src,
 }
 
 int icmp_echo_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
-				uint32_t *validation, __attribute__((unused))int probe_num)
+				uint32_t *validation, __attribute__((unused)) int probe_num,
+				__attribute__((unused)) void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *) buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);

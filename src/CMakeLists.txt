@@ -27,6 +27,8 @@ SET(LIB_SOURCES
 	${PROJECT_SOURCE_DIR}/lib/random.c
 	${PROJECT_SOURCE_DIR}/lib/rijndael-alg-fst.c
 	${PROJECT_SOURCE_DIR}/lib/xalloc.c
+	${PROJECT_SOURCE_DIR}/lib/lockfd.c
+	${PROJECT_SOURCE_DIR}/lib/util.c
 )
 
 # ADD YOUR PROBE MODULE HERE
@@ -49,6 +51,7 @@ SET(PROBE_MODULE_SOURCES
 	probe_modules/module_udp.c
 	probe_modules/packet.c
 	probe_modules/probe_modules.c
+	probe_modules/module_ntp.c
 	)
 
 SET(SOURCES
@@ -63,7 +66,9 @@ SET(SOURCES
 	recv.c
 	send.c
 	shard.c
+	socket.c
 	state.c
+	summary.c
 	validate.c
 	zmap.c
 	zopt_compat.c
@@ -75,14 +80,35 @@ SET(SOURCES
 	${PROBE_MODULE_SOURCES}
 	${OUTPUT_MODULE_SOURCES}
 	${LIB_SOURCES}
-	)
+)
+
+SET(ZBLSOURCES
+	zblacklist.c
+	${LIB_SOURCES}
+)
+
+# Handle various versions of socket
+if(WITH_PFRING)
+	SET(SOURCES ${SOURCES} socket-pfring.c)
+elseif (APPLE OR BSD)
+	SET(SOURCES ${SOURCES} socket-bsd.c)
+else()
+	SET(SOURCES ${SOURCES} socket-linux.c)
+endif()
+
+# Handle various versions of recv
+if(WITH_PFRING)
+	SET(SOURCES ${SOURCES} recv-pfring.c)
+else()
+	SET(SOURCES ${SOURCES} recv-pcap.c)
+endif()
 
 if (WITH_JSON)
 	SET(SOURCES ${SOURCES} output_modules/module_json.c)
 endif()
 
 if (WITH_REDIS)
-	SET(SOURCES ${SOURCES} ${PROJECT_SOURCE_DIR}/lib/redis.c output_modules/module_redis.c output_modules/module_csvredis.c)
+	SET(SOURCES ${SOURCES} ${PROJECT_SOURCE_DIR}/lib/redis.c output_modules/module_redis.c output_modules/module_csvredis.c output_modules/module_redis_csv.c)
 endif()
 
 add_custom_command(OUTPUT zopt.h
@@ -101,6 +127,7 @@ add_custom_command(OUTPUT parser.c
 	)
 
 add_executable(zmap ${SOURCES})
+add_executable(zblacklist ${ZBLSOURCES})
 
 if (APPLE OR BSD)
 	set(DNET_LIBRARIES "dnet")
@@ -109,17 +136,23 @@ else()
 endif()
 
 target_link_libraries(
-	zmap 
+	zmap
+	${PFRING_LIBRARIES}
 	pcap gmp m
 	${DNET_LIBRARIES}
 	${REDIS_LIBS}
 	${JSON_LIBRARIES}
 	)
 
+target_link_libraries(
+	zblacklist
+	m
+	)
 # Install binary
 install(
 	TARGETS
 	zmap
+	zblacklist
 	RUNTIME DESTINATION sbin
 )
 

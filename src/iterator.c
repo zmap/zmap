@@ -20,6 +20,7 @@ struct iterator {
 	shard_t *thread_shards;
 	uint8_t *complete;
 	pthread_mutex_t mutex;
+	uint32_t curr_threads;
 };
 
 void shard_complete(uint8_t thread_id, void *arg)
@@ -28,9 +29,11 @@ void shard_complete(uint8_t thread_id, void *arg)
 	assert(thread_id < it->num_threads);
 	pthread_mutex_lock(&it->mutex);
 	it->complete[thread_id] = 1;
+	it->curr_threads--;
 	shard_t *s = &it->thread_shards[thread_id];
 	zsend.sent += s->state.sent;
 	zsend.blacklisted += s->state.blacklisted;
+	zsend.whitelisted += s->state.whitelisted;
 	zsend.sendto_failures += s->state.failures;
 	uint8_t done = 1;
 	for (uint8_t i = 0; done && (i < it->num_threads); ++i) {
@@ -55,8 +58,9 @@ iterator_t* iterator_init(uint8_t num_threads, uint8_t shard,
 	} else {
 		zsend.max_index = (uint32_t) num_addrs;
 	}
-	it->cycle = make_cycle(group);
+	it->cycle = make_cycle(group, zconf.aes);
 	it->num_threads = num_threads;
+	it->curr_threads = num_threads;
 	it->thread_shards = xcalloc(num_threads, sizeof(shard_t));
 	it->complete = xcalloc(it->num_threads, sizeof(uint8_t));
 	pthread_mutex_init(&it->mutex, NULL);
@@ -89,4 +93,10 @@ shard_t* get_shard(iterator_t *it, uint8_t thread_id)
 {
 	assert(thread_id < it->num_threads);
 	return &it->thread_shards[thread_id];
+}
+
+uint32_t iterator_get_curr_send_threads(iterator_t *it)
+{
+	assert(it);
+	return it->curr_threads;
 }

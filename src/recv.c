@@ -5,21 +5,18 @@
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
+#include "recv.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <pthread.h>
 #include <assert.h>
-
-#include <pcap.h>
-#include <pcap/pcap.h>
 
 #include "../lib/includes.h"
 #include "../lib/logger.h"
 #include "../lib/pbm.h"
 
+#include <pthread.h>
+#include <unistd.h>
+
+#include "recv-internal.h"
 #include "state.h"
 #include "validate.h"
 #include "fieldset.h"
@@ -27,32 +24,12 @@
 #include "probe_modules/probe_modules.h"
 #include "output_modules/output_modules.h"
 
-#define PCAP_PROMISC 1
-#define PCAP_TIMEOUT 1000
-
-static uint32_t num_src_ports;
-static pcap_t *pc = NULL;
+static u_char fake_eth_hdr[65535];
 
 // bitmap of observed IP addresses
 static uint8_t **seen = NULL;
 
-static u_char fake_eth_hdr[65535];
-
-void packet_cb(u_char __attribute__((__unused__)) *user,
-		const struct pcap_pkthdr *p, const u_char *bytes)
-{
-	if (!p) {
-		return;
-	}
-	if (zrecv.success_unique >= zconf.max_results) {
-		// Libpcap can process multiple packets per pcap_dispatch;
-		// we need to throw out results once we've
-		// gotten our --max-results worth.
-		return;
-	}
-	// length of entire packet captured by libpcap
-	uint32_t buflen = (uint32_t) p->caplen;
-
+void handle_packet(uint32_t buflen, const u_char *bytes) {
 	if ((sizeof(struct ip) + (zconf.send_ip_pkts ? 0 : sizeof(struct ether_header))) > buflen) {
 		// buffer not large enough to contain ethernet
 		// and ip headers. further action would overrun buf
@@ -109,6 +86,18 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 	} else {
 		zrecv.failure_total++;
 	}
+	// probe module includes app_success field
+	if (zconf.fsconf.app_success_index >= 0) {
+		int is_app_success = fs_get_uint64_by_index(fs,
+				zconf.fsconf.app_success_index);
+		if (is_app_success) {
+			zrecv.app_success_total++;
+			if (!is_repeat) {
+				zrecv.app_success_unique++;
+			}
+		}
+	}
+
 	fieldset_t *o = NULL;
 	// we need to translate the data provided by the probe module
 	// into a fieldset that can be used by the output module
@@ -134,50 +123,12 @@ cleanup:
 	}
 }
 
-int recv_update_pcap_stats(void)
-{
-	if (!pc) {
-		return EXIT_FAILURE;
-	}
-	struct pcap_stat pcst;
-	if (pcap_stats(pc, &pcst)) {
-		log_error("recv", "unable to retrieve pcap statistics: %s",
-				pcap_geterr(pc));
-		return EXIT_FAILURE;
-	} else {
-		zrecv.pcap_recv = pcst.ps_recv;
-		zrecv.pcap_drop = pcst.ps_drop;
-		zrecv.pcap_ifdrop = pcst.ps_ifdrop;
-	}
-	return EXIT_SUCCESS;
-}
-
 int recv_run(pthread_mutex_t *recv_ready_mutex)
 {
 	log_trace("recv", "recv thread started");
-	num_src_ports = zconf.source_port_last - zconf.source_port_first + 1;
 	log_debug("recv", "capturing responses on %s", zconf.iface);
 	if (!zconf.dryrun) {
-		char errbuf[PCAP_ERRBUF_SIZE];
-		pc = pcap_open_live(zconf.iface, zconf.probe_module->pcap_snaplen,
-						PCAP_PROMISC, PCAP_TIMEOUT, errbuf);
-		if (pc == NULL) {
-			log_fatal("recv", "could not open device %s: %s",
-							zconf.iface, errbuf);
-		}
-		struct bpf_program bpf;
-		if (pcap_compile(pc, &bpf, zconf.probe_module->pcap_filter, 1, 0) < 0) {
-			log_fatal("recv", "couldn't compile filter");
-		}
-		if (pcap_setfilter(pc, &bpf) < 0) {
-			log_fatal("recv", "couldn't install filter");
-		}
-		// set pcap_dispatch to not hang if it never receives any packets
-		// this could occur if you ever scan a small number of hosts as
-		// documented in issue #74.
-		if (pcap_setnonblock (pc, 1, errbuf) == -1) {
-			log_fatal("recv", "pcap_setnonblock error:%s", errbuf);
-		}
+		recv_init();
 	}
 	if (zconf.send_ip_pkts) {
 		struct ether_header *eth = (struct ether_header *) fake_eth_hdr;
@@ -209,9 +160,7 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 		if (zconf.dryrun) {
 			sleep(1);
 		} else {
-			if (pcap_dispatch(pc, -1, packet_cb, NULL) == -1) {
-				log_fatal("recv", "pcap_dispatch error");
-			}
+			recv_packets();
 			if (zconf.max_results && zrecv.success_unique >= zconf.max_results) {
 				break;
 			}
@@ -219,15 +168,13 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 	} while (!(zsend.complete && (now()-zsend.finish > zconf.cooldown_secs)));
 	zrecv.finish = now();
 	// get final pcap statistics before closing
-	recv_update_pcap_stats();
+	recv_update_stats();
 	if (!zconf.dryrun) {
 		pthread_mutex_lock(recv_ready_mutex);
-		pcap_close(pc);
-		pc = NULL;
+		recv_cleanup();
 		pthread_mutex_unlock(recv_ready_mutex);
 	}
 	zrecv.complete = 1;
 	log_debug("recv", "thread finished");
 	return 0;
 }
-

@@ -1,12 +1,12 @@
 /*
  * Logger Copyright 2013 Regents of the University of Michigan
- *
+*
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
-
 #include <stdlib.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -17,13 +17,45 @@
 
 #include "logger.h"
 #include "xalloc.h"
+#include "lockfd.h"
 
 static enum LogLevel log_output_level = ZLOG_INFO;
 
 static FILE *log_output_stream = NULL;
+static int color = 0;
 
 static const char *log_level_name[] = {
 	"FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE" };
+
+#define RED     "\x1b[31m"
+#define GREEN   "\x1b[32m"
+#define YELLOW  "\x1b[33m"
+#define BLUE    "\x1b[34m"
+#define MAGENTA "\x1b[35m"
+#define CYAN    "\x1b[36m"
+#define RESET   "\033[0m"
+
+#define COLOR(x) do { if(color) fprintf(log_output_stream, "%s", x); } while (0)
+
+static const char* color_for_level(enum LogLevel level)
+{
+	switch(level) {
+	case ZLOG_FATAL:
+		return RED;
+	case ZLOG_ERROR:
+		return MAGENTA;
+	case ZLOG_WARN:
+		return YELLOW;
+	case ZLOG_INFO:
+		return GREEN;
+	case ZLOG_DEBUG:
+		return BLUE;
+	case ZLOG_TRACE:
+		return RESET;
+	default:
+		return RESET;
+	}
+}
 
 static int LogLogVA(enum LogLevel level, const char *loggerName,
 		const char *logMessage, va_list args)
@@ -31,9 +63,15 @@ static int LogLogVA(enum LogLevel level, const char *loggerName,
 	if (!log_output_stream) {
 		log_output_stream = stdout;
 	}
+	if (log_output_stream == stdout || log_output_stream == stderr) {
+		lock_file(log_output_stream);
+	}
+	if (color) {
+		COLOR(color_for_level(level));
+	}
 	if (level <= log_output_level) {
-		const char *levelName = log_level_name[level];
 
+		const char *levelName = log_level_name[level];
 		struct timeval now;
 		char timestamp[256];
 		gettimeofday(&now, NULL);
@@ -51,9 +89,16 @@ static int LogLogVA(enum LogLevel level, const char *loggerName,
 		if (loggerName || logMessage) {
 			fputs("\n", log_output_stream);
 		}
-		fflush(log_output_stream);
+
 	}
-	return 0;
+	if (color) {
+		COLOR(RESET);
+	}
+	fflush(log_output_stream);
+	if (log_output_stream == stdout || log_output_stream == stderr) {
+		unlock_file(log_output_stream);
+	}
+	return EXIT_SUCCESS;
 }
 
 int log_fatal(const char *name, const char *message, ...) {
@@ -150,6 +195,9 @@ int log_init(FILE *stream, enum LogLevel level,
 	if (syslog_enabled) {
 		openlog(appname, 0, LOG_USER); //no options
 	}
+	if (isatty(fileno(log_output_stream))) {
+		color = 1;
+	}
 	return 0;
 }
 
@@ -169,4 +217,3 @@ size_t dstrftime(char *buf, size_t maxsize, const char *format, double tm)
 	tv.tv_usec = (long) (tm - floor(tm)) * 1000000;
 	return strftime(buf, maxsize, format, localtime((const time_t*) &tv));
 }
-

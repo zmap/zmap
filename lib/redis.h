@@ -44,6 +44,10 @@ int redis_spull(char*, void*, int, size_t, int*);
 
 int redis_spush(char*, void*, int, size_t);
 
+
+int redis_lpush_strings(char *redisqueuename, char **buf, int num);
+int redis_spush_strings(char *redisqueuename, char **buf, int num);
+
 redisContext* redis_get_context(void);
 
 uint32_t redis_getconf_uint32_t(const char*);

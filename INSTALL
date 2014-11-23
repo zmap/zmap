@@ -27,7 +27,7 @@ running:
 or on RHEL- and Fedora-based systems by running:
 
   sudo yum install gmp gmp-devel gengetopt libpcap-devel flex byacc
-  
+
 or on Mac OS systems (brew):
 
   brew install cmake gmp gengetopt json-c byacc libdnet
@@ -52,10 +52,10 @@ with Redis, you will first need to install Hiredis. Then run cmake with
 JSON support is not enabled by default. If you are want to use ZMap
 with JSON output, you will first need to install json-c. Then, run cmake with
 "-DWITH_JSON=ON".
- 
+
 Installing json-c from source requires git and autotools to be available. For
 more information on how to install json-c, please see
 http://github.com/json-c/json-c. If you are running on Ubuntu, these dependencies
 can be installed by running:
 
-  sudo apt-get install pkg-config libjson0-dev 
+  sudo apt-get install pkg-config libjson0-dev

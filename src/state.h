@@ -5,18 +5,22 @@
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
+#ifndef STATE_H
+#define STATE_H
 
 #include <stdio.h>
 #include <stdint.h>
 
 #include "../lib/includes.h"
 
-#include "types.h"
+#ifdef PFRING
+#include <pfring_zc.h>
+#endif
+
+#include "aesrand.h"
 #include "fieldset.h"
 #include "filter.h"
-
-#ifndef STATE_H
-#define STATE_H
+#include "types.h"
 
 #define MAX_PACKET_SIZE 4096
 #define MAC_ADDR_LEN_BYTES 6
@@ -29,6 +33,7 @@ struct fieldset_conf {
 	fielddefset_t outdefs;
 	translation_t translation;
 	int success_index;
+	int app_success_index;
 	int classification_index;
 };
 
@@ -57,10 +62,13 @@ struct state_conf {
 	int cooldown_secs;
 	// number of sending threads
 	uint8_t senders;
+	uint32_t pin_cores_len;
+	uint32_t *pin_cores;
 	// should use CLI provided randomization seed instead of generating
 	// a random seed.
 	int use_seed;
-	uint32_t seed;
+	uint64_t seed;
+	aesrand_t *aes;
 	// generator of the cyclic multiplicative group that is utilized for
 	// address generation
 	uint32_t generator;
@@ -76,14 +84,19 @@ struct state_conf {
 	macaddr_t hw_mac[MAC_ADDR_LEN_BYTES];
 	uint32_t gw_ip;
 	int gw_mac_set;
+	int hw_mac_set;
 	int send_ip_pkts;
 	char *source_ip_first;
 	char *source_ip_last;
 	char *output_filename;
 	char *blacklist_filename;
 	char *whitelist_filename;
+#ifdef JSON
 	char *metadata_filename;
 	FILE *metadata_file;
+	char *notes;
+	char *custom_metadata_str;
+#endif
 	char **destination_cidrs;
 	int destination_cidrs_len;
 	char *raw_output_fields;
@@ -94,6 +107,7 @@ struct state_conf {
 	int output_fields_len;
 	char *log_file;
 	char *log_directory;
+	char *status_updates_file;
 	int dryrun;
 	int summary;
 	int quiet;
@@ -102,6 +116,17 @@ struct state_conf {
 	int filter_duplicates;
 	int filter_unsuccessful;
 	int recv_ready;
+	int num_retries;
+#ifdef PFRING
+	struct {
+		pfring_zc_cluster *cluster;
+		pfring_zc_queue *send;
+		pfring_zc_queue *recv;
+		pfring_zc_queue **queues;
+		pfring_zc_pkt_buff **buffers;
+		pfring_zc_buffer_pool *prefetches;
+	} pf;
+#endif
 };
 extern struct state_conf zconf;
 
@@ -112,6 +137,7 @@ struct state_send {
 	double finish;
 	uint32_t sent;
 	uint32_t blacklisted;
+	uint32_t whitelisted;
 	int complete;
 	uint32_t first_scanned;
 	uint32_t targets;
@@ -126,6 +152,10 @@ struct state_recv {
 	uint32_t success_total;
 	// unique IPs that sent valid responses classified as "success"
 	uint32_t success_unique;
+	// valid responses classified as "success"
+	uint32_t app_success_total;
+	// unique IPs that sent valid responses classified as "success"
+	uint32_t app_success_unique;
 	// valid responses classified as "success" received during cooldown
 	uint32_t cooldown_total;
 	// unique IPs that first sent valid "success"es during cooldown
@@ -150,4 +180,3 @@ struct state_recv {
 extern struct state_recv zrecv;
 
 #endif // _STATE_H
-

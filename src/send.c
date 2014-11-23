@@ -22,6 +22,7 @@
 #include "../lib/logger.h"
 #include "../lib/random.h"
 #include "../lib/blacklist.h"
+#include "../lib/lockfd.h"
 
 #include "aesrand.h"
 #include "get_gateway.h"
@@ -33,12 +34,14 @@
 #include "validate.h"
 
 // OS specific functions called by send_run
-static inline int send_packet(int fd, void *buf, int len);
-static inline int send_run_init(int sock);
+static inline int send_packet(sock_t sock, void *buf, int len, uint32_t idx);
+static inline int send_run_init(sock_t sock);
 
 
 // Include the right implementations
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(PFRING)
+#include "send-pfring.h"
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__)
 #include "send-bsd.h"
 #else /* LINUX */
 #include "send-linux.h"
@@ -88,7 +91,7 @@ iterator_t* send_init(void)
 		uint32_t ip_last = ntohl(srcip_last);
 		assert(ip_first && ip_last);
 		assert(ip_last > ip_first);
-		uint32_t offset = (uint32_t) (aesrand_getword() & 0xFFFFFFFF);
+		uint32_t offset = (uint32_t) (aesrand_getword(zconf.aes) & 0xFFFFFFFF);
 		srcip_offset = offset % (srcip_last - srcip_first);
 		num_src_addrs = ip_last - ip_first + 1;
 	}
@@ -130,12 +133,20 @@ iterator_t* send_init(void)
 
 	// Get the source hardware address, and give it to the probe
 	// module
-	if (get_iface_hw_addr(zconf.iface, zconf.hw_mac)) {
-		log_fatal("send", "could not retrieve hardware address for "
-			  "interface: %s", zconf.iface);
-		return NULL;
-	}
-     log_debug("send", "source MAC address %02x:%02x:%02x:%02x:%02x:%02x",
+    if (!zconf.hw_mac_set) {
+	    if (get_iface_hw_addr(zconf.iface, zconf.hw_mac)) {
+	    	log_fatal("send", "could not retrieve hardware address for "
+	    		  "interface: %s", zconf.iface);
+	    	return NULL;
+	    }
+        log_debug("send", "no source MAC provided. "
+                "automatically detected %02x:%02x:%02x:%02x:%02x:%02x as hw "
+                "interface for %s",
+                zconf.hw_mac[0], zconf.hw_mac[1], zconf.hw_mac[2],
+                zconf.hw_mac[3], zconf.hw_mac[4], zconf.hw_mac[5],
+                zconf.iface);
+    }
+	log_debug("send", "source MAC address %02x:%02x:%02x:%02x:%02x:%02x",
            zconf.hw_mac[0], zconf.hw_mac[1], zconf.hw_mac[2],
            zconf.hw_mac[3], zconf.hw_mac[4], zconf.hw_mac[5]);
 
@@ -159,22 +170,8 @@ static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
 			% num_src_addrs)) + srcip_first;
 }
 
-int get_dryrun_socket(void)
-{
-	// we need a socket in order to gather details about the system
-	// such as source MAC address and IP address. However, because
-	// we don't want to require root access in order to run dryrun,
-	// we just create a TCP socket.
-	int sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (sock <= 0) {
-		log_fatal("send", "couldn't create socket. "
-			  "Error: %s\n", strerror(errno));
-	}
-	return sock;
-}
-
 // one sender thread
-int send_run(int sock, shard_t *s)
+int send_run(sock_t st, shard_t *s)
 {
 	log_trace("send", "send thread started");
 	pthread_mutex_lock(&send_mutex);
@@ -183,7 +180,7 @@ int send_run(int sock, shard_t *s)
 	memset(buf, 0, MAX_PACKET_SIZE);
 
 	// OS specific per-thread init
-	if (send_run_init(sock)) {
+	if (send_run_init(st)) {
 		return -1;
 	}
 
@@ -201,9 +198,10 @@ int send_run(int sock, shard_t *s)
 	}
 	log_debug("send", "source MAC address %s",
 			mac_buf);
+	void *probe_data;
 	if (zconf.probe_module->thread_initialize) {
 		zconf.probe_module->thread_initialize(buf, zconf.hw_mac, zconf.gw_mac,
-					      zconf.target_port);
+					      zconf.target_port, &probe_data);
 	}
 	pthread_mutex_unlock(&send_mutex);
 
@@ -225,6 +223,8 @@ int send_run(int sock, shard_t *s)
 		last_time = now();
 	}
 	uint32_t curr = shard_get_cur_ip(s);
+	int attempts = zconf.num_retries + 1;
+	uint32_t idx = 0;
 	while (1) {
 		// adaptive timing delay
 		if (delay > 0) {
@@ -263,25 +263,32 @@ int send_run(int sock, shard_t *s)
 
 		  	uint32_t validation[VALIDATE_BYTES/sizeof(uint32_t)];
 			validate_gen(src_ip, curr, (uint8_t *)validation);
-			zconf.probe_module->make_packet(buf, src_ip, curr, validation, i);
+			zconf.probe_module->make_packet(buf, src_ip, curr, validation, i, probe_data);
 
 			if (zconf.dryrun) {
-				pthread_mutex_lock(&send_mutex);
+				lock_file(stdout);
 				zconf.probe_module->print_packet(stdout, buf);
-				pthread_mutex_unlock(&send_mutex);
+				unlock_file(stdout);
 			} else {
 				int length = zconf.probe_module->packet_length;
 				void *contents = buf + zconf.send_ip_pkts*sizeof(struct ether_header);
-				int rc = send_packet(sock, contents, length);
-				if (rc < 0) {
-					struct in_addr addr;
-					addr.s_addr = curr;
-					log_debug("send", "send_packet failed for %s. %s",
-							  inet_ntoa(addr), strerror(errno));
-					s->state.failures++;
+				for (int i = 0; i < attempts; ++i) {
+					int rc = send_packet(st, contents, length, idx);
+					if (rc < 0) {
+						struct in_addr addr;
+						addr.s_addr = curr;
+						log_debug("send", "send_packet failed for %s. %s",
+								  inet_ntoa(addr), strerror(errno));
+						s->state.failures++;
+					} else {
+						break;
+					}
 				}
+				idx++;
+				idx &= 0xFF;
 			}
 		}
+
 		curr = shard_get_next_ip(s);
 	}
 	if (zconf.dryrun) {
@@ -292,4 +299,3 @@ int send_run(int sock, shard_t *s)
 	log_debug("send", "thread %hu finished", s->id);
 	return EXIT_SUCCESS;
 }
-

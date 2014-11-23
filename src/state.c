@@ -38,6 +38,7 @@ struct state_conf zconf = {
 	.gw_ip = 0,
 	.hw_mac = {0},
 	.gw_mac_set = 0,
+	.hw_mac_set = 0,
 	.send_ip_pkts = 0,
 	.source_ip_first = NULL,
 	.source_ip_last = NULL,
@@ -47,15 +48,20 @@ struct state_conf zconf = {
 	.output_fields_len = 0,
 	.log_file = NULL,
 	.log_directory = NULL,
+	.status_updates_file = NULL,
 	.dryrun = 0,
 	.quiet = 0,
 	.summary = 0,
 	.syslog = 1,
 	.filter_duplicates = 0,
 	.filter_unsuccessful = 0,
-	.recv_ready = 0,
+#ifdef JSON
 	.metadata_file = NULL,
-	.metadata_filename = NULL
+	.metadata_filename = NULL,
+    .notes = NULL,
+    .custom_metadata_str = NULL,
+#endif
+	.recv_ready = 0
 };
 
 // global sender stats and defaults
@@ -64,6 +70,7 @@ struct state_send zsend = {
 	.finish = 0.0,
 	.sent = 0,
 	.blacklisted = 0,
+	.whitelisted = 0,
 	.complete = 0,
 	.sendto_failures = 0,
 	.targets = 0,
@@ -73,6 +80,8 @@ struct state_send zsend = {
 struct state_recv zrecv = {
 	.success_unique = 0,
 	.success_total = 0,
+	.app_success_unique = 0,
+	.app_success_total = 0,
 	.cooldown_unique = 0,
 	.cooldown_total = 0,
 	.failure_total = 0,

@@ -21,3 +21,6 @@
 #include <net/if.h>
 #include <ifaddrs.h>        // NOTE: net/if.h MUST be included BEFORE ifaddrs.h
 #include <arpa/inet.h>
+
+#define MAC_ADDR_LEN ETHER_ADDR_LEN
+#define UNUSED __attribute__((unused))

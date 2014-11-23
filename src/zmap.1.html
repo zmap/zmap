@@ -76,7 +76,9 @@
 
 <h2 id="DESCRIPTION">DESCRIPTION</h2>
 
-<p><em>ZMap</em> is a network tool for scanning the entire Internet (or large samples). ZMap is capable of scanning the entire Internet in around 45 minutes on a gigabit network connection, reaching ~98% theoretical line speed.</p>
+<p><em>ZMap</em> is a network tool for scanning the entire Internet (or large samples).
+ZMap is capable of scanning the entire Internet in around 45 minutes on a
+gigabit network connection, reaching ~98% theoretical line speed.</p>
 
 <h2 id="OPTIONS">OPTIONS</h2>
 
@@ -176,10 +178,25 @@ fields, and write filters over the output fields.</p>
 </dl>
 
 
+<h3 id="UDP-PROBE-MODULE-OPTIONS">UDP PROBE MODULE OPTIONS</h3>
+
+<p>These arguments are all passed using the <code>--probe-args=args</code> option. Only one
+argument may be passed at a time.</p>
+
+<dl>
+<dt> <code>file:/path/to/file</code></dt><dd><p> Path to payload file to send to each host over UDP.</p></dd>
+<dt> <code>template:/path/to/template</code></dt><dd><p> Path to template file. For each destination host, the template file is
+ populated, set as the UDP payload, and sent.</p></dd>
+<dt> <code>text:&lt;text></code></dt><dd><p> ASCII text to send to each destination host</p></dd>
+<dt> <code>hex:&lt;hex></code></dt><dd><p>Hex-encoded binary to send to each destination host</p></dd>
+<dt> <code>template-fields</code></dt><dd><p> Print information about the allowed template fields and exit.</p></dd>
+</dl>
+
+
 
   <ol class='man-decor man-foot man foot'>
     <li class='tl'></li>
-    <li class='tc'>June 2014</li>
+    <li class='tc'>August 2014</li>
     <li class='tr'>zmap(1)</li>
   </ol>
 

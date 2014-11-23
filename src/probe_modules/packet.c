@@ -87,7 +87,7 @@ void make_ip_header(struct ip *iph, uint8_t protocol, uint16_t len)
 	iph->ip_tos = 0; // Type of Service
 	iph->ip_len = len;
 	iph->ip_id = htons(54321); // identification number
-	iph->ip_off = 0; //fragmentation falg
+	iph->ip_off = 0; //fragmentation flag
 	iph->ip_ttl = MAXTTL; // time to live (TTL)
 	iph->ip_p = protocol; // upper layer protocol => TCP
 	// we set the checksum = 0 for now because that's
