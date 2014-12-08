@@ -40,87 +40,87 @@ int json_output_file_init(struct state_conf *conf, UNUSED char **fields, UNUSED 
 	json_object *obj = json_object_new_object();
 	assert(conf);
 
-	if (conf->output_filename) {
-		if (!strcmp(conf->output_filename, "-")) {
-			file = stdout;
-		} else {
-			if (!(file = fopen(conf->output_filename, "w"))) {
-				perror("Couldn't open output file");
-				exit(EXIT_FAILURE);
-			}
+	if (!strcmp(conf->output_filename, "-")) {
+		file = stdout;
+	} else if (conf->output_filename) {
+		if (!(file = fopen(conf->output_filename, "w"))) {
+			log_fatal("output-json", "could not open output file %s",
+					conf->output_filename);
 		}
-
-		// Create a header json object to describe this output file
-		json_object_object_add(obj, "type", json_object_new_string("header"));
-		json_object_object_add(obj, "log_level", json_object_new_int(conf->log_level));
-		json_object_object_add(obj, "target_port",
-				json_object_new_int(conf->target_port));
-		json_object_object_add(obj, "source_port_first",
-				json_object_new_int(conf->source_port_first));
-		json_object_object_add(obj, "source_port_last",
-				json_object_new_int(conf->source_port_last));
-		json_object_object_add(obj, "max_targets", json_object_new_int(conf->max_targets));
-		json_object_object_add(obj, "max_runtime", json_object_new_int(conf->max_runtime));
-		json_object_object_add(obj, "max_results", json_object_new_int(conf->max_results));
-		if (conf->iface) {
-			json_object_object_add(obj, "iface", json_object_new_string(conf->iface));
-		}
-		json_object_object_add(obj, "rate", json_object_new_int(conf->rate));
-
-		json_object_object_add(obj, "bandwidth", json_object_new_int(conf->bandwidth));
-		json_object_object_add(obj, "cooldown_secs", json_object_new_int(conf->cooldown_secs));
-		json_object_object_add(obj, "senders", json_object_new_int(conf->senders));
-		json_object_object_add(obj, "use_seed", json_object_new_int(conf->use_seed));
-		json_object_object_add(obj, "seed", json_object_new_int(conf->seed));
-		json_object_object_add(obj, "generator", json_object_new_int(conf->generator));
-		json_object_object_add(obj, "packet_streams",
-				json_object_new_int(conf->packet_streams));
-		json_object_object_add(obj, "probe_module",
-				json_object_new_string(((probe_module_t *)conf->probe_module)->name));
-		json_object_object_add(obj, "output_module",
-				json_object_new_string(((output_module_t *)conf->output_module)->name));
-
-		if (conf->probe_args) {
-			json_object_object_add(obj, "probe_args",
-				json_object_new_string(conf->probe_args));
-		}
-		if (conf->output_args) {
-			json_object_object_add(obj, "output_args",
-				json_object_new_string(conf->output_args));
-		}
-
-		if (conf->gw_mac) {
-			memset(mac_buf, 0, sizeof(mac_buf));
-			p = mac_buf;
-			for(i=0; i < MAC_ADDR_LEN; i++) {
-				if (i == MAC_ADDR_LEN-1) {
-					snprintf(p, 3, "%.2x", conf->gw_mac[i]);
-					p += 2;
-				} else {
-					snprintf(p, 4, "%.2x:", conf->gw_mac[i]);
-					p += 3;
-				}
-			}
-			json_object_object_add(obj, "gw_mac", json_object_new_string(mac_buf));
-		}
-
-		json_object_object_add(obj, "source_ip_first",
-				json_object_new_string(conf->source_ip_first));
-		json_object_object_add(obj, "source_ip_last",
-				json_object_new_string(conf->source_ip_last));
-		json_object_object_add(obj, "output_filename",
-				json_object_new_string(conf->output_filename));
-		if (conf->blacklist_filename) json_object_object_add(obj,
-				"blacklist_filename",
-				json_object_new_string(conf->blacklist_filename));
-		if (conf->whitelist_filename) json_object_object_add(obj, "whitelist_filename", json_object_new_string(conf->whitelist_filename));
-		json_object_object_add(obj, "dryrun", json_object_new_int(conf->dryrun));
-		json_object_object_add(obj, "summary", json_object_new_int(conf->summary));
-		json_object_object_add(obj, "quiet", json_object_new_int(conf->quiet));
-		json_object_object_add(obj, "recv_ready", json_object_new_int(conf->recv_ready));
-
-		fprintf(file, "%s\n", json_object_to_json_string(obj));
+	} else {
+		file = stdout;
 	}
+	
+	// Create a header json object to describe this output file
+	json_object_object_add(obj, "type", json_object_new_string("header"));
+	json_object_object_add(obj, "log_level", json_object_new_int(conf->log_level));
+	json_object_object_add(obj, "target_port",
+			json_object_new_int(conf->target_port));
+	json_object_object_add(obj, "source_port_first",
+			json_object_new_int(conf->source_port_first));
+	json_object_object_add(obj, "source_port_last",
+			json_object_new_int(conf->source_port_last));
+	json_object_object_add(obj, "max_targets", json_object_new_int(conf->max_targets));
+	json_object_object_add(obj, "max_runtime", json_object_new_int(conf->max_runtime));
+	json_object_object_add(obj, "max_results", json_object_new_int(conf->max_results));
+	if (conf->iface) {
+		json_object_object_add(obj, "iface", json_object_new_string(conf->iface));
+	}
+	json_object_object_add(obj, "rate", json_object_new_int(conf->rate));
+	
+	json_object_object_add(obj, "bandwidth", json_object_new_int(conf->bandwidth));
+	json_object_object_add(obj, "cooldown_secs", json_object_new_int(conf->cooldown_secs));
+	json_object_object_add(obj, "senders", json_object_new_int(conf->senders));
+	json_object_object_add(obj, "use_seed", json_object_new_int(conf->use_seed));
+	json_object_object_add(obj, "seed", json_object_new_int(conf->seed));
+	json_object_object_add(obj, "generator", json_object_new_int(conf->generator));
+	json_object_object_add(obj, "packet_streams",
+			json_object_new_int(conf->packet_streams));
+	json_object_object_add(obj, "probe_module",
+			json_object_new_string(((probe_module_t *)conf->probe_module)->name));
+	json_object_object_add(obj, "output_module",
+			json_object_new_string(((output_module_t *)conf->output_module)->name));
+	
+	if (conf->probe_args) {
+		json_object_object_add(obj, "probe_args",
+			json_object_new_string(conf->probe_args));
+	}
+	if (conf->output_args) {
+		json_object_object_add(obj, "output_args",
+			json_object_new_string(conf->output_args));
+	}
+
+	if (conf->gw_mac) {
+		memset(mac_buf, 0, sizeof(mac_buf));
+		p = mac_buf;
+		for(i=0; i < MAC_ADDR_LEN; i++) {
+			if (i == MAC_ADDR_LEN-1) {
+				snprintf(p, 3, "%.2x", conf->gw_mac[i]);
+				p += 2;
+			} else {
+				snprintf(p, 4, "%.2x:", conf->gw_mac[i]);
+				p += 3;
+			}
+		}
+		json_object_object_add(obj, "gw_mac", json_object_new_string(mac_buf));
+	}
+	
+	json_object_object_add(obj, "source_ip_first",
+			json_object_new_string(conf->source_ip_first));
+	json_object_object_add(obj, "source_ip_last",
+			json_object_new_string(conf->source_ip_last));
+	json_object_object_add(obj, "output_filename",
+			json_object_new_string(conf->output_filename));
+	if (conf->blacklist_filename) json_object_object_add(obj,
+			"blacklist_filename",
+			json_object_new_string(conf->blacklist_filename));
+	if (conf->whitelist_filename) json_object_object_add(obj, "whitelist_filename", json_object_new_string(conf->whitelist_filename));
+	json_object_object_add(obj, "dryrun", json_object_new_int(conf->dryrun));
+	json_object_object_add(obj, "summary", json_object_new_int(conf->summary));
+	json_object_object_add(obj, "quiet", json_object_new_int(conf->quiet));
+	json_object_object_add(obj, "recv_ready", json_object_new_int(conf->recv_ready));
+
+	fprintf(file, "%s\n", json_object_to_json_string(obj));
 	return EXIT_SUCCESS;
 }
 
