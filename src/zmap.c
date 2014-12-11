@@ -20,6 +20,10 @@
 
 #include <pcap/pcap.h>
 
+#ifdef JSON
+#include <json.h>
+#endif
+
 #include <pthread.h>
 
 #include "../lib/includes.h"
@@ -602,7 +606,6 @@ int main(int argc, char *argv[])
 
     if (args.user_metadata_given) {
 #ifdef JSON
-#include <json.h>
         zconf.custom_metadata_str = args.user_metadata_arg;
         if (!json_tokener_parse(zconf.custom_metadata_str)) {
             log_fatal("metadata", "unable to parse custom user metadata");
