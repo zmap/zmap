@@ -61,7 +61,7 @@ static int LogLogVA(enum LogLevel level, const char *loggerName,
 		const char *logMessage, va_list args)
 {
 	if (!log_output_stream) {
-		log_output_stream = stdout;
+		log_output_stream = stderr;
 	}
 	if (log_output_stream == stdout || log_output_stream == stderr) {
 		lock_file(log_output_stream);
