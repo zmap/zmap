@@ -221,7 +221,7 @@ static void start_zmap(void)
 		}
 	}
 	log_debug("zmap", "%d sender threads spawned", zconf.senders);
-	if (!zconf.quiet) {
+	if (!zconf.quiet || zconf.status_updates_file) {
 		mon_start_arg_t *mon_arg = xmalloc(sizeof(mon_start_arg_t));
 		mon_arg->it = it;
 		mon_arg->recv_ready_mutex = &recv_ready_mutex;
@@ -256,7 +256,7 @@ static void start_zmap(void)
 		log_fatal("zmap", "unable to join recv thread");
 		exit(EXIT_FAILURE);
 	}
-	if (!zconf.quiet || !zconf.status_updates_file) {
+	if (!zconf.quiet || zconf.status_updates_file) {
 		pthread_join(tmon, NULL);
 		if (r != 0) {
 			log_fatal("zmap", "unable to join monitor thread");
@@ -332,7 +332,7 @@ int main(int argc, char *argv[])
 		log_location = fopen(zconf.log_file, "w");
 	} else if (zconf.log_directory) {
 		time_t now;
-    		time(&now);
+    	time(&now);
 		struct tm *local = localtime(&now);
 		char path[100];
 		strftime(path, 100, "zmap-%Y-%m-%dT%H%M%S%z.log", local);
@@ -817,7 +817,7 @@ int main(int argc, char *argv[])
 	} else {
 		int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
 		zconf.senders = max_int(num_cores - 1, 1);
-		if (!zconf.quiet) {
+		if (!zconf.quiet || zconf.status_updates_file) {
 			// If monitoring, save a core for the monitor thread
 			zconf.senders = max_int(zconf.senders - 1, 1);
 		}
