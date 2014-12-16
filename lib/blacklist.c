@@ -80,7 +80,6 @@ int blacklist_is_allowed(uint32_t s_addr) {
 static void _add_constraint(struct in_addr addr, int prefix_len, int value)
 {
 	constraint_set(constraint, ntohl(addr.s_addr), prefix_len, value);
-	const char *name = (value == ADDR_DISALLOWED) ? "blacklisting" : "whitelisting";
 	if (value == ADDR_ALLOWED) {
 		bl_ll_add(whitelisted_cidrs, addr, prefix_len);
 	} else if (value == ADDR_DISALLOWED) {
@@ -88,7 +87,6 @@ static void _add_constraint(struct in_addr addr, int prefix_len, int value)
 	} else {
 		log_fatal("blacklist", "unknown type of blacklist operation specified");
 	}
-	log_debug("constraint", "%s %s/%i", name, inet_ntoa(addr), prefix_len);
 }
 
 // blacklist a CIDR network allocation
