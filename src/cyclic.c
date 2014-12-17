@@ -115,6 +115,10 @@ static uint32_t find_primroot(const cyclic_group_t *group, aesrand_t *aes)
 	}
 	while (check_coprime(candidate, group) != COPRIME) {
 		++candidate;
+		//special case where we need to restart check from begin
+		if(candidate >= group->prime) { 
+			candidate = 1;
+		}
 	}
 	uint64_t retv = isomorphism(candidate, group);
 	return retv;
