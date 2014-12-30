@@ -51,7 +51,7 @@ SET(PROBE_MODULE_SOURCES
 	probe_modules/module_udp.c
 	probe_modules/packet.c
 	probe_modules/probe_modules.c
-    probe_modules/module_ntp.c
+	probe_modules/module_ntp.c
 	)
 
 SET(SOURCES
@@ -82,6 +82,10 @@ SET(SOURCES
 	${LIB_SOURCES}
 )
 
+SET(ZBLSOURCES
+	zblacklist.c
+	${LIB_SOURCES}
+)
 
 # Handle various versions of socket
 if(WITH_PFRING)
@@ -104,7 +108,7 @@ if (WITH_JSON)
 endif()
 
 if (WITH_REDIS)
-	SET(SOURCES ${SOURCES} ${PROJECT_SOURCE_DIR}/lib/redis.c output_modules/module_redis.c output_modules/module_csvredis.c)
+	SET(SOURCES ${SOURCES} ${PROJECT_SOURCE_DIR}/lib/redis.c output_modules/module_redis.c output_modules/module_csvredis.c output_modules/module_redis_csv.c)
 endif()
 
 add_custom_command(OUTPUT zopt.h
@@ -123,6 +127,7 @@ add_custom_command(OUTPUT parser.c
 	)
 
 add_executable(zmap ${SOURCES})
+add_executable(zblacklist ${ZBLSOURCES})
 
 if (APPLE OR BSD)
 	set(DNET_LIBRARIES "dnet")
@@ -139,10 +144,15 @@ target_link_libraries(
 	${JSON_LIBRARIES}
 	)
 
+target_link_libraries(
+	zblacklist
+	m
+	)
 # Install binary
 install(
 	TARGETS
 	zmap
+	zblacklist
 	RUNTIME DESTINATION sbin
 )
 
