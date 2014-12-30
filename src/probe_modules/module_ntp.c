@@ -167,8 +167,8 @@ void ntp_print_packet(FILE *fp, void *packet){
     struct ip *iph = (struct ip *) &ethh[1];
     struct udphdr *udph = (struct udphdr *) (iph + 4*iph->ip_hl);
     struct ntphdr *ntph = (struct ntphdr *) &udph[1];
-    fprintf(fp, "ntp {LI_VN_MODE: %u }\n",
-            ntph->LI_VN_MODE);
+    fprintf(fp, "ntp { LI_VN_MODE: %u | stratum: %u | poll: %u }\n",
+            ntph->LI_VN_MODE, ntph->stratum, ntph->poll);
     fprintf(fp, "udp { source: %u | dest: %u | checksum: %u }\n",
             ntohs(udph->uh_sport),
             ntohs(udph->uh_dport),
