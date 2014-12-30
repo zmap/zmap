@@ -161,10 +161,23 @@ int ntp_init_perthread(void *buf, macaddr_t *src,
 	return EXIT_SUCCESS;
 }
 
-//print packet taken out for lack of need
-/*void ntp_print_packet(FILE *fp, void *packet){
-
-}*/
+void ntp_print_packet(FILE *fp, void *packet){
+    
+    struct ether_header *ethh = (struct ether_header *)packet;
+    struct ip *iph = (struct ip *) &ethh[1];
+    struct udphdr *udph = (struct udphdr *) (iph + 4*iph->ip_hl);
+    struct ntphdr *ntph = (struct ntphdr *) &udph[1];
+    fprintf(fp, "ntp {LI_VN_MODE: %u }\n",
+            ntph->LI_VN_MODE);
+    fprintf(fp, "udp { source: %u | dest: %u | checksum: %u }\n",
+            ntohs(udph->uh_sport),
+            ntohs(udph->uh_dport),
+            ntohl(udph->uh_sum));
+    fprintf_ip_header(fp, iph);
+    fprintf_eth_header(fp, ethh);
+    
+    fprintf(fp, "-------------------------------------------------\n");
+}
 
 static fielddef_t fields[] = {
     {.name = "classification", .type = "string", .desc = "packet classification"},
@@ -198,7 +211,7 @@ probe_module_t module_ntp = {
     .thread_initialize = &ntp_init_perthread,
     .global_initialize = &udp_global_initialize,
     .make_packet = &udp_make_packet,
-    //.print_packet = &ntp_print_packet,
+    .print_packet = &ntp_print_packet,
     .validate_packet = &udp_validate_packet,
     .process_packet = &ntp_process_packet,
     .close = &udp_global_cleanup,
