@@ -29,6 +29,7 @@ SET(LIB_SOURCES
 	${PROJECT_SOURCE_DIR}/lib/xalloc.c
 	${PROJECT_SOURCE_DIR}/lib/lockfd.c
 	${PROJECT_SOURCE_DIR}/lib/util.c
+	${PROJECT_SOURCE_DIR}/lib/queue.c
 )
 
 # ADD YOUR PROBE MODULE HERE
@@ -87,6 +88,11 @@ SET(ZBLSOURCES
 	${LIB_SOURCES}
 )
 
+SET(ZTEESOURCES
+  ztee.c
+	${LIB_SOURCES}
+)
+
 # Handle various versions of socket
 if(WITH_PFRING)
 	SET(SOURCES ${SOURCES} socket-pfring.c)
@@ -128,6 +134,7 @@ add_custom_command(OUTPUT parser.c
 
 add_executable(zmap ${SOURCES})
 add_executable(zblacklist ${ZBLSOURCES})
+add_executable(ztee ${ZTEESOURCES})
 
 if (APPLE OR BSD)
 	set(DNET_LIBRARIES "dnet")
@@ -147,7 +154,13 @@ target_link_libraries(
 target_link_libraries(
 	zblacklist
 	m
-	)
+)
+
+target_link_libraries(
+	ztee
+	m
+)
+
 # Install binary
 install(
 	TARGETS

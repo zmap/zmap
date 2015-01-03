@@ -20,3 +20,4 @@ _CPack_Packages/*
 *.deb
 !.gitignore
 src/zblacklist
+src/ztee
