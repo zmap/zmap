@@ -10,9 +10,11 @@
 #include <string.h>
 #include <assert.h>
 
+#include <errno.h>
 #include <getopt.h>
 #include <pthread.h>
 
+#include "../lib/logger.h"
 #include "../lib/queue.h"
 
 #include "topt.h"
@@ -113,6 +115,8 @@ int main(int argc, char *argv[])
 		exit(EXIT_SUCCESS);
 	}
 
+	log_init(stderr, ZLOG_WARN, 0, NULL);
+
 	// Handle help text and version
 	if (args.help_given) {
 		cmdline_parser_print_help();
@@ -125,19 +129,18 @@ int main(int argc, char *argv[])
 
 	// Check for an output file
 	if (args.inputs_num < 1) {
-		perror("Requires an output file");
-		exit(EXIT_FAILURE);
+		log_fatal("ztee", "No output file specified");
 	}
 	if (args.inputs_num > 1) {
-		perror("Extra positional arguments");
-		exit(EXIT_FAILURE);
+		log_fatal("ztee", "Extra positional arguments starting with %s",
+				args.inputs[1]);
 	}
 
 	output_filename = args.inputs[0];
 	output_file = fopen(output_filename, "w");
 	if (!output_file) {
-		perror("Can not open output file");
-		exit(EXIT_FAILURE);
+		log_fatal("ztee", "Could not open output file %s, %s",
+				output_filename, strerror(errno));
 	}
 
 	// Read actual options
@@ -152,13 +155,9 @@ int main(int argc, char *argv[])
 		monitor_filename = args.status_updates_file_arg;
 		monitor_output_file = fopen(monitor_filename, "w");
 		if (!monitor_output_file) {
-			perror("Unable to open monitor file");
-			exit(EXIT_FAILURE);
+			log_fatal("Unable to open monitor file %s, %s",
+					monitor_filename, strerror(errno));
 		}
-	}
-
-	if (output_file == NULL) {
-		print_error();
 	}
 
 	queue* my_queue;
