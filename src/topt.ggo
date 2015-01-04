@@ -1,0 +1,33 @@
+# ZTee Copyright 2014 Regents of the University of Michigan
+
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at http://www.apache.org/licenses/LICENSE-2.0
+
+# ztee option description to be processed by gengetopt
+
+package "ztee"
+version "2.0.0-RC1"
+purpose "A buffering output splitter"
+
+section "Basic arguments"
+
+option "success-only"           S "Only write to stdout rows where success=1 or success=true"
+    optional
+option "monitor"                m "Print monitor output to stdout"
+    optional
+option "status-updates-file"    s "File to write status updates in CSV format"
+    typestr="monitor.csv"
+    optional string
+
+section "Additional options"
+
+option "help"                   h "Print help and exit"
+    optional
+option "version"                V "Print version and exit"
+    optional
+
+text "\nExamples:\n\
+    zmap -p 80 -o - | ztee zmap.csv (save zmap output to zmap.csv and output all rows to stdout)\n\
+    zmap -p 80 --output-fields=* -o - | ztee -S zmap.csv  (save all zmap output to zmap.csv, print successful rows to stdout)\n\
+    zmap -p 80 -o - | ztee -s status.csv zmap.csv (save zmap output to zmap.csv, write status updates to status.csv)"

@@ -90,6 +90,7 @@ SET(ZBLSOURCES
 
 SET(ZTEESOURCES
   ztee.c
+	"${CMAKE_CURRENT_BINARY_DIR}/topt.h"
 	${LIB_SOURCES}
 )
 
@@ -120,6 +121,11 @@ endif()
 add_custom_command(OUTPUT zopt.h
 	COMMAND gengetopt -C --no-help --no-version --unamed-opts=SUBNETS -i "${CMAKE_CURRENT_SOURCE_DIR}/zopt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/zopt"
 	DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/zopt.ggo"
+	)
+
+add_custom_command(OUTPUT topt.h
+	COMMAND gengetopt -S --no-help --no-version --unamed-opts=FILE -i "${CMAKE_CURRENT_SOURCE_DIR}/topt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/topt"
+	DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/topt.ggo"
 	)
 
 add_custom_command(OUTPUT lexer.c
