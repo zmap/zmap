@@ -44,7 +44,7 @@ int csv_init(struct state_conf *conf, char **fields, int fieldlens)
 		log_debug("csv", "more than one field, will add headers");
 		for (int i=0; i < fieldlens; i++) {
 			if (i) {
-				fprintf(file, ", ");
+				fprintf(file, ",");
 			}
 			fprintf(file, "%s", fields[i]);
 		}
