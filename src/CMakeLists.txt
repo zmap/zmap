@@ -90,6 +90,7 @@ SET(ZBLSOURCES
 
 SET(ZTEESOURCES
   ztee.c
+	topt_compat.c
 	"${CMAKE_CURRENT_BINARY_DIR}/topt.h"
 	${LIB_SOURCES}
 )

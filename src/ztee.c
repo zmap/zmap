@@ -8,9 +8,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
+
 #include <getopt.h>
 #include <pthread.h>
-#include "queue.h"
+
+#include "../lib/queue.h"
+
+#include "topt.h"
 
 char *output_filename = NULL;
 char *monitor_filename = NULL;
@@ -89,47 +94,72 @@ void print_thread_error ();
 //executes every second
 void *monitor_ztee(void *my_q);
 
+#define SET_IF_GIVEN(DST,ARG) \
+	{ if (args.ARG##_given) { (DST) = args.ARG##_arg; }; }
+#define SET_BOOL(DST,ARG) \
+	{ if (args.ARG##_given) { (DST) = 1; }; }
+
 int main(int argc, char *argv[])
 {
+	struct gengetopt_args_info args;
+	struct cmdline_parser_params *params;
+	params = cmdline_parser_params_create();
+	assert(params);
+	params->initialize = 1;
+	params->override = 0;
+	params->check_required = 0;
 
-        int ch = 0;
-        int index;
+	if (cmdline_parser_ext(argc, argv, &args, params) != 0) {
+		exit(EXIT_SUCCESS);
+	}
 
-        const struct option longOpts[] = {
-                { "find-success-only", no_argument, 0, 'f' },
-                { "output-file", required_argument, 0, 'o' },
-                { "monitor", required_argument, 0, 'm' },
-                { 0, 0, 0, 0}
-        };
-	while (ch != -1){
-		ch = getopt_long (argc, argv, "fo:m:", longOpts, &index);
-		switch(ch){
-			case 'f':
-			find_success_only = 1;
-			break;
-			case 'o':
-			output_filename = optarg;
-			output_file = (FILE *)fopen(output_filename, "w");
-			if (output_file == NULL) {
-				perror("can't open file");
-				exit(0);
-			}
-			break;
-			case 'm':
-			monitor = 1;
-			monitor_filename = optarg;
-			monitor_output_file = (FILE *)fopen(monitor_filename, "w");
-			if (monitor_output_file == NULL) {
-				perror("can't open file");
-				exit(0);
-			}
-			break;
-			case -1:
-			break;
+	// Handle help text and version
+	if (args.help_given) {
+		cmdline_parser_print_help();
+		exit(EXIT_SUCCESS);
+	}
+	if (args.version_given) {
+		cmdline_parser_print_version();
+		exit(EXIT_SUCCESS);
+	}
+
+	// Check for an output file
+	if (args.inputs_num < 1) {
+		perror("Requires an output file");
+		exit(EXIT_FAILURE);
+	}
+	if (args.inputs_num > 1) {
+		perror("Extra positional arguments");
+		exit(EXIT_FAILURE);
+	}
+
+	output_filename = args.inputs[0];
+	output_file = fopen(output_filename, "w");
+	if (!output_file) {
+		perror("Can not open output file");
+		exit(EXIT_FAILURE);
+	}
+
+	// Read actual options
+	SET_BOOL(find_success_only, success_only);
+	SET_BOOL(monitor, monitor);
+	// Backwards compatability hack until monitor is different than status
+	// updates file.
+	SET_BOOL(monitor, status_updates_file);
+
+	// Open the status update file if necessary
+	if (args.status_updates_file_given) {
+		monitor_filename = args.status_updates_file_arg;
+		monitor_output_file = fopen(monitor_filename, "w");
+		if (!monitor_output_file) {
+			perror("Unable to open monitor file");
+			exit(EXIT_FAILURE);
 		}
 	}
 
-	if(output_file == NULL) print_error();
+	if (output_file == NULL) {
+		print_error();
+	}
 
 	queue* my_queue;
 	my_queue = queue_init();
