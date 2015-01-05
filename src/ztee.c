@@ -63,7 +63,7 @@ pthread_t threads[3];
 //it exits
 void *process_queue (void* my_q);
 
-void print_error ();
+void print_error () __attribute__ ((noreturn));
 
 //uses fgets to read from stdin and add it to the zqueue_t
 void *read_in (void* my_q);
@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
 	zqueue_t* my_queue;
 	my_queue = queue_init();
 	int y = pthread_create(&threads[0], NULL, read_in, my_queue);
-	char* read = "read thread\n";
+	const char* read = "read thread\n";
 
 	if (y) {
 		print_thread_error(read);
@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
 	start_time = now();
 
 	int a = pthread_create(&threads[1], NULL, process_queue, my_queue);
-	char* process = "process thread\n";
+	const char* process = "process thread\n";
 
 	if (a) {
 		print_thread_error(process);
@@ -190,7 +190,7 @@ int main(int argc, char *argv[])
 
 	if (monitor || status_updates_file) {
 		int z = pthread_create(&threads[2], NULL, monitor_ztee, my_queue);
-		char* monitor_thread = "monitor thread\n";
+		const char* monitor_thread = "monitor thread\n";
 		if(z){
 			print_thread_error(monitor_thread);
 			exit(1);
@@ -371,9 +371,9 @@ void figure_out_fields(char* data)
 	//check each substring if it is the same as saddr
 	//set ip_field
 	char *temp;
-	char* saddr = "input saddr";
+	const char* saddr = "input saddr";
 	char* found;
-	char* is_successful = "success\0";
+	const char* is_successful = "success\0";
 	char *new_found;
 	int count = 0;
 	int length;
@@ -456,8 +456,8 @@ void output_file_is_csv()
 	char *end_of_file = malloc(sizeof(char*) *4);
 	strncpy(end_of_file, output_filename+(length - 3), 3);
 	end_of_file[4] = '\0';
-	char *csv = "csv\n";
-	char *json = "jso\n";
+	const char *csv = "csv\n";
+	const char *json = "jso\n";
 	if(!strncmp(end_of_file, csv, 3) && !strncmp(end_of_file, json, 3)){
 		print_error();
 	}
