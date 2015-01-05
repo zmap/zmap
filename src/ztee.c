@@ -54,13 +54,13 @@ pthread_t threads[3];
 //one thread writes out and parses
 
 //pops next element and determines what to do
-//if queue is empty and read_in is finished, then
+//if zqueue_t is empty and read_in is finished, then
 //it exits
 void *process_queue (void* my_q);
 
 void print_error ();
 
-//uses fgets to read from stdin and add it to the queue
+//uses fgets to read from stdin and add it to the zqueue_t
 void *read_in (void* my_q);
 
 //does the same as find UP but finds only successful IPs, determined by the
@@ -80,10 +80,10 @@ void write_out_to_file (char* data);
 void figure_out_fields (char* data);
 
 //checks if input is csv or just ip
-//only needs to be run one time and on the first node
-//because the first node will have the different fields or
+//only needs to be run one time and on the first znode_t
+//because the first znode_t will have the different fields or
 //just the ip address`
-int input_is_csv (queue *my_queue);
+int input_is_csv (zqueue_t *my_queue);
 
 //check that the output file is either in a csv form or json form
 //throws error is it is not either
@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	queue* my_queue;
+	zqueue_t* my_queue;
 	my_queue = queue_init();
 	int y = pthread_create(&threads[0], NULL, read_in, my_queue);
 	char* read = "read thread\n";
@@ -202,11 +202,11 @@ int main(int argc, char *argv[])
 
 void *process_queue(void* my_q)
 {
-	queue *my_queue = (queue *)my_q;
+	zqueue_t *my_queue = (zqueue_t *)my_q;
 
 	while (!is_empty(my_queue) || !done){
 
-		node* temp = malloc(sizeof(node));
+		znode_t* temp = malloc(sizeof(znode_t));
 
 		pthread_mutex_lock(&lock_queue);
 		check_queue(my_queue);
@@ -261,7 +261,7 @@ void *read_in(void* my_q)
 
 	char* input = NULL;
 	size_t length;
-	queue *my_queue = (queue*)my_q;
+	zqueue_t *my_queue = (zqueue_t*)my_q;
 	input = malloc(sizeof(char) *1000);
 
 	//geline
@@ -419,18 +419,18 @@ void figure_out_fields(char* data)
 	}
 }
 
-int input_is_csv(queue *my_queue)
+int input_is_csv(zqueue_t *my_queue)
 {
 	//checks if input is csv or just ip
-	//only needs to be run one time and on the first node
-	//because the first node will have the different fields or
+	//only needs to be run one time and on the first znode_t
+	//because the first znode_t will have the different fields or
 	//just the ip address`
 	while (is_empty(my_queue) && !done);
 	if (is_empty(my_queue) && done) {
 		return 1;
 	}
 
-	node *temp = malloc(sizeof(node));
+	znode_t *temp = malloc(sizeof(znode_t));
 	temp = get_front(my_queue);
 
 	char *found;
@@ -438,7 +438,7 @@ int input_is_csv(queue *my_queue)
 	if (!found) {
 		input_csv = 0;
 	}else {
-		node *to_delete = malloc(sizeof(node*));
+		znode_t *to_delete = malloc(sizeof(znode_t*));
 		input_csv = 1;
 		to_delete = pop_front(my_queue);
 		figure_out_fields(temp->data);
@@ -472,7 +472,7 @@ void print_thread_error(char* string)
 
 void *monitor_ztee(void* my_q)
 {
-	queue *my_queue = (queue *)my_q;
+	zqueue_t *my_queue = (zqueue_t *)my_q;
 	fprintf(monitor_output_file,"Total_read_in, read_in_last_sec, read_per_sec_avg, buffer_current_size, buffer_avg_size\n");
 	int read_per_sec_avg = 0, buffer_current_size = 0, buffer_avg_size = 0;
 	total_read_in = 0;
