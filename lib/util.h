@@ -17,6 +17,12 @@ void split_string(char *in, int *len, char ***results);
 // spaces
 void fprintw(FILE *f, char *s, size_t w);
 
+// pretty print elapsed (or estimated) number of seconds
+void time_string(uint32_t time, int est, char *buf, size_t len);
+
+// pretty print quantities
+void number_string(uint32_t n, char *buf, size_t len);
+
 // Convert a string representation of a MAC address to a byte array
 int parse_mac(macaddr_t *out, char *in);
 

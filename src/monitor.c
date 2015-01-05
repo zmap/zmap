@@ -22,6 +22,7 @@
 #include "state.h"
 
 #include "../lib/logger.h"
+#include "../lib/util.h"
 #include "../lib/xalloc.h"
 #include "../lib/lockfd.h"
 
@@ -100,67 +101,6 @@ static double min_d(double array[], int n)
 		}
 	}
 	return value;
-}
-
-// pretty print elapsed (or estimated) number of seconds
-static void time_string(uint32_t time, int est, char *buf, size_t len)
-{
-  	int y = time / 31556736;
-  	int d = (time % 31556736) / 86400;
-	int h = (time % 86400) / 3600;
-	int m = (time % 3600) / 60;
-	int s = time % 60;
-
-	if (est) {
-		if (y > 0) {
-			snprintf(buf, len, "%d years", y);
-		} else if (d > 9) {
-			snprintf(buf, len, "%dd", d);
-		} else if (d > 0) {
-			snprintf(buf, len, "%dd%02dh", d, h);
-		} else if (h > 9) {
-			snprintf(buf, len, "%dh", h);
-		} else if (h > 0) {
-			snprintf(buf, len, "%dh%02dm", h, m);
-		} else if (m > 9) {
-			snprintf(buf, len, "%dm", m);
-		} else if (m > 0) {
-			snprintf(buf, len, "%dm%02ds", m, s);
-		} else {
-			snprintf(buf, len, "%ds", s);
-		}
-	} else {
-		if (d > 0) {
-			snprintf(buf, len, "%dd%d:%02d:%02d", d, h, m, s);
-		} else if (h > 0) {
-			snprintf(buf, len, "%d:%02d:%02d", h, m, s);
-		} else {
-			snprintf(buf, len, "%d:%02d", m, s);
-		}
-	}
-}
-
-// pretty print quantities
-static void number_string(uint32_t n, char *buf, size_t len)
-{
-	int figs = 0;
-	if (n < 1000) {
-		snprintf(buf, len, "%u ", n);
-	} else if (n < 1000000) {
-		if (n < 10000) {
-		figs = 2;
-		} else if (n < 100000) {
-		figs = 1;
-		}
-		snprintf(buf, len, "%0.*f K", figs, (float)n/1000.);
-	} else {
-		if (figs < 10000000) {
-		figs = 2;
-		} else if (figs < 100000000) {
-			figs = 1;
-		}
-		snprintf(buf, len, "%0.*f M", figs, (float)n/1000000.);
-	}
 }
 
 // estimate time remaining time based on config and state

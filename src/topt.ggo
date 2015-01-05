@@ -12,11 +12,11 @@ purpose "A buffering output splitter"
 
 section "Basic arguments"
 
-option "success-only"           S "Only write to stdout rows where success=1 or success=true"
+option "success-only"           - "Only write to stdout rows where success=1 or success=true"
     optional
 option "monitor"                m "Print monitor output to stdout"
     optional
-option "status-updates-file"    s "File to write status updates in CSV format"
+option "status-updates-file"    u "File to write status updates in CSV format"
     typestr="monitor.csv"
     optional string
 

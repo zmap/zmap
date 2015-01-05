@@ -14,15 +14,18 @@
 #include <getopt.h>
 #include <pthread.h>
 
+#include "../lib/lockfd.h"
 #include "../lib/logger.h"
 #include "../lib/queue.h"
+#include "../lib/util.h"
+#include "../lib/xalloc.h"
 
 #include "topt.h"
 
 char *output_filename = NULL;
 char *monitor_filename = NULL;
 FILE *output_file = NULL;
-FILE *monitor_output_file = NULL;
+FILE *status_updates_file = NULL;
 
 pthread_mutex_t queue_size_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lock_queue = PTHREAD_MUTEX_INITIALIZER;
@@ -46,7 +49,9 @@ int monitor = 0;
 int done = 0;
 int process_done = 0;
 int total_read_in = 0;
-int read_in_last_sec =0;
+int read_in_last_sec = 0;
+
+double start_time;
 
 pthread_t threads[3];
 
@@ -146,15 +151,12 @@ int main(int argc, char *argv[])
 	// Read actual options
 	SET_BOOL(find_success_only, success_only);
 	SET_BOOL(monitor, monitor);
-	// Backwards compatability hack until monitor is different than status
-	// updates file.
-	SET_BOOL(monitor, status_updates_file);
 
 	// Open the status update file if necessary
 	if (args.status_updates_file_given) {
 		monitor_filename = args.status_updates_file_arg;
-		monitor_output_file = fopen(monitor_filename, "w");
-		if (!monitor_output_file) {
+		status_updates_file = fopen(monitor_filename, "w");
+		if (!status_updates_file) {
 			log_fatal("Unable to open monitor file %s, %s",
 					monitor_filename, strerror(errno));
 		}
@@ -176,6 +178,8 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
+	start_time = now();
+
 	int a = pthread_create(&threads[1], NULL, process_queue, my_queue);
 	char* process = "process thread\n";
 
@@ -184,7 +188,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	if (monitor) {
+	if (monitor || status_updates_file) {
 		int z = pthread_create(&threads[2], NULL, monitor_ztee, my_queue);
 		char* monitor_thread = "monitor thread\n";
 		if(z){
@@ -241,9 +245,6 @@ void *process_queue(void* my_q)
 	process_done = 1;
 	fflush(output_file);
 	fclose(output_file);
-	free(my_queue);
-	fprintf(stderr, "finished processing\n");
-	pthread_exit(NULL);
 	return NULL;
 }
 
@@ -470,37 +471,87 @@ void print_thread_error(char* string)
 	return;
 }
 
-void *monitor_ztee(void* my_q)
+#define TIME_STR_LEN 20
+
+typedef struct ztee_stats {
+	// Read stats
+	uint32_t total_read;
+	uint32_t read_per_sec_avg;
+	uint32_t read_last_sec;
+
+	// Buffer stats
+	uint32_t buffer_cur_size;
+	uint32_t buffer_avg_size;
+	uint64_t _buffer_size_sum;
+
+	// Duration
+	double _last_age;
+	uint32_t time_past;
+	char time_past_str[TIME_STR_LEN];
+} stats_t;
+
+void update_stats(stats_t *stats, zqueue_t *queue)
 {
-	zqueue_t *my_queue = (zqueue_t *)my_q;
-	fprintf(monitor_output_file,"Total_read_in, read_in_last_sec, read_per_sec_avg, buffer_current_size, buffer_avg_size\n");
-	int read_per_sec_avg = 0, buffer_current_size = 0, buffer_avg_size = 0;
-	total_read_in = 0;
-	double count_seconds = 1;
+	double age = now() - start_time;
+	double delta = age - stats->_last_age;
+	stats->_last_age = age;
+
+	stats->time_past = age;
+	time_string((int)age, 0, stats->time_past_str, TIME_STR_LEN);
+
+	uint32_t total_read = total_read_in;
+	stats->read_last_sec = (total_read - stats->total_read) / delta;
+	stats->total_read = total_read;
+	stats->read_per_sec_avg = stats->total_read / age;
+
+	stats->buffer_cur_size = get_size(queue);
+	stats->_buffer_size_sum += stats->buffer_cur_size;
+	stats->buffer_avg_size = stats->_buffer_size_sum / age;
+}
+
+void *monitor_ztee(void* arg)
+{
+	zqueue_t *queue = (zqueue_t *) arg;
+	stats_t *stats = xmalloc(sizeof(stats_t));
+
+	if (status_updates_file) {
+		fprintf(status_updates_file,"time_past,total_read_in,read_in_last_sec,read_per_sec_avg,buffer_current_size,buffer_avg_size\n");
+		fflush(status_updates_file);
+	}
 	while (!process_done) {
-		read_in_last_sec = 0;
-		buffer_current_size = 0;
-
-		pthread_mutex_lock(&queue_size_lock);
-
-		if(!process_done){
-			buffer_current_size = get_size(my_queue);
-			buffer_avg_size = (buffer_current_size + buffer_avg_size)
-			/count_seconds;
-			read_per_sec_avg = (read_per_sec_avg + read_in_last_sec)
-			/count_seconds;
-			fprintf(monitor_output_file, "%i,%i,%i,%i,%i\n", total_read_in,
-			read_in_last_sec, read_per_sec_avg, buffer_current_size,
-			buffer_avg_size);
-		}
-
-		pthread_mutex_unlock(&queue_size_lock);
-		count_seconds++;
 		sleep(1);
 
+		update_stats(stats, queue);
+		if (monitor) {
+			lock_file(stderr);
+			fprintf(stderr, "%5s read_rate: %u rows/s (avg %u rows/s), buffer_size: %u (avg %u)\n",
+					stats->time_past_str,
+					stats->read_last_sec,
+					stats->read_per_sec_avg,
+					stats->buffer_cur_size,
+					stats->buffer_avg_size);
+			fflush(stderr);
+			unlock_file(stderr);
+		}
+		if (status_updates_file) {
+			fprintf(status_updates_file, "%u,%u,%u,%u,%u,%u\n",
+					stats->time_past,
+					stats->total_read,
+					stats->read_last_sec,
+					stats->read_per_sec_avg,
+					stats->buffer_cur_size,
+					stats->buffer_avg_size);
+			fflush(status_updates_file);
+		}
 	}
-	fflush(monitor_output_file);
-	fclose(monitor_output_file);
-	pthread_exit(NULL);
+	if (monitor) {
+		lock_file(stderr);
+		fflush(stderr);
+		unlock_file(stderr);
+	}
+	if (status_updates_file) {
+		fflush(status_updates_file);
+		fclose(status_updates_file);
+	}
 	return NULL;
 }
