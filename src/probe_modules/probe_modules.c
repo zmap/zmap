@@ -53,6 +53,16 @@ void print_probe_modules(void)
 }
 
 
+void fs_add_eth_fields(fieldset_t *fs, struct ether_header *eth)
+{
+	// WARNING: you must update eth_fields_len  as well
+	// as the definitions set (eth_fields) if you
+	// change the fields added below:
+	fs_add_string(fs, "smac", make_mac_str(eth->ether_shost), 1);
+	fs_add_string(fs, "dmac", make_mac_str(eth->ether_dhost), 1);
+	fs_add_uint64(fs, "eth-type", eth->ether_type);
+}
+
 void fs_add_ip_fields(fieldset_t *fs, struct ip *ip)
 {
 	// WARNING: you must update ip_fields_len as well
@@ -85,6 +95,14 @@ void fs_add_system_fields(fieldset_t *fs, int is_repeat, int in_cooldown)
 	fs_add_uint64(fs, "timestamp-ts", (uint64_t) t.tv_sec);
 	fs_add_uint64(fs, "timestamp-us", (uint64_t) t.tv_usec);
 }
+
+int eth_fields_len = 3;
+fielddef_t eth_fields[] = {
+	{.name="smac", .type="string", .desc="source MAC address of response"},
+	{.name="dmac", .type="string", .desc="destination MAC address of response"},
+	{.name="eth-type", .type="int", .desc="ethernet packet type of response"}
+};
+
 
 int ip_fields_len = 6;
 fielddef_t ip_fields[] = {

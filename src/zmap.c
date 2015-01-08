@@ -487,9 +487,10 @@ int main(int argc, char *argv[])
 	// now that we know the probe module, let's find what it supports
 	memset(&zconf.fsconf, 0, sizeof(struct fieldset_conf));
 	// the set of fields made available to a user is constructed
-	// of IP header fields + probe module fields + system fields
+	// of IP header fields + ether fields + probe module fields + system fields
 	fielddefset_t *fds = &(zconf.fsconf.defs);
 	gen_fielddef_set(fds, (fielddef_t*) &(ip_fields), ip_fields_len);
+	gen_fielddef_set(fds, (fielddef_t*) &(eth_fields), eth_fields_len);
 	gen_fielddef_set(fds, zconf.probe_module->fields,
 			zconf.probe_module->numfields);
 	gen_fielddef_set(fds, (fielddef_t*) &(sys_fields), sys_fields_len);

@@ -51,12 +51,15 @@ typedef struct probe_module {
 
 probe_module_t* get_probe_module_by_name(const char*);
 
+void fs_add_eth_fields(fieldset_t *fs, struct ether_header *eth);
 void fs_add_ip_fields(fieldset_t *fs, struct ip *ip);
 void fs_add_system_fields(fieldset_t *fs, int is_repeat, int in_cooldown);
 void print_probe_modules(void);
 
+extern int eth_fields_len;
 extern int ip_fields_len;
 extern int sys_fields_len;
+extern fielddef_t eth_fields[];
 extern fielddef_t ip_fields[];
 extern fielddef_t sys_fields[];
 
