@@ -55,8 +55,8 @@ void print_probe_modules(void)
 
 void fs_add_ip_fields(fieldset_t *fs, struct ip *ip)
 {
-	// WARNING: you must update fs_ip_fields_len  as well
-	// as the definitions set (ip_fiels) if you
+	// WARNING: you must update ip_fields_len as well
+	// as the definitions set (ip_fields) if you
 	// change the fields added below:
 	fs_add_string(fs, "saddr", make_ip_str(ip->ip_src.s_addr), 1);
 	fs_add_uint64(fs, "saddr-raw", (uint64_t) ip->ip_src.s_addr);
