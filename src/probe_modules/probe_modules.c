@@ -24,13 +24,15 @@ extern probe_module_t module_icmp_echo;
 extern probe_module_t module_udp;
 // ADD YOUR MODULE HERE
 extern probe_module_t module_ntp;
+extern probe_module_t module_arp;
 
 probe_module_t* probe_modules[] = {
 	&module_tcp_synscan,
 	&module_icmp_echo,
 	&module_udp,
 	// ADD YOUR MODULE HERE
-    &module_ntp
+	&module_ntp,
+	&module_arp
 };
 
 probe_module_t* get_probe_module_by_name(const char* name)
