@@ -48,7 +48,7 @@ typedef struct udp_payload_output
 	char *data;
 } udp_payload_output_t;
 
-void udp_print_packet(FILE *fp, void* packet);
+void udp_print_packet(FILE *fp, const void* packet);
 
 int udp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 		uint32_t *validation, int probe_num, void *arg);

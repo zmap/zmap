@@ -164,7 +164,7 @@ int ntp_init_perthread(void *buf, macaddr_t *src,
 	return EXIT_SUCCESS;
 }
 
-void ntp_print_packet(FILE *fp, void *packet){
+void ntp_print_packet(FILE *fp, const void *packet){
     
     struct ether_header *ethh = (struct ether_header *)packet;
     struct ip *iph = (struct ip *) &ethh[1];

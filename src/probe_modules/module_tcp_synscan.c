@@ -68,7 +68,7 @@ int synscan_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 	return EXIT_SUCCESS;
 }
 
-void synscan_print_packet(FILE *fp, void* packet)
+void synscan_print_packet(FILE *fp, const void *packet)
 {
 	struct ether_header *ethh = (struct ether_header *) packet;
 	struct ip *iph = (struct ip *) &ethh[1];
