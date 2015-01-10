@@ -20,10 +20,10 @@ typedef int (*probe_make_packet_cb)(void* packetbuf, ipaddr_n_t src_ip,
 typedef void (*probe_print_packet_cb)(FILE *, void* packetbuf);
 typedef int (*probe_close_cb)(struct state_conf*,
 		struct state_send*, struct state_recv*);
-typedef int (*probe_validate_packet_cb)(const struct ip *ip_hdr,
+typedef int (*probe_validate_packet_cb)(const void* packetbuf,
 		uint32_t len, uint32_t *src_ip, uint32_t *validation);
 
-typedef void (*probe_classify_packet_cb)(const u_char* packetbuf,
+typedef void (*probe_classify_packet_cb)(const void* packetbuf,
 		uint32_t len, fieldset_t*);
 
 typedef struct probe_module {

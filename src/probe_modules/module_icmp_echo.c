@@ -87,14 +87,21 @@ void icmp_echo_print_packet(FILE *fp, void* packet)
 
 
 
-int icmp_validate_packet(const struct ip *ip_hdr,
+int icmp_validate_packet(const void *packet,
 		uint32_t len, uint32_t *src_ip, uint32_t *validation)
 {
+	if (!ip_validate_packet(packet, len, src_ip, validation)) {
+		return 0;
+	}
+
+        struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
+ 	uint32_t ip_len = len - sizeof(struct ether_header);
+
 	if (ip_hdr->ip_p != IPPROTO_ICMP) {
 		return 0;
 	}
 
-	if (((uint32_t) 4 * ip_hdr->ip_hl + ICMP_SMALLEST_SIZE) > len) {
+	if (((uint32_t) 4 * ip_hdr->ip_hl + ICMP_SMALLEST_SIZE) > ip_len) {
 		// buffer not large enough to contain expected icmp header
 		return 0;
 	}
@@ -109,13 +116,13 @@ int icmp_validate_packet(const struct ip *ip_hdr,
 		// Should have 16B TimeExceeded/Dest_Unreachable header + original IP header
 		// + 1st 8B of original ICMP frame
 		if ((4*ip_hdr->ip_hl + ICMP_TIMXCEED_UNREACH_HEADER_SIZE +
-			sizeof(struct ip)) > len) {
+		     sizeof(struct ip)) > ip_len) {
 			return 0;
 		}
 
 		struct ip *ip_inner = (struct ip *)(icmp_h + 1);
 		if (((uint32_t) 4 * ip_hdr->ip_hl + ICMP_TIMXCEED_UNREACH_HEADER_SIZE +
-				4*ip_inner->ip_hl + 8 /*1st 8 bytes of original*/ ) > len) {
+		     4*ip_inner->ip_hl + 8 /*1st 8 bytes of original*/ ) > ip_len) {
 			return 0;
 		}
 
@@ -135,11 +142,13 @@ int icmp_validate_packet(const struct ip *ip_hdr,
 	return 1;
 }
 
-void icmp_echo_process_packet(const u_char *packet,
+void icmp_echo_process_packet(const void *packet,
 		__attribute__((unused)) uint32_t len, fieldset_t *fs)
 {
-	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
-	struct icmp *icmp_hdr = (struct icmp *) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
+	ip_process_packet(packet, len, fs);
+
+        struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
+ 	struct icmp *icmp_hdr = (struct icmp *) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
 	fs_add_uint64(fs, "type", icmp_hdr->icmp_type);
 	fs_add_uint64(fs, "code", icmp_hdr->icmp_code);
 	fs_add_uint64(fs, "icmp-id", ntohs(icmp_hdr->icmp_id));

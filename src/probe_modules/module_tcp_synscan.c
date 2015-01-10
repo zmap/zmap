@@ -83,14 +83,21 @@ void synscan_print_packet(FILE *fp, void* packet)
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
-int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
+int synscan_validate_packet(const void *packet, uint32_t len,
 		__attribute__((unused))uint32_t *src_ip,
 		uint32_t *validation)
 {
+	if (!ip_validate_packet(packet, len, src_ip, validation)) {
+		return 0;
+	}
+
+        struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
+ 	uint32_t ip_len = len - sizeof(struct ether_header);
+
 	if (ip_hdr->ip_p != IPPROTO_TCP) {
 		return 0;
 	}
-	if ((4*ip_hdr->ip_hl + sizeof(struct tcphdr)) > len) {
+	if ((4*ip_hdr->ip_hl + sizeof(struct tcphdr)) > ip_len) {
 		// buffer not large enough to contain expected tcp header
 		return 0;
 	}
@@ -112,11 +119,13 @@ int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	return 1;
 }
 
-void synscan_process_packet(const u_char *packet,
+void synscan_process_packet(const void *packet,
 		__attribute__((unused)) uint32_t len, fieldset_t *fs)
 {
-	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
-	struct tcphdr *tcp = (struct tcphdr*)((char *)ip_hdr
+	ip_process_packet(packet, len, fs);
+
+        struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
+ 	struct tcphdr *tcp = (struct tcphdr*)((char *)ip_hdr
 					+ 4*ip_hdr->ip_hl);
 
 	fs_add_uint64(fs, "sport", (uint64_t) ntohs(tcp->th_sport));
