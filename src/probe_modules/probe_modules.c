@@ -52,6 +52,27 @@ void print_probe_modules(void)
 	}
 }
 
+int ip_validate_packet(const void *packet, uint32_t len, uint32_t *src_ip,
+		         __attribute__((__unused__)) uint32_t *validation)
+{
+	if ((sizeof(struct ip) + sizeof(struct ether_header)) > len) {
+		// buffer not large enough to contain ethernet
+		// and ip headers. further action would overrun buf
+		return 0;
+	}
+
+	struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
+
+	*src_ip = ip_hdr->ip_src.s_addr;
+
+	return 1;
+}
+
+void ip_process_packet(const void *packet, __attribute__((unused)) uint32_t len, fieldset_t *fs)
+{
+	struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
+	fs_add_ip_fields(fs, ip_hdr);
+}
 
 void fs_add_ip_fields(fieldset_t *fs, struct ip *ip)
 {
