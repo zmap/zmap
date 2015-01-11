@@ -37,8 +37,7 @@ int csv_init(struct state_conf *conf, char **fields, int fieldlens)
 		}
 	} else {
 		file = stdout;
-		log_warn("csv", "no output file selected. "
-				   "will output results to stdout.");
+		log_info("csv", "no output file selected, will use stdout");
 	}
 	if (fieldlens > 1 && file) {
 		log_debug("csv", "more than one field, will add headers");
@@ -111,4 +110,3 @@ output_module_t module_csv_file = {
 	.process_ip = &csv_process,
 	.helptext = NULL
 };
-
