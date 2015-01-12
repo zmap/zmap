@@ -32,6 +32,7 @@ void print_macaddr(struct ifreq* i)
 #endif /* NDEBUG */
 
 #define IP_ADDR_LEN_STR 20
+#define MAC_ADDR_LEN_STR 18
 
 void fprintf_ip_header(FILE *fp, struct ip *iph)
 {
@@ -136,3 +137,12 @@ char *make_ip_str(uint32_t ip)
 	return retv;
 }
 
+// Note: caller must free return value
+char *make_mac_str(macaddr_t *mac)
+{
+	char *retv = xmalloc(MAC_ADDR_LEN_STR);
+	snprintf(retv, MAC_ADDR_LEN_STR, "%02x:%02x:%02x:%02x:%02x:%02x",
+		 (int) mac[0], (int) mac[1], (int) mac[2],
+		 (int) mac[3], (int) mac[4], (int) mac[5]);
+	return retv;
+}

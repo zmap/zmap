@@ -99,5 +99,6 @@ static __attribute__((unused)) inline uint16_t get_src_port(int num_ports,
 
 // Note: caller must free return value
 char *make_ip_str(uint32_t ip);
+char *make_mac_str(macaddr_t *mac);
 
 #endif
