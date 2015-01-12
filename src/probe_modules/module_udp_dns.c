@@ -381,7 +381,7 @@ static fielddef_t fields[] = {
 };
 
 probe_module_t module_udp_dns = {
-	.name = "udp_dns",
+	.name = "dns",
 	.packet_length = 1,
 	.pcap_filter = "udp || icmp",
 	.pcap_snaplen = 1500,			// TO BE CHANGED FOR EXSTIMATE REFLECTION SIZE

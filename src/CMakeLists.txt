@@ -53,6 +53,7 @@ SET(PROBE_MODULE_SOURCES
 	probe_modules/packet.c
 	probe_modules/probe_modules.c
 	probe_modules/module_ntp.c
+	probe_modules/module_upnp.c
 	)
 
 SET(SOURCES
