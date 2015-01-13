@@ -51,7 +51,7 @@ int ntp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 
 void ntp_process_packet(const void *packet, __attribute__((unused)) uint32_t len, fieldset_t *fs)
 {
-    ip_process_packet(packet, len, fs);
+    udp_process_packet(packet, len, fs);
 
     struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
     int *ptr;
@@ -63,14 +63,7 @@ void ntp_process_packet(const void *packet, __attribute__((unused)) uint32_t len
         struct udphdr *udp = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
         struct module_ntp *ntp = (struct module_ntp *) &udp[1];
         
-        fs_add_string(fs, "classification", (char*) "ntp", 0);
-        fs_add_uint64(fs, "success", 1);
-        fs_add_uint64(fs, "sport", ntohs(udp->uh_sport));
-        fs_add_uint64(fs, "dport", ntohs(udp->uh_dport));
-        fs_add_null(fs, "icmp_responder");
-        fs_add_null(fs, "icmp_type");
-        fs_add_null(fs, "icmp_code");
-        fs_add_null(fs, "icmp_unreach_str");
+        fs_modify_string(fs, "classification", (char*) "ntp", 0);
         
         ptr = (int *)ntp;
 
@@ -99,29 +92,6 @@ void ntp_process_packet(const void *packet, __attribute__((unused)) uint32_t len
         temp64 = *((uint64_t *)ptr + 40);
         fs_add_uint64(fs, "transmit_timestamp", temp64);
 
-
-    }else if(ip_hdr->ip_p ==  IPPROTO_ICMP){
-        struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr -> ip_hl + 4);
-        struct ip *ip_inner = (struct ip *) &icmp[1];
-		
-		fs_modify_string(fs, "saddr", make_ip_str(ip_inner->ip_dst.s_addr), 1);
-		fs_add_string(fs, "classification", (char*) "icmp-unreach", 0);
-		fs_add_uint64(fs, "success", 0);
-		fs_add_null(fs, "sport");
-		fs_add_null(fs, "dport");
-		fs_add_string(fs, "icmp_responder", make_ip_str(ip_hdr->ip_src.s_addr), 1);
-		fs_add_uint64(fs, "icmp_type", icmp->icmp_type);
-		fs_add_uint64(fs, "icmp_code", icmp->icmp_code);
-
-    }else{
-        fs_add_string(fs, "classification", (char *) "other", 0);
-        fs_add_uint64(fs, "success", 0);
-        fs_add_null(fs, "sport");
-        fs_add_null(fs, "dport");
-        fs_add_null(fs, "icmp_responder");
-        fs_add_null(fs, "icmp_type");
-        fs_add_null(fs, "icmp_code");
-        fs_add_null(fs, "icmp_unreach_str");
     }
 }
 
@@ -172,26 +142,11 @@ void ntp_print_packet(FILE *fp, const void *packet){
     struct ntphdr *ntph = (struct ntphdr *) &udph[1];
     fprintf(fp, "ntp { LI_VN_MODE: %u | stratum: %u | poll: %u }\n",
             ntph->LI_VN_MODE, ntph->stratum, ntph->poll);
-    fprintf(fp, "udp { source: %u | dest: %u | checksum: %u }\n",
-            ntohs(udph->uh_sport),
-            ntohs(udph->uh_dport),
-            ntohl(udph->uh_sum));
-    fprintf_ip_header(fp, iph);
-    fprintf_eth_header(fp, ethh);
-    
-    fprintf(fp, "-------------------------------------------------\n");
+    udp_print_packet(fp, packet);
 }
 
 static fielddefset_t fields = {
   .fielddefs = {
-    {.name = "classification", .type = "string", .desc = "packet classification"},
-    {.name = "success", .type = "int", .desc = "is  response considered success"},
-    {.name = "sport", .type = "int", .desc = "UDP source port"},
-    {.name = "dport", .type = "int", .desc = "UDP destination port"},
-    {.name = "icmp_responder", .type = "string", .desc = "Source IP of ICMP_UNREACH messages"},
-    {.name = "icmp_type", .type = "int", .desc = "icmp message type"},
-    {.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
-    {.name = "icmp_unreach_str", .type = "string", .desc = "for icmp_unreach responses, the string version of icmp_code "},
     {.name = "LI_VN_MODE", .type = "int", .desc = "leap indication, version number, mode"},
     {.name = "stratum", .type = "int", .desc = "stratum"},
     {.name = "poll", .type ="int", .desc = "poll"},
@@ -204,7 +159,7 @@ static fielddefset_t fields = {
     {.name = "receive_timestamp", .type = "int", .desc = "local time at which request arrvied at service host"},
     {.name = "transmit_timestamp", .type = "int", .desc = "local time which reply departed service host for client"},
   },
-  .len = 19
+  .len = 11
 };
 
 probe_module_t module_ntp = {
@@ -222,6 +177,7 @@ probe_module_t module_ntp = {
     .close = &udp_global_cleanup,
     .fieldsets = (fielddefset_t*[]){
         &ip_fields,
+	&udp_fields,
         &fields
     },
     .num_fieldsets = 2

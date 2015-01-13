@@ -769,7 +769,7 @@ udp_payload_template_t * udp_template_load(char *buf, unsigned int len)
 	return t;
 }
 
-static fielddefset_t fields = {
+fielddefset_t udp_fields = {
 	.fielddefs = {
 		{.name = "classification", .type="string", .desc = "packet classification"},
 		{.name = "success", .type="int", .desc = "is response considered success"},
@@ -804,7 +804,7 @@ probe_module_t module_udp = {
 	            "and templates with template:/path_to_template_file.",
 	.fieldsets = (fielddefset_t *[]){
 		&ip_fields,
-		&fields
+		&udp_fields
 	},
 	.num_fieldsets = 2
 };

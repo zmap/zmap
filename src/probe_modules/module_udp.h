@@ -75,3 +75,7 @@ int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len, s
 int udp_template_field_lookup(char *vname, udp_payload_field_t *c);
 
 udp_payload_template_t * udp_template_load(char *buf, unsigned int len);
+
+void udp_process_packet(const void *packet, uint32_t len, fieldset_t *fs);
+
+extern fielddefset_t udp_fields;
