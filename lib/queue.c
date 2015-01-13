@@ -34,8 +34,8 @@ void push_back(char* data, zqueue_t *my_queue)
                 my_queue->front = new_node;
                 my_queue->back = new_node;
         } else {
-                my_queue->back->next = (znode_t*)new_node;
-                new_node->prev = (znode_t*)my_queue->back;
+                my_queue->back->next = new_node;
+                new_node->prev = my_queue->back;
                 my_queue->back = new_node;
         }
         my_queue->size++;
@@ -99,7 +99,7 @@ void check_queue(zqueue_t *my_queue)
 {
         znode_t *temp = my_queue->front;
         while(temp){
-                temp = (znode_t*)temp->next;
+                temp = temp->next;
         }
 }
 
