@@ -181,15 +181,17 @@ void icmp_echo_process_packet(const void *packet,
 	}
 }
 
-fielddef_t fields[] = {
-	{.name="type", .type="int", .desc="icmp message type"},
-	{.name="code", .type="int", .desc="icmp message sub type code"},
-	{.name="icmp-id", .type="int", .desc="icmp id number"},
-	{.name="seq", .type="int", .desc="icmp sequence number"},
-	{.name="classification", .type="string", .desc="probe module classification"},
-	{.name="success", .type="int", .desc="did probe module classify response as success"}
+static fielddefset_t fields = {
+	.fielddefs = {
+		{.name="type", .type="int", .desc="icmp message type"},
+		{.name="code", .type="int", .desc="icmp message sub type code"},
+		{.name="icmp-id", .type="int", .desc="icmp id number"},
+		{.name="seq", .type="int", .desc="icmp sequence number"},
+		{.name="classification", .type="string", .desc="probe module classification"},
+		{.name="success", .type="int", .desc="did probe module classify response as success"}
+	},
+	.len = 6
 };
-
 
 probe_module_t module_icmp_echo = {
 	.name = "icmp_echoscan",
@@ -203,6 +205,10 @@ probe_module_t module_icmp_echo = {
 	.process_packet = &icmp_echo_process_packet,
 	.validate_packet = &icmp_validate_packet,
 	.close = NULL,
-	.fields = fields,
-	.numfields = 6};
+	.fieldsets = (fielddefset_t*[]){
+    		&ip_fields,
+		&fields
+	},
+	.num_fieldsets = 2
+};
 

@@ -143,14 +143,17 @@ void synscan_process_packet(const void *packet,
 	}
 }
 
-static fielddef_t fields[] = {
-	{.name = "sport",  .type = "int", .desc = "TCP source port"},
-	{.name = "dport",  .type = "int", .desc = "TCP destination port"},
-	{.name = "seqnum", .type = "int", .desc = "TCP sequence number"},
-	{.name = "acknum", .type = "int", .desc = "TCP acknowledgement number"},
-	{.name = "window", .type = "int", .desc = "TCP window"},
-	{.name = "classification", .type="string", .desc = "packet classification"},
-	{.name = "success", .type="int", .desc = "is response considered success"}
+static fielddefset_t fields = {
+	.fielddefs = {
+		{.name = "sport",  .type = "int", .desc = "TCP source port"},
+		{.name = "dport",  .type = "int", .desc = "TCP destination port"},
+		{.name = "seqnum", .type = "int", .desc = "TCP sequence number"},
+		{.name = "acknum", .type = "int", .desc = "TCP acknowledgement number"},
+		{.name = "window", .type = "int", .desc = "TCP window"},
+		{.name = "classification", .type="string", .desc = "packet classification"},
+		{.name = "success", .type="int", .desc = "is response considered success"}
+	},
+	.len = 7
 };
 
 probe_module_t module_tcp_synscan = {
@@ -171,6 +174,10 @@ probe_module_t module_tcp_synscan = {
 		"SYN-ACK packet is considered a success and a reset packet "
 		"is considered a failed response.",
 
-	.fields = fields,
-	.numfields = 7};
+	.fieldsets = (fielddefset_t*[]){
+		&ip_fields,
+		&fields
+	},
+	.num_fieldsets = 2
+};
 

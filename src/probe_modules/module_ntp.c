@@ -182,7 +182,8 @@ void ntp_print_packet(FILE *fp, const void *packet){
     fprintf(fp, "-------------------------------------------------\n");
 }
 
-static fielddef_t fields[] = {
+static fielddefset_t fields = {
+  .fielddefs = {
     {.name = "classification", .type = "string", .desc = "packet classification"},
     {.name = "success", .type = "int", .desc = "is  response considered success"},
     {.name = "sport", .type = "int", .desc = "UDP source port"},
@@ -202,7 +203,8 @@ static fielddef_t fields[] = {
     {.name = "originate_timestamp", .type = "int", .desc = "local time at which request deparated client for service"},
     {.name = "receive_timestamp", .type = "int", .desc = "local time at which request arrvied at service host"},
     {.name = "transmit_timestamp", .type = "int", .desc = "local time which reply departed service host for client"},
-
+  },
+  .len = 19
 };
 
 probe_module_t module_ntp = {
@@ -218,6 +220,9 @@ probe_module_t module_ntp = {
     .validate_packet = &udp_validate_packet,
     .process_packet = &ntp_process_packet,
     .close = &udp_global_cleanup,
-    .fields = fields,
-    .numfields = sizeof(fields)/sizeof(fields[0])
+    .fieldsets = (fielddefset_t*[]){
+        &ip_fields,
+        &fields
+    },
+    .num_fieldsets = 2
 };

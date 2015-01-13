@@ -769,17 +769,20 @@ udp_payload_template_t * udp_template_load(char *buf, unsigned int len)
 	return t;
 }
 
-static fielddef_t fields[] = {
-	{.name = "classification", .type="string", .desc = "packet classification"},
-	{.name = "success", .type="int", .desc = "is response considered success"},
-	{.name = "sport", .type = "int", .desc = "UDP source port"},
-	{.name = "dport", .type = "int", .desc = "UDP destination port"},
-	{.name = "icmp_responder", .type = "string", .desc = "Source IP of ICMP_UNREACH message"},
-	{.name = "icmp_type", .type = "int", .desc = "icmp message type"},
-	{.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
-	{.name = "icmp_unreach_str", .type = "string", .desc = "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"},
-	{.name = "udp_pkt_size", .type="int", .desc = "UDP packet length"},
-	{.name = "data", .type="binary", .desc = "UDP payload"}
+static fielddefset_t fields = {
+	.fielddefs = {
+		{.name = "classification", .type="string", .desc = "packet classification"},
+		{.name = "success", .type="int", .desc = "is response considered success"},
+		{.name = "sport", .type = "int", .desc = "UDP source port"},
+		{.name = "dport", .type = "int", .desc = "UDP destination port"},
+		{.name = "icmp_responder", .type = "string", .desc = "Source IP of ICMP_UNREACH message"},
+		{.name = "icmp_type", .type = "int", .desc = "icmp message type"},
+		{.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
+		{.name = "icmp_unreach_str", .type = "string", .desc = "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"},
+		{.name = "udp_pkt_size", .type="int", .desc = "UDP packet length"},
+		{.name = "data", .type="binary", .desc = "UDP payload"}
+	},
+	.len = 10
 };
 
 probe_module_t module_udp = {
@@ -799,6 +802,9 @@ probe_module_t module_udp = {
 	            "optionally be templated based on destination host. Specify"
 	            " packet file with --probe-args=file:/path_to_packet_file "
 	            "and templates with template:/path_to_template_file.",
-	.fields = fields,
-	.numfields = sizeof(fields)/sizeof(fields[0])
+	.fieldsets = (fielddefset_t *[]){
+		&ip_fields,
+		&fields
+	},
+	.num_fieldsets = 2
 };

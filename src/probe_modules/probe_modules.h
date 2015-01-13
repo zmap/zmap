@@ -43,8 +43,8 @@ typedef struct probe_module {
 	probe_validate_packet_cb validate_packet;
 	probe_classify_packet_cb process_packet;
 	probe_close_cb close;
-	fielddef_t *fields;
-	int numfields;
+	fielddefset_t **fieldsets;
+	int num_fieldsets;
 	const char *helptext;
 
 } probe_module_t;
@@ -58,10 +58,8 @@ void fs_add_ip_fields(fieldset_t *fs, struct ip *ip);
 void fs_add_system_fields(fieldset_t *fs, int is_repeat, int in_cooldown);
 void print_probe_modules(void);
 
-extern int ip_fields_len;
-extern int sys_fields_len;
-extern fielddef_t ip_fields[];
-extern fielddef_t sys_fields[];
+extern fielddefset_t ip_fields;
+extern fielddefset_t sys_fields;
 
 #endif // HEADER_PROBE_MODULES_H
 
