@@ -810,6 +810,10 @@ int main(int argc, char *argv[])
 		zsend.targets = zconf.max_targets;
 	}
 
+	if (zsend.targets == 0) {
+		log_fatal("zmap", "zero eligible addresses to scan");
+	}
+
 #ifndef PFRING
 	// Set the correct number of threads, default to num_cores - 1
 	if (args.sender_threads_given) {
@@ -823,8 +827,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (zconf.senders > zsend.targets) {
-		zconf.senders = max_int(zsend.targets, 1);
+	if (zconf.senders >= zsend.targets) {
+		zconf.senders = max_int(zsend.targets - 1, 1);
 	}
 #else
 	zconf.senders = args.sender_threads_arg;
