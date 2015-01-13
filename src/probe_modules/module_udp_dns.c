@@ -364,20 +364,23 @@ int udp_dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	return 1;
 }
 
-static fielddef_t fields[] = {
-	{.name = "classification", .type="string", .desc = "packet classification"},
-	{.name = "success", .type="int", .desc = "is response considered success"},
-	{.name = "sport",  .type = "int", .desc = "UDP source port"},
-	{.name = "dport",  .type = "int", .desc = "UDP destination port"},
-	{.name = "icmp_responder", .type = "string", .desc = "Source IP of ICMP_UNREACH message"},
-	{.name = "icmp_type", .type = "int", .desc = "icmp message type"},
-	{.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
-	{.name = "icmp_unreach_str", .type = "string", .desc = "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"},
-	{.name = "app_response_str", .type = "string", .desc = "for DNS responses, the response code meaning of dns answer pkt"},
-	{.name = "app_response_code", .type = "int", .desc = "for DNS responses, the RCODE of dns answer pkt"},
-	{.name = "udp_pkt_size", .type="int", .desc = "UDP packet lenght"},
-	{.name = "data", .type="binary", .desc = "UDP payload"},
-	{.name = "addrs", .type="string", .desc = "DNS answers"}
+static fielddefset_t fields = {
+	.fielddefs = {
+		{.name = "classification", .type="string", .desc = "packet classification"},
+		{.name = "success", .type="int", .desc = "is response considered success"},
+		{.name = "sport",  .type = "int", .desc = "UDP source port"},
+		{.name = "dport",  .type = "int", .desc = "UDP destination port"},
+		{.name = "icmp_responder", .type = "string", .desc = "Source IP of ICMP_UNREACH message"},
+		{.name = "icmp_type", .type = "int", .desc = "icmp message type"},
+		{.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
+		{.name = "icmp_unreach_str", .type = "string", .desc = "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"},
+		{.name = "app_response_str", .type = "string", .desc = "for DNS responses, the response code meaning of dns answer pkt"},
+		{.name = "app_response_code", .type = "int", .desc = "for DNS responses, the RCODE of dns answer pkt"},
+		{.name = "udp_pkt_size", .type="int", .desc = "UDP packet lenght"},
+		{.name = "data", .type="binary", .desc = "UDP payload"},
+		{.name = "addrs", .type="string", .desc = "DNS answers"}
+	},
+	.len = 13
 };
 
 probe_module_t module_udp_dns = {
@@ -393,6 +396,9 @@ probe_module_t module_udp_dns = {
 	.validate_packet = &udp_dns_validate_packet,
 	.process_packet = &udp_dns_process_packet,
 	.close = &udp_dns_global_cleanup,
-	.fields = fields,
-	.numfields = sizeof(fields)/sizeof(fields[0])
+	.fieldsets = (fielddefset_t *[]){
+		&ip_fields,
+		&fields
+	},
+	.num_fieldsets = 2
 };

@@ -240,27 +240,30 @@ cleanup:
         }
 }
 
-static fielddef_t fields[] = {
-        {.name = "classification", .type="string", .desc = "packet classification"},
-        {.name = "success", .type="int", .desc = "is response considered success"},
+static fielddefset_t fields = {
+	.fielddefs = {
+	        {.name = "classification", .type="string", .desc = "packet classification"},
+	        {.name = "success", .type="int", .desc = "is response considered success"},
 
-        {.name = "server", .type="string", .desc = "UPnP server"},
-        {.name = "location", .type="string", .desc = "UPnP location"},
-        {.name = "usn", .type="string", .desc = "UPnP usn"},
-        {.name = "st", .type="string", .desc = "UPnP st"},
-        {.name = "cache-control", .type="string", .desc = "UPnP cache-control"},
-        {.name = "x-user-agent", .type="string", .desc = "UPnP x-user-agent"},
-        {.name = "agent", .type="string", .desc = "UPnP agent"},
-        {.name = "date", .type="string", .desc = "UPnP date"},
+		{.name = "server", .type="string", .desc = "UPnP server"},
+        	{.name = "location", .type="string", .desc = "UPnP location"},
+        	{.name = "usn", .type="string", .desc = "UPnP usn"},
+        	{.name = "st", .type="string", .desc = "UPnP st"},
+        	{.name = "cache-control", .type="string", .desc = "UPnP cache-control"},
+        	{.name = "x-user-agent", .type="string", .desc = "UPnP x-user-agent"},
+        	{.name = "agent", .type="string", .desc = "UPnP agent"},
+        	{.name = "date", .type="string", .desc = "UPnP date"},
 
-        {.name = "sport",  .type = "int", .desc = "UDP source port"},
-        {.name = "dport",  .type = "int", .desc = "UDP destination port"},
-        {.name = "icmp_responder", .type = "string", .desc = "Source IP of ICMP_UNREACH message"},
-        {.name = "icmp_type", .type = "int", .desc = "icmp message type"},
-        {.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
-        {.name = "icmp_unreach_str", .type = "string", .desc = "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"},
+	        {.name = "sport",  .type = "int", .desc = "UDP source port"},
+        	{.name = "dport",  .type = "int", .desc = "UDP destination port"},
+        	{.name = "icmp_responder", .type = "string", .desc = "Source IP of ICMP_UNREACH message"},
+        	{.name = "icmp_type", .type = "int", .desc = "icmp message type"},
+        	{.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
+        	{.name = "icmp_unreach_str", .type = "string", .desc = "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"},
 
-        {.name = "data", .type="binary", .desc = "UDP payload"}
+        	{.name = "data", .type="binary", .desc = "UDP payload"}
+	},
+	.len = 17
 };
 
 probe_module_t module_upnp = {
@@ -281,5 +284,9 @@ probe_module_t module_upnp = {
         "SYN-ACK packet is considered a success and a reset packet "
         "is considered a failed response.",
 
-    .fields = fields,
-    .numfields = 17};
+    .fieldsets = (fielddefset_t *[]){
+	&ip_fields,
+	&fields
+    },
+    .num_fieldsets = 2
+};
