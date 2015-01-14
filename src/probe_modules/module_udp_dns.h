@@ -69,12 +69,12 @@ typedef struct __attribute__((packed)){
 #define DNS_RCODE_QTYPENOTIMPL	4	/* Response code NO ERROR */
 #define DNS_RCODE_QRYREFUSED	5	/* Response code NO ERROR */
 
-void udp_dns_print_packet(FILE *fp, void* packet);
+void udp_dns_print_packet(FILE *fp, const void* packet);
 
 int udp_dns_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 		uint32_t *validation, int probe_num, void *arg);
 
-int udp_dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
+int udp_dns_validate_packet(const void *packet, uint32_t len,
 		__attribute__((unused))uint32_t *src_ip, uint32_t *validation);
 
 extern const char *udp_unreach_strings[];

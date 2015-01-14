@@ -60,11 +60,12 @@ int upnp_init_perthread(void* buf, macaddr_t *src,
 }
 
 
-void upnp_process_packet(const u_char *packet,
+void upnp_process_packet(const void *packet,
         __attribute__((unused)) uint32_t len, fieldset_t *fs)
 {
 
-    struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
+        struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
+
         if (ip_hdr->ip_p == IPPROTO_UDP) {
                 struct udphdr *udp = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
 

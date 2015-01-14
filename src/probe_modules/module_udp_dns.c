@@ -241,7 +241,7 @@ int udp_dns_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 	return EXIT_SUCCESS;
 }
 
-void udp_dns_print_packet(FILE *fp, void* packet) {
+void udp_dns_print_packet(FILE *fp, const void* packet) {
 	struct ether_header *ethh = (struct ether_header *) packet;
 	struct ip *iph = (struct ip *) &ethh[1];
 	struct udphdr *udph  = (struct udphdr*) (iph + 4*iph->ip_hl);
@@ -254,8 +254,8 @@ void udp_dns_print_packet(FILE *fp, void* packet) {
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
-void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *fs) {
-	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
+void udp_dns_process_packet(const void *packet, UNUSED uint32_t len, fieldset_t *fs) {
+        struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		struct udphdr *udp_hdr = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
 		struct dnshdr *dns_hdr = (struct dnshdr *) ((char *) udp_hdr + 8);
@@ -315,11 +315,17 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 	}
 }
 
-int udp_dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
+int udp_dns_validate_packet(const void *packet, uint32_t len,
         __attribute__((unused))uint32_t *src_ip, uint32_t *validation) {
+    if (!ip_validate_packet(packet, len, src_ip, validation)) {
+      return 0;
+    }
+
+    struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
+    uint32_t ip_len = len - sizeof(struct ether_header);
     uint16_t dport, sport;
     if (ip_hdr->ip_p == IPPROTO_UDP) {
-        if ((4*ip_hdr->ip_hl + sizeof(struct udphdr)) > len) {
+        if ((4*ip_hdr->ip_hl + sizeof(struct udphdr)) > ip_len) {
             // buffer not large enough to contain expected udp header
             return 0;
         }
@@ -332,7 +338,7 @@ int udp_dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
         // IP( ICMP( IP( UDP ) ) ) for a destination unreach
         uint32_t min_len = 4*ip_hdr->ip_hl + sizeof(struct icmp)
                 + sizeof(struct ip) + sizeof(struct udphdr);
-        if (len < min_len) {
+        if (ip_len < min_len) {
             // Not enough information for us to validate
             return 0;
         }
@@ -344,7 +350,7 @@ int udp_dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
 
         struct ip *ip_inner = (struct ip*) &icmp[1];
         // Now we know the actual inner ip length, we should recheck the buffer
-        if (len < 4*ip_inner->ip_hl - sizeof(struct ip) + min_len) {
+        if (ip_len < 4*ip_inner->ip_hl - sizeof(struct ip) + min_len) {
             return 0;
         }
         // This is the packet we sent
