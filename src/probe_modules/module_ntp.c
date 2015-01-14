@@ -97,7 +97,7 @@ void ntp_process_packet(const u_char *packet, __attribute__((unused)) uint32_t l
                 fs_add_uint64(fs, "transmit_timestamp", temp64);
 
 
-        }else if(ip_hdr->ip_p ==  IPPROTO_ICMP){
+        } else if(ip_hdr->ip_p ==  IPPROTO_ICMP) {
                 struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr -> ip_hl + 4);
                 struct ip *ip_inner = (struct ip *) &icmp[1];
 
@@ -109,8 +109,22 @@ void ntp_process_packet(const u_char *packet, __attribute__((unused)) uint32_t l
                 fs_add_string(fs, "icmp_responder", make_ip_str(ip_hdr->ip_src.s_addr), 1);
                 fs_add_uint64(fs, "icmp_type", icmp->icmp_type);
                 fs_add_uint64(fs, "icmp_code", icmp->icmp_code);
+                fs_add_null(fs, "icmp_unreach_str");
 
-        }else{
+                fs_add_null(fs, "LI_VN_MODE");
+                fs_add_null(fs, "stratum");
+                fs_add_null(fs, "poll");
+                fs_add_null(fs, "precision");
+                fs_add_null(fs, "root_delay");
+                fs_add_null(fs, "root_dispersion");
+                fs_add_null(fs, "reference_clock_identifier");
+                fs_add_null(fs, "reference_timestamp");
+                fs_add_null(fs, "originate_timestap");
+                fs_add_null(fs, "receive_timestamp");
+                fs_add_null(fs, "transmit_timestamp");
+
+
+        } else {
                 fs_add_string(fs, "classification", (char *) "other", 0);
                 fs_add_uint64(fs, "success", 0);
                 fs_add_null(fs, "sport");
@@ -119,6 +133,17 @@ void ntp_process_packet(const u_char *packet, __attribute__((unused)) uint32_t l
                 fs_add_null(fs, "icmp_type");
                 fs_add_null(fs, "icmp_code");
                 fs_add_null(fs, "icmp_unreach_str");
+                fs_add_null(fs, "LI_VN_MODE");
+                fs_add_null(fs, "stratum");
+                fs_add_null(fs, "poll");
+                fs_add_null(fs, "precision");
+                fs_add_null(fs, "root_delay");
+                fs_add_null(fs, "root_dispersion");
+                fs_add_null(fs, "reference_clock_identifier");
+                fs_add_null(fs, "reference_timestamp");
+                fs_add_null(fs, "originate_timestap");
+                fs_add_null(fs, "receive_timestamp");
+                fs_add_null(fs, "transmit_timestamp");
         }
 }
 
