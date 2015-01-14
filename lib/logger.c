@@ -184,7 +184,20 @@ extern int log_trace(const char *name, const char *message, ...) {
 	va_start(va, message);
 	int ret = LogLogVA(ZLOG_TRACE, name, message, va);
 	va_end(va);
+
+	char *prefixed = xmalloc(strlen(name) + strlen(message) + 3);
+	strcpy(prefixed, name);
+	strcat(prefixed, ": ");
+	strcat(prefixed, message);
+
+	va_start(va, message);
+	vsyslog(LOG_MAKEPRI(LOG_USER, LOG_DEBUG), prefixed, va);
+	va_end(va);
+
+	free(prefixed);
+
 	return ret;
+
 }
 
 int log_init(FILE *stream, enum LogLevel level,
