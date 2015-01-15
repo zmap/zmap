@@ -20,6 +20,7 @@
 #include "../../lib/includes.h"
 #include "../../lib/random.h"
 #include "probe_modules.h"
+#include "module_udp.h"
 #include "packet.h"
 #include "logger.h"
 #include "module_udp_dns.h"
@@ -64,7 +65,18 @@ const char *udp_dns_response_strings[] = {
         "DNS server failure",
         "DNS domain name error",
         "DNS query type not implemented",
-        "DNS query refused"
+        "DNS query refused",
+	"Reserved 6",
+	"Reserved 7",
+	"Reserved 8",
+	"Reserved 9",
+	"Reserved 10",
+	"Reserved 11",
+	"Resevered 12",
+	"Resevered 13",
+	"Resevered 14",
+	"Resevered 15"
+
 };
 
 static int num_ports;
@@ -79,10 +91,10 @@ void udp_dns_set_num_ports(int x) {
 void convert_to_dns_name_format(unsigned char* dns,unsigned char* host) {
 	int lock = 0;
 	strcat((char*)host,".");
-	for(int i = 0; i < (int) strlen((char*)host); i++) {
+	for(int i = 0; i < ((int) strlen((char*)host)); i++) {
 		if(host[i]=='.') {
 			*dns++=i-lock;
-			for(;lock<i;lock++) {
+			for(lock;lock<i;lock++) {
 				*dns++=host[lock];
 			}
 			lock++;
@@ -129,6 +141,7 @@ char* parse_dns_ip_results(struct dnshdr* dns_hdr) {
 }
 
 static int udp_dns_global_initialize(struct state_conf *conf) {
+	fprintf(stderr, "in global init\n");
 	char *args, *c;
 	int dns_domain_len;
 	unsigned char* dns_domain;
@@ -146,7 +159,7 @@ static int udp_dns_global_initialize(struct state_conf *conf) {
 	if (! args) exit(1);
 
 	c = strchr(args, ':');
-	if (! c) {
+	if (!c) {
 		free(args);
 		free(udp_send_msg);
 		log_fatal("udp_dns", "unknown UDP DNS probe specification (expected "
@@ -364,10 +377,11 @@ int udp_dns_validate_packet(const void *packet, uint32_t len,
     if (dport != zconf.target_port) {
             return 0;
     }
-	if (!check_dst_port(sport, num_ports, validation)) {
-		return 0;
-	}
-	return 1;
+    if (!check_dst_port(sport, num_ports, validation)) {
+	    return 0;
+    }
+
+    return 1;
 }
 
 static fielddefset_t fields = {
@@ -390,18 +404,19 @@ static fielddefset_t fields = {
 };
 
 probe_module_t module_udp_dns = {
+	//changed gloabl initialize, make_packet, validate_packet, global cleanup
 	.name = "dns",
 	.packet_length = 1,
 	.pcap_filter = "udp || icmp",
 	.pcap_snaplen = 1500,			// TO BE CHANGED FOR EXSTIMATE REFLECTION SIZE
 	.port_args = 1,
 	.thread_initialize = &udp_dns_init_perthread,
-	.global_initialize = &udp_dns_global_initialize,
-	.make_packet = &udp_dns_make_packet,
+	.global_initialize = &udp_global_initialize,
+	.make_packet = &udp_make_packet,
 	.print_packet = &udp_dns_print_packet,
-	.validate_packet = &udp_dns_validate_packet,
+	.validate_packet = &udp_validate_packet,
 	.process_packet = &udp_dns_process_packet,
-	.close = &udp_dns_global_cleanup,
+	.close = &udp_global_cleanup,
 	.fieldsets = (fielddefset_t *[]){
 		&ip_fields,
 		&fields
