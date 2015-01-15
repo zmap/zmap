@@ -233,7 +233,7 @@ int get_default_gw(struct in_addr *gw, char *iface)
 	if (strcmp(iface, _iface) != 0) {
 		log_fatal("get-gateway", "interface specified (%s) does not match "
 				"the interface of the default gateway (%s). You will need "
-				"to manually specify the MAC address of your dateway.",
+				"to manually specify the MAC address of your gateway.",
 				iface, _iface);
 	}
 	return EXIT_SUCCESS;
