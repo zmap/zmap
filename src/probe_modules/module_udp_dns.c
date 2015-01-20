@@ -1,5 +1,5 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan
+  ZMap Copyright 2013 Regents of the University of Michigan
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
@@ -20,7 +20,6 @@
 #include "../../lib/includes.h"
 #include "../../lib/random.h"
 #include "probe_modules.h"
-#include "module_udp.h"
 #include "packet.h"
 #include "logger.h"
 #include "module_udp_dns.h"
@@ -66,17 +65,16 @@ const char *udp_dns_response_strings[] = {
         "DNS domain name error",
         "DNS query type not implemented",
         "DNS query refused",
-	"Reserved 6",
-	"Reserved 7",
-	"Reserved 8",
-	"Reserved 9",
-	"Reserved 10",
-	"Reserved 11",
-	"Resevered 12",
-	"Resevered 13",
-	"Resevered 14",
-	"Resevered 15"
-
+	"DNS Reserved 6",
+	"DNS Reserved 7",
+	"DNS Reserved 8",
+	"DNS Reserved 9",
+	"DNS Reserved 10",
+	"DNS Reserved 11",
+	"DNS Resevered 12",
+	"DNS Resevered 13",
+	"DNS Resevered 14",
+	"DNS Resevered 15"
 };
 
 static int num_ports;
@@ -94,7 +92,7 @@ void convert_to_dns_name_format(unsigned char* dns,unsigned char* host) {
 	for(int i = 0; i < ((int) strlen((char*)host)); i++) {
 		if(host[i]=='.') {
 			*dns++=i-lock;
-			for(lock;lock<i;lock++) {
+			for(;lock<i;lock++) {
 				*dns++=host[lock];
 			}
 			lock++;
@@ -106,37 +104,74 @@ void convert_to_dns_name_format(unsigned char* dns,unsigned char* host) {
 // allocates and returns a string representation of a hexadecimal IP
 // hexadecimal ip must be passed in network byte order
 char* hex_to_ip(void* hex_ip) {
+
+	if(!hex_ip){
+		fprintf(stderr, "Im null!\n");
+		return NULL;
+	}
 	char* addrstr = malloc(INET_ADDRSTRLEN);
-	if (inet_ntop(AF_INET, hex_ip, addrstr, INET_ADDRSTRLEN) == 0) {
+	if(addrstr == NULL){
+		fprintf(stderr, "ERROR\n");
+		exit(1);
+	}
+	//fprintf(stderr, "hex_ip %s\n", (char*)hex_ip);
+	
+	//memcpy(addrstr, hex_ip, sizeof(&hex_ip));
+	if(inet_ntop(AF_INET, (struct sockaddr_in *)hex_ip, addrstr, INET_ADDRSTRLEN) == NULL){
+		fprintf(stderr, "WHYYY\n");
 		free(addrstr);
 		return NULL;
 	}
+	fprintf(stderr, "addstr in hex_to_ip %s\n", addrstr);
 	return addrstr;
 }
 
 char* parse_dns_ip_results(struct dnshdr* dns_hdr) {
 	// parse through dns_query since it can be of variable length
+	fprintf(stderr, "parse dns i[\n");
 	char* dns_ans_start = ((char*)dns_hdr + sizeof(struct dnshdr));
 	while(*dns_ans_start++);
 	// skip  qtype and qclass octets
 	dns_ans_start += 4;
 	// number of answers * 16 chars each (each followed by space or null, and quotes)
-	char* ip_addrs = malloc(ntohs(dns_hdr->ancount)*INET_ADDRSTRLEN + 2);
+	size_t size = ntohs(dns_hdr->ancount)*INET_ADDRSTRLEN+2;
+	char* ip_addrs = malloc(size);
+
 	// should always be 4 for ipv4 addrs, but include in case of unexpected response
 	uint16_t prev_data_len = 4;
 	int output_pos = 0;
+	fprintf(stderr, "ntohs %i\n", ntohs(dns_hdr->ancount));
+	if(ntohs(dns_hdr->ancount) > 1000){
+		return NULL;
+	}
 	for (int i = 0; i < ntohs(dns_hdr->ancount); i++) {
-		dnsans* dns_ans = (dnsans *) ((char*) dns_ans_start + (12 + prev_data_len) * i);
+		fprintf(stderr, "beginning of for loop\n");
+		//dnsans* dns_ans = (dnsans *) ((char*) dns_ans_start + (12 + prev_data_len)*i);
+		dnsans* dns_ans = (dnsans *) ((char*) dns_ans_start + (12)*i);
+		fprintf(stderr, "got dns_ans\n");
+		if(!dns_ans->addr){
+			fprintf(stderr, "im null!\n");
+			prev_data_len = ntohs(dns_ans->length);
+			fprintf(stderr, "prev data len %i\n", ntohs(dns_ans->length));
+			continue;
+		}
+		fprintf(stderr, "about to call hex_to_ip\n");
 		char* ip_addr = hex_to_ip(&dns_ans->addr);
+		fprintf(stderr, "ended hex_to_ip\n");
 		if (!ip_addr) {
+			fprintf(stderr, "Continuing\n");
+			prev_data_len = ntohs(dns_ans->length);
+			fprintf(stderr, "prev data len %i\n", ntohs(dns_ans->length));
 			continue;
 		}
 		output_pos += i == 0 ? sprintf(ip_addrs + output_pos, "\"%s", ip_addr) : sprintf(ip_addrs + output_pos, " %s", ip_addr);
 		prev_data_len = ntohs(dns_ans->length);
+		fprintf(stderr, "prev data len %i\n", ntohs(dns_ans->length));
 	}
 	if (output_pos) {
 		sprintf(ip_addrs + output_pos, "\"");
 	}
+	fprintf(stderr, "out ofparse dns i[\n");
 	return ip_addrs;
 }
 
@@ -268,8 +303,11 @@ void udp_dns_print_packet(FILE *fp, void* packet) {
 }
 
 void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *fs) {
+	fprintf(stderr, "print packet\n");
 	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
+	fprintf(stderr, "got ip_hdr\n");
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
+		fprintf(stderr, "in first if\n");
 		struct udphdr *udp_hdr = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
 		struct dnshdr *dns_hdr = (struct dnshdr *) ((char *) udp_hdr + 8);
 		fs_add_string(fs, "classification", (char*) "udp_dns", 0);
@@ -285,11 +323,24 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 		fs_add_string(fs, "app_response_str", (char *) udp_dns_response_strings[dns_hdr->rcode], 0);
 		fs_add_uint64(fs, "app_response_code",dns_hdr->rcode);
 		fs_add_uint64(fs, "udp_pkt_size", ntohs(udp_hdr->uh_ulen));
-		fs_add_binary(fs, "data", (ntohs(udp_hdr->uh_ulen) - sizeof(struct udphdr)), (void*) &udp_hdr[1], 0);
+		fprintf(stderr, "udp_pkt_size %i\n", ntohs(udp_hdr->uh_ulen));
+		fprintf(stderr, "udp hdr %i\n", sizeof(struct udphdr));
+		if(ntohs(udp_hdr->uh_ulen) == 0){
+			fs_add_null(fs, "data");
+		}else{
+
+			fs_add_binary(fs, "data", (ntohs(udp_hdr->uh_ulen) - sizeof(struct udphdr)), (void*) &udp_hdr[1], 0);
+		}
 
 		char* ip_addrs = parse_dns_ip_results(dns_hdr);
-		// printf("addrs: %s\n", ip_addrs);
-		fs_add_string(fs, "addrs", ip_addrs, 1);
+		fprintf(stderr, "addrs: %s\n", ip_addrs);
+		if(!ip_addrs){
+			fprintf(stderr, "addrs is null\n");
+			fs_add_null(fs, "addrs");	
+		}else{
+			fprintf(stderr, "string\n");
+			fs_add_string(fs, "addrs", ip_addrs, 1);
+		}
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
 		struct ip *ip_inner = (struct ip *) &icmp[1];
@@ -312,6 +363,7 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 		fs_add_null(fs, "app_response_code");
 		fs_add_null(fs, "udp_pkt_size");
 		fs_add_null(fs, "data");
+		fs_add_null(fs, "addrs");
 	} else {
 		fs_add_string(fs, "classification", (char *) "other", 0);
 		fs_add_uint64(fs, "success", 0);
@@ -325,6 +377,7 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 		fs_add_null(fs, "app_response_code");
 		fs_add_null(fs, "udp_pkt_size");
 		fs_add_null(fs, "data");
+		fs_add_null(fs, "addrs");
 	}
 }
 
@@ -395,19 +448,18 @@ static fielddef_t fields[] = {
 };
 
 probe_module_t module_udp_dns = {
-	//changed gloabl initialize, make_packet, validate_packet, global cleanup
 	.name = "dns",
 	.packet_length = 1,
 	.pcap_filter = "udp || icmp",
 	.pcap_snaplen = 1500,			// TO BE CHANGED FOR EXSTIMATE REFLECTION SIZE
 	.port_args = 1,
 	.thread_initialize = &udp_dns_init_perthread,
-	.global_initialize = &udp_global_initialize,
-	.make_packet = &udp_make_packet,
+	.global_initialize = &udp_dns_global_initialize,
+	.make_packet = &udp_dns_make_packet,
 	.print_packet = &udp_dns_print_packet,
-	.validate_packet = &udp_validate_packet,
+	.validate_packet = &udp_dns_validate_packet,
 	.process_packet = &udp_dns_process_packet,
-	.close = &udp_global_cleanup,
+	.close = &udp_dns_global_cleanup,
 	.fields = fields,
 	.numfields = sizeof(fields)/sizeof(fields[0])
 };
