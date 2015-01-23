@@ -232,6 +232,7 @@ void *process_queue(void* my_q)
 
 		if (!input_csv) {
 			fprintf(stdout, "%s", temp->data);
+			fflush(stdout);
 		}else if (find_success_only) {
 			find_successful_IP(temp->data);
 		}else {
@@ -346,9 +347,11 @@ void find_IP(char* my_string)
 			strncpy(temp, found, length);
 			temp[length] = '\0';
 			fprintf(stdout, "%s\n", temp);
+			fflush(stdout);
 			return;
 		} else if(i == ip_field) {
 			fprintf(stdout, "%s\n", found);
+			fflush(stdout);
 			return;
 		}
 		if(new_found) found = new_found+1;
@@ -356,6 +359,7 @@ void find_IP(char* my_string)
 
 	}
 	fprintf(stdout, "%s\n", temp);
+	fflush(stdout);
 }
 
 void write_out_to_file(char* data)
