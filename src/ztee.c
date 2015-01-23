@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
 	}
 
 	output_filename = args.inputs[0];
-	output_file = fopen(output_filename, "w");
+	output_file = (FILE *)fopen(output_filename, "w");
 	if (!output_file) {
 		log_fatal("ztee", "Could not open output file %s, %s",
 				output_filename, strerror(errno));
@@ -171,7 +171,6 @@ int main(int argc, char *argv[])
 		print_thread_error(read);
 		exit(1);
 	}
-
 	int returned = input_is_csv(my_queue);
 
 	if (returned) {
@@ -207,7 +206,6 @@ int main(int argc, char *argv[])
 void *process_queue(void* my_q)
 {
 	zqueue_t *my_queue = (zqueue_t *)my_q;
-
 	while (!is_empty(my_queue) || !done){
 
 		znode_t* temp = malloc(sizeof(znode_t));
@@ -239,7 +237,9 @@ void *process_queue(void* my_q)
 		}else {
 			find_IP(temp->data);
 		}
-		write_out_to_file(temp->data);
+		//write_out_to_file(temp->data);
+		fprintf(output_file, "%s", temp->data);
+		fflush(output_file);
 		free(temp);
 	}
 	process_done = 1;
@@ -426,7 +426,8 @@ int input_is_csv(zqueue_t *my_queue)
 	//only needs to be run one time and on the first znode_t
 	//because the first znode_t will have the different fields or
 	//just the ip address`
-	while (is_empty(my_queue) && !done);
+//	while (is_empty(my_queue) && !done);
+
 	if (is_empty(my_queue) && done) {
 		return 1;
 	}
