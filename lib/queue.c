@@ -11,7 +11,7 @@ pthread_cond_t queue_empty = PTHREAD_COND_INITIALIZER;
 zqueue_t* queue_init()
 {
         //call with queue_init(&zqueue_t);
-        zqueue_t *p = malloc(sizeof(zqueue_t));
+        zqueue_t *p = xmalloc(sizeof(zqueue_t));
         p->front = NULL;
         p->back = NULL;
         p->size = 0;
@@ -72,7 +72,7 @@ znode_t* get_front(zqueue_t *queue)
                 pthread_cond_wait(&queue_empty, &queue_lock);
         }
 
-        znode_t *temp = malloc(sizeof(znode_t));
+        znode_t *temp = xmalloc(sizeof(znode_t));
         temp = queue->front;
         pthread_mutex_unlock(&queue_lock);
         return temp;
@@ -86,7 +86,7 @@ znode_t* get_back(zqueue_t *queue)
                 pthread_cond_wait(&queue_empty, &queue_lock);
         }
 
-        znode_t *temp = malloc(sizeof(znode_t));
+        znode_t *temp = xmalloc(sizeof(znode_t));
         temp = queue->back;
         pthread_mutex_unlock(&queue_lock);
         return temp;
