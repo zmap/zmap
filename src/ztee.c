@@ -13,6 +13,7 @@
 #include <errno.h>
 #include <getopt.h>
 #include <pthread.h>
+#include <unistd.h>
 
 #include "../lib/lockfd.h"
 #include "../lib/logger.h"
@@ -62,8 +63,6 @@ pthread_t threads[3];
 //if zqueue_t is empty and read_in is finished, then
 //it exits
 void *process_queue (void* my_q);
-
-void print_error () __attribute__ ((noreturn));
 
 //uses fgets to read from stdin and add it to the zqueue_t
 void *read_in (void* my_q);
@@ -246,14 +245,6 @@ void *process_queue(void* my_q)
 	fflush(output_file);
 	fclose(output_file);
 	return NULL;
-}
-
-void print_error()
-{
-	//includes incorrect output file format
-	//
-	printf("Problem with file format\n");
-	exit(0);
 }
 
 void *read_in(void* my_q)
@@ -462,7 +453,7 @@ void output_file_is_csv()
 	const char *csv = "csv\n";
 	const char *json = "jso\n";
 	if(!strncmp(end_of_file, csv, 3) && !strncmp(end_of_file, json, 3)){
-		print_error();
+		log_fatal("ztee", "Invalid output format");
 	}
 	if(!strncmp(end_of_file, csv, 3)) output_csv = 1;
 	if(!strncmp(end_of_file, json, 3)) output_csv = 0;
