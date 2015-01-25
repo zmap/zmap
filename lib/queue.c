@@ -99,14 +99,6 @@ void delete_queue(zqueue_t *queue)
         }
 }
 
-void check_queue(zqueue_t *queue)
-{
-        znode_t *temp = queue->front;
-        while(temp){
-                temp = temp->next;
-        }
-}
-
 int get_size(zqueue_t *queue)
 {
         int buffer_size;

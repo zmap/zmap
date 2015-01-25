@@ -211,7 +211,6 @@ void *process_queue(void* my_q)
 		znode_t* temp = malloc(sizeof(znode_t));
 
 		pthread_mutex_lock(&lock_queue);
-		check_queue(my_queue);
 		while (!done && is_empty(my_queue)) {
 			pthread_cond_wait(&read_in_waiting, &lock_queue);
 		}
@@ -270,7 +269,6 @@ void *read_in(void* my_q)
 	while (getline(&input, &length, stdin) > 0) {
 		pthread_mutex_lock(&lock_queue);
 		push_back(input, my_queue);
-		check_queue(my_queue);
 		pthread_mutex_unlock(&lock_queue);
 
 		pthread_mutex_lock(&queue_size_lock);

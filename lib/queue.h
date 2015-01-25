@@ -25,7 +25,6 @@ znode_t* pop_front (zqueue_t *queue);
 znode_t* get_front (zqueue_t *queue);
 znode_t* get_back (zqueue_t *queue);
 void delete_queue (zqueue_t *queue);
-void check_queue (zqueue_t *queue);
 int get_size (zqueue_t *queue);
 
 #endif /* ZMAP_QUEUE_H */
