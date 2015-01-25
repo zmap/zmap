@@ -23,10 +23,26 @@
 
 #include "topt.h"
 
-char *output_filename = NULL;
-char *monitor_filename = NULL;
-FILE *output_file = NULL;
-FILE *status_updates_file = NULL;
+typedef enum file_format { FORMAT_CSV, FORMAT_JSON } format_t;
+
+typedef struct ztee_conf {
+	// Files
+	char *output_filename;
+	char *status_updates_filename;
+	FILE *output_file;
+	FILE *status_updates_file;
+
+	// Input formats
+	format_t in_format;
+	format_t out_format;
+
+	// Monitor config
+	int monitor;
+
+} ztee_conf_t;
+
+static ztee_conf_t tconf;
+
 
 pthread_mutex_t queue_size_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lock_queue = PTHREAD_MUTEX_INITIALIZER;
@@ -46,7 +62,6 @@ int success_found = 0;
 int number_of_fields = 0;
 int ip_field = 0;
 int ip_field_found = 0;
-int monitor = 0;
 int done = 0;
 int process_done = 0;
 int total_read_in = 0;
@@ -140,25 +155,30 @@ int main(int argc, char *argv[])
 				args.inputs[1]);
 	}
 
-	output_filename = args.inputs[0];
-	output_file = (FILE *)fopen(output_filename, "w");
-	if (!output_file) {
+	tconf.output_filename = args.inputs[0];
+	tconf.output_file = fopen(tconf.output_filename, "w");
+	if (!tconf.output_file) {
 		log_fatal("ztee", "Could not open output file %s, %s",
-				output_filename, strerror(errno));
+				tconf.output_filename, strerror(errno));
 	}
 
 	// Read actual options
 	SET_BOOL(find_success_only, success_only);
-	SET_BOOL(monitor, monitor);
+	SET_BOOL(tconf.monitor, monitor);
 
 	// Open the status update file if necessary
 	if (args.status_updates_file_given) {
-		monitor_filename = args.status_updates_file_arg;
-		status_updates_file = fopen(monitor_filename, "w");
-		if (!status_updates_file) {
-			log_fatal("Unable to open monitor file %s, %s",
-					monitor_filename, strerror(errno));
+		// Try to open the status output file
+		char *filename = args.status_updates_file_arg;
+		FILE *file = fopen(filename, "w");
+		if (!file) {
+			char *err = strerror(errno);
+			log_fatal("Unable to open status updates file %s (%s)",
+					filename, err);
 		}
+		// Set the variables in state
+		tconf.status_updates_filename = filename;
+		tconf.status_updates_file = file;
 	}
 
 	zqueue_t* my_queue;
@@ -186,7 +206,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	if (monitor || status_updates_file) {
+	if (tconf.monitor || tconf.status_updates_file) {
 		int z = pthread_create(&threads[2], NULL, monitor_ztee, my_queue);
 		const char* monitor_thread = "monitor thread\n";
 		if(z){
@@ -202,9 +222,10 @@ int main(int argc, char *argv[])
 
 }
 
-void *process_queue(void* my_q)
+void *process_queue(void* arg)
 {
-	zqueue_t *my_queue = (zqueue_t *)my_q;
+	zqueue_t *my_queue = arg;
+	FILE *output_file = tconf.output_file;
 	while (!is_empty(my_queue) || !done){
 
 		znode_t* temp = malloc(sizeof(znode_t));
@@ -355,7 +376,7 @@ void write_out_to_file(char* data)
 {
 	//take whatever is in the front of the linked list and parse it out to the
 	//outputfile
-	fprintf(output_file, "%s", data);
+	fprintf(tconf.output_file, "%s", data);
 }
 
 void figure_out_fields(char* data)
@@ -437,7 +458,7 @@ int input_is_csv(zqueue_t *my_queue)
 		input_csv = 1;
 		to_delete = pop_front(my_queue);
 		figure_out_fields(temp->data);
-		fprintf(output_file, "%s", temp->data);
+		fprintf(tconf.output_file, "%s", temp->data);
 		free(to_delete);
 	}
 	output_file_is_csv();
@@ -446,6 +467,14 @@ int input_is_csv(zqueue_t *my_queue)
 
 void output_file_is_csv()
 {
+	return;
+	/*
+	char *dot = strrchr(output_filename);
+	if dot == NULL {
+		return;
+	}
+	*/
+	/*
 	int length = strlen(output_filename);
 	char *end_of_file = malloc(sizeof(char*) *4);
 	strncpy(end_of_file, output_filename+(length - 3), 3);
@@ -457,6 +486,7 @@ void output_file_is_csv()
 	}
 	if(!strncmp(end_of_file, csv, 3)) output_csv = 1;
 	if(!strncmp(end_of_file, json, 3)) output_csv = 0;
+	*/
 }
 
 void print_thread_error(char* string)
@@ -508,15 +538,15 @@ void *monitor_ztee(void* arg)
 	zqueue_t *queue = (zqueue_t *) arg;
 	stats_t *stats = xmalloc(sizeof(stats_t));
 
-	if (status_updates_file) {
-		fprintf(status_updates_file,"time_past,total_read_in,read_in_last_sec,read_per_sec_avg,buffer_current_size,buffer_avg_size\n");
-		fflush(status_updates_file);
+	if (tconf.status_updates_file) {
+		fprintf(tconf.status_updates_file, "time_past,total_read_in,read_in_last_sec,read_per_sec_avg,buffer_current_size,buffer_avg_size\n");
+		fflush(tconf.status_updates_file);
 	}
 	while (!process_done) {
 		sleep(1);
 
 		update_stats(stats, queue);
-		if (monitor) {
+		if (tconf.monitor) {
 			lock_file(stderr);
 			fprintf(stderr, "%5s read_rate: %u rows/s (avg %u rows/s), buffer_size: %u (avg %u)\n",
 					stats->time_past_str,
@@ -527,25 +557,25 @@ void *monitor_ztee(void* arg)
 			fflush(stderr);
 			unlock_file(stderr);
 		}
-		if (status_updates_file) {
-			fprintf(status_updates_file, "%u,%u,%u,%u,%u,%u\n",
+		if (tconf.status_updates_file) {
+			fprintf(tconf.status_updates_file, "%u,%u,%u,%u,%u,%u\n",
 					stats->time_past,
 					stats->total_read,
 					stats->read_last_sec,
 					stats->read_per_sec_avg,
 					stats->buffer_cur_size,
 					stats->buffer_avg_size);
-			fflush(status_updates_file);
+			fflush(tconf.status_updates_file);
 		}
 	}
-	if (monitor) {
+	if (tconf.monitor) {
 		lock_file(stderr);
 		fflush(stderr);
 		unlock_file(stderr);
 	}
-	if (status_updates_file) {
-		fflush(status_updates_file);
-		fclose(status_updates_file);
+	if (tconf.status_updates_file) {
+		fflush(tconf.status_updates_file);
+		fclose(tconf.status_updates_file);
 	}
 	return NULL;
 }
