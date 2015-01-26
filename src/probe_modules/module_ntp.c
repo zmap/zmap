@@ -58,7 +58,7 @@ void ntp_process_packet(const u_char *packet, __attribute__((unused)) uint32_t l
 
         if(ip_hdr->ip_p ==  IPPROTO_UDP){
                 struct udphdr *udp = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
-                struct module_ntp *ntp = (struct module_ntp *) &udp[1];
+                struct module_ntp *ntp = (struct module_ntp *)(udp + 8);
 
                 fs_add_string(fs, "classification", (char*) "ntp", 0);
                 fs_add_uint64(fs, "success", 1);
@@ -71,30 +71,44 @@ void ntp_process_packet(const u_char *packet, __attribute__((unused)) uint32_t l
 
                 ptr = (int *)ntp;
 
-                temp8 = *((uint8_t *)ptr);
-                fs_add_uint64(fs, "LI_VN_MODE", temp8);
-                temp8 = *((uint8_t *)ptr +1);
-                fs_add_uint64(fs, "stratum", temp8);
-                temp8 = *((uint8_t *)ptr +2);
-                fs_add_uint64(fs, "poll", temp8);
-                temp8 = *((uint8_t *)ptr + 3);
-                fs_add_uint64(fs, "precision", temp8);
+		if(len > 90){
+                	temp8 = *((uint8_t *)ptr);
+                	fs_add_uint64(fs, "LI_VN_MODE", temp8);
+                	temp8 = *((uint8_t *)ptr +1);
+                	fs_add_uint64(fs, "stratum", temp8);
+                	temp8 = *((uint8_t *)ptr +2);
+                	fs_add_uint64(fs, "poll", temp8);
+                	temp8 = *((uint8_t *)ptr + 3);
+                	fs_add_uint64(fs, "precision", temp8);
 
                 temp32 = *((uint32_t *)ptr + 4);
                 fs_add_uint64(fs, "root_delay", temp32);
                 temp32 = *((uint32_t *)ptr + 8);
                 fs_add_uint64(fs, "root_dispersion", temp32);
-                temp32 = *((uint32_t *)ptr + 12);
-                fs_add_uint64(fs, "reference_clock_identifier", temp32);
+		temp32 = *((uint32_t *)ptr + 12);
+		fs_add_uint64(fs, "reference_clock_identifier", temp32);
 
-                temp64 = *((uint64_t *)ptr + 16);
-                fs_add_uint64(fs, "reference_timestamp", temp64);
-                temp64 = *((uint64_t *)ptr + 24);
-                fs_add_uint64(fs, "originate_timestap", temp64);
-                temp64 = *((uint64_t *)ptr + 32);
-                fs_add_uint64(fs, "receive_timestamp", temp64);
-                temp64 = *((uint64_t *)ptr + 40);
-                fs_add_uint64(fs, "transmit_timestamp", temp64);
+		temp64 = *((uint64_t *)ptr + 16);
+		fs_add_uint64(fs, "reference_timestamp", temp64);
+		temp64 = *((uint64_t *)ptr + 24);
+		fs_add_uint64(fs, "originate_timestap", temp64);
+		temp64 = *((uint64_t *)ptr + 32);
+		fs_add_uint64(fs, "receive_timestamp", temp64);
+		temp64 = *((uint64_t *)ptr + 39);
+		fs_add_uint64(fs, "transmit_timestamp", temp64);
+		}else{
+			fs_add_null(fs, "LI_VN_MODE");
+			fs_add_null(fs, "stratum");
+			fs_add_null(fs, "poll");
+			fs_add_null(fs, "precision");
+			fs_add_null(fs, "root_delay");
+			fs_add_null(fs, "root_dispersion");
+			fs_add_null(fs, "reference_clock_identifier");
+			fs_add_null(fs, "reference_timestamp");
+			fs_add_null(fs, "originate_timestamp");
+			fs_add_null(fs, "receive_timestamp");
+			fs_add_null(fs, "transmit_timestamp");
+		}
 
 
         } else if(ip_hdr->ip_p ==  IPPROTO_ICMP) {
