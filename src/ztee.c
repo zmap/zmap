@@ -187,8 +187,8 @@ int main(int argc, char *argv[])
 	}
 
 	// Read the first line of the input file
-	char *first_line = xmalloc(100);
-	size_t first_line_len;
+	size_t first_line_len = 1024;
+	char *first_line = xmalloc(first_line_len);
 	if (getline(&first_line, &first_line_len, stdin) < 0) {
 		log_fatal("ztee", "reading input to test format failed");
 	}
