@@ -103,7 +103,7 @@ void find_successful_IP (char* my_string);
 void find_IP (char* my_string);
 
 //writes a csv string out to csv file
-//fprintf(stderr, "Is empty inside if %i\n", is_empty(my_queue));
+//fprintf(stderr, "Is empty inside if %i\n", is_empty(queue));
 void write_out_to_file (char* data);
 
 //figure out how many fields are present if it is a csv
@@ -274,21 +274,26 @@ int main(int argc, char *argv[])
 
 void *process_queue(void* arg)
 {
-	zqueue_t *my_queue = arg;
+	zqueue_t *queue = arg;
 	FILE *output_file = tconf.output_file;
-	while (!is_empty(my_queue) || !done) {
+	while (!is_empty(queue) || !done) {
 
-		pthread_mutex_lock(&my_queue->lock);
-		if (done && is_empty(my_queue)) {
+		pthread_mutex_lock(&queue->lock);
+		if (done && is_empty(queue)) {
 			process_done = 1;
 			fflush(output_file);
 			fclose(output_file);
-			pthread_mutex_unlock(&my_queue->lock);
+			pthread_mutex_unlock(&queue->lock);
 			return NULL;
 		}
 
-		znode_t *node = pop_front_unsafe(my_queue);
-		pthread_mutex_unlock(&my_queue->lock);
+		if (is_empty(queue)) {
+			pthread_cond_wait(&queue->empty, &queue->lock);
+			continue;
+		}
+		znode_t *node = pop_front_unsafe(queue);
+		pthread_mutex_unlock(&queue->lock);
+
 
 		// Write raw data to output file
 		fprintf(output_file, "%s", node->data);
