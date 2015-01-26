@@ -106,29 +106,24 @@ void convert_to_dns_name_format(unsigned char* dns,unsigned char* host) {
 char* hex_to_ip(void* hex_ip) {
 
 	if(!hex_ip){
-		fprintf(stderr, "Im null!\n");
 		return NULL;
 	}
 	char* addrstr = malloc(INET_ADDRSTRLEN);
 	if(addrstr == NULL){
-		fprintf(stderr, "ERROR\n");
 		exit(1);
 	}
 	//fprintf(stderr, "hex_ip %s\n", (char*)hex_ip);
 	
 	//memcpy(addrstr, hex_ip, sizeof(&hex_ip));
 	if(inet_ntop(AF_INET, (struct sockaddr_in *)hex_ip, addrstr, INET_ADDRSTRLEN) == NULL){
-		fprintf(stderr, "WHYYY\n");
 		free(addrstr);
 		return NULL;
 	}
-	fprintf(stderr, "addstr in hex_to_ip %s\n", addrstr);
 	return addrstr;
 }
 
 char* parse_dns_ip_results(struct dnshdr* dns_hdr) {
 	// parse through dns_query since it can be of variable length
-	fprintf(stderr, "parse dns i[\n");
 	char* dns_ans_start = ((char*)dns_hdr + sizeof(struct dnshdr));
 	while(*dns_ans_start++);
 	// skip  qtype and qclass octets
@@ -138,45 +133,33 @@ char* parse_dns_ip_results(struct dnshdr* dns_hdr) {
 	char* ip_addrs = malloc(size);
 
 	// should always be 4 for ipv4 addrs, but include in case of unexpected response
-	uint16_t prev_data_len = 4;
+	//uint16_t prev_data_len = 4;
 	int output_pos = 0;
-	fprintf(stderr, "ntohs %i\n", ntohs(dns_hdr->ancount));
 	if(ntohs(dns_hdr->ancount) > 1000){
 		return NULL;
 	}
 	for (int i = 0; i < ntohs(dns_hdr->ancount); i++) {
-		fprintf(stderr, "beginning of for loop\n");
 		//dnsans* dns_ans = (dnsans *) ((char*) dns_ans_start + (12 + prev_data_len)*i);
 		dnsans* dns_ans = (dnsans *) ((char*) dns_ans_start + (12)*i);
-		fprintf(stderr, "got dns_ans\n");
 		if(!dns_ans->addr){
-			fprintf(stderr, "im null!\n");
-			prev_data_len = ntohs(dns_ans->length);
-			fprintf(stderr, "prev data len %i\n", ntohs(dns_ans->length));
+			//prev_data_len = ntohs(dns_ans->length);
 			continue;
 		}
-		fprintf(stderr, "about to call hex_to_ip\n");
 		char* ip_addr = hex_to_ip(&dns_ans->addr);
-		fprintf(stderr, "ended hex_to_ip\n");
 		if (!ip_addr) {
-			fprintf(stderr, "Continuing\n");
-			prev_data_len = ntohs(dns_ans->length);
-			fprintf(stderr, "prev data len %i\n", ntohs(dns_ans->length));
+			//prev_data_len = ntohs(dns_ans->length);
 			continue;
 		}
 		output_pos += i == 0 ? sprintf(ip_addrs + output_pos, "\"%s", ip_addr) : sprintf(ip_addrs + output_pos, " %s", ip_addr);
-		prev_data_len = ntohs(dns_ans->length);
-		fprintf(stderr, "prev data len %i\n", ntohs(dns_ans->length));
+		//prev_data_len = ntohs(dns_ans->length);
 	}
 	if (output_pos) {
 		sprintf(ip_addrs + output_pos, "\"");
 	}
-	fprintf(stderr, "out ofparse dns i[\n");
 	return ip_addrs;
 }
 
 static int udp_dns_global_initialize(struct state_conf *conf) {
-	fprintf(stderr, "in global init\n");
 	char *args, *c;
 	int dns_domain_len;
 	unsigned char* dns_domain;
@@ -303,11 +286,8 @@ void udp_dns_print_packet(FILE *fp, void* packet) {
 }
 
 void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *fs) {
-	fprintf(stderr, "print packet\n");
 	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
-	fprintf(stderr, "got ip_hdr\n");
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
-		fprintf(stderr, "in first if\n");
 		struct udphdr *udp_hdr = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
 		struct dnshdr *dns_hdr = (struct dnshdr *) ((char *) udp_hdr + 8);
 		fs_add_string(fs, "classification", (char*) "udp_dns", 0);
@@ -323,8 +303,6 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 		fs_add_string(fs, "app_response_str", (char *) udp_dns_response_strings[dns_hdr->rcode], 0);
 		fs_add_uint64(fs, "app_response_code",dns_hdr->rcode);
 		fs_add_uint64(fs, "udp_pkt_size", ntohs(udp_hdr->uh_ulen));
-		fprintf(stderr, "udp_pkt_size %i\n", ntohs(udp_hdr->uh_ulen));
-		fprintf(stderr, "udp hdr %i\n", sizeof(struct udphdr));
 		if(ntohs(udp_hdr->uh_ulen) == 0){
 			fs_add_null(fs, "data");
 		}else{
@@ -333,12 +311,9 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 		}
 
 		char* ip_addrs = parse_dns_ip_results(dns_hdr);
-		fprintf(stderr, "addrs: %s\n", ip_addrs);
 		if(!ip_addrs){
-			fprintf(stderr, "addrs is null\n");
 			fs_add_null(fs, "addrs");	
 		}else{
-			fprintf(stderr, "string\n");
 			fs_add_string(fs, "addrs", ip_addrs, 1);
 		}
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
