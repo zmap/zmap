@@ -20,10 +20,12 @@
 #include "../lib/queue.h"
 #include "../lib/util.h"
 #include "../lib/xalloc.h"
+#include "../lib/csv.h"
 
 #include "topt.h"
 
-typedef enum file_format { FORMAT_CSV, FORMAT_JSON } format_t;
+typedef enum file_format { FORMAT_CSV, FORMAT_JSON, FORMAT_RAW } format_t;
+static const char *format_names[] = { "csv", "json", "raw" };
 
 typedef struct ztee_conf {
 	// Files
@@ -36,36 +38,45 @@ typedef struct ztee_conf {
 	format_t in_format;
 	format_t out_format;
 
+	// Output config
+	int success_only;
+
 	// Monitor config
 	int monitor;
+
+	// Field indicies
+	size_t ip_field;
+	size_t success_field;
 
 } ztee_conf_t;
 
 static ztee_conf_t tconf;
 
+static void print_from_csv(char *line);
 
-pthread_mutex_t queue_size_lock = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t lock_queue = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t read_in_waiting = PTHREAD_COND_INITIALIZER;
+static format_t test_input_format(char *line, size_t len) {
+	// Check for empty input, remember line contains '\n'
+	if (len < 2) {
+		return FORMAT_RAW;
+	}
+	if (len >= 3) {
+		// If the input is JSON, the line should look like
+		// {.......}\n
+		if (line[0] == '{' && line[len - 2] == '}') {
+			return FORMAT_JSON;
+		}
+	}
+	if (strchr(line, ',') != NULL) {
+		return FORMAT_CSV;
+	}
+	return FORMAT_RAW;
+}
 
-//keeps track if input file is csv
-int input_csv = 0;
-//keeps track if output file is csv
-int output_csv = 0;
-//set to 1 if this flag is set
-int find_success_only = 0;
-//keep track of what field the is_successful field is
-int success_field = 0;
-//tells whether the is_successful field has been found or not
-int success_found = 0;
-//keeps track of the number of fields present in csv (minus 1 because 0 index)
-int number_of_fields = 0;
-int ip_field = 0;
-int ip_field_found = 0;
 int done = 0;
 int process_done = 0;
 int total_read_in = 0;
 int read_in_last_sec = 0;
+int total_written = 0;
 
 double start_time;
 
@@ -98,18 +109,12 @@ void write_out_to_file (char* data);
 //figure out how many fields are present if it is a csv
 void figure_out_fields (char* data);
 
-//checks if input is csv or just ip
-//only needs to be run one time and on the first znode_t
-//because the first znode_t will have the different fields or
-//just the ip address`
-int input_is_csv (zqueue_t *my_queue);
-
 //check that the output file is either in a csv form or json form
 //throws error is it is not either
 //NOTE: JSON OUTPUT NOT IMPLEMENTED
-void output_file_is_csv ();
+void output_file_is_csv();
 
-void print_thread_error ();
+void print_thread_error();
 
 //monitor code for ztee
 //executes every second
@@ -163,7 +168,7 @@ int main(int argc, char *argv[])
 	}
 
 	// Read actual options
-	SET_BOOL(find_success_only, success_only);
+	SET_BOOL(tconf.success_only, success_only);
 	SET_BOOL(tconf.monitor, monitor);
 
 	// Open the status update file if necessary
@@ -173,7 +178,7 @@ int main(int argc, char *argv[])
 		FILE *file = fopen(filename, "w");
 		if (!file) {
 			char *err = strerror(errno);
-			log_fatal("Unable to open status updates file %s (%s)",
+			log_fatal("ztee", "unable to open status updates file %s (%s)",
 					filename, err);
 		}
 		// Set the variables in state
@@ -181,86 +186,133 @@ int main(int argc, char *argv[])
 		tconf.status_updates_file = file;
 	}
 
-	zqueue_t* my_queue;
-	my_queue = queue_init();
-	int y = pthread_create(&threads[0], NULL, read_in, my_queue);
-	const char* read = "read thread\n";
-
-	if (y) {
-		print_thread_error(read);
-		exit(1);
+	// Read the first line of the input file
+	char *first_line = xmalloc(100);
+	size_t first_line_len;
+	if (getline(&first_line, &first_line_len, stdin) < 0) {
+		log_fatal("ztee", "reading input to test format failed");
 	}
-	int returned = input_is_csv(my_queue);
+	// Detect the input format
+	format_t format = test_input_format(first_line, first_line_len);
+	log_info("ztee", "detected input format %s", format_names[format]);
+	tconf.in_format = format;
 
-	if (returned) {
-		return 0;
-	}
-
-	start_time = now();
-
-	int a = pthread_create(&threads[1], NULL, process_queue, my_queue);
-	const char* process = "process thread\n";
-
-	if (a) {
-		print_thread_error(process);
-		exit(1);
+	if (tconf.in_format == FORMAT_JSON) {
+		log_fatal("ztee", "json input not implemented");
 	}
 
-	if (tconf.monitor || tconf.status_updates_file) {
-		int z = pthread_create(&threads[2], NULL, monitor_ztee, my_queue);
-		const char* monitor_thread = "monitor thread\n";
-		if(z){
-			print_thread_error(monitor_thread);
-			exit(1);
+	// Find fields if needed
+	char *header = strdup(first_line);
+	int found_success = 0;
+	int found_ip = 0;
+	if (tconf.in_format == FORMAT_CSV) {
+		static const char *success_names[] = { "success" };
+		static const char *ip_names[] = { "saddr", "ip" };
+		int success_idx = csv_find_index(header, success_names, 1);
+		if (success_idx >= 0) {
+			found_success = 1;
+			tconf.success_field = (size_t) success_idx;
+		}
+		int ip_idx = csv_find_index(header, ip_names, 2);
+		if (found_ip >= 0) {
+			found_ip = 1;
+			tconf.ip_field = (size_t) ip_idx;
+		}
+		if (!found_ip) {
+			log_fatal("ztee", "Unable to find IP/SADDR field");
 		}
 	}
 
-	int g;
-	for(g=0; g < 3; g++){
-		pthread_join(threads[g], NULL);
+
+
+	if (tconf.success_only) {
+		if (tconf.in_format != FORMAT_CSV) {
+			log_fatal("ztee", "success filter requires csv input");
+		}
+		if (!found_success) {
+			log_fatal("ztee", "Could not find success field");
+		}
 	}
 
+
+	// Make the queue
+	zqueue_t* queue = queue_init();
+	assert(queue);
+
+	// Add the first line to the queue if needed
+	push_back(first_line, queue);
+
+	// Start the regular read thread
+	pthread_t read_thread;
+	if (pthread_create(&read_thread, NULL, read_in, queue)) {
+		log_fatal("ztee", "unable to start read thread");
+	}
+
+	// Record the start time
+	start_time = now();
+
+	// Start the process thread
+	pthread_t process_thread;
+	if (pthread_create(&process_thread, NULL, process_queue, queue)) {
+		log_fatal("ztee", "unable to start process thread");
+	}
+
+	// Start the monitor thread if necessary, and join to it
+	if (tconf.monitor || tconf.status_updates_file) {
+		pthread_t monitor_thread;
+		if (pthread_create(&monitor_thread, NULL, monitor_ztee, queue)) {
+			log_fatal("ztee", "unable to create monitor thread");
+		}
+		pthread_join(monitor_thread, NULL);
+	}
+
+	// Join to the remaining threads,
+	pthread_join(read_thread, NULL);
+	pthread_join(process_thread, NULL);
+	return 0;
 }
 
 void *process_queue(void* arg)
 {
 	zqueue_t *my_queue = arg;
 	FILE *output_file = tconf.output_file;
-	while (!is_empty(my_queue) || !done){
+	while (!is_empty(my_queue) || !done) {
 
-		znode_t* temp = malloc(sizeof(znode_t));
-
-		pthread_mutex_lock(&lock_queue);
-		while (!done && is_empty(my_queue)) {
-			pthread_cond_wait(&read_in_waiting, &lock_queue);
-		}
-
+		pthread_mutex_lock(&my_queue->lock);
 		if (done && is_empty(my_queue)) {
 			process_done = 1;
 			fflush(output_file);
 			fclose(output_file);
-			free(my_queue);
+			pthread_mutex_unlock(&my_queue->lock);
 			return NULL;
 		}
 
-		if (!is_empty(my_queue)) {
-			temp = pop_front(my_queue);
-		}
+		znode_t *node = pop_front_unsafe(my_queue);
+		pthread_mutex_unlock(&my_queue->lock);
 
-		pthread_mutex_unlock(&lock_queue);
-
-		if (!input_csv) {
-			fprintf(stdout, "%s", temp->data);
-			fflush(stdout);
-		}else if (find_success_only) {
-			find_successful_IP(temp->data);
-		}else {
-			find_IP(temp->data);
-		}
-		//write_out_to_file(temp->data);
-		fprintf(output_file, "%s", temp->data);
+		// Write raw data to output file
+		fprintf(output_file, "%s", node->data);
 		fflush(output_file);
-		free(temp);
+
+		switch (tconf.in_format) {
+		case FORMAT_JSON:
+			log_fatal("ztee", "JSON input format unimplemented");
+			break;
+		case FORMAT_CSV:
+			print_from_csv(node->data);
+			break;
+		default:
+			// Handle raw
+			fprintf(stdout, "%s", node->data);
+			fflush(stdout);
+			break;
+		}
+
+		total_written++;
+
+		// Free the memory
+		free(node->data);
+		free(node);
 	}
 	process_done = 1;
 	fflush(output_file);
@@ -268,201 +320,51 @@ void *process_queue(void* arg)
 	return NULL;
 }
 
-void *read_in(void* my_q)
+void *read_in(void* arg)
 {
-	//read in from stdin and add to back of linked list
+	// Allocate buffers
+	zqueue_t *queue = (zqueue_t*) arg;
+	size_t length = 1000;
+	char *input = xcalloc(sizeof(char), length);;
 
-	char* input = NULL;
-	size_t length;
-	zqueue_t *my_queue = (zqueue_t*)my_q;
-	input = malloc(sizeof(char) *1000);
-
-	//geline
+	// Read in from stdin and add to back of linked list
 	while (getline(&input, &length, stdin) > 0) {
-		pthread_mutex_lock(&lock_queue);
-		push_back(input, my_queue);
-		pthread_mutex_unlock(&lock_queue);
+		push_back(input, queue);
 
-		pthread_mutex_lock(&queue_size_lock);
 		total_read_in++;
 		read_in_last_sec++;
-		pthread_mutex_unlock(&queue_size_lock);
 	}
-
-	pthread_mutex_lock(&lock_queue);
+	pthread_mutex_lock(&queue->lock);
 	done = 1;
-	pthread_cond_signal(&read_in_waiting);
-	pthread_mutex_unlock(&lock_queue);
-	pthread_exit(NULL);
+	pthread_mutex_unlock(&queue->lock);
 	return NULL;
 }
 
-void find_successful_IP(char* my_string)
+void print_from_csv(char *line)
 {
-
-	char *found;
-	char *new_found;
-	char *this_IP;
-	int length;
-	int i;
-	char* is_this_IP_successful = 0;
-	int is_successful = 0;
-	found = strdup(my_string);
-	new_found = strchr(found, ',');
-
-	for (i=0; i <= number_of_fields; i++) {
-		if (i == success_field && new_found) {
-			length = strlen(found) - strlen(new_found);
-			is_this_IP_successful = malloc(sizeof(char*)*(length+1));
-			strncpy(is_this_IP_successful, found, length);
-			is_successful = atoi(is_this_IP_successful);
-			if(!is_successful) return;
-		} else if(i == success_field) {
-			is_successful = atoi( found );
-			if(!is_successful) return;
-		}
-
-		if (i == ip_field && new_found) {
-			length = strlen(found) - strlen(new_found);
-			this_IP = malloc(sizeof(char*)*(length+1));
-			strncpy(this_IP, found, length);
-			this_IP[length] = '\0';
-		} else if(i == ip_field) {
-			this_IP = found;
-		}
-
-		if (new_found) found = new_found+1;
-		new_found = strchr(found, ',');
+	if (total_written == 0) {
+		return;
 	}
-}
-
-void find_IP(char* my_string)
-{
-	//finds IP in the string of csv and sends it to stdout for zgrab
-	//you need to know what position is the csv string the ip field is in
-	//zero indexed
-	char *found;
-	char *new_found;
-	char *temp = NULL;
-	int length;
-	int i;
-	found = strdup(my_string);
-	new_found = strchr(found, ',');
-
-	for (i = 0; i <= number_of_fields; i++) {
-		if (i == ip_field && new_found) {
-			temp = NULL;
-			length = strlen(found) - strlen(new_found);
-			temp = malloc(sizeof(char*)*(length+1));
-			strncpy(temp, found, length);
-			temp[length] = '\0';
-			fprintf(stdout, "%s\n", temp);
-			fflush(stdout);
-			return;
-		} else if(i == ip_field) {
-			fprintf(stdout, "%s\n", found);
-			fflush(stdout);
+	if (tconf.success_only) {
+		char *success_entry = csv_get_index(line, tconf.success_field);
+		if (success_entry == NULL) {
 			return;
 		}
-		if(new_found) found = new_found+1;
-		new_found = strchr(found, ',');
-
+		int success = 0;
+		if (atoi(success_entry)) {
+			success = 1;
+		} else if (strcasecmp(success_entry, "true") == 0) {
+			success = 1;
+		}
+		if (!success) {
+			return;
+		}
 	}
-	fprintf(stdout, "%s\n", temp);
+	// Find the ip
+	char *ip = csv_get_index(line, tconf.ip_field);
+	fprintf(stdout, "%s\n", ip);
 	fflush(stdout);
-}
-
-void write_out_to_file(char* data)
-{
-	//take whatever is in the front of the linked list and parse it out to the
-	//outputfile
-	fprintf(tconf.output_file, "%s", data);
-}
-
-void figure_out_fields(char* data)
-{
-	//number_of_fields = number of commas + 1
-	//check each substring if it is the same as saddr
-	//set ip_field
-	char *temp;
-	const char* saddr = "input saddr";
-	char* found;
-	const char* is_successful = "success\0";
-	char *new_found;
-	int count = 0;
-	int length;
-	found = data;
-	new_found = strchr(found, ',');
-
-	while (new_found) {
-		if (!ip_field_found) {
-			length = strlen(found) - strlen(new_found);
-			temp = NULL;
-			temp = malloc(sizeof(char*)*(length+1));
-			strncpy(temp, found, length);
-
-			if (!strncmp(temp, saddr, 5)) {
-				ip_field = count;
-				ip_field_found = 1;
-			}
-		}
-
-		if (!success_found) {
-			if (!strncmp(temp, is_successful, 7)) {
-				success_found = 1;
-				success_field = count;
-			}
-		}
-		found = new_found+2;
-		new_found = NULL;
-		count++;
-		new_found = strchr(found, ',');
-	}
-
-	number_of_fields = count++;
-	if (!ip_field_found) {
-		if (!strncmp(found, saddr, 5)) {
-			ip_field = number_of_fields;
-			ip_field_found = 1;
-		}
-	}
-	if (!success_found) {
-		if (!strncmp(found, is_successful, 7)) {
-			success_found = 1;
-			success_field = number_of_fields;
-		}
-	}
-}
-
-int input_is_csv(zqueue_t *my_queue)
-{
-	//checks if input is csv or just ip
-	//only needs to be run one time and on the first znode_t
-	//because the first znode_t will have the different fields or
-	//just the ip address`
-//	while (is_empty(my_queue) && !done);
-
-	if (is_empty(my_queue) && done) {
-		return 1;
-	}
-
-	znode_t *temp = malloc(sizeof(znode_t));
-	temp = get_front(my_queue);
-
-	char *found;
-	found = strchr(temp->data, ',');
-	if (!found) {
-		input_csv = 0;
-	}else {
-		znode_t *to_delete = malloc(sizeof(znode_t*));
-		input_csv = 1;
-		to_delete = pop_front(my_queue);
-		figure_out_fields(temp->data);
-		fprintf(tconf.output_file, "%s", temp->data);
-		free(to_delete);
-	}
-	output_file_is_csv();
-	return 0;
+	return;
 }
 
 void output_file_is_csv()
