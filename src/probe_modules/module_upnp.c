@@ -140,7 +140,7 @@ void upnp_process_packet(const u_char *packet,
             } else if (!strcmp(key, "Cache-Control") || !strcmp(key, "CACHE-CONTROL")) {
                 cachecontrol = strdup(value);
             } else {
-                log_debug("upnp-module", "new key: %s", key);
+                //log_debug("upnp-module", "new key: %s", key);
             }
             pch = strtok(NULL, "\n");
         }

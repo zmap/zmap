@@ -30,6 +30,7 @@ SET(LIB_SOURCES
 	${PROJECT_SOURCE_DIR}/lib/lockfd.c
 	${PROJECT_SOURCE_DIR}/lib/util.c
 	${PROJECT_SOURCE_DIR}/lib/queue.c
+	${PROJECT_SOURCE_DIR}/lib/csv.c
 )
 
 # ADD YOUR PROBE MODULE HERE
