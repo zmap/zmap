@@ -341,6 +341,7 @@ void *read_in(void* arg)
 	}
 	pthread_mutex_lock(&queue->lock);
 	done = 1;
+	pthread_cond_signal(&queue->empty);
 	pthread_mutex_unlock(&queue->lock);
 	return NULL;
 }
