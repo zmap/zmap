@@ -276,19 +276,15 @@ void *process_queue(void* arg)
 {
 	zqueue_t *queue = arg;
 	FILE *output_file = tconf.output_file;
-	while (!is_empty(queue) || !done) {
+	while (!process_done) {
 
 		pthread_mutex_lock(&queue->lock);
+		while (!done && is_empty(queue)) {
+			pthread_cond_wait(&queue->empty, &queue->lock);
+		}
 		if (done && is_empty(queue)) {
 			process_done = 1;
-			fflush(output_file);
-			fclose(output_file);
 			pthread_mutex_unlock(&queue->lock);
-			return NULL;
-		}
-
-		if (is_empty(queue)) {
-			pthread_cond_wait(&queue->empty, &queue->lock);
 			continue;
 		}
 		znode_t *node = pop_front_unsafe(queue);
