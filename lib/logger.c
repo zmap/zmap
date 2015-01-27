@@ -14,11 +14,13 @@
 #include <time.h>
 #include <syslog.h>
 #include <math.h>
+#include <pthread.h>
 
 #include "logger.h"
 #include "xalloc.h"
 #include "lockfd.h"
 
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static enum LogLevel log_output_level = ZLOG_INFO;
 
 static FILE *log_output_stream = NULL;
@@ -63,8 +65,14 @@ static int LogLogVA(enum LogLevel level, const char *loggerName,
 	if (!log_output_stream) {
 		log_output_stream = stderr;
 	}
+	// if logging to a shared output channel, then use a global
+	// lock accross ZMap. Otherwise, if we're logging to a file,
+	// only lockin with the module, in order to avoid having 
+	// corrupt log entries.
 	if (log_output_stream == stdout || log_output_stream == stderr) {
 		lock_file(log_output_stream);
+	} else {
+		pthread_mutex_lock(&mutex);
 	}
 	if (color) {
 		COLOR(color_for_level(level));
@@ -97,6 +105,8 @@ static int LogLogVA(enum LogLevel level, const char *loggerName,
 	fflush(log_output_stream);
 	if (log_output_stream == stdout || log_output_stream == stderr) {
 		unlock_file(log_output_stream);
+	} else {
+		pthread_mutex_unlock(&mutex);
 	}
 	return EXIT_SUCCESS;
 }
