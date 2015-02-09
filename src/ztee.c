@@ -168,8 +168,10 @@ int main(int argc, char *argv[])
 	}
 
 	// Read actual options
+	int raw = 0;
 	SET_BOOL(tconf.success_only, success_only);
 	SET_BOOL(tconf.monitor, monitor);
+	SET_BOOL(raw, raw);
 
 	// Open the status update file if necessary
 	if (args.status_updates_file_given) {
@@ -193,9 +195,14 @@ int main(int argc, char *argv[])
 		log_fatal("ztee", "reading input to test format failed");
 	}
 	// Detect the input format
-	format_t format = test_input_format(first_line, first_line_len);
-	log_info("ztee", "detected input format %s", format_names[format]);
-	tconf.in_format = format;
+	if (!raw) {
+		format_t format = test_input_format(first_line, first_line_len);
+		log_info("ztee", "detected input format %s", format_names[format]);
+		tconf.in_format = format;
+	} else {
+		tconf.in_format = FORMAT_RAW;
+		log_info("ztee", "raw input");
+	}
 
 	if (tconf.in_format == FORMAT_JSON) {
 		log_fatal("ztee", "json input not implemented");
