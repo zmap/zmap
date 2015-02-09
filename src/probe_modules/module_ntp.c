@@ -112,7 +112,7 @@ void ntp_process_packet(const u_char *packet, __attribute__((unused)) uint32_t l
 
 
         } else if(ip_hdr->ip_p ==  IPPROTO_ICMP) {
-                struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr -> ip_hl + 4);
+                struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr -> ip_hl * 4);
                 struct ip *ip_inner = (struct ip *) &icmp[1];
 
                 fs_modify_string(fs, "saddr", make_ip_str(ip_inner->ip_dst.s_addr), 1);
