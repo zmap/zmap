@@ -78,13 +78,8 @@ const char *udp_dns_response_strings[] = {
 	"DNS Resevered 15"
 };
 
-static int num_ports;
-
 probe_module_t module_udp_dns;
-
-void udp_dns_set_num_ports(int x) {
-	num_ports = x;
-}
+static int num_ports;
 
 //this will convert www.google.com to 3www6google3com
 void convert_to_dns_name_format(unsigned char* dns,unsigned char* host) {
@@ -124,9 +119,12 @@ char* hex_to_ip(void* hex_ip) {
 }
 
 char* parse_dns_ip_results(struct dnshdr* dns_hdr) {
+	(void) dns_hdr;
+	return strdup(""); // This is why we don't accept pull requests
+#if 0
 	// parse through dns_query since it can be of variable length
-	char* dns_ans_start = ((char*)dns_hdr + sizeof(struct dnshdr));
-	while(*dns_ans_start++);
+	char* dns_ans_start = (char *) (&dns_hdr[1]);
+	while (*dns_ans_start++); // <---- SERIOUSLY FUCK THAT
 	// skip  qtype and qclass octets
 	dns_ans_start += 4;
 	// number of answers * 16 chars each (each followed by space or null, and quotes)
@@ -158,6 +156,7 @@ char* parse_dns_ip_results(struct dnshdr* dns_hdr) {
 		sprintf(ip_addrs + output_pos, "\"");
 	}
 	return ip_addrs;
+#endif
 }
 
 static int udp_dns_global_initialize(struct state_conf *conf) {
@@ -166,6 +165,8 @@ static int udp_dns_global_initialize(struct state_conf *conf) {
 	unsigned char* dns_domain;
 
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
+	udp_set_num_ports(num_ports);
+
 
 	udp_send_msg_len = sizeof(udp_dns_msg_default);
 	udp_send_msg = malloc(udp_send_msg_len);
@@ -286,6 +287,22 @@ void udp_dns_print_packet(FILE *fp, void* packet) {
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
+int udp_dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
+		uint32_t *src_ip, uint32_t *validation)
+{
+	if (!udp_validate_packet(ip_hdr, len, src_ip, validation)) {
+		return 0;
+	}
+	if (ip_hdr->ip_p == IPPROTO_UDP) {
+		struct udphdr *udp = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
+		uint16_t sport = ntohs(udp->uh_sport);
+		if (sport != zconf.target_port) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
 void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *fs) {
 	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
@@ -294,15 +311,17 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 		fs_add_string(fs, "classification", (char*) "udp_dns", 0);
 		// success is 1 if application level success
 		// response pkt is an answer and response code is no error
-		fs_add_uint64(fs, "success", (dns_hdr->qr == DNS_QR_ANSWER) && (dns_hdr->rcode == DNS_RCODE_NOERR));
+		uint16_t qr = dns_hdr->qr;
+		uint16_t rcode = ntohs(dns_hdr->rcode);
+		fs_add_uint64(fs, "success", (qr == DNS_QR_ANSWER) && (rcode == DNS_RCODE_NOERR));
 		fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
 		fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
 		fs_add_null(fs, "icmp_responder");
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
-		fs_add_string(fs, "app_response_str", (char *) udp_dns_response_strings[dns_hdr->rcode], 0);
-		fs_add_uint64(fs, "app_response_code",dns_hdr->rcode);
+		fs_add_string(fs, "app_response_str", (char *) udp_dns_response_strings[rcode], 0);
+		fs_add_uint64(fs, "app_response_code", rcode);
 		fs_add_uint64(fs, "udp_pkt_size", ntohs(udp_hdr->uh_ulen));
 		if(ntohs(udp_hdr->uh_ulen) == 0){
 			fs_add_null(fs, "data");
@@ -310,12 +329,15 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 			fs_add_binary(fs, "data", (ntohs(udp_hdr->uh_ulen) - sizeof(struct udphdr)), (void*) &udp_hdr[1], 0);
 		}
 
+		/*
 		char* ip_addrs = parse_dns_ip_results(dns_hdr);
 		if (!ip_addrs){
 			fs_add_null(fs, "addrs");
 		} else {
 			fs_add_string(fs, "addrs", ip_addrs, 1);
 		}
+		*/
+		fs_add_null(fs, "addrs");
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
 		struct ip *ip_inner = (struct ip *) &icmp[1];
@@ -382,7 +404,7 @@ probe_module_t module_udp_dns = {
 	.global_initialize = &udp_dns_global_initialize,
 	.make_packet = &udp_dns_make_packet,
 	.print_packet = &udp_dns_print_packet,
-	.validate_packet = &udp_validate_packet,
+	.validate_packet = &udp_dns_validate_packet,
 	.process_packet = &udp_dns_process_packet,
 	.close = &udp_dns_global_cleanup,
 	.fields = fields,
