@@ -12,7 +12,7 @@
 #include <unistd.h>
 #include <string.h>
 
-struct dnshdr {
+struct  __attribute__((packed)) dnshdr {
 	uint16_t id;       /* transaction ID */
 
 	uint16_t rd:1;     /* recursion desired */
@@ -32,7 +32,7 @@ struct dnshdr {
 	uint16_t arcount;  /* # RR in additional information section */
 };
 
-typedef struct __attribute__((packed)){
+typedef struct __attribute__((packed)) {
   uint16_t name;
   uint16_t type;
   uint16_t addr_class;
