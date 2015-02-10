@@ -290,7 +290,7 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		struct udphdr *udp_hdr = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
-		struct dnshdr *dns_hdr = (struct dnshdr *) ((char *) udp_hdr + 8);
+		struct dnshdr *dns_hdr = (struct dnshdr *) (&udp_hdr[1]);
 		fs_add_string(fs, "classification", (char*) "udp_dns", 0);
 		// success is 1 if application level success
 		// response pkt is an answer and response code is no error
@@ -307,14 +307,13 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 		if(ntohs(udp_hdr->uh_ulen) == 0){
 			fs_add_null(fs, "data");
 		}else{
-
 			fs_add_binary(fs, "data", (ntohs(udp_hdr->uh_ulen) - sizeof(struct udphdr)), (void*) &udp_hdr[1], 0);
 		}
 
 		char* ip_addrs = parse_dns_ip_results(dns_hdr);
-		if(!ip_addrs){
+		if (!ip_addrs){
 			fs_add_null(fs, "addrs");
-		}else{
+		} else {
 			fs_add_string(fs, "addrs", ip_addrs, 1);
 		}
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
