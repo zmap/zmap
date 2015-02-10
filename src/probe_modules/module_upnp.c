@@ -73,13 +73,13 @@ void upnp_process_packet(const u_char *packet,
 
 	        char *s = malloc(plen+1);
 	        //char *t = malloc(plen+1);
-	        assert(s)
+	        assert(s);
 		strncpy(s, payload, plen);
 		//strncpy(t, payload, plen);
 		s[plen] = 0;
 
 	        int is_first = 1;
-	        const char *classification= NULL;
+	        const char *classification = "none";
 	        uint64_t is_success = 0;
 
 	        char *server=NULL, *location=NULL, *usn=NULL, *st=NULL,
@@ -103,7 +103,7 @@ void upnp_process_packet(const u_char *packet,
 				}
 				is_first = 0;
 				is_success = 1;
-				classification = "ok";
+				classification = "upnp";
 				pch = strtok(NULL, "\n");
 				continue;
 			}
@@ -121,23 +121,23 @@ void upnp_process_packet(const u_char *packet,
 				continue;
 			}
 
-			if (!strcmp(key, "Server") || !strcmp(key, "server") || !strcmp(key, "SERVER")) {
+			if (!strcasecmp(key, "server")) {
 				server = strdup(value);
-			} else if (!strcmp(key, "Location") || !strcmp(key, "LOCATION")) {
+			} else if (!strcasecmp(key, "location")) {
 				location = strdup(value);
-			} else if (!strcmp(key, "USN")) {
+			} else if (!strcasecmp(key, "USN")) {
 				usn = strdup(value);
-			} else if (!strcmp(key, "EXT")) {
+			} else if (!strcasecmp(key, "EXT")) {
 				ext = strdup(value);
-			} else if (!strcmp(key, "ST")) {
+			} else if (!strcasecmp(key, "ST")) {
 				st = strdup(value);
-			} else if (!strcmp(key, "Agent")) {
+			} else if (!strcasecmp(key, "Agent")) {
 				agent = strdup(value);
-			} else if (!strcmp(key, "X-User-Agent")) {
+			} else if (!strcasecmp(key, "X-User-Agent")) {
 				xusragent = strdup(value);
-			} else if (!strcmp(key, "date") || !strcmp(key, "Date") || !strcmp(key, "DATE")) {
+			} else if (!strcasecmp(key, "date")) {
 				date = strdup(value);
-			} else if (!strcmp(key, "Cache-Control") || !strcmp(key, "CACHE-CONTROL")) {
+			} else if (!strcasecmp(key, "Cache-Control")) {
 				cachecontrol = strdup(value);
 			} else {
 				//log_debug("upnp-module", "new key: %s", key);
@@ -145,7 +145,7 @@ void upnp_process_packet(const u_char *packet,
 			pch = strtok(NULL, "\n");
 	        }
 	cleanup:
-		fs_add_string(fs, "classification", (char*)"none", 0);
+		fs_add_string(fs, "classification", (char *) classification, 0);
 		fs_add_uint64(fs, "success", is_success);
 
 		if (server) {
@@ -255,6 +255,17 @@ void upnp_process_packet(const u_char *packet,
         } else {
                 fs_add_string(fs, "classification", (char *) "other", 0);
                 fs_add_uint64(fs, "success", 0);
+
+		fs_add_null(fs, "server");
+		fs_add_null(fs, "location");
+		fs_add_null(fs, "usn");
+		fs_add_null(fs, "st");
+		fs_add_null(fs, "ext");
+		fs_add_null(fs, "cache-control");
+		fs_add_null(fs, "x-user-agent");
+		fs_add_null(fs, "agent");
+		fs_add_null(fs, "date");
+
                 fs_add_null(fs, "sport");
                 fs_add_null(fs, "dport");
                 fs_add_null(fs, "icmp_responder");
@@ -273,6 +284,7 @@ static fielddef_t fields[] = {
         {.name = "location", .type="string", .desc = "UPnP location"},
         {.name = "usn", .type="string", .desc = "UPnP usn"},
         {.name = "st", .type="string", .desc = "UPnP st"},
+	{.name = "ext", .type="string", .desc = "UPnP ext"},
         {.name = "cache-control", .type="string", .desc = "UPnP cache-control"},
         {.name = "x-user-agent", .type="string", .desc = "UPnP x-user-agent"},
         {.name = "agent", .type="string", .desc = "UPnP agent"},
