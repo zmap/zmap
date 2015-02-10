@@ -1,6 +1,6 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan 
- * 
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -41,7 +41,7 @@ int upnp_init_perthread(void* buf, macaddr_t *src,
     struct ether_header *eth_header = (struct ether_header *) buf;
     make_eth_header(eth_header, src, gw);
     struct ip *ip_header = (struct ip*)(&eth_header[1]);
-    
+
     uint16_t len = htons(sizeof(struct ip) + sizeof(struct udphdr) + strlen(upnp_query));
     make_ip_header(ip_header, IPPROTO_UDP, len);
 
@@ -51,7 +51,7 @@ int upnp_init_perthread(void* buf, macaddr_t *src,
 
     char* payload = (char*)(&udp_header[1]);
 
-    assert(sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr) 
+    assert(sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr)
                     + strlen(upnp_query) <= MAX_PACKET_SIZE);
 
     strcpy(payload, upnp_query);
@@ -96,7 +96,6 @@ void upnp_process_packet(const u_char *packet,
             // the first pch is always supposed to be an HTTP response
             if (is_first) {
                 if (strcmp(pch, "HTTP/1.1 200 OK")) {
-                    printf("http check failed\n");  
                     classification = "no-http-header";      
                     is_success = 0;
                     goto cleanup;
@@ -144,7 +143,7 @@ void upnp_process_packet(const u_char *packet,
             }
             pch = strtok(NULL, "\n");
         }
-cleanup:    
+cleanup:
         fs_add_string(fs, "classification", (char*)"none", 0);
                 fs_add_uint64(fs, "success", is_success);
         if (server)
@@ -194,7 +193,7 @@ cleanup:
                 fs_add_null(fs, "icmp_unreach_str");
 
                 fs_add_binary(fs, "data", (ntohs(udp->uh_ulen) - sizeof(struct udphdr)), (void*) &udp[1], 0);
-    
+
         free(s);
 
         } else if (ip_hdr->ip_p == IPPROTO_ICMP) {
