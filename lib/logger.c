@@ -67,7 +67,7 @@ static int LogLogVA(enum LogLevel level, const char *loggerName,
 	}
 	// if logging to a shared output channel, then use a global
 	// lock accross ZMap. Otherwise, if we're logging to a file,
-	// only lockin with the module, in order to avoid having 
+	// only lockin with the module, in order to avoid having
 	// corrupt log entries.
 	if (log_output_stream == stdout || log_output_stream == stderr) {
 		lock_file(log_output_stream);
@@ -116,7 +116,6 @@ int log_fatal(const char *name, const char *message, ...) {
 	va_start(va, message);
 	LogLogVA(ZLOG_FATAL, name, message, va);
 	va_end(va);
-
 	va_start(va, message);
 	vsyslog(LOG_MAKEPRI(LOG_USER, LOG_CRIT), message, va);
 	va_end(va);

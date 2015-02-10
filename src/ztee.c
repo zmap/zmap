@@ -299,13 +299,15 @@ void *process_queue(void* arg)
 
 
 		// Write raw data to output file
-		int file_ret = fprintf(output_file, "%s", node->data);
-		fflush(output_file);
-		if (file_ret < 0) {
-			char *output_file_error = strerror(file_ret);
-			fprintf(stderr, "%s\n", output_file_error);
-			fflush(stderr);
-			exit(EXIT_FAILURE);
+		int output_ret = fprintf(output_file, "%s", node->data);
+		int output_flush = fflush(output_file);
+		if (output_ret < 0) {
+			char *output_file_error = strerror(output_ret);
+			log_fatal("ztee", "%s", output_file_error);
+		}
+		if (output_flush != 0) {
+			char *output_flush_error = strerror(errno);
+			log_fatal("ztee", "%s", output_flush_error);
 		}
 
 		// Dump to stdout
@@ -323,13 +325,16 @@ void *process_queue(void* arg)
 			fflush(stdout);
 			break;
 		}
+		int stdout_flush = fflush(stdout);
 
 		// Check to see if write failed
 		if (stdout_ret < 0) {
 			char *stdout_error = strerror(stdout_ret);
-			fprintf(stderr, "%s\n", stdout_error);
-			fflush(stderr);
-			exit(EXIT_FAILURE);
+			log_fatal("ztee", "%s", stdout_error);
+		}
+		if (stdout_flush != 0) {
+			char *stdout_flush_error = strerror(errno);
+			log_fatal("ztee", "%s", stdout_flush_error);
 		}
 
 		// Record output lines
@@ -389,7 +394,6 @@ int print_from_csv(char *line)
 	// Find the ip
 	char *ip = csv_get_index(line, tconf.ip_field);
 	int ret = fprintf(stdout, "%s\n", ip);
-	fflush(stdout);
 	return ret;
 }
 
