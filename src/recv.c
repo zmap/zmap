@@ -49,7 +49,7 @@ void handle_packet(uint32_t buflen, const u_char *bytes) {
 		return;
 	}
 
-	int is_repeat = pbm_check(seen, ntohl(src_ip));
+	int is_repeat = 0; //= pbm_check(seen, ntohl(src_ip));
 
 	fieldset_t *fs = fs_new_fieldset();
 	fs_add_ip_fields(fs, ip_hdr);
