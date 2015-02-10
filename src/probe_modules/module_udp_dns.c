@@ -23,6 +23,7 @@
 #include "packet.h"
 #include "logger.h"
 #include "module_udp_dns.h"
+#include "module_udp.h"
 
 #define MAX_UDP_PAYLOAD_LEN 1472
 #define UNUSED __attribute__((unused))
@@ -47,10 +48,10 @@ static int udp_send_msg_len = 0;
 // \x00\x01 -> Type: A (Host address)
 // \x00\x01 -> Class: IN (0x0001)
 
-static const char udp_dns_msg_default [32] = "\xb0\x0b\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x03\x77\x77\x77\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01";
-static const char udp_dns_msg_default_head [DNS_HEAD_LEN] = "\xb0\x0b\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00";
+static const char udp_dns_msg_default[32] = "\xb0\x0b\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x03\x77\x77\x77\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01";
+static const char udp_dns_msg_default_head[DNS_HEAD_LEN] = "\xb0\x0b\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00";
 // static const char udp_dns_msg_default_name [16] = "\x03\x77\x77\x77\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00";
-static const char udp_dns_msg_default_tail [DNS_TAIL_LEN]  = "\x00\x01\x00\x01";
+static const char udp_dns_msg_default_tail[DNS_TAIL_LEN]  = "\x00\x01\x00\x01";
 
 // google packet from wireshark
 // static const char udp_dns_msg_default[36] = "\xf5\x07\x00\x35\x00\x24\x04\x51\x10\xf5\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01";
@@ -113,7 +114,7 @@ char* hex_to_ip(void* hex_ip) {
 		exit(1);
 	}
 	//fprintf(stderr, "hex_ip %s\n", (char*)hex_ip);
-	
+
 	//memcpy(addrstr, hex_ip, sizeof(&hex_ip));
 	if(inet_ntop(AF_INET, (struct sockaddr_in *)hex_ip, addrstr, INET_ADDRSTRLEN) == NULL){
 		free(addrstr);
@@ -232,7 +233,7 @@ int udp_dns_global_cleanup(__attribute__((unused)) struct state_conf *zconf,
 }
 
 int udp_dns_init_perthread(void* buf, macaddr_t *src,
-		macaddr_t *gw, __attribute__((unused)) port_h_t dst_port, 
+		macaddr_t *gw, __attribute__((unused)) port_h_t dst_port,
         __attribute__((unused)) void **arg_ptr) {
 	memset(buf, 0, MAX_PACKET_SIZE);
 	struct ether_header *eth_header = (struct ether_header *) buf;
@@ -289,7 +290,7 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		struct udphdr *udp_hdr = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
-		struct dnshdr *dns_hdr = (struct dnshdr *) ((char *) udp_hdr + 8);
+		struct dnshdr *dns_hdr = (struct dnshdr *) (&udp_hdr[1]);
 		fs_add_string(fs, "classification", (char*) "udp_dns", 0);
 		// success is 1 if application level success
 		// response pkt is an answer and response code is no error
@@ -306,14 +307,13 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 		if(ntohs(udp_hdr->uh_ulen) == 0){
 			fs_add_null(fs, "data");
 		}else{
-
 			fs_add_binary(fs, "data", (ntohs(udp_hdr->uh_ulen) - sizeof(struct udphdr)), (void*) &udp_hdr[1], 0);
 		}
 
 		char* ip_addrs = parse_dns_ip_results(dns_hdr);
-		if(!ip_addrs){
-			fs_add_null(fs, "addrs");	
-		}else{
+		if (!ip_addrs){
+			fs_add_null(fs, "addrs");
+		} else {
 			fs_add_string(fs, "addrs", ip_addrs, 1);
 		}
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
@@ -356,56 +356,6 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 	}
 }
 
-int udp_dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
-        __attribute__((unused))uint32_t *src_ip, uint32_t *validation) {
-    uint16_t dport, sport;
-    if (ip_hdr->ip_p == IPPROTO_UDP) {
-        if ((4*ip_hdr->ip_hl + sizeof(struct udphdr)) > len) {
-            // buffer not large enough to contain expected udp header
-            return 0;
-        }
-        struct udphdr *udp = (struct udphdr*) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
-
-        sport = ntohs(udp->uh_dport);
-        dport = ntohs(udp->uh_sport);
-    } else if (ip_hdr->ip_p == IPPROTO_ICMP) {
-        // UDP can return ICMP Destination unreach
-        // IP( ICMP( IP( UDP ) ) ) for a destination unreach
-        uint32_t min_len = 4*ip_hdr->ip_hl + sizeof(struct icmp)
-                + sizeof(struct ip) + sizeof(struct udphdr);
-        if (len < min_len) {
-            // Not enough information for us to validate
-            return 0;
-        }
-
-        struct icmp *icmp = (struct icmp*) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
-        if (icmp->icmp_type != ICMP_UNREACH) {
-            return 0;
-        }
-
-        struct ip *ip_inner = (struct ip*) &icmp[1];
-        // Now we know the actual inner ip length, we should recheck the buffer
-        if (len < 4*ip_inner->ip_hl - sizeof(struct ip) + min_len) {
-            return 0;
-        }
-        // This is the packet we sent
-        struct udphdr *udp = (struct udphdr *) ((char*) ip_inner + 4*ip_inner->ip_hl);
-
-        sport = ntohs(udp->uh_sport);
-        dport = ntohs(udp->uh_dport);
-    } else {
-            return 0;
-    }
-    if (dport != zconf.target_port) {
-            return 0;
-    }
-    if (!check_dst_port(sport, num_ports, validation)) {
-	    return 0;
-    }
-
-    return 1;
-}
-
 static fielddef_t fields[] = {
 	{.name = "classification", .type="string", .desc = "packet classification"},
 	{.name = "success", .type="int", .desc = "is response considered success"},
@@ -432,7 +382,7 @@ probe_module_t module_udp_dns = {
 	.global_initialize = &udp_dns_global_initialize,
 	.make_packet = &udp_dns_make_packet,
 	.print_packet = &udp_dns_print_packet,
-	.validate_packet = &udp_dns_validate_packet,
+	.validate_packet = &udp_validate_packet,
 	.process_packet = &udp_dns_process_packet,
 	.close = &udp_dns_global_cleanup,
 	.fields = fields,

@@ -12,41 +12,27 @@
 #include <unistd.h>
 #include <string.h>
 
-struct dnshdr
-{
-  uint16_t id;		/* transaction ID */
+struct  __attribute__((packed)) dnshdr {
+	uint16_t id;       /* transaction ID */
 
-// #  if __BYTE_ORDER == __LITTLE_ENDIAN
-  uint16_t rd:1;	/* recursion desired */
-  uint16_t tc:1;	/* truncation */
-  uint16_t aa:1;	/* authoritative answer */
-  uint16_t opcode:4;	/* opcode 0=std query 1=Inverse query 2=srv status request */
-  uint16_t qr:1;	/* query/response */
-  uint16_t rcode:4;	/* response code */
-  uint16_t cd :1;      /* checking disabled */
-  uint16_t ad :1;      /* authenticated data */
-  uint16_t z:1;	/* reserved set to 0 */
-  uint16_t ra:1;	/* recursion available */
-// #  endif
+	uint16_t rd:1;     /* recursion desired */
+	uint16_t tc:1;     /* truncation */
+	uint16_t aa:1;     /* authoritative answer */
+	uint16_t opcode:4; /* opcode 0=std query 1=Inverse query 2=srv status request */
+	uint16_t qr:1;     /* query/response */
+	uint16_t rcode:4;  /* response code */
+	uint16_t cd :1;    /* checking disabled */
+	uint16_t ad :1;    /* authenticated data */
+	uint16_t z:1;      /* reserved set to 0 */
+	uint16_t ra:1;     /* recursion available */
 
-// #  if __BYTE_ORDER == __BIG_ENDIAN
-//   uint16_t qr:1;	/* query/response */
-//   uint16_t opcode:4;	/* opcode 0=std query 1=Inverse query 2=srv status request */
-//   uint16_t aa:1;	  authoritative answer
-//   uint16_t tc:1;	/* truncation */
-//   uint16_t rd:1;	/* recursion desired */
-//   uint16_t ra:1;	/* recursion available */
-//   uint16_t z:3;	/* reserved set to 0 */
-//   uint16_t rcode:4;	/* response code */
-// #  endif
-
-  uint16_t qdcount;	/* # entries in question section */
-  uint16_t ancount;	/* # RR in answer section */
-  uint16_t nscount;	/* # name server RR in authority section */
-  uint16_t arcount;	/* # RR in additional information section */
+	uint16_t qdcount;  /* # entries in question section */
+	uint16_t ancount;  /* # RR in answer section */
+	uint16_t nscount;  /* # name server RR in authority section */
+	uint16_t arcount;  /* # RR in additional information section */
 };
 
-typedef struct __attribute__((packed)){
+typedef struct __attribute__((packed)) {
   uint16_t name;
   uint16_t type;
   uint16_t addr_class;
