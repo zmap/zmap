@@ -12,14 +12,14 @@
 #include <unistd.h>
 #include <string.h>
 
-struct  __attribute__((packed)) dnshdr {
+struct dnshdr {
 	uint16_t id;       /* transaction ID */
-
 	uint16_t rd:1;     /* recursion desired */
 	uint16_t tc:1;     /* truncation */
 	uint16_t aa:1;     /* authoritative answer */
 	uint16_t opcode:4; /* opcode 0=std query 1=Inverse query 2=srv status request */
 	uint16_t qr:1;     /* query/response */
+	
 	uint16_t rcode:4;  /* response code */
 	uint16_t cd :1;    /* checking disabled */
 	uint16_t ad :1;    /* authenticated data */
@@ -64,5 +64,3 @@ int udp_dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		__attribute__((unused))uint32_t *src_ip, uint32_t *validation);
 
 extern const char *udp_unreach_strings[];
-
-void udp_dns_set_num_ports(int x);
