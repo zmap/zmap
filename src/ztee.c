@@ -52,7 +52,7 @@ typedef struct ztee_conf {
 
 static ztee_conf_t tconf;
 
-static void print_from_csv(char *line);
+static int print_from_csv(char *line);
 
 static format_t test_input_format(char *line, size_t len) {
 	// Check for empty input, remember line contains '\n'
@@ -299,23 +299,40 @@ void *process_queue(void* arg)
 
 
 		// Write raw data to output file
-		fprintf(output_file, "%s", node->data);
+		int file_ret = fprintf(output_file, "%s", node->data);
 		fflush(output_file);
+		if (file_ret < 0) {
+			char *output_file_error = strerror(file_ret);
+			fprintf(stderr, "%s\n", output_file_error);
+			fflush(stderr);
+			exit(EXIT_FAILURE);
+		}
 
+		// Dump to stdout
+		int stdout_ret = 0;
 		switch (tconf.in_format) {
 		case FORMAT_JSON:
 			log_fatal("ztee", "JSON input format unimplemented");
 			break;
 		case FORMAT_CSV:
-			print_from_csv(node->data);
+			stdout_ret = print_from_csv(node->data);
 			break;
 		default:
 			// Handle raw
-			fprintf(stdout, "%s", node->data);
+			stdout_ret = fprintf(stdout, "%s", node->data);
 			fflush(stdout);
 			break;
 		}
 
+		// Check to see if write failed
+		if (stdout_ret < 0) {
+			char *stdout_error = strerror(stdout_ret);
+			fprintf(stderr, "%s\n", stdout_error);
+			fflush(stderr);
+			exit(EXIT_FAILURE);
+		}
+
+		// Record output lines
 		total_written++;
 
 		// Free the memory
@@ -349,15 +366,15 @@ void *read_in(void* arg)
 	return NULL;
 }
 
-void print_from_csv(char *line)
+int print_from_csv(char *line)
 {
 	if (total_written == 0) {
-		return;
+		return 0;
 	}
 	if (tconf.success_only) {
 		char *success_entry = csv_get_index(line, tconf.success_field);
 		if (success_entry == NULL) {
-			return;
+			return 0;
 		}
 		int success = 0;
 		if (atoi(success_entry)) {
@@ -366,14 +383,14 @@ void print_from_csv(char *line)
 			success = 1;
 		}
 		if (!success) {
-			return;
+			return 0;
 		}
 	}
 	// Find the ip
 	char *ip = csv_get_index(line, tconf.ip_field);
-	fprintf(stdout, "%s\n", ip);
+	int ret = fprintf(stdout, "%s\n", ip);
 	fflush(stdout);
-	return;
+	return ret;
 }
 
 void output_file_is_csv()
