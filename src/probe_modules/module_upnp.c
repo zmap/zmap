@@ -319,4 +319,4 @@ probe_module_t module_upnp = {
         "is considered a failed response.",
 
     .fields = fields,
-    .numfields = 17};
+    .numfields = 18};
