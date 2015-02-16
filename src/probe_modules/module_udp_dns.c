@@ -312,7 +312,7 @@ void udp_dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_
 		// success is 1 if application level success
 		// response pkt is an answer and response code is no error
 		uint16_t qr = dns_hdr->qr;
-		uint16_t rcode = ntohs(dns_hdr->rcode);
+		uint16_t rcode = dns_hdr->rcode;
 		fs_add_uint64(fs, "success", (qr == DNS_QR_ANSWER) && (rcode == DNS_RCODE_NOERR));
 		fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
 		fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
