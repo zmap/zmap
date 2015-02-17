@@ -299,7 +299,7 @@ void udp_print_packet(FILE *fp, void* packet)
 {
 	struct ether_header *ethh = (struct ether_header *) packet;
 	struct ip *iph = (struct ip *) &ethh[1];
-    struct udphdr *udph = (struct udphdr*)(&iph[1]); 
+    struct udphdr *udph = (struct udphdr*)(&iph[1]);
 	fprintf(fp, "udp { source: %u | dest: %u | checksum: %u }\n",
 		ntohs(udph->uh_sport),
 		ntohs(udph->uh_dport),
@@ -382,6 +382,12 @@ int udp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		__attribute__((unused))uint32_t *src_ip, uint32_t *validation)
 {
 	uint16_t dport, sport;
+
+	if (ip_hdr->ip_ttl == 255) {
+		// drop any of outbound traffic that happened to be caught
+		return 0;
+	}
+
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		if ((4*ip_hdr->ip_hl + sizeof(struct udphdr)) > len) {
 			// buffer not large enough to contain expected udp header
