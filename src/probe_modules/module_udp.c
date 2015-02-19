@@ -426,10 +426,10 @@ int udp_validate_packet(const void *packet, uint32_t len,
 
 		sport = ntohs(udp->uh_sport);
 		dport = ntohs(udp->uh_dport);
+		if (dport != zconf.target_port) {
+			return 0;
+		}
 	} else {
-		return 0;
-	}
-	if (dport != zconf.target_port) {
 		return 0;
 	}
 	if (!check_dst_port(sport, num_ports, validation)) {

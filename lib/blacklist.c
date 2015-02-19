@@ -141,7 +141,7 @@ static int init_from_string(char *ip, int value)
 			}
 			struct sockaddr_in *sa = (struct sockaddr_in *) aip->ai_addr;
 			memcpy(&addr, &sa->sin_addr, sizeof(addr));
-			log_debug("constraint", "%s retrieved by hostname\n",
+			log_debug("constraint", "%s retrieved by hostname",
 				  inet_ntoa(addr));
 			ret = 0;
 			_add_constraint(addr, prefix_len, value);
@@ -244,7 +244,7 @@ int blacklist_init(char *whitelist_filename, char *blacklist_filename,
 		constraint = constraint_init(ADDR_ALLOWED);
 	}
 	if (blacklist_filename) {
-		init_from_file(blacklist_filename, "blacklist", 
+		init_from_file(blacklist_filename, "blacklist",
                 ADDR_DISALLOWED, ignore_invalid_hosts);
 	}
 	if (blacklist_entries) {

@@ -71,10 +71,10 @@ int main(int argc, char **argv)
 	struct zbl_conf conf; 
 	conf.verbosity = 3;
 	memset(&conf, 0, sizeof(struct zbl_conf));
-	int no_dupchk_pres;
+	int no_dupchk_pres = 0;
 	int ignore_bl_errs;
 	struct option longopts[] = {
-		{"no-duplicate-checking",  no_argument,	   &no_dupchk_pres, 0   },
+		{"no-duplicate-checking",  no_argument,	   &no_dupchk_pres, 1   },
 		{"ignore-blacklist-errors",no_argument,	   &ignore_bl_errs, 1   },
 		{"log-file",			   required_argument, NULL,			'l' },
 		{"blacklist-file",		 required_argument, NULL,			'b' },
@@ -116,7 +116,7 @@ int main(int argc, char **argv)
 		}
 	}
 	conf.check_duplicates = (!no_dupchk_pres);
-	conf.ignore_errors = ignore_bl_errs;	
+	conf.ignore_errors = ignore_bl_errs;
 	// initialize logging
 	FILE *logfile = stderr;
 	if (conf.log_filename) {

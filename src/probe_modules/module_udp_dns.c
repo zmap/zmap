@@ -1,5 +1,5 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan
+  ZMap Copyright 2013 Regents of the University of Michigan
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
@@ -20,10 +20,10 @@
 #include "../../lib/includes.h"
 #include "../../lib/random.h"
 #include "probe_modules.h"
-#include "module_udp.h"
 #include "packet.h"
 #include "logger.h"
 #include "module_udp_dns.h"
+#include "module_udp.h"
 
 #define MAX_UDP_PAYLOAD_LEN 1472
 #define UNUSED __attribute__((unused))
@@ -48,10 +48,10 @@ static int udp_send_msg_len = 0;
 // \x00\x01 -> Type: A (Host address)
 // \x00\x01 -> Class: IN (0x0001)
 
-static const char udp_dns_msg_default [32] = "\xb0\x0b\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x03\x77\x77\x77\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01";
-static const char udp_dns_msg_default_head [DNS_HEAD_LEN] = "\xb0\x0b\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00";
+static const char udp_dns_msg_default[32] = "\xb0\x0b\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x03\x77\x77\x77\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01";
+static const char udp_dns_msg_default_head[DNS_HEAD_LEN] = "\xb0\x0b\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00";
 // static const char udp_dns_msg_default_name [16] = "\x03\x77\x77\x77\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00";
-static const char udp_dns_msg_default_tail [DNS_TAIL_LEN]  = "\x00\x01\x00\x01";
+static const char udp_dns_msg_default_tail[DNS_TAIL_LEN]  = "\x00\x01\x00\x01";
 
 // google packet from wireshark
 // static const char udp_dns_msg_default[36] = "\xf5\x07\x00\x35\x00\x24\x04\x51\x10\xf5\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00\x00\x01\x00\x01";
@@ -66,26 +66,20 @@ const char *udp_dns_response_strings[] = {
         "DNS domain name error",
         "DNS query type not implemented",
         "DNS query refused",
-	"Reserved 6",
-	"Reserved 7",
-	"Reserved 8",
-	"Reserved 9",
-	"Reserved 10",
-	"Reserved 11",
-	"Resevered 12",
-	"Resevered 13",
-	"Resevered 14",
-	"Resevered 15"
-
+	"DNS Reserved 6",
+	"DNS Reserved 7",
+	"DNS Reserved 8",
+	"DNS Reserved 9",
+	"DNS Reserved 10",
+	"DNS Reserved 11",
+	"DNS Resevered 12",
+	"DNS Resevered 13",
+	"DNS Resevered 14",
+	"DNS Resevered 15"
 };
 
-static int num_ports;
-
 probe_module_t module_udp_dns;
-
-void udp_dns_set_num_ports(int x) {
-	num_ports = x;
-}
+static int num_ports;
 
 //this will convert www.google.com to 3www6google3com
 void convert_to_dns_name_format(unsigned char* dns,unsigned char* host) {
@@ -94,7 +88,7 @@ void convert_to_dns_name_format(unsigned char* dns,unsigned char* host) {
 	for(int i = 0; i < ((int) strlen((char*)host)); i++) {
 		if(host[i]=='.') {
 			*dns++=i-lock;
-			for(lock;lock<i;lock++) {
+			for(;lock<i;lock++) {
 				*dns++=host[lock];
 			}
 			lock++;
@@ -106,8 +100,18 @@ void convert_to_dns_name_format(unsigned char* dns,unsigned char* host) {
 // allocates and returns a string representation of a hexadecimal IP
 // hexadecimal ip must be passed in network byte order
 char* hex_to_ip(void* hex_ip) {
+
+	if(!hex_ip){
+		return NULL;
+	}
 	char* addrstr = malloc(INET_ADDRSTRLEN);
-	if (inet_ntop(AF_INET, hex_ip, addrstr, INET_ADDRSTRLEN) == 0) {
+	if(addrstr == NULL){
+		exit(1);
+	}
+	//fprintf(stderr, "hex_ip %s\n", (char*)hex_ip);
+
+	//memcpy(addrstr, hex_ip, sizeof(&hex_ip));
+	if(inet_ntop(AF_INET, (struct sockaddr_in *)hex_ip, addrstr, INET_ADDRSTRLEN) == NULL){
 		free(addrstr);
 		return NULL;
 	}
@@ -115,38 +119,54 @@ char* hex_to_ip(void* hex_ip) {
 }
 
 char* parse_dns_ip_results(struct dnshdr* dns_hdr) {
+	(void) dns_hdr;
+	return strdup(""); // This is why we don't accept pull requests
+#if 0
 	// parse through dns_query since it can be of variable length
-	char* dns_ans_start = ((char*)dns_hdr + sizeof(struct dnshdr));
-	while(*dns_ans_start++);
+	char* dns_ans_start = (char *) (&dns_hdr[1]);
+	while (*dns_ans_start++); // <---- SERIOUSLY FUCK THAT
 	// skip  qtype and qclass octets
 	dns_ans_start += 4;
 	// number of answers * 16 chars each (each followed by space or null, and quotes)
-	char* ip_addrs = malloc(ntohs(dns_hdr->ancount)*INET_ADDRSTRLEN + 2);
+	size_t size = ntohs(dns_hdr->ancount)*INET_ADDRSTRLEN+2;
+	char* ip_addrs = malloc(size);
+
 	// should always be 4 for ipv4 addrs, but include in case of unexpected response
-	uint16_t prev_data_len = 4;
+	//uint16_t prev_data_len = 4;
 	int output_pos = 0;
+	if(ntohs(dns_hdr->ancount) > 1000){
+		return NULL;
+	}
 	for (int i = 0; i < ntohs(dns_hdr->ancount); i++) {
-		dnsans* dns_ans = (dnsans *) ((char*) dns_ans_start + (12 + prev_data_len) * i);
+		//dnsans* dns_ans = (dnsans *) ((char*) dns_ans_start + (12 + prev_data_len)*i);
+		dnsans* dns_ans = (dnsans *) ((char*) dns_ans_start + (12)*i);
+		if(!dns_ans->addr){
+			//prev_data_len = ntohs(dns_ans->length);
+			continue;
+		}
 		char* ip_addr = hex_to_ip(&dns_ans->addr);
 		if (!ip_addr) {
+			//prev_data_len = ntohs(dns_ans->length);
 			continue;
 		}
 		output_pos += i == 0 ? sprintf(ip_addrs + output_pos, "\"%s", ip_addr) : sprintf(ip_addrs + output_pos, " %s", ip_addr);
-		prev_data_len = ntohs(dns_ans->length);
+		//prev_data_len = ntohs(dns_ans->length);
 	}
 	if (output_pos) {
 		sprintf(ip_addrs + output_pos, "\"");
 	}
 	return ip_addrs;
+#endif
 }
 
 static int udp_dns_global_initialize(struct state_conf *conf) {
-	fprintf(stderr, "in global init\n");
 	char *args, *c;
 	int dns_domain_len;
 	unsigned char* dns_domain;
 
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
+	udp_set_num_ports(num_ports);
+
 
 	udp_send_msg_len = sizeof(udp_dns_msg_default);
 	udp_send_msg = malloc(udp_send_msg_len);
@@ -214,7 +234,7 @@ int udp_dns_global_cleanup(__attribute__((unused)) struct state_conf *zconf,
 }
 
 int udp_dns_init_perthread(void* buf, macaddr_t *src,
-		macaddr_t *gw, __attribute__((unused)) port_h_t dst_port, 
+		macaddr_t *gw, __attribute__((unused)) port_h_t dst_port,
         __attribute__((unused)) void **arg_ptr) {
 	memset(buf, 0, MAX_PACKET_SIZE);
 	struct ether_header *eth_header = (struct ether_header *) buf;
@@ -267,29 +287,61 @@ void udp_dns_print_packet(FILE *fp, const void* packet) {
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
+int udp_dns_validate_packet(const void *packet, uint32_t len,
+        __attribute__((unused))uint32_t *src_ip, uint32_t *validation) {
+
+	struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
+	//    	uint32_t ip_len = len - sizeof(struct ether_header);
+
+	if (!udp_validate_packet(packet, len, src_ip, validation)) {
+		return 0;
+	}
+
+	if (ip_hdr->ip_p == IPPROTO_UDP) {
+		struct udphdr *udp = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
+		uint16_t sport = ntohs(udp->uh_sport);
+		if (sport != zconf.target_port) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
 void udp_dns_process_packet(const void *packet, UNUSED uint32_t len, fieldset_t *fs) {
         struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		struct udphdr *udp_hdr = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
-		struct dnshdr *dns_hdr = (struct dnshdr *) ((char *) udp_hdr + 8);
+		struct dnshdr *dns_hdr = (struct dnshdr *) (&udp_hdr[1]);
 		fs_add_string(fs, "classification", (char*) "udp_dns", 0);
 		// success is 1 if application level success
 		// response pkt is an answer and response code is no error
-		fs_add_uint64(fs, "success", (dns_hdr->qr == DNS_QR_ANSWER) && (dns_hdr->rcode == DNS_RCODE_NOERR));
+		uint16_t qr = dns_hdr->qr;
+		uint16_t rcode = dns_hdr->rcode;
+		fs_add_uint64(fs, "success", (qr == DNS_QR_ANSWER) && (rcode == DNS_RCODE_NOERR));
 		fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
 		fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
 		fs_add_null(fs, "icmp_responder");
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
-		fs_add_string(fs, "app_response_str", (char *) udp_dns_response_strings[dns_hdr->rcode], 0);
-		fs_add_uint64(fs, "app_response_code",dns_hdr->rcode);
+		fs_add_string(fs, "app_response_str", (char *) udp_dns_response_strings[rcode], 0);
+		fs_add_uint64(fs, "app_response_code", rcode);
 		fs_add_uint64(fs, "udp_pkt_size", ntohs(udp_hdr->uh_ulen));
-		fs_add_binary(fs, "data", (ntohs(udp_hdr->uh_ulen) - sizeof(struct udphdr)), (void*) &udp_hdr[1], 0);
+		if(ntohs(udp_hdr->uh_ulen) == 0){
+			fs_add_null(fs, "data");
+		}else{
+			fs_add_binary(fs, "data", (ntohs(udp_hdr->uh_ulen) - sizeof(struct udphdr)), (void*) &udp_hdr[1], 0);
+		}
 
+		/*
 		char* ip_addrs = parse_dns_ip_results(dns_hdr);
-		// printf("addrs: %s\n", ip_addrs);
-		fs_add_string(fs, "addrs", ip_addrs, 1);
+		if (!ip_addrs){
+			fs_add_null(fs, "addrs");
+		} else {
+			fs_add_string(fs, "addrs", ip_addrs, 1);
+		}
+		*/
+		fs_add_null(fs, "addrs");
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
 		struct ip *ip_inner = (struct ip *) &icmp[1];
@@ -312,6 +364,7 @@ void udp_dns_process_packet(const void *packet, UNUSED uint32_t len, fieldset_t 
 		fs_add_null(fs, "app_response_code");
 		fs_add_null(fs, "udp_pkt_size");
 		fs_add_null(fs, "data");
+		fs_add_null(fs, "addrs");
 	} else {
 		fs_add_string(fs, "classification", (char *) "other", 0);
 		fs_add_uint64(fs, "success", 0);
@@ -325,63 +378,8 @@ void udp_dns_process_packet(const void *packet, UNUSED uint32_t len, fieldset_t 
 		fs_add_null(fs, "app_response_code");
 		fs_add_null(fs, "udp_pkt_size");
 		fs_add_null(fs, "data");
+		fs_add_null(fs, "addrs");
 	}
-}
-
-int udp_dns_validate_packet(const void *packet, uint32_t len,
-        __attribute__((unused))uint32_t *src_ip, uint32_t *validation) {
-    if (!ip_validate_packet(packet, len, src_ip, validation)) {
-      return 0;
-    }
-
-    struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
-    uint32_t ip_len = len - sizeof(struct ether_header);
-    uint16_t dport, sport;
-    if (ip_hdr->ip_p == IPPROTO_UDP) {
-        if ((4*ip_hdr->ip_hl + sizeof(struct udphdr)) > ip_len) {
-            // buffer not large enough to contain expected udp header
-            return 0;
-        }
-        struct udphdr *udp = (struct udphdr*) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
-
-        sport = ntohs(udp->uh_dport);
-        dport = ntohs(udp->uh_sport);
-    } else if (ip_hdr->ip_p == IPPROTO_ICMP) {
-        // UDP can return ICMP Destination unreach
-        // IP( ICMP( IP( UDP ) ) ) for a destination unreach
-        uint32_t min_len = 4*ip_hdr->ip_hl + sizeof(struct icmp)
-                + sizeof(struct ip) + sizeof(struct udphdr);
-        if (ip_len < min_len) {
-            // Not enough information for us to validate
-            return 0;
-        }
-
-        struct icmp *icmp = (struct icmp*) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
-        if (icmp->icmp_type != ICMP_UNREACH) {
-            return 0;
-        }
-
-        struct ip *ip_inner = (struct ip*) &icmp[1];
-        // Now we know the actual inner ip length, we should recheck the buffer
-        if (ip_len < 4*ip_inner->ip_hl - sizeof(struct ip) + min_len) {
-            return 0;
-        }
-        // This is the packet we sent
-        struct udphdr *udp = (struct udphdr *) ((char*) ip_inner + 4*ip_inner->ip_hl);
-
-        sport = ntohs(udp->uh_sport);
-        dport = ntohs(udp->uh_dport);
-    } else {
-            return 0;
-    }
-    if (dport != zconf.target_port) {
-            return 0;
-    }
-    if (!check_dst_port(sport, num_ports, validation)) {
-	    return 0;
-    }
-
-    return 1;
 }
 
 static fielddefset_t fields = {
@@ -404,19 +402,18 @@ static fielddefset_t fields = {
 };
 
 probe_module_t module_udp_dns = {
-	//changed gloabl initialize, make_packet, validate_packet, global cleanup
 	.name = "dns",
 	.packet_length = 1,
 	.pcap_filter = "udp || icmp",
 	.pcap_snaplen = 1500,			// TO BE CHANGED FOR EXSTIMATE REFLECTION SIZE
 	.port_args = 1,
 	.thread_initialize = &udp_dns_init_perthread,
-	.global_initialize = &udp_global_initialize,
-	.make_packet = &udp_make_packet,
+	.global_initialize = &udp_dns_global_initialize,
+	.make_packet = &udp_dns_make_packet,
 	.print_packet = &udp_dns_print_packet,
-	.validate_packet = &udp_validate_packet,
+	.validate_packet = &udp_dns_validate_packet,
 	.process_packet = &udp_dns_process_packet,
-	.close = &udp_global_cleanup,
+	.close = &udp_dns_global_cleanup,
 	.fieldsets = (fielddefset_t *[]){
 		&ip_fields,
 		&fields
