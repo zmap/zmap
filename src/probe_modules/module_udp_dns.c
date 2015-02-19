@@ -308,6 +308,8 @@ int udp_dns_validate_packet(const void *packet, uint32_t len,
 }
 
 void udp_dns_process_packet(const void *packet, UNUSED uint32_t len, fieldset_t *fs) {
+	ip_process_packet(packet, len, fs);
+
         struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		struct udphdr *udp_hdr = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);

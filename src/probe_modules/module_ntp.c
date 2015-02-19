@@ -46,7 +46,7 @@ int ntp_validate_packet(const void *packet, uint32_t len,
         struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
 	// 	uint32_t ip_len = len - sizeof(struct ether_header);
 
-	if (!udp_validate_packet(ip_hdr, len, src_ip, validation)) {
+	if (!udp_validate_packet(packet, len, src_ip, validation)) {
 		return 0;
 	}
         if (ip_hdr->ip_p ==  IPPROTO_UDP) {

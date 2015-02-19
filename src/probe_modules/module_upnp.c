@@ -65,7 +65,7 @@ int upnp_validate_packet(const void *packet, uint32_t len,
         struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
 	// 	uint32_t ip_len = len - sizeof(struct ether_header);
 
-	if (!udp_validate_packet(ip_hdr, len, src_ip, validation)) {
+	if (!udp_validate_packet(packet, len, src_ip, validation)) {
 		return 0;
 	}
 
@@ -83,6 +83,7 @@ int upnp_validate_packet(const void *packet, uint32_t len,
 void upnp_process_packet(const void *packet,
         __attribute__((unused)) uint32_t len, fieldset_t *fs)
 {
+	ip_process_packet(packet, len, fs);
 
         struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
         if (ip_hdr->ip_p == IPPROTO_UDP) {
