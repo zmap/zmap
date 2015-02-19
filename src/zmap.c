@@ -487,12 +487,13 @@ int main(int argc, char *argv[])
 	// now that we know the probe module, let's find what it supports
 	memset(&zconf.fsconf, 0, sizeof(struct fieldset_conf));
 	// the set of fields made available to a user is constructed
-	// of probe module fields + system fields
+	// of probe module fields + ether fields + system fields
 	fielddefset_t *fds = &(zconf.fsconf.defs);
 	for (int i = 0; i < zconf.probe_module->num_fieldsets; i++) {
 		gen_fielddef_set(fds, zconf.probe_module->fieldsets[i]->fielddefs,
 				 zconf.probe_module->fieldsets[i]->len);
 	}
+	gen_fielddef_set(fds, eth_fields.fielddefs, eth_fields.len);
 	gen_fielddef_set(fds, sys_fields.fielddefs, sys_fields.len);
 	if (args.list_output_fields_given) {
 		for (int i = 0; i < fds->len; i++) {

@@ -80,10 +80,20 @@ void ip_process_packet(const void *packet, __attribute__((unused)) uint32_t len,
 	fs_add_ip_fields(fs, ip_hdr);
 }
 
+void fs_add_eth_fields(fieldset_t *fs, struct ether_header *eth)
+{
+	// WARNING: you must update eth_fields_len  as well
+	// as the definitions set (eth_fields) if you
+	// change the fields added below:
+	fs_add_string(fs, "smac", make_mac_str(eth->ether_shost), 1);
+	fs_add_string(fs, "dmac", make_mac_str(eth->ether_dhost), 1);
+	fs_add_uint64(fs, "eth-type", eth->ether_type);
+}
+
 void fs_add_ip_fields(fieldset_t *fs, struct ip *ip)
 {
-	// WARNING: you must update fs_ip_fields_len  as well
-	// as the definitions set (ip_fiels) if you
+	// WARNING: you must update ip_fields_len as well
+	// as the definitions set (ip_fields) if you
 	// change the fields added below:
 	fs_add_string(fs, "saddr", make_ip_str(ip->ip_src.s_addr), 1);
 	fs_add_uint64(fs, "saddr-raw", (uint64_t) ip->ip_src.s_addr);
@@ -123,6 +133,15 @@ fielddefset_t ip_fields = {
 		{.name="ttl", .type="int", .desc="time-to-live of response packet"}
 	},
 	.len = 6
+};
+
+fielddefset_t eth_fields = {
+	.fielddefs = {
+		{.name="smac", .type="string", .desc="source MAC address of response"},
+		{.name="dmac", .type="string", .desc="destination MAC address of response"},
+		{.name="eth-type", .type="int", .desc="ethernet packet type of response"}
+	},
+	.len = 3
 };
 
 fielddefset_t sys_fields = {

@@ -54,11 +54,13 @@ probe_module_t* get_probe_module_by_name(const char*);
 int ip_validate_packet(const void *packet, uint32_t len, uint32_t *src_ip,
 		       __attribute__((__unused__)) uint32_t *validation);
 void ip_process_packet(const void *packet, __attribute__((unused)) uint32_t len, fieldset_t *fs);
+void fs_add_eth_fields(fieldset_t *fs, struct ether_header *eth);
 void fs_add_ip_fields(fieldset_t *fs, struct ip *ip);
 void fs_add_system_fields(fieldset_t *fs, int is_repeat, int in_cooldown);
 void print_probe_modules(void);
 
 extern fielddefset_t ip_fields;
+extern fielddefset_t eth_fields;
 extern fielddefset_t sys_fields;
 
 #endif // HEADER_PROBE_MODULES_H
