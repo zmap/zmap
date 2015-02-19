@@ -153,10 +153,10 @@ void arp_process_packet(const void *packet,
 	struct arp_pkt *arp_packet = (struct arp_pkt *)(&ethh[1]);
 
 	fs_add_uint64(fs, "opcode", ntohs(arp_packet->hdr.ar_op));
-	fs_add_string(fs, "arp-saddr", make_ip_str(arp_packet->spa), 1);
-	fs_add_uint64(fs, "arp-saddr-raw", (uint64_t) arp_packet->spa);
-	fs_add_string(fs, "arp-daddr", make_ip_str(arp_packet->tpa), 1);
-	fs_add_uint64(fs, "arp-daddr-raw", (uint64_t) arp_packet->tpa);
+	fs_add_string(fs, "saddr", make_ip_str(arp_packet->spa), 1);
+	fs_add_uint64(fs, "saddr-raw", (uint64_t) arp_packet->spa);
+	fs_add_string(fs, "daddr", make_ip_str(arp_packet->tpa), 1);
+	fs_add_uint64(fs, "daddr-raw", (uint64_t) arp_packet->tpa);
 	fs_add_string(fs, "classification", (char *) "reply", 0);
 	fs_add_uint64(fs, "success", 1);
 }
