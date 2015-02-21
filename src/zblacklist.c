@@ -170,8 +170,10 @@ int main(int argc, char **argv)
 	}
 	// process addresses	
 	char line[1000]; 
-	while (fgets(line, sizeof(line), stdin) != NULL) {
+	char original[1000];
+	while (fgets(line, 1000, stdin) != NULL) {
 		// remove new line
+		memcpy(original, line, strlen(line) + 1);
 		char *n = zmin(zmin(zmin(zmin(strchr(line, '\n'), 
                         strchr(line, ',')), 
                         strchr(line, '\t')),
@@ -200,12 +202,13 @@ int main(int argc, char **argv)
 			if (conf.check_duplicates) {
 				if (!pbm_check(seen, ntohl(addr.s_addr))) {
 					pbm_set(seen, ntohl(addr.s_addr));
-					printf("%s\n", line);
+					printf("%s", original);
 				}
 			} else {
-				printf("%s\n", line);
+				printf("%s", original);
 			}
-		}	}
+		}	
+	}
 	return EXIT_SUCCESS;
 }
 
