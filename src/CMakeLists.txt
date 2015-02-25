@@ -175,6 +175,7 @@ install(
 	TARGETS
 	zmap
 	zblacklist
+        ztee
 	RUNTIME DESTINATION sbin
 )
 
