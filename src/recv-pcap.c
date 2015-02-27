@@ -52,7 +52,7 @@ void recv_init()
 	}
 	struct bpf_program bpf;
 
-	snprintf(bpftmp, sizeof(bpftmp-1), "ether src %02x:%02x:%02x:%02x:%02x:%02x and (%s)",
+	snprintf(bpftmp, sizeof(bpftmp)-1, "ether src %02x:%02x:%02x:%02x:%02x:%02x and (%s)",
 		zconf.gw_mac[0], zconf.gw_mac[1], zconf.gw_mac[2],
 		zconf.gw_mac[3], zconf.gw_mac[4], zconf.gw_mac[5],
 		zconf.probe_module->pcap_filter);
