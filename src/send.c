@@ -247,6 +247,7 @@ int send_run(sock_t st, shard_t *s)
 		}
 		if (s->state.sent >= max_targets) {
 			s->cb(s->id, s->arg);
+			log_trace("send", "send thread %hhu finished (max targets of %u reached)", s->id, max_targets);
 			break;
 		}
 		if (zconf.max_runtime && zconf.max_runtime <= now() - zsend.start) {
@@ -255,6 +256,7 @@ int send_run(sock_t st, shard_t *s)
 		}
 		if (curr == 0) {
 			s->cb(s->id, s->arg);
+			log_trace("send", "send thread %hhu finished, shard depleted", s->id);
 			break;
 		}
 		s->state.sent++;
@@ -292,9 +294,9 @@ int send_run(sock_t st, shard_t *s)
 		curr = shard_get_next_ip(s);
 	}
 	if (zconf.dryrun) {
-		pthread_mutex_lock(&send_mutex);
+		lock_file(stdout);
 		fflush(stdout);
-		pthread_mutex_unlock(&send_mutex);
+		unlock_file(stdout);
 	}
 	log_debug("send", "thread %hu finished", s->id);
 	return EXIT_SUCCESS;
