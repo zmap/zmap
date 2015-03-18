@@ -31,8 +31,13 @@ typedef struct ztee_conf {
 	// Files
 	char *output_filename;
 	char *status_updates_filename;
+	char *log_file_name;
 	FILE *output_file;
 	FILE *status_updates_file;
+	FILE *log_file;
+
+	// Log level
+	int log_level;
 
 	// Input formats
 	format_t in_format;
@@ -139,7 +144,6 @@ int main(int argc, char *argv[])
 		exit(EXIT_SUCCESS);
 	}
 
-	log_init(stderr, ZLOG_WARN, 0, NULL);
 
 	// Handle help text and version
 	if (args.help_given) {
@@ -150,6 +154,23 @@ int main(int argc, char *argv[])
 		cmdline_parser_print_version();
 		exit(EXIT_SUCCESS);
 	}
+
+	// Try opening the log file
+	tconf.log_level = ZLOG_WARN;
+	if (args.log_file_given) {
+		tconf.log_file = fopen(args.log_file_arg, "w");
+	} else {
+		tconf.log_file = stderr;
+	}
+
+	// Check for an error opening the log file
+	if (tconf.log_file == NULL) {
+		log_init(stderr, tconf.log_level, 0, "ztee");
+		log_fatal("ztee", "Could not open log file");
+	}
+
+	// Actually init the logging infrastructure
+	log_init(tconf.log_file, tconf.log_level, 0, "ztee");
 
 	// Check for an output file
 	if (args.inputs_num < 1) {
