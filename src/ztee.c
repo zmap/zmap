@@ -144,6 +144,8 @@ int main(int argc, char *argv[])
 		exit(EXIT_SUCCESS);
 	}
 
+	signal(SIGPIPE, SIG_IGN);
+
 
 	// Handle help text and version
 	if (args.help_given) {
@@ -323,8 +325,7 @@ void *process_queue(void* arg)
 		int output_ret = fprintf(output_file, "%s", node->data);
 		int output_flush = fflush(output_file);
 		if (output_ret < 0) {
-			char *output_file_error = strerror(output_ret);
-			log_fatal("ztee", "%s", output_file_error);
+			log_fatal("ztee", "%s", "error writing to output file");
 		}
 		if (output_flush != 0) {
 			char *output_flush_error = strerror(errno);
@@ -350,8 +351,7 @@ void *process_queue(void* arg)
 
 		// Check to see if write failed
 		if (stdout_ret < 0) {
-			char *stdout_error = strerror(stdout_ret);
-			log_fatal("ztee", "%s", stdout_error);
+			log_fatal("ztee", "%s", "error writing to stdout");
 		}
 		if (stdout_flush != 0) {
 			char *stdout_flush_error = strerror(errno);
