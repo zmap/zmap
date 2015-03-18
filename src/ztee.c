@@ -14,6 +14,7 @@
 #include <getopt.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include "../lib/lockfd.h"
 #include "../lib/logger.h"
