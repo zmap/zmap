@@ -323,18 +323,14 @@ void *process_queue(void* arg)
 
 
 		// Write raw data to output file
-		int output_ret = fprintf(output_file, "%s", node->data);
-		int output_flush = fflush(output_file);
-		if (output_ret < 0) {
-			log_fatal("ztee", "%s", "error writing to output file");
-		}
-		if (output_flush != 0) {
-			char *output_flush_error = strerror(errno);
-			log_fatal("ztee", "%s", output_flush_error);
+		fprintf(output_file, "%s", node->data);
+		fflush(output_file);
+		if (ferror(output_file) != 0) {
+			log_fatal("ztee", "%s", "Error writing to output file");
 		}
 
 		// Dump to stdout
-		int stdout_ret = 0;
+		int stdout_ret;
 		switch (tconf.in_format) {
 		case FORMAT_JSON:
 			log_fatal("ztee", "JSON input format unimplemented");
@@ -345,18 +341,13 @@ void *process_queue(void* arg)
 		default:
 			// Handle raw
 			stdout_ret = fprintf(stdout, "%s", node->data);
-			fflush(stdout);
 			break;
 		}
-		int stdout_flush = fflush(stdout);
 
 		// Check to see if write failed
-		if (stdout_ret < 0) {
-			log_fatal("ztee", "%s", "error writing to stdout");
-		}
-		if (stdout_flush != 0) {
-			char *stdout_flush_error = strerror(errno);
-			log_fatal("ztee", "%s", stdout_flush_error);
+		fflush(stdout);
+		if (ferror(stdout) != 0 || stdout_ret <= 0) {
+			log_fatal("ztee", "%s", "Error writing to stdout");
 		}
 
 		// Record output lines
