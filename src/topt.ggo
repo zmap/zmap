@@ -19,6 +19,8 @@ option "monitor"                m "Print monitor output to stdout"
 option "status-updates-file"    u "File to write status updates in CSV format"
     typestr="monitor.csv"
     optional string
+option "log-file"               l "File to log to"
+    optional string
 option "raw"                    r "Ignore input formatting"
     optional
 

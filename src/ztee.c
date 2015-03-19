@@ -14,6 +14,7 @@
 #include <getopt.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include "../lib/lockfd.h"
 #include "../lib/logger.h"
@@ -31,8 +32,13 @@ typedef struct ztee_conf {
 	// Files
 	char *output_filename;
 	char *status_updates_filename;
+	char *log_file_name;
 	FILE *output_file;
 	FILE *status_updates_file;
+	FILE *log_file;
+
+	// Log level
+	int log_level;
 
 	// Input formats
 	format_t in_format;
@@ -139,7 +145,8 @@ int main(int argc, char *argv[])
 		exit(EXIT_SUCCESS);
 	}
 
-	log_init(stderr, ZLOG_WARN, 0, NULL);
+	signal(SIGPIPE, SIG_IGN);
+
 
 	// Handle help text and version
 	if (args.help_given) {
@@ -150,6 +157,23 @@ int main(int argc, char *argv[])
 		cmdline_parser_print_version();
 		exit(EXIT_SUCCESS);
 	}
+
+	// Try opening the log file
+	tconf.log_level = ZLOG_WARN;
+	if (args.log_file_given) {
+		tconf.log_file = fopen(args.log_file_arg, "w");
+	} else {
+		tconf.log_file = stderr;
+	}
+
+	// Check for an error opening the log file
+	if (tconf.log_file == NULL) {
+		log_init(stderr, tconf.log_level, 0, "ztee");
+		log_fatal("ztee", "Could not open log file");
+	}
+
+	// Actually init the logging infrastructure
+	log_init(tconf.log_file, tconf.log_level, 0, "ztee");
 
 	// Check for an output file
 	if (args.inputs_num < 1) {
@@ -302,8 +326,7 @@ void *process_queue(void* arg)
 		int output_ret = fprintf(output_file, "%s", node->data);
 		int output_flush = fflush(output_file);
 		if (output_ret < 0) {
-			char *output_file_error = strerror(output_ret);
-			log_fatal("ztee", "%s", output_file_error);
+			log_fatal("ztee", "%s", "error writing to output file");
 		}
 		if (output_flush != 0) {
 			char *output_flush_error = strerror(errno);
@@ -329,8 +352,7 @@ void *process_queue(void* arg)
 
 		// Check to see if write failed
 		if (stdout_ret < 0) {
-			char *stdout_error = strerror(stdout_ret);
-			log_fatal("ztee", "%s", stdout_error);
+			log_fatal("ztee", "%s", "error writing to stdout");
 		}
 		if (stdout_flush != 0) {
 			char *stdout_flush_error = strerror(errno);
