@@ -300,10 +300,10 @@ void udp_print_packet(FILE *fp, void* packet)
 	struct ether_header *ethh = (struct ether_header *) packet;
 	struct ip *iph = (struct ip *) &ethh[1];
     struct udphdr *udph = (struct udphdr*)(&iph[1]); 
-	fprintf(fp, "udp { source: %u | dest: %u | checksum: %u }\n",
+	fprintf(fp, "udp { source: %u | dest: %u | checksum: %#04X }\n",
 		ntohs(udph->uh_sport),
 		ntohs(udph->uh_dport),
-		ntohl(udph->uh_sum));
+		ntohs(udph->uh_sum));
 	fprintf_ip_header(fp, iph);
 	fprintf_eth_header(fp, ethh);
 	fprintf(fp, "------------------------------------------------------\n");

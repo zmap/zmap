@@ -73,11 +73,11 @@ void synscan_print_packet(FILE *fp, void* packet)
 	struct ether_header *ethh = (struct ether_header *) packet;
 	struct ip *iph = (struct ip *) &ethh[1];
 	struct tcphdr *tcph = (struct tcphdr *) &iph[1];
-	fprintf(fp, "tcp { source: %u | dest: %u | seq: %u | checksum: %u }\n",
+	fprintf(fp, "tcp { source: %u | dest: %u | seq: %u | checksum: %#04X }\n",
 			ntohs(tcph->th_sport),
 			ntohs(tcph->th_dport),
 			ntohl(tcph->th_seq),
-			ntohl(tcph->th_sum));
+			ntohs(tcph->th_sum));
 	fprintf_ip_header(fp, iph);
 	fprintf_eth_header(fp, ethh);
 	fprintf(fp, "------------------------------------------------------\n");

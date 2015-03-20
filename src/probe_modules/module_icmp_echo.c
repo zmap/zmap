@@ -74,7 +74,7 @@ void icmp_echo_print_packet(FILE *fp, void* packet)
 	struct icmp *icmp_header = (struct icmp*) (&iph[1]);
 
 	fprintf(fp, "icmp { type: %u | code: %u "
-			"| checksum: %u | id: %u | seq: %u }\n",
+			"| checksum: %#04X | id: %u | seq: %u }\n",
 			icmp_header->icmp_type,
 			icmp_header->icmp_code,
 			ntohs(icmp_header->icmp_cksum),
