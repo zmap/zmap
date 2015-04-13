@@ -172,14 +172,7 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
 
 void dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *fs) {
     struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];    
-    uint16_t temp16;
     //char char2[2];
-    char *char2 = malloc(sizeof(char)*2);
-    char *query_num = malloc(sizeof(char)*2);
-    char *answer_rrs = malloc(sizeof(char) *2);
-    char *authority_rrs = malloc(sizeof(char)*2);
-    char *additional_rrs = malloc(sizeof(char)*2);
-    char* data;
     //char query_num[2];
     if(ip_hdr->ip_p == IPPROTO_UDP){
        struct udphdr *udp = (struct udphdr*) ((char*) ip_hdr+ip_hdr->ip_hl * 4);
