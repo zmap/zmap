@@ -13,6 +13,7 @@
 #include "logger.h"
 
 #define MAX_NTP_PAYLOAD_LEN 1472
+#define ICMP_UNREACH_HEADER_SIZE 8
 #define UNUSED __attribute__((unused))
 
 probe_module_t module_ntp;
@@ -117,7 +118,7 @@ void ntp_process_packet(const u_char *packet,
 		}
         } else if (ip_hdr->ip_p ==  IPPROTO_ICMP) {
                 struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr -> ip_hl * 4);
-                struct ip *ip_inner = (struct ip *) &icmp[1];
+                struct ip *ip_inner = (struct ip *) ((char*) icmp + ICMP_UNREACH_HEADER_SIZE);
 
                 fs_modify_string(fs, "saddr", make_ip_str(ip_inner->ip_dst.s_addr), 1);
                 fs_add_string(fs, "classification", (char*) "icmp-unreach", 0);

@@ -66,6 +66,7 @@ int csv_close(__attribute__((unused)) struct state_conf* c,
 static void hex_encode(FILE *f, unsigned char* readbuf, size_t len)
 {
 	for(size_t i=0; i < len; i++) {
+        fprintf(stderr, "%02x", readbuf[i]);
 		fprintf(f, "%02x", readbuf[i]);
 	}
 }
