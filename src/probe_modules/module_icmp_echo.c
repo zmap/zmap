@@ -14,6 +14,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/time.h>
 
 #include "../../lib/includes.h"
 #include "probe_modules.h"
@@ -25,6 +26,12 @@
 #define ICMP_TIMXCEED_UNREACH_HEADER_SIZE 8
 
 probe_module_t module_icmp_echo;
+
+struct icmp_payload_for_rtt {
+  uint32_t sent_tv_sec;
+  uint32_t sent_tv_usec;
+  ipaddr_n_t dst;
+};
 
 int icmp_echo_init_perthread(void* buf, macaddr_t *src,
 		macaddr_t *gw, __attribute__((unused)) port_h_t dst_port,
@@ -52,12 +59,20 @@ int icmp_echo_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 	struct ether_header *eth_header = (struct ether_header *) buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
 	struct icmp *icmp_header = (struct icmp*)(&ip_header[1]);
+	struct icmp_payload_for_rtt *payload = (struct icmp_payload_for_rtt*)(((char *)icmp_header) + 8);
 	uint16_t icmp_idnum = validation[2] & 0xFFFF;
+	struct timeval tv;
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
 
 	icmp_header->icmp_id = icmp_idnum;
+
+	gettimeofday(&tv, NULL);
+	payload->sent_tv_sec = tv.tv_sec;
+	payload->sent_tv_usec = tv.tv_usec;
+	payload->dst = dst_ip;
+
 	icmp_header->icmp_cksum = 0;
 	icmp_header->icmp_cksum = icmp_checksum((unsigned short *) icmp_header);
 
@@ -128,10 +143,10 @@ int icmp_validate_packet(const struct ip *ip_hdr,
 			     (uint8_t *) validation);
 	}
 
-	// validate icmp id
-	if (icmp_idnum != (validation[2] & 0xFFFF)) {
-		return 0;
-	}
+	// Don't validate icmp id so that we will retain the ability to receive responses from other addresses
+	/* if (icmp_idnum != (validation[2] & 0xFFFF)) { */
+	/* 	return 0; */
+	/* } */
 	return 1;
 }
 
@@ -144,6 +159,11 @@ void icmp_echo_process_packet(const u_char *packet,
 	fs_add_uint64(fs, "code", icmp_hdr->icmp_code);
 	fs_add_uint64(fs, "icmp-id", ntohs(icmp_hdr->icmp_id));
 	fs_add_uint64(fs, "seq", ntohs(icmp_hdr->icmp_seq));
+	struct icmp_payload_for_rtt *payload = (struct icmp_payload_for_rtt *)(((char *)icmp_hdr) + 8);
+	fs_add_uint64(fs, "sent-timestamp-ts", (uint64_t)payload->sent_tv_sec);
+	fs_add_uint64(fs, "sent-timestamp-us", (uint64_t)payload->sent_tv_usec);
+	fs_add_uint64(fs, "dst-raw", (uint64_t)payload->dst);
+
 	switch (icmp_hdr->icmp_type) {
 		case ICMP_ECHOREPLY:
 			fs_add_string(fs, "classification", (char*) "echoreply", 0);
@@ -177,6 +197,9 @@ fielddef_t fields[] = {
 	{.name="code", .type="int", .desc="icmp message sub type code"},
 	{.name="icmp-id", .type="int", .desc="icmp id number"},
 	{.name="seq", .type="int", .desc="icmp sequence number"},
+	{.name="sent-timestamp-ts", .type="int", .desc="timestamp of sent probe in seconds since Epoch"},
+	{.name="sent-timestamp-us", .type="int", .desc="microsecond part of sent timestamp"},
+	{.name="dst-raw", .type="int", .desc="raw destination IP address of sent probe"},
 	{.name="classification", .type="string", .desc="probe module classification"},
 	{.name="success", .type="int", .desc="did probe module classify response as success"}
 };
@@ -195,5 +218,5 @@ probe_module_t module_icmp_echo = {
 	.validate_packet = &icmp_validate_packet,
 	.close = NULL,
 	.fields = fields,
-	.numfields = 6};
+	.numfields = 9};
 
