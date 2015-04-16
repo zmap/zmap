@@ -55,6 +55,7 @@ int upnp_init_perthread(void* buf, macaddr_t *src, macaddr_t *gw,
     assert(sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr)
 		+ strlen(upnp_query) <= MAX_PACKET_SIZE);
 
+    assert(MAX_PACKET_SIZE - (payload - buf) > strlen(upnp_query));
     strcpy(payload, upnp_query);
 
     return EXIT_SUCCESS;
