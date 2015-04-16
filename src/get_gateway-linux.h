@@ -273,7 +273,7 @@ int get_iface_hw_addr(char *iface, unsigned char *hw_mac)
 		return EXIT_FAILURE;
 	}
 	memset(&buffer, 0, sizeof(buffer));
-	strcpy(buffer.ifr_name, iface);
+	strncpy(buffer.ifr_name, iface, IFNAMSIZ);
 	ioctl(s, SIOCGIFHWADDR, &buffer);
 	close(s);
 	memcpy(hw_mac, buffer.ifr_hwaddr.sa_data, 6);
