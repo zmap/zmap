@@ -28,7 +28,7 @@
 
 probe_module_t module_icmp_echo_time;
 
-static struct icmp_payload_for_rtt {
+struct icmp_payload_for_rtt {
   uint32_t sent_tv_sec;
   uint32_t sent_tv_usec;
   ipaddr_n_t dst;
@@ -114,12 +114,11 @@ static int icmp_validate_packet(const struct ip *ip_hdr,
     }
 
     struct icmp *icmp_h = (struct icmp *) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
-    uint16_t icmp_idnum = icmp_h->icmp_id;
 
     // ICMP validation is tricky: for some packet types, we must look inside
     // the payload
     if (icmp_h->icmp_type == ICMP_TIMXCEED || icmp_h->icmp_type == ICMP_UNREACH) {
-
+        //uint16_t icmp_idnum = icmp_h->icmp_id;
         // Should have 16B TimeExceeded/Dest_Unreachable header + original IP header
         // + 1st 8B of original ICMP frame
         if ((4*ip_hdr->ip_hl + ICMP_TIMXCEED_UNREACH_HEADER_SIZE +
@@ -133,10 +132,10 @@ static int icmp_validate_packet(const struct ip *ip_hdr,
             return 0;
         }
 
-        struct icmp *icmp_inner = (struct icmp *)((char *) ip_inner + 4*ip_hdr->ip_hl);
+        //struct icmp *icmp_inner = (struct icmp *)((char *) ip_inner + 4*ip_hdr->ip_hl);
 
         // Regenerate validation and icmp id based off inner payload
-        icmp_idnum = icmp_inner->icmp_id;
+        //icmp_idnum = icmp_inner->icmp_id;
         *src_ip = ip_inner->ip_dst.s_addr;
         validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
                  (uint8_t *) validation);
