@@ -26,7 +26,7 @@
 
 probe_module_t module_icmp_echo;
 
-int icmp_echo_init_perthread(void* buf, macaddr_t *src,
+static int icmp_echo_init_perthread(void* buf, macaddr_t *src,
 		macaddr_t *gw, __attribute__((unused)) port_h_t dst_port,
 		__attribute__((unused)) void **arg_ptr)
 {
@@ -45,7 +45,7 @@ int icmp_echo_init_perthread(void* buf, macaddr_t *src,
 	return EXIT_SUCCESS;
 }
 
-int icmp_echo_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
+static int icmp_echo_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 				uint32_t *validation, __attribute__((unused)) int probe_num,
 				__attribute__((unused)) void *arg)
 {
@@ -67,7 +67,7 @@ int icmp_echo_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 	return EXIT_SUCCESS;
 }
 
-void icmp_echo_print_packet(FILE *fp, void* packet)
+static void icmp_echo_print_packet(FILE *fp, void* packet)
 {
 	struct ether_header *ethh = (struct ether_header *) packet;
 	struct ip *iph = (struct ip *) &ethh[1];
@@ -87,7 +87,7 @@ void icmp_echo_print_packet(FILE *fp, void* packet)
 
 
 
-int icmp_validate_packet(const struct ip *ip_hdr,
+static int icmp_validate_packet(const struct ip *ip_hdr,
 		uint32_t len, uint32_t *src_ip, uint32_t *validation)
 {
 	if (ip_hdr->ip_p != IPPROTO_ICMP) {
@@ -135,7 +135,7 @@ int icmp_validate_packet(const struct ip *ip_hdr,
 	return 1;
 }
 
-void icmp_echo_process_packet(const u_char *packet,
+static void icmp_echo_process_packet(const u_char *packet,
 		__attribute__((unused)) uint32_t len, fieldset_t *fs)
 {
 	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
@@ -172,7 +172,7 @@ void icmp_echo_process_packet(const u_char *packet,
 	}
 }
 
-fielddef_t fields[] = {
+static fielddef_t fields[] = {
 	{.name="type", .type="int", .desc="icmp message type"},
 	{.name="code", .type="int", .desc="icmp message sub type code"},
 	{.name="icmp-id", .type="int", .desc="icmp id number"},
