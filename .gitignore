@@ -21,5 +21,6 @@ install_manifest.txt
 _CPack_Packages/*
 *.deb
 !.gitignore
+!.travis.yml
 src/zblacklist
 src/ztee
