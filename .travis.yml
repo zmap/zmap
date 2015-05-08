@@ -2,7 +2,7 @@ language: c
 sudo: required
 before_install: 
     - sudo apt-get update -qq
-    - sudo apt-get install -qq build-essential cmake libgmp3-dev gengetopt libpcap-dev flex byacc libjson-c-dev pkg-config
-script: cmake -DENABLE_DEVELOPMENT=ON . && make
+    - sudo apt-get install -qq build-essential cmake libgmp3-dev gengetopt libpcap-dev flex byacc pkg-config
+script: cmake -DENABLE_DEVELOPMENT=ON -DWITH_JSON=OFF . && make
 compiler: clang
 
