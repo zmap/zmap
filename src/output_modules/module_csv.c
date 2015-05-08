@@ -31,7 +31,7 @@ int csv_init(struct state_conf *conf, char **fields, int fieldlens)
 			file = stdout;
 		} else {
 			if (!(file = fopen(conf->output_filename, "w"))) {
-				log_fatal("csv", "could not open output file (%s)",
+				log_fatal("csv", "could not open CSV output file %s",
 					conf->output_filename);
 			}
 		}
