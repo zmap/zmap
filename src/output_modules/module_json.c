@@ -124,7 +124,7 @@ int json_output_file_init(struct state_conf *conf, UNUSED char **fields, UNUSED 
 	return EXIT_SUCCESS;
 }
 
-static void json_output_file_store_data(json_object *obj, const u_char *packet, size_t buflen)
+static void json_output_file_store_data(json_object *obj, const char* name, const u_char *packet, size_t buflen)
 {
 	unsigned int i;
 	char *buf;
@@ -134,8 +134,7 @@ static void json_output_file_store_data(json_object *obj, const u_char *packet, 
 
 	for (i=0; i<buflen; i++)
 		snprintf(buf + (i*2), 3, "%.2x", packet[i]);
-	json_object_object_add(obj, "data", json_object_new_string(buf));
-	json_object_object_add(obj, "length", json_object_new_int(buflen));
+	json_object_object_add(obj, name, json_object_new_string(buf));
 	free(buf);
 }
 
@@ -155,7 +154,7 @@ int json_output_file_ip(fieldset_t *fs)
 			json_object_object_add(obj, f->name,
 					json_object_new_int((int) f->value.num));
 		} else if (f->type == FS_BINARY) {
-			json_output_file_store_data(obj,
+			json_output_file_store_data(obj, f->name,
 					(const u_char*) f->value.ptr, f->len);
 		} else if (f->type == FS_NULL) {
 			// do nothing
