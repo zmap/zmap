@@ -23,9 +23,9 @@
 #define BUFFER_SIZE 50
 
 static int buffer_fill = 0;
-static mongoc_client_t *client           = NULL;
-static mongoc_collection_t *collection   = NULL;
-static mongoc_bulk_operation_t *bulk     = NULL;
+static mongoc_client_t *client         = NULL;
+static mongoc_collection_t *collection = NULL;
+static mongoc_bulk_operation_t *bulk   = NULL;
 
 void mongodb_module_log(mongoc_log_level_t log_level, const char *log_domain, const char *msg, UNUSED void *user_data)
 {
@@ -73,7 +73,7 @@ int mongodb_module_init(struct state_conf *conf, UNUSED char **fields, UNUSED in
 	collection = mongoc_client_get_collection(client, db ? db : strdup("zmap_output"), conf->output_filename ? conf->output_filename : strdup("zmap_output"));
 	bulk = mongoc_collection_create_bulk_operation(collection,false,NULL);
 
-	return EXIT_SUCCESS;		
+	return EXIT_SUCCESS;
 }
 
 static int mongodb_module_flush(void)
@@ -84,6 +84,10 @@ static int mongodb_module_flush(void)
 	bson_t reply;
 	mongoc_bulk_operation_t *old_bulk;
 
+	if (buffer_fill == 0){
+		mongoc_bulk_operation_destroy(bulk);
+		return EXIT_SUCCESS;
+	}
 
 	bulk_ret = mongoc_bulk_operation_execute(bulk, &reply, &error);
 	old_bulk = bulk;
