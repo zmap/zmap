@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/zmap/zmap.svg?branch=travis-configuration)](https://travis-ci.org/zmap/zmap)
+
 ZMap is a fast network scanner designed for Internet-wide network surveys. On a
 typical desktop computer with a gigabit Ethernet connection, ZMap is capable
 scanning the entire public IPv4 address space in under five minutes.
@@ -10,7 +12,7 @@ scanning out of the box.
 
 Documentation and examples can be found at https://zmap.io/.
 
--- 
+----
 
 ZMap Copyright 2013 Regents of the University of Michigan 
 
