@@ -129,6 +129,10 @@ if (WITH_REDIS)
 	SET(SOURCES ${SOURCES} ${PROJECT_SOURCE_DIR}/lib/redis.c output_modules/module_redis.c output_modules/module_csvredis.c output_modules/module_redis_csv.c)
 endif()
 
+if (WITH_MONGO)
+	SET(SOURCES ${SOURCES} output_modules/module_mongodb.c)
+endif()
+
 add_custom_command(OUTPUT zopt.h
 	COMMAND gengetopt -C --no-help --no-version --unamed-opts=SUBNETS -i "${CMAKE_CURRENT_SOURCE_DIR}/zopt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/zopt"
 	DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/zopt.ggo"
@@ -166,6 +170,7 @@ target_link_libraries(
 	${DNET_LIBRARIES}
 	${REDIS_LIBS}
 	${JSON_LIBRARIES}
+	${MONGO_LIBRARIES}
 	)
 
 target_link_libraries(
