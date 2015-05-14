@@ -54,5 +54,3 @@ your scan IPs.
 
 Remember, you're sending a lot of traffic. This is what happened at the
 University of Michigan during a 10 Gbps scan.
-
-![bandwidth](https://davidadrian.org/srv/umich_bandwidth.png)
