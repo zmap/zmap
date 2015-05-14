@@ -24,3 +24,4 @@ _CPack_Packages/*
 !.travis.yml
 src/zblacklist
 src/ztee
+cmake_installer.sh
