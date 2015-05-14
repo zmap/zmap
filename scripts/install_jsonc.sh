@@ -12,4 +12,4 @@ cd json-c-json-c-0.12-20140410
 make
 
 # Install it
-#sudo make install
+sudo make install
