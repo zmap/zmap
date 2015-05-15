@@ -6,7 +6,7 @@ before_install:
     - sudo apt-get install -qq libgmp3-dev gengetopt libpcap-dev flex byacc pkg-config libhiredis-dev
     - sudo apt-get install libsasl2-dev
     - sudo pip install sh
-    - python ./scripts/install_cmake.sh
+    - python ./scripts/install_cmake.py
     - python ./scripts/install_jsonc.py
     - python ./scripts/install_mongo.py
     - export PATH=/opt/bin:$PATH
