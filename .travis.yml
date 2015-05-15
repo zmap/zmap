@@ -7,7 +7,7 @@ before_install:
     - sudo apt-get install libsasl2-dev
     - sudo pip install sh
     - sudo ./scripts/install_cmake.sh
-    - sudo ./scripts/install_jsonc.sh
+    - python ./scripts/install_jsonc.py
     - python ./scripts/install_mongo.py
     - export PATH=/opt/bin:$PATH
     - export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/lib64/pkgconfig
