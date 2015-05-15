@@ -27,7 +27,7 @@ git.clone("https://github.com/mongodb/mongo-c-driver.git",
 
 cd(mongo_c_driver)
 autogen = sh.Command(autogen_location)
-autogen(prefix="/usr", libdir="/usr/lib64", _out=write_output, _env=install_env)
+autogen(prefix="/usr", _out=write_output, _env=install_env)
 make(_out=write_output, _env=install_env)
 
 if os.environ.get("ZMAP_TRAVIS_BUILD", None):

@@ -10,7 +10,6 @@ before_install:
     - python ./scripts/install_jsonc.py
     - python ./scripts/install_mongo.py
     - export PATH=/opt/bin:$PATH
-    - export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/lib64/pkgconfig
     - pkg-config --variable pc_path pkg-config
     - pkg-config --list-all
 script: cmake -DENABLE_DEVELOPMENT=ON -DWITH_JSON=ON -DWITH_REDIS=ON -DWITH_MONGO=ON . && make
