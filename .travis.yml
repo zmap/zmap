@@ -8,6 +8,7 @@ before_install:
     - sudo pip install sh
     - sudo ./scripts/install_cmake.sh
     - sudo ./scripts/install_jsonc.sh
+    - python ./scripts/install_mongo.py
     - export PATH=/opt/bin:$PATH
 script: cmake -DENABLE_DEVELOPMENT=ON -DWITH_JSON=ON -DWITH_REDIS=ON -DWITH_MONGO=ON . && make
 compiler: clang
