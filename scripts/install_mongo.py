@@ -8,6 +8,9 @@ from sh import git, cd, make, rm, sudo
 def write_output(line):
 	sys.stdout.write(line)
 
+install_env = os.environ.copy()
+install_env['CC'] = "gcc"
+
 directory = os.path.dirname(os.path.realpath(__file__))
 
 mongo_c_driver = os.path.join(directory, "mongo-c-driver")
@@ -24,12 +27,12 @@ git.clone("https://github.com/mongodb/mongo-c-driver.git",
 
 cd(mongo_c_driver)
 autogen = sh.Command(autogen_location)
-autogen(prefix="/usr", libdir="/usr/lib64", _out=write_output)
-make(_out=write_output)
+autogen(prefix="/usr", libdir="/usr/lib64", _out=write_output, _env=install_env)
+make(_out=write_output, _env=install_env)
 
 if os.environ.get("ZMAP_TRAVIS_BUILD", None):
 	print("Installing...")
 	with sudo:
-		make.install(_out=write_output)
+		make.install(_out=write_output, _env=install_env)
 
 print("Done.")
