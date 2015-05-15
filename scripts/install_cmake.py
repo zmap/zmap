@@ -18,11 +18,11 @@ directory = os.path.dirname(os.path.realpath(__file__))
 
 # Download it
 cd(directory)
-#curl(
-#	"-L",
-#	"http://www.cmake.org/files/v3.2/cmake-3.2.2-Linux-x86_64.sh",
-#	_out="cmake_installer.sh"
-#)
+curl(
+	"-L",
+	"http://www.cmake.org/files/v3.2/cmake-3.2.2-Linux-x86_64.sh",
+	_out="cmake_installer.sh"
+)
 
 # Set up the installer
 installer_path = os.path.join(directory, "cmake_installer.sh")
