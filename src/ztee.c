@@ -387,12 +387,12 @@ void *read_in(void* arg)
 int print_from_csv(char *line)
 {
 	if (total_written == 0) {
-		return 0;
+		return 1;
 	}
 	if (tconf.success_only) {
 		char *success_entry = csv_get_index(line, tconf.success_field);
 		if (success_entry == NULL) {
-			return 0;
+			return 1;
 		}
 		int success = 0;
 		if (atoi(success_entry)) {
@@ -401,7 +401,7 @@ int print_from_csv(char *line)
 			success = 1;
 		}
 		if (!success) {
-			return 0;
+			return 1;
 		}
 	}
 	// Find the ip
