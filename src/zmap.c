@@ -379,26 +379,6 @@ int main(int argc, char *argv[])
 		zconf.raw_output_fields = (char*) "saddr";
 		zconf.filter_duplicates = 1;
 		zconf.filter_unsuccessful = 1;
-	} else if (!strcmp(args.output_module_arg, "simple_file")) {
-		log_warn("zmap", "the simple_file output interface has been deprecated and "
-				 "will be removed in the future. Users should use the csv "
-				 "output module. Newer scan options such as output-fields "
-				 "are not supported with this output module.");
-		zconf.output_module = get_output_module_by_name("csv");
-		zconf.raw_output_fields = (char*) "saddr";
-		zconf.filter_duplicates = 1;
-		zconf.filter_unsuccessful = 1;
-	} else if (!strcmp(args.output_module_arg, "extended_file")) {
-		log_warn("zmap", "the extended_file output interface has been deprecated and "
-				 "will be removed in the future. Users should use the csv "
-				 "output module. Newer scan options such as output-fields "
-				 "are not supported with this output module.");
-		zconf.output_module = get_output_module_by_name("csv");
-		zconf.raw_output_fields = (char*) "classification, saddr, "
-						  "daddr, sport, dport, "
-						  "seqnum, acknum, cooldown, "
-						  "repeat, timestamp-str";
-		zconf.filter_duplicates = 0;
 	} else if (!strcmp(args.output_module_arg, "redis")) {
 		log_warn("zmap", "the redis output interface has been deprecated and "
 				 "will be removed in the future. Users should "
