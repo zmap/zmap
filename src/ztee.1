@@ -1,0 +1,43 @@
+.\" generated with Ronn/v0.7.3
+.\" http://github.com/rtomayko/ronn/tree/0.7.3
+.
+.TH "ZTEE" "1" "June 2015" "zmap v2.1.0" "zmap"
+.
+.SH "SYNOPSIS"
+ztee [ OPTIONS\.\.\. ] [ FILE\.\.\. ]
+.
+.SH "DESCRIPTION"
+\fIZTee\fR is an output buffer and splitter for use with ZMap output data\. ZTee should be used whenever ZMap is piped into an application scanner, placed between ZMap and the application scanner\. ZTee writes the transformed output to stdout, and writes the original output to FILE\.
+.
+.P
+See \fB\-\-help\fR for examples\.
+.
+.SH "OPTIONS"
+.
+.SS "BASIC OPTIONS"
+.
+.TP
+\fB\-r\fR, \fB\-\-raw\fR
+Ignore input formatting and pass through raw input\. This causes ztee to behavior identical to tee, except with buffering\.
+.
+.TP
+\fB\-m\fR, \fB\-\-monitor\fR
+Print monitor output to stderr
+.
+.TP
+\fB\-u\fR, \fB\-\-status\-updates\-file\fR
+Write status updates (monitor data) to a file in CSV format
+.
+.TP
+\fB\-l\fR, \fB\-\-log\-file=name\fR
+File to log to\.
+.
+.SS "ADDITIONAL OPTIONS"
+.
+.TP
+\fB\-h, \-\-help\fR
+Display help
+.
+.TP
+\fB\-v, \-\-version\fR
+Display version
