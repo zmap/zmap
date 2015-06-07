@@ -73,6 +73,8 @@ SET(SOURCES
 
 SET(ZBLSOURCES
     zblacklist.c
+    zbopt_compat.c
+    "${CMAKE_CURRENT_BINARY_DIR}/zbopt.h"
 )
 
 SET(ZTEESOURCES
@@ -107,6 +109,11 @@ add_custom_command(OUTPUT topt.h
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/topt.ggo"
 )
 
+add_custom_command(OUTPUT zbopt.h
+    COMMAND gengetopt -C --no-help --no-version -i "${CMAKE_CURRENT_SOURCE_DIR}/zbopt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/zbopt"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/zbopt.ggo"
+)
+
 add_custom_command(OUTPUT lexer.c
     COMMAND flex -o "${CMAKE_CURRENT_BINARY_DIR}/lexer.c" --header-file="${CMAKE_CURRENT_BINARY_DIR}/lexer.h" "${CMAKE_CURRENT_SOURCE_DIR}/lexer.l"
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/lexer.l"
@@ -129,7 +136,7 @@ endif()
 
 target_link_libraries(
     zmap
-	zmaplib
+    zmaplib
     ${PFRING_LIBRARIES}
     pcap gmp m
     ${DNET_LIBRARIES}
@@ -140,13 +147,13 @@ target_link_libraries(
 
 target_link_libraries(
     zblacklist
-	zmaplib
+    zmaplib
     m
 )
 
 target_link_libraries(
     ztee
-	zmaplib
+    zmaplib
     m
 )
 
