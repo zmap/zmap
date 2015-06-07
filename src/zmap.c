@@ -780,6 +780,8 @@ int main(int argc, char *argv[])
 
 	// compute number of targets
 	uint64_t allowed = blacklist_count_allowed();
+	zconf.total_allowed = allowed;
+	zconf.total_disallowed = blacklist_count_not_allowed();
 	assert(allowed <= (1LL << 32));
 	if (allowed == (1LL << 32)) {
 		zsend.targets = 0xFFFFFFFF;
