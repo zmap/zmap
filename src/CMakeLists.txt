@@ -163,5 +163,6 @@ install(
 install(
     FILES
     zmap.1
+    zblacklist.1
     DESTINATION share/man/man1
 )
