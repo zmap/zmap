@@ -11,7 +11,7 @@
  * blacklist from being scanned, and (2) ensures the uniqueness of output
  * addresses such that no host is scanned twice. ZBlacklist takes in a list
  * of addresses on stdin and outputs addresses that are acceptable to scan
- * on stdout. The utility uses the blacklist data structures from ZMap for 
+ * on stdout. The utility uses the blacklist data structures from ZMap for
  * checking scan eligibility and a paged bitmap for duplicate prevention.
  */
 
@@ -68,7 +68,7 @@ struct zbl_conf {
 
 int main(int argc, char **argv)
 {
-	struct zbl_conf conf; 
+	struct zbl_conf conf;
 	conf.verbosity = 3;
 	memset(&conf, 0, sizeof(struct zbl_conf));
 	int no_dupchk_pres = 0;
@@ -122,11 +122,11 @@ int main(int argc, char **argv)
 	if (conf.log_filename) {
 		logfile = fopen(conf.log_filename, "w");
 		if (!logfile) {
-			fprintf(stderr, "FATAL: unable to open specified logfile (%s)\n", 
+			fprintf(stderr, "FATAL: unable to open specified logfile (%s)\n",
 					conf.log_filename);
 			exit(1);
 		}
-	} 
+	}
 	if (log_init(logfile, conf.verbosity, 1, "zblacklist")) {
 		fprintf(stderr, "FATAL: unable able to initialize logging\n");
 		exit(1);
@@ -135,7 +135,7 @@ int main(int argc, char **argv)
 	if (!conf.blacklist_filename && !conf.whitelist_filename) {
 		log_fatal("zblacklist", "must specify either a whitelist or blacklist file");
 	}
-   
+
 	// parse blacklist
 	if (conf.blacklist_filename) {
 		log_debug("zblacklist", "blacklist file at %s to be used", conf.blacklist_filename);
@@ -168,16 +168,16 @@ int main(int argc, char **argv)
 			log_fatal("zblacklist", "unable to initialize paged bitmap");
 		}
 	}
-	// process addresses	
-	char line[1000]; 
+	// process addresses
+	char line[1000];
 	char original[1000];
 	while (fgets(line, 1000, stdin) != NULL) {
 		// remove new line
 		memcpy(original, line, strlen(line) + 1);
-		char *n = zmin(zmin(zmin(zmin(strchr(line, '\n'), 
-                        strchr(line, ',')), 
+		char *n = zmin(zmin(zmin(zmin(strchr(line, '\n'),
+                        strchr(line, ',')),
                         strchr(line, '\t')),
-                        strchr(line, ' ')), 
+                        strchr(line, ' ')),
                         strchr(line, '#'));
 		assert(n);
 		n[0] = 0;
@@ -207,8 +207,7 @@ int main(int argc, char **argv)
 			} else {
 				printf("%s", original);
 			}
-		}	
+		}
 	}
 	return EXIT_SUCCESS;
 }
-
