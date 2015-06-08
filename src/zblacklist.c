@@ -11,7 +11,7 @@
  * blacklist from being scanned, and (2) ensures the uniqueness of output
  * addresses such that no host is scanned twice. ZBlacklist takes in a list
  * of addresses on stdin and outputs addresses that are acceptable to scan
- * on stdout. The utility uses the blacklist data structures from ZMap for 
+ * on stdout. The utility uses the blacklist data structures from ZMap for
  * checking scan eligibility and a paged bitmap for duplicate prevention.
  */
 
@@ -32,6 +32,9 @@
 #include "../lib/blacklist.h"
 #include "../lib/logger.h"
 #include "../lib/pbm.h"
+
+#include "zbopt.h"
+
 
 //struct zbl_stats {
 //	uint32_t cidr_entries;
@@ -58,7 +61,6 @@ static inline char* zmin(char *a, char *b) {
 struct zbl_conf {
 	char *blacklist_filename;
 	char *whitelist_filename;
-	char *metadata_filename;
 	char *log_filename;
 	int check_duplicates;
 	int ignore_errors;
@@ -66,67 +68,72 @@ struct zbl_conf {
 	//struct zbl_stats stats;
 };
 
+#define SET_IF_GIVEN(DST,ARG) \
+	{ if (args.ARG##_given) { (DST) = args.ARG##_arg; }; }
+#define SET_BOOL(DST,ARG) \
+	{ if (args.ARG##_given) { (DST) = 1; }; }
+
 int main(int argc, char **argv)
 {
-	struct zbl_conf conf; 
+	struct zbl_conf conf;
 	conf.verbosity = 3;
 	memset(&conf, 0, sizeof(struct zbl_conf));
 	int no_dupchk_pres = 0;
-	int ignore_bl_errs;
-	struct option longopts[] = {
-		{"no-duplicate-checking",  no_argument,	   &no_dupchk_pres, 1   },
-		{"ignore-blacklist-errors",no_argument,	   &ignore_bl_errs, 1   },
-		{"log-file",			   required_argument, NULL,			'l' },
-		{"blacklist-file",		 required_argument, NULL,			'b' },
-		{"whitelist-file",		 required_argument, NULL,			'w' },
-		{"verbosity",			  required_argument, NULL,			'v' },
-		{0, 0, 0, 0 }
-	};
-	// move longopt options into global configuration
-	while (1) {
-		int option_index = 0;
-		int c = getopt_long(argc, argv, "l:b:w:v:", longopts, &option_index);
-		if (c == -1) {
-			break;
-		}
-		switch (c) {
-			case 0:
-				if (longopts[option_index].flag != 0) {
-					break;
-				}
-			case 'm':
-				conf.metadata_filename = strdup(optarg);
-				break;
-			case 'l':
-				conf.log_filename = strdup(optarg);
-				break;
-			case 'b':
-				conf.blacklist_filename = strdup(optarg);
-				break;
-			case 'w':
-				conf.whitelist_filename = strdup(optarg);
-				break;
-			case 'v':
-				conf.verbosity = atoi(optarg);
-				break;
+  conf.ignore_errors = 0;
 
-			default:
-				fprintf(stderr, "FATAL: unknown state entered in getopt\n");
-				exit(EXIT_FAILURE);
-		}
-	}
-	conf.check_duplicates = (!no_dupchk_pres);
-	conf.ignore_errors = ignore_bl_errs;
+  struct gengetopt_args_info args;
+  struct cmdline_parser_params *params;
+  params = cmdline_parser_params_create();
+  assert(params);
+  params->initialize = 1;
+  params->override = 0;
+  params->check_required = 0;
+
+  if (cmdline_parser_ext(argc, argv, &args, params) != 0) {
+    exit(EXIT_SUCCESS);
+  }
+
+  // Handle help text and version
+  if (args.help_given) {
+    cmdline_parser_print_help();
+    exit(EXIT_SUCCESS);
+  }
+  if (args.version_given) {
+    cmdline_parser_print_version();
+    exit(EXIT_SUCCESS);
+  }
+
+  // Set the log file and metadata file
+  if (args.log_file_given) {
+    conf.log_filename = strdup(args.log_file_arg);
+  }
+  if (args.verbosity_given) {
+    conf.verbosity = args.verbosity_arg;
+  }
+
+  // Blacklist and whitelist
+  if (args.blacklist_file_given) {
+    conf.blacklist_filename = strdup(args.blacklist_file_arg);
+  }
+  if (args.whitelist_file_given) {
+    conf.whitelist_filename = strdup(args.whitelist_file_arg);
+  }
+
+  // Read the boolean flags
+  SET_BOOL(no_dupchk_pres, no_duplicate_checking);
+  conf.check_duplicates = !no_dupchk_pres;
+  SET_BOOL(conf.ignore_errors, ignore_blacklist_errors);
+
 	// initialize logging
 	FILE *logfile = stderr;
 	if (conf.log_filename) {
 		logfile = fopen(conf.log_filename, "w");
 		if (!logfile) {
-			fprintf(stderr, "FATAL: unable to open specified logfile (%s)\n", 
+			fprintf(stderr, "FATAL: unable to open specified logfile (%s)\n",
 					conf.log_filename);
 			exit(1);
 		}
-	} 
+	}
 	if (log_init(logfile, conf.verbosity, 1, "zblacklist")) {
 		fprintf(stderr, "FATAL: unable able to initialize logging\n");
 		exit(1);
@@ -135,7 +142,7 @@ int main(int argc, char **argv)
 	if (!conf.blacklist_filename && !conf.whitelist_filename) {
 		log_fatal("zblacklist", "must specify either a whitelist or blacklist file");
 	}
-   
+
 	// parse blacklist
 	if (conf.blacklist_filename) {
 		log_debug("zblacklist", "blacklist file at %s to be used", conf.blacklist_filename);
@@ -168,16 +175,16 @@ int main(int argc, char **argv)
 			log_fatal("zblacklist", "unable to initialize paged bitmap");
 		}
 	}
-	// process addresses	
-	char line[1000]; 
+	// process addresses
+	char line[1000];
 	char original[1000];
 	while (fgets(line, 1000, stdin) != NULL) {
 		// remove new line
 		memcpy(original, line, strlen(line) + 1);
-		char *n = zmin(zmin(zmin(zmin(strchr(line, '\n'), 
-                        strchr(line, ',')), 
+		char *n = zmin(zmin(zmin(zmin(strchr(line, '\n'),
+                        strchr(line, ',')),
                         strchr(line, '\t')),
-                        strchr(line, ' ')), 
+                        strchr(line, ' ')),
                         strchr(line, '#'));
 		assert(n);
 		n[0] = 0;
@@ -207,8 +214,7 @@ int main(int argc, char **argv)
 			} else {
 				printf("%s", original);
 			}
-		}	
+		}
 	}
 	return EXIT_SUCCESS;
 }
-

@@ -1,5 +1,7 @@
 #ifdef __APPLE__
+#pragma GCC diagnostic ignored "-Wflexible-array-extensions"
 #include <dnet.h>
+#pragma GCC diagnostic warning "-Wflexible-array-extensions"
 #endif
 
 #ifndef __FAVOR_BSD

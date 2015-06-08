@@ -1,0 +1,19 @@
+language: c
+sudo: required
+before_install:
+    - sudo apt-get update -qq
+    - sudo apt-get install -qq build-essential libtool autoconf automake
+    - sudo apt-get install -qq libgmp3-dev gengetopt libpcap-dev flex byacc pkg-config libhiredis-dev
+    - sudo apt-get install libsasl2-dev
+    - sudo pip install sh
+    - python ./scripts/install_cmake.py
+    - python ./scripts/install_jsonc.py
+    - python ./scripts/install_mongo.py
+    - export PATH=/opt/bin:$PATH
+    - pkg-config --variable pc_path pkg-config
+    - pkg-config --list-all
+script: cmake -DENABLE_DEVELOPMENT=ON -DWITH_JSON=ON -DWITH_REDIS=ON -DWITH_MONGO=ON . && make
+compiler: clang
+notifications:
+  email:
+    - zmap-devel@umich.edu

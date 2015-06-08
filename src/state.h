@@ -117,6 +117,8 @@ struct state_conf {
 	int filter_unsuccessful;
 	int recv_ready;
 	int num_retries;
+	uint64_t total_allowed;
+	uint64_t total_disallowed;
 #ifdef PFRING
 	struct {
 		pfring_zc_cluster *cluster;

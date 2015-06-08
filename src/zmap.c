@@ -55,7 +55,6 @@ static int32_t distrib_func(pfring_zc_pkt_buff *pkt, void *arg) {
 }
 #endif
 
-
 pthread_mutex_t recv_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct send_arg {
@@ -73,6 +72,13 @@ typedef struct mon_start_arg {
 	iterator_t *it;
 	pthread_mutex_t *recv_ready_mutex;
 } mon_start_arg_t;
+
+const char *default_help_text = "By default, ZMap prints out unique, successful"
+	"IP addresses (e.g., SYN-ACK from a TCP SYN scan) "
+	"in ASCII form (e.g., 192.168.1.5) to stdout or the specified output "
+	"file. Internally this is handled by the \"csv\" output module and is "
+	"equivalent to running zmap --output-module=csv --output-fields=saddr "
+	"--output-filter=\"success = 1 && repeat = 0\".";
 
 static void enforce_range(const char *name, int v, int min, int max)
 {
@@ -364,13 +370,6 @@ int main(int argc, char *argv[])
 	// other command-line helpers (e.g. probe help)
 	log_trace("zmap", "requested ouput-module: %s", args.output_module_arg);
 
-	// we changed output module setup after the original version of ZMap was
-	// made public. After this setup was removed, many of the original
-	// output modules became unnecessary. However, in order to support
-	// backwards compatibility, we still allows this output-modules to be
-	// specified and then map these into new-style output modules and warn
-	// users that they need to be switching to the new module interface.
-
 	// zmap's default behavior is to provide a simple file of the unique IP
 	// addresses that responded successfully.
 	if (!strcmp(args.output_module_arg, "default")) {
@@ -379,67 +378,11 @@ int main(int argc, char *argv[])
 		zconf.raw_output_fields = (char*) "saddr";
 		zconf.filter_duplicates = 1;
 		zconf.filter_unsuccessful = 1;
-	} else if (!strcmp(args.output_module_arg, "simple_file")) {
-		log_warn("zmap", "the simple_file output interface has been deprecated and "
-				 "will be removed in the future. Users should use the csv "
-				 "output module. Newer scan options such as output-fields "
-				 "are not supported with this output module.");
-		zconf.output_module = get_output_module_by_name("csv");
-		zconf.raw_output_fields = (char*) "saddr";
-		zconf.filter_duplicates = 1;
-		zconf.filter_unsuccessful = 1;
-	} else if (!strcmp(args.output_module_arg, "extended_file")) {
-		log_warn("zmap", "the extended_file output interface has been deprecated and "
-				 "will be removed in the future. Users should use the csv "
-				 "output module. Newer scan options such as output-fields "
-				 "are not supported with this output module.");
-		zconf.output_module = get_output_module_by_name("csv");
-		zconf.raw_output_fields = (char*) "classification, saddr, "
-						  "daddr, sport, dport, "
-						  "seqnum, acknum, cooldown, "
-						  "repeat, timestamp-str";
-		zconf.filter_duplicates = 0;
-	} else if (!strcmp(args.output_module_arg, "redis")) {
-		log_warn("zmap", "the redis output interface has been deprecated and "
-				 "will be removed in the future. Users should "
-				 "either use redis-packed or redis-json in the "
-				 "future.");
-		zconf.output_module = get_output_module_by_name("redis-packed");
-		if (!zconf.output_module) {
-			log_fatal("zmap", "%s: specified output module (%s) does not exist\n",
-					CMDLINE_PARSER_PACKAGE, args.output_module_arg);
-		}
-		zconf.raw_output_fields = (char*) "saddr";
-		zconf.filter_duplicates = 1;
-		zconf.filter_unsuccessful = 1;
-		if (args.output_fields_given) {
-			log_fatal("redis", "module does not support user defined "
-					"output fields");
-		}
-
-		if (args.output_filter_given) {
-			log_fatal("redis", "module does not support user defined "
-					"filters.");
-		}
-	} else if (!strcmp(args.output_module_arg, "csvredis"))  {
-		if (args.output_fields_given) {
-			log_fatal("csvredis", "module does not support user defined "
-					"output fields");
-		}
-		// output all available fields to the CSV file
-		zconf.raw_output_fields = (char*) "*";
-		// module does not support filtering
-		if (args.output_filter_given) {
-			log_fatal("csvredis", "module does not support user defined "
-					"filters.");
-		}
-		zconf.output_module = get_output_module_by_name("csvredis");
 	} else {
 		zconf.output_module = get_output_module_by_name(args.output_module_arg);
 		if (!zconf.output_module) {
-		  log_fatal("zmap", "%s: specified output module (%s) does not exist\n",
+		  log_fatal("zmap", "specified output module (%s) does not exist\n",
 				args.output_module_arg);
-		  exit(EXIT_FAILURE);
 		}
 	}
 	zconf.probe_module = get_probe_module_by_name(args.probe_module_arg);
@@ -457,7 +400,10 @@ int main(int argc, char *argv[])
 			printf("no help text available\n");
 		}
 		printf("\nOutput-module (%s) Help:\n", zconf.output_module->name);
-		if (zconf.output_module->helptext) {
+
+       	if (!strcmp(args.output_module_arg, "default")) {
+			fprintw(stdout, (char*) default_help_text, 80);
+        } else if (zconf.output_module->helptext) {
 			fprintw(stdout, (char*) zconf.output_module->helptext, 80);
 		} else {
 			printf("no help text available\n");
@@ -800,6 +746,8 @@ int main(int argc, char *argv[])
 
 	// compute number of targets
 	uint64_t allowed = blacklist_count_allowed();
+	zconf.total_allowed = allowed;
+	zconf.total_disallowed = blacklist_count_not_allowed();
 	assert(allowed <= (1LL << 32));
 	if (allowed == (1LL << 32)) {
 		zsend.targets = 0xFFFFFFFF;
