@@ -14,3 +14,6 @@ before_install:
     - pkg-config --list-all
 script: cmake -DENABLE_DEVELOPMENT=ON -DWITH_JSON=ON -DWITH_REDIS=ON -DWITH_MONGO=ON . && make
 compiler: clang
+notifications:
+  email:
+    - zmap-devel@umich.edu
