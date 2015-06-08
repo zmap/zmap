@@ -44,13 +44,13 @@ int json_output_file_init(struct state_conf *conf, UNUSED char **fields, UNUSED 
 		file = stdout;
 	} else if (conf->output_filename) {
 		if (!(file = fopen(conf->output_filename, "w"))) {
-			log_fatal("output-json", "could not open output file %s",
+			log_fatal("output-json", "could not open JSON output file %s",
 					conf->output_filename);
 		}
 	} else {
 		file = stdout;
 	}
-	
+
 	// Create a header json object to describe this output file
 	json_object_object_add(obj, "type", json_object_new_string("header"));
 	json_object_object_add(obj, "log_level", json_object_new_int(conf->log_level));
@@ -67,7 +67,7 @@ int json_output_file_init(struct state_conf *conf, UNUSED char **fields, UNUSED 
 		json_object_object_add(obj, "iface", json_object_new_string(conf->iface));
 	}
 	json_object_object_add(obj, "rate", json_object_new_int(conf->rate));
-	
+
 	json_object_object_add(obj, "bandwidth", json_object_new_int(conf->bandwidth));
 	json_object_object_add(obj, "cooldown_secs", json_object_new_int(conf->cooldown_secs));
 	json_object_object_add(obj, "senders", json_object_new_int(conf->senders));
@@ -80,7 +80,7 @@ int json_output_file_init(struct state_conf *conf, UNUSED char **fields, UNUSED 
 			json_object_new_string(((probe_module_t *)conf->probe_module)->name));
 	json_object_object_add(obj, "output_module",
 			json_object_new_string(((output_module_t *)conf->output_module)->name));
-	
+
 	if (conf->probe_args) {
 		json_object_object_add(obj, "probe_args",
 			json_object_new_string(conf->probe_args));
@@ -104,7 +104,7 @@ int json_output_file_init(struct state_conf *conf, UNUSED char **fields, UNUSED 
 		}
 		json_object_object_add(obj, "gw_mac", json_object_new_string(mac_buf));
 	}
-	
+
 	json_object_object_add(obj, "source_ip_first",
 			json_object_new_string(conf->source_ip_first));
 	json_object_object_add(obj, "source_ip_last",
@@ -124,7 +124,7 @@ int json_output_file_init(struct state_conf *conf, UNUSED char **fields, UNUSED 
 	return EXIT_SUCCESS;
 }
 
-static void json_output_file_store_data(json_object *obj, const u_char *packet, size_t buflen)
+static void json_output_file_store_data(json_object *obj, const char* name, const u_char *packet, size_t buflen)
 {
 	unsigned int i;
 	char *buf;
@@ -134,8 +134,7 @@ static void json_output_file_store_data(json_object *obj, const u_char *packet, 
 
 	for (i=0; i<buflen; i++)
 		snprintf(buf + (i*2), 3, "%.2x", packet[i]);
-	json_object_object_add(obj, "data", json_object_new_string(buf));
-	json_object_object_add(obj, "length", json_object_new_int(buflen));
+	json_object_object_add(obj, name, json_object_new_string(buf));
 	free(buf);
 }
 
@@ -155,7 +154,7 @@ int json_output_file_ip(fieldset_t *fs)
 			json_object_object_add(obj, f->name,
 					json_object_new_int((int) f->value.num));
 		} else if (f->type == FS_BINARY) {
-			json_output_file_store_data(obj,
+			json_output_file_store_data(obj, f->name,
 					(const u_char*) f->value.ptr, f->len);
 		} else if (f->type == FS_NULL) {
 			// do nothing

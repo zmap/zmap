@@ -31,7 +31,7 @@ int csv_init(struct state_conf *conf, char **fields, int fieldlens)
 			file = stdout;
 		} else {
 			if (!(file = fopen(conf->output_filename, "w"))) {
-				log_fatal("csv", "could not open output file (%s)",
+				log_fatal("csv", "could not open CSV output file %s",
 					conf->output_filename);
 			}
 		}
@@ -66,6 +66,7 @@ int csv_close(__attribute__((unused)) struct state_conf* c,
 static void hex_encode(FILE *f, unsigned char* readbuf, size_t len)
 {
 	for(size_t i=0; i < len; i++) {
+        fprintf(stderr, "%02x", readbuf[i]);
 		fprintf(f, "%02x", readbuf[i]);
 	}
 }

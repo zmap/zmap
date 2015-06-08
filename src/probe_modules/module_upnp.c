@@ -26,6 +26,7 @@ static const char *upnp_query = "M-SEARCH * HTTP/1.1\r\n"
         "Man:\"ssdp:discover\"\r\nMX:3\r\n\r\n";
 
 probe_module_t module_upnp;
+#define ICMP_UNREACH_HEADER_SIZE 8
 
 int upnp_global_initialize(struct state_conf *state)
 {
@@ -54,6 +55,7 @@ int upnp_init_perthread(void* buf, macaddr_t *src, macaddr_t *gw,
     assert(sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr)
 		+ strlen(upnp_query) <= MAX_PACKET_SIZE);
 
+    assert(MAX_PACKET_SIZE - ((char*)payload - (char*)buf) > (int) strlen(upnp_query));
     strcpy(payload, upnp_query);
 
     return EXIT_SUCCESS;
@@ -240,7 +242,7 @@ void upnp_process_packet(const u_char *packet,
 
         } else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
-		struct ip *ip_inner = (struct ip *) &icmp[1];
+		struct ip *ip_inner = (struct ip *) ((char *) icmp + ICMP_UNREACH_HEADER_SIZE);
 		// ICMP unreach comes from another server (not the one we sent a probe to);
 		// But we will fix up saddr to be who we sent the probe to, in case you care.
 		fs_modify_string(fs, "saddr", make_ip_str(ip_inner->ip_dst.s_addr), 1);
