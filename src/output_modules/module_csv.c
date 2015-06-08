@@ -101,6 +101,7 @@ int csv_process(fieldset_t *fs)
 	return EXIT_SUCCESS;
 }
 
+
 output_module_t module_csv_file = {
 	.name = "csv",
 	.init = &csv_init,
@@ -109,5 +110,9 @@ output_module_t module_csv_file = {
 	.update_interval = 0,
 	.close = &csv_close,
 	.process_ip = &csv_process,
-	.helptext = NULL
+	.helptext = "Outputs one or more output fields as a comma-delimited file. By default, the \n"
+	"probe module does not filter out duplicates or limit to successful fields, \n"
+	"but rather includes all received packets. Fields can be controlled by \n"
+	"setting --output-fields. Filtering out failures and duplicate packets can \n"
+	"be achieved by setting an --output-filer."
 };
