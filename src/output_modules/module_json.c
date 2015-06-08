@@ -36,17 +36,17 @@ int json_output_file_init(struct state_conf *conf, UNUSED char **fields,
 		UNUSED int fieldlens)
 {
 	assert(conf);
-	if (!strcmp(conf->output_filename, "-")) {
+    if (!conf->output_filename) {
 		file = stdout;
-	} else if (conf->output_filename) {
+    } else if (!strcmp(conf->output_filename, "-")) {
+		file = stdout;
+	} else {
 		if (!(file = fopen(conf->output_filename, "w"))) {
 			log_fatal("output-json", "could not open JSON output file %s",
 					conf->output_filename);
 		}
-	} else {
-		file = stdout;
-	}
-	return EXIT_SUCCESS;
+	} 
+    return EXIT_SUCCESS;
 }
 
 static void json_output_file_store_data(json_object *obj, const char* name, 
