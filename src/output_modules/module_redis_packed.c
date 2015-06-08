@@ -104,6 +104,6 @@ output_module_t module_redis = {
 	.update_interval = 0,
 	.close = &redismodule_close,
 	.process_ip = &redismodule_process,
-	.helptext = NULL
+	.helptext = "Flushes to redis the ip address as packed binary integer in network order\n"
 };
 

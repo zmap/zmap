@@ -183,6 +183,10 @@ output_module_t module_redis_csv = {
 	.update_interval = 0,
 	.close = &rediscsvmodule_close,
 	.process_ip = &rediscsvmodule_process,
-	.helptext = NULL
+	.helptext = "Outputs one or more output fields in csv, and then flushes out to redis. \n"
+    "By default, the probe module does not filter out duplicates or limit to successful fields, \n"
+    "but rather includes all received packets. Fields can be controlled by \n"
+    "setting --output-fileds. Filtering out failures and duplicate packets can \n"
+    "be achieved by setting an --output-filter."
 };
 
