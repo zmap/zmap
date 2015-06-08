@@ -158,3 +158,5 @@ FEATURE Add icmp-echo-time probe module for measuring RTT
 
 CHANGED remove --summary
 
+CHANGED JSON metadata now uses ISO-8601 compatible timestamps instead of proprietary log format.
+
