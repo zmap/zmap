@@ -151,3 +151,5 @@ FEATURE	add pf_ring and 10GigE support
 BUGFIX	random-number generator is now thread safe
 
 FEATURE	optional app-success field output in monitor
+
+CHANGED remove type field from json output module and get rid of header

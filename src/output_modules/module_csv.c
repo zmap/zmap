@@ -104,15 +104,17 @@ int csv_process(fieldset_t *fs)
 
 output_module_t module_csv_file = {
 	.name = "csv",
+	.filter_duplicates = 0, // framework should not filter out duplicates
+	.filter_unsuccessful = 0,  // framework should not filter out unsuccessful
 	.init = &csv_init,
 	.start = NULL,
 	.update = NULL,
 	.update_interval = 0,
 	.close = &csv_close,
 	.process_ip = &csv_process,
-	.helptext = "Outputs one or more output fields as a comma-delimited file. By default, the \n"
-	"probe module does not filter out duplicates or limit to successful fields, \n"
-	"but rather includes all received packets. Fields can be controlled by \n"
-	"setting --output-fields. Filtering out failures and duplicate packets can \n"
-	"be achieved by setting an --output-filer."
+	.helptext = "Outputs one or more output fields as a comma-delimited file. By default, the "
+	"probe module does not filter out duplicates or limit to successful fields, "
+	"but rather includes all received packets. Fields can be controlled by "
+	"setting --output-fields. Filtering out failures and duplicate packets can "
+	"be achieved by setting an --output-filter."
 };

@@ -24,6 +24,8 @@ typedef int (*output_update_cb)(struct state_conf*,
 
 typedef struct output_module {
 	const char *name;
+	int filter_duplicates;
+	int filter_unsuccessful;
 	unsigned update_interval;
 	output_init_cb init;
 	output_update_cb start;
