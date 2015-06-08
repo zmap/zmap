@@ -28,7 +28,7 @@
 
 probe_module_t module_icmp_echo_time;
 
-static struct icmp_payload_for_rtt {
+struct icmp_payload_for_rtt {
   uint32_t sent_tv_sec;
   uint32_t sent_tv_usec;
   ipaddr_n_t dst;
