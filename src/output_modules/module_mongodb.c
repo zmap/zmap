@@ -160,6 +160,5 @@ output_module_t module_mongodb = {
 	.update_interval = 0,
 	.close = &mongodb_module_close,
 	.process_ip = &mongodb_module_process,
-	.helptext = NULL
+	.helptext = "Write output to MongoDB. Defaults to mongodb://localhost:27017/zmap_output. Specify a custom connection URI in output module args."
 };
-
