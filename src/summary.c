@@ -31,13 +31,13 @@
 void json_metadata(FILE *file)
 {
 	char send_start_time[STRTIME_LEN+1];
-	assert(dstrftime(send_start_time, STRTIME_LEN, "%c", zsend.start));
+	assert(dstrftime(send_start_time, STRTIME_LEN, "%Y-%m-%dT%H:%M:%S%z", zsend.start));
 	char send_end_time[STRTIME_LEN+1];
-	assert(dstrftime(send_end_time, STRTIME_LEN, "%c", zsend.finish));
+	assert(dstrftime(send_end_time, STRTIME_LEN, "%Y-%m-%dT%H:%M:%S%z", zsend.finish));
 	char recv_start_time[STRTIME_LEN+1];
-	assert(dstrftime(recv_start_time, STRTIME_LEN, "%c", zrecv.start));
+	assert(dstrftime(recv_start_time, STRTIME_LEN, "%Y-%m-%dT%H:%M:%S%z", zrecv.start));
 	char recv_end_time[STRTIME_LEN+1];
-	assert(dstrftime(recv_end_time, STRTIME_LEN, "%c", zrecv.finish));
+	assert(dstrftime(recv_end_time, STRTIME_LEN, "%Y-%m-%dT%H:%M:%S%z", zrecv.finish));
 	double hitrate = ((double) 100 * zrecv.success_unique)/((double)zsend.sent);
 
 	json_object *obj = json_object_new_object();
