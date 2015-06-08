@@ -214,4 +214,3 @@ probe_module_t module_icmp_echo_time = {
     .close = NULL,
     .fields = fields,
     .numfields = 9};
-

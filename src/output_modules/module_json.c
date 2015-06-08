@@ -104,10 +104,16 @@ int json_output_file_close(UNUSED struct state_conf* c,
 output_module_t module_json_file = {
 	.name = "json",
 	.init = &json_output_file_init,
+	.filter_duplicates = 0, // framework should not filter out duplicates
+	.filter_unsuccessful = 0,  // framework should not filter out unsuccessful
 	.start = NULL,
 	.update = NULL,
 	.update_interval = 0,
 	.close = &json_output_file_close,
 	.process_ip = &json_output_file_ip,
-	.helptext = NULL
+	.helptext = "Outputs one or more output fileds as a json valid file. By default, the \n"
+	"probe module does not filter out duplicates or limit to successful fields, \n"
+	"but rather includes all received packets. Fields can be controlled by \n"
+	"setting --output-fields. Filtering out failures and duplicate pakcets can \n"
+	"be achieved by setting an --output-filter."
 };

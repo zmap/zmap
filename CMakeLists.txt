@@ -131,11 +131,7 @@ else()
     set(CONFIG_DESTINATION "/etc/zmap")
 endif()
 
-install(
-    FILES
-    ${CONF_FILES}
-    DESTINATION ${CONFIG_DESTINATION}
-)
+install(SCRIPT InstallConfFiles.cmake)
 
 # Allow Debian Packaging
 INCLUDE (InstallRequiredSystemLibraries)
