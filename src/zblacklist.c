@@ -61,7 +61,6 @@ static inline char* zmin(char *a, char *b) {
 struct zbl_conf {
 	char *blacklist_filename;
 	char *whitelist_filename;
-	char *metadata_filename;
 	char *log_filename;
 	int check_duplicates;
 	int ignore_errors;
@@ -110,9 +109,6 @@ int main(int argc, char **argv)
   }
   if (args.verbosity_given) {
     conf.verbosity = args.verbosity_arg;
-  }
-  if (args.metadata_file_given) {
-    conf.metadata_filename = strdup(args.metadata_file_arg);
   }
 
   // Blacklist and whitelist

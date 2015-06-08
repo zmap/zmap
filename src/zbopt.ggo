@@ -18,8 +18,6 @@ option "whitelist-file"           w "File of subnets to include, in CIDR notatio
     optional string
 option "log-file"                 l "File to log to"
     optional string
-option "metadata-file"            m "File to write metadata to"
-    optional string
 option "verbosity"                v "Set log level verbosity (0-5, default 3)"
     default="3"
     optional int
