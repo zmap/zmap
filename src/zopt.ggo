@@ -7,7 +7,7 @@
 # zmap option description to be processed by gengetopt
 
 package "zmap"
-version "2.0.0-RC1"
+version "2.1.0-RC1"
 purpose "A fast Internet-wide scanner."
 
 section "Basic arguments"
@@ -137,8 +137,6 @@ option "status-updates-file"    u "Write scan progress updates to CSV file"
     typestr="name"
     optional string
 option "quiet"                  q "Do not print status updates"
-    optional
-option "summary"                g "Print configuration and summary at end of scan"
     optional
 option "disable-syslog"         - "Disables logging messages to syslog"
     optional

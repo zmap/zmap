@@ -23,73 +23,7 @@
 #include "probe_modules/probe_modules.h"
 #include "output_modules/output_modules.h"
 
-
-#define SI(w,x,y) printf("%s\t%s\t%i\n", w, x, y);
-#define SD(w,x,y) printf("%s\t%s\t%f\n", w, x, y);
-#define SU(w,x,y) printf("%s\t%s\t%u\n", w, x, y);
-#define SLU(w,x,y) printf("%s\t%s\t%lu\n", w, x, (long unsigned int) y);
-#define SS(w,x,y) printf("%s\t%s\t%s\n", w, x, y);
 #define STRTIME_LEN 1024
-
-void summary(void)
-{
-	char send_start_time[STRTIME_LEN+1];
-	assert(dstrftime(send_start_time, STRTIME_LEN, "%c", zsend.start));
-	char send_end_time[STRTIME_LEN+1];
-	assert(dstrftime(send_end_time, STRTIME_LEN, "%c", zsend.finish));
-	char recv_start_time[STRTIME_LEN+1];
-	assert(dstrftime(recv_start_time, STRTIME_LEN, "%c", zrecv.start));
-	char recv_end_time[STRTIME_LEN+1];
-	assert(dstrftime(recv_end_time, STRTIME_LEN, "%c", zrecv.finish));
-	double hitrate = ((double) 100 * zrecv.success_unique)/((double)zsend.sent);
-
-	SU("cnf", "target-port", zconf.target_port);
-	SU("cnf", "source-port-range-begin", zconf.source_port_first);
-	SU("cnf", "source-port-range-end", zconf.source_port_last);
-	SS("cnf", "source-addr-range-begin", zconf.source_ip_first);
-	SS("cnf", "source-addr-range-end", zconf.source_ip_last);
-	SU("cnf", "maximum-targets", zconf.max_targets);
-	SU("cnf", "maximum-runtime", zconf.max_runtime);
-	SU("cnf", "maximum-results", zconf.max_results);
-	SLU("cnf", "permutation-seed", zconf.seed);
-	SI("cnf", "cooldown-period", zconf.cooldown_secs);
-	SS("cnf", "send-interface", zconf.iface);
-	SI("cnf", "rate", zconf.rate);
-	SLU("cnf", "bandwidth", zconf.bandwidth);
-	SU("cnf", "shard-num", (unsigned) zconf.shard_num);
-	SU("cnf", "num-shards", (unsigned) zconf.total_shards);
-	SU("cnf", "senders", (unsigned) zconf.senders);
-	SU("env", "nprocessors", (unsigned) sysconf(_SC_NPROCESSORS_ONLN));
-	SS("exc", "send-start-time", send_start_time);
-	SS("exc", "send-end-time", send_end_time);
-	SS("exc", "recv-start-time", recv_start_time);
-	SS("exc", "recv-end-time", recv_end_time);
-	SU("exc", "sent", zsend.sent);
-	SLU("exc", "blacklist-total-allowed", zconf.total_allowed);
-	SLU("exc", "blacklist-total-not-allowed", zconf.total_disallowed);
-//	SU("exc", "blacklisted", zsend.blacklisted);
-//	SU("exc", "whitelisted", zsend.whitelisted);
-	SU("exc", "first-scanned", zsend.first_scanned);
-	SD("exc", "hit-rate", hitrate);
-	SU("exc", "success-total", zrecv.success_total);
-	SU("exc", "success-unique", zrecv.success_unique);
-	// if there are application-level status messages, output
-	if (zconf.fsconf.app_success_index >= 0) {
-		SU("exc", "app-success-total", zrecv.app_success_total);
-		SU("exc", "app-success-unique", zrecv.app_success_unique);
-	}
-	SU("exc", "success-cooldown-total", zrecv.cooldown_total);
-	SU("exc", "success-cooldown-unique", zrecv.cooldown_unique);
-	SU("exc", "failure-total", zrecv.failure_total);
-	SU("exc", "sendto-failures", zsend.sendto_failures);
-	SU("adv", "permutation-gen", zconf.generator);
-	SS("exc", "scan-type", zconf.probe_module->name);
-#ifdef JSON
-    if (zconf.notes) {
-	    SS("exc", "notes", zconf.notes);
-    }
-#endif
-}
 
 #ifdef JSON
 #include <json.h>
@@ -309,8 +243,6 @@ void json_metadata(FILE *file)
 	}
 	json_object_object_add(obj, "dryrun",
             json_object_new_int(zconf.dryrun));
-	json_object_object_add(obj, "summary",
-            json_object_new_int(zconf.summary));
 	json_object_object_add(obj, "quiet",
             json_object_new_int(zconf.quiet));
 	json_object_object_add(obj, "log_level",

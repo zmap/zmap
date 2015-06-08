@@ -51,7 +51,6 @@ struct state_conf zconf = {
 	.status_updates_file = NULL,
 	.dryrun = 0,
 	.quiet = 0,
-	.summary = 0,
 	.syslog = 1,
 	.filter_duplicates = 0,
 	.filter_unsuccessful = 0,
@@ -90,4 +89,3 @@ struct state_recv zrecv = {
 	.pcap_drop = 0,
 	.pcap_ifdrop = 0,
 };
-
