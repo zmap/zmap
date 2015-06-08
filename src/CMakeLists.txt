@@ -24,7 +24,7 @@ if (WITH_JSON)
 endif()
 
 if (WITH_REDIS)
-    SET(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_redis.c output_modules/module_csvredis.c output_modules/module_redis_csv.c)
+    SET(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_redis_packed.c output_modules/module_csvredis.c output_modules/module_redis_csv.c)
 endif()
 
 if (WITH_MONGO)
