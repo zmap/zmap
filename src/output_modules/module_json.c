@@ -183,6 +183,8 @@ int json_output_file_close(UNUSED struct state_conf* c,
 output_module_t module_json_file = {
 	.name = "json",
 	.init = &json_output_file_init,
+	.filter_duplicates = 0, // framework should not filter out duplicates
+	.filter_unsuccessful = 0,  // framework should not filter out unsuccessful
 	.start = NULL,
 	.update = NULL,
 	.update_interval = 0,

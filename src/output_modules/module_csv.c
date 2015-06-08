@@ -104,6 +104,8 @@ int csv_process(fieldset_t *fs)
 
 output_module_t module_csv_file = {
 	.name = "csv",
+	.filter_duplicates = 0, // framework should not filter out duplicates
+	.filter_unsuccessful = 0,  // framework should not filter out unsuccessful
 	.init = &csv_init,
 	.start = NULL,
 	.update = NULL,
