@@ -27,3 +27,4 @@ _CPack_Packages/*
 src/zblacklist
 src/ztee
 cmake_installer.sh
+!InstallConfFiles.cmake
