@@ -7,7 +7,7 @@
 # zblacklist option description to be processed by gengetopt
 
 package "zblacklist"
-version "2.1.0-beta-1"
+version "2.1.0-RC1"
 purpose "A tool for limiting and deduplicating a list of IP addresses"
 
 section "Basic arguments"
