@@ -67,6 +67,8 @@ BUGFIX	Off-by-one error in paged bitmap
 
 
 1.2.0	2014-03-10
+FEATURE added MongoDB as a supported output module
+
 BUGFIX	ICMP values added incorrectly, timestamp unavailable
 
 BUGFIX	setting fixed number of probes may inadverantly target specific networks
@@ -106,7 +108,18 @@ BUGFIX	Integer overflow in json metadata when printing generator
 
 BUGFIX	All calls to malloc checked for failure
 
-2.0.0	2014-01-XX
+2.1.0	2014-06-07
+
+CHANGED json output uses underscores instead of hyphens
+
+CHANGED removes support for deprecated simple_file and extended_file options
+
+BUGFIX  pcap filter captures outgoing packets
+
+BUGFIX  install overwrites blacklist file
+
+BUGFIX  output is sometimes colored
+
 FEATURE	zblacklist
 
 FEATURE	ztee
@@ -138,3 +151,12 @@ FEATURE	add pf_ring and 10GigE support
 BUGFIX	random-number generator is now thread safe
 
 FEATURE	optional app-success field output in monitor
+
+CHANGED remove type field from json output module and get rid of header
+
+FEATURE Add icmp-echo-time probe module for measuring RTT
+
+CHANGED remove --summary
+
+CHANGED JSON metadata now uses ISO-8601 compatible timestamps instead of proprietary log format.
+

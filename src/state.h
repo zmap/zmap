@@ -109,7 +109,6 @@ struct state_conf {
 	char *log_directory;
 	char *status_updates_file;
 	int dryrun;
-	int summary;
 	int quiet;
 	int ignore_invalid_hosts;
 	int syslog;
@@ -117,6 +116,8 @@ struct state_conf {
 	int filter_unsuccessful;
 	int recv_ready;
 	int num_retries;
+	uint64_t total_allowed;
+	uint64_t total_disallowed;
 #ifdef PFRING
 	struct {
 		pfring_zc_cluster *cluster;

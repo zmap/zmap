@@ -278,20 +278,19 @@ void udp_dns_print_packet(FILE *fp, const void* packet) {
 	struct ether_header *ethh = (struct ether_header *) packet;
 	struct ip *iph = (struct ip *) &ethh[1];
 	struct udphdr *udph  = (struct udphdr*) (iph + 4*iph->ip_hl);
-	fprintf(fp, "udp_dns { source: %u | dest: %u | checksum: %u }\n",
+	fprintf(fp, "udp_dns { source: %u | dest: %u | checksum: %#04X }\n",
 		ntohs(udph->uh_sport),
 		ntohs(udph->uh_dport),
-		ntohl(udph->uh_sum));
+		ntohs(udph->uh_sum));
 	fprintf_ip_header(fp, iph);
 	fprintf_eth_header(fp, ethh);
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
 int udp_dns_validate_packet(const void *packet, uint32_t len,
-        __attribute__((unused))uint32_t *src_ip, uint32_t *validation) {
+                            uint32_t *src_ip, uint32_t *validation) {
 
 	struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
-	//    	uint32_t ip_len = len - sizeof(struct ether_header);
 
 	if (!udp_validate_packet(packet, len, src_ip, validation)) {
 		return 0;

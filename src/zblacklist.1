@@ -1,0 +1,38 @@
+.\" generated with Ronn/v0.7.3
+.\" http://github.com/rtomayko/ronn/tree/0.7.3
+.
+.TH "ZBLACKLIST" "1" "June 2015" "zmap v2.1.0" "zmap"
+.
+.SH "SYNOPSIS"
+zblacklist [ \-b <blacklist> ] [ \-w <whitelist> ] [ OPTIONS\.\.\. ]
+.
+.SH "DESCRIPTION"
+\fIZBlacklist\fR is a network tool for limiting and deduplicating a list of IP addresses using a blacklist or whitelist\.
+.
+.SH "OPTIONS"
+.
+.SS "BASIC OPTIONS"
+.
+.TP
+\fB\-b\fR, \fB\-\-blacklist\-file=path\fR
+File of subnets to exclude, in CIDR notation, one\-per line\. It is recommended you use this to exclude RFC 1918 addresses, multicast, IANA reserved space, and other IANA special\-purpose addresses\. An example blacklist file \fBblacklist\.conf\fR for this purpose\.
+.
+.TP
+\fB\-w\fR, \fB\-\-whitelist\-file=name\fR
+File of subnets to include, in CIDR notation, one\-per line\. All other subnets will be excluded\.
+.
+.TP
+\fB\-l\fR, \fB\-\-log\-file=name\fR
+File to log to\.
+.
+.TP
+\fB\-v\fR, \fB\-\-verbosity\fR
+Level of log detail (0\-5, default=3)
+.
+.TP
+\fB\-\-no\-duplicate\-checking\fR
+Don\'t deduplicate input addresses\. Default is false\.
+.
+.TP
+\fB\-\-ignore\-blacklist\-errors\fR
+Ignore invalid entries in the blacklist\. Default is false\.

@@ -31,7 +31,7 @@ int csv_init(struct state_conf *conf, char **fields, int fieldlens)
 			file = stdout;
 		} else {
 			if (!(file = fopen(conf->output_filename, "w"))) {
-				log_fatal("csv", "could not open output file (%s)",
+				log_fatal("csv", "could not open CSV output file %s",
 					conf->output_filename);
 			}
 		}
@@ -66,6 +66,7 @@ int csv_close(__attribute__((unused)) struct state_conf* c,
 static void hex_encode(FILE *f, unsigned char* readbuf, size_t len)
 {
 	for(size_t i=0; i < len; i++) {
+        fprintf(stderr, "%02x", readbuf[i]);
 		fprintf(f, "%02x", readbuf[i]);
 	}
 }
@@ -100,13 +101,20 @@ int csv_process(fieldset_t *fs)
 	return EXIT_SUCCESS;
 }
 
+
 output_module_t module_csv_file = {
 	.name = "csv",
+	.filter_duplicates = 0, // framework should not filter out duplicates
+	.filter_unsuccessful = 0,  // framework should not filter out unsuccessful
 	.init = &csv_init,
 	.start = NULL,
 	.update = NULL,
 	.update_interval = 0,
 	.close = &csv_close,
 	.process_ip = &csv_process,
-	.helptext = NULL
+	.helptext = "Outputs one or more output fields as a comma-delimited file. By default, the "
+	"probe module does not filter out duplicates or limit to successful fields, "
+	"but rather includes all received packets. Fields can be controlled by "
+	"setting --output-fields. Filtering out failures and duplicate packets can "
+	"be achieved by setting an --output-filter."
 };

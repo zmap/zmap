@@ -26,6 +26,7 @@
 #include "module_udp.h"
 
 #define MAX_UDP_PAYLOAD_LEN 1472
+#define ICMP_UNREACH_HEADER_SIZE 8
 #define UNUSED __attribute__((unused))
 
 static char *udp_send_msg = NULL;
@@ -300,10 +301,10 @@ void udp_print_packet(FILE *fp, const void* packet)
 	struct ether_header *ethh = (struct ether_header *) packet;
 	struct ip *iph = (struct ip *) &ethh[1];
     struct udphdr *udph = (struct udphdr*)(&iph[1]); 
-	fprintf(fp, "udp { source: %u | dest: %u | checksum: %u }\n",
+	fprintf(fp, "udp { source: %u | dest: %u | checksum: %#04X }\n",
 		ntohs(udph->uh_sport),
 		ntohs(udph->uh_dport),
-		ntohl(udph->uh_sum));
+		ntohs(udph->uh_sum));
 	fprintf_ip_header(fp, iph);
 	fprintf_eth_header(fp, ethh);
 	fprintf(fp, "------------------------------------------------------\n");
@@ -348,7 +349,7 @@ void udp_process_packet(const void *packet, uint32_t len, fieldset_t *fs)
 		}
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
-		struct ip *ip_inner = (struct ip *) &icmp[1];
+		struct ip *ip_inner = (struct ip *) ((char *) icmp + ICMP_UNREACH_HEADER_SIZE);
 		// ICMP unreach comes from another server (not the one we sent a probe to);
 		// But we will fix up saddr to be who we sent the probe to, in case you care.
 		fs_modify_string(fs, "saddr", make_ip_str(ip_inner->ip_dst.s_addr), 1);
@@ -404,7 +405,7 @@ int udp_validate_packet(const void *packet, uint32_t len,
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		// UDP can return ICMP Destination unreach
 		// IP( ICMP( IP( UDP ) ) ) for a destination unreach
-		uint32_t min_len = 4*ip_hdr->ip_hl + sizeof(struct icmp)
+		uint32_t min_len = 4*ip_hdr->ip_hl + ICMP_UNREACH_HEADER_SIZE
 				+ sizeof(struct ip) + sizeof(struct udphdr);
 		if (ip_len < min_len) {
 			// Not enough information for us to validate
@@ -416,7 +417,7 @@ int udp_validate_packet(const void *packet, uint32_t len,
 			return 0;
 		}
 
-		struct ip *ip_inner = (struct ip*) &icmp[1];
+		struct ip *ip_inner = (struct ip*) ((char *) icmp + ICMP_UNREACH_HEADER_SIZE);
 		// Now we know the actual inner ip length, we should recheck the buffer
 		if (ip_len < 4*ip_inner->ip_hl - sizeof(struct ip) + min_len) {
 			return 0;

@@ -1,3 +1,11 @@
+/*
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0
+ */
+
 #ifndef ZMAP_GET_GATEWAY_LINUX_H
 #define ZMAP_GET_GATEWAY_LINUX_H
 
@@ -273,7 +281,7 @@ int get_iface_hw_addr(char *iface, unsigned char *hw_mac)
 		return EXIT_FAILURE;
 	}
 	memset(&buffer, 0, sizeof(buffer));
-	strcpy(buffer.ifr_name, iface);
+	strncpy(buffer.ifr_name, iface, IFNAMSIZ);
 	ioctl(s, SIOCGIFHWADDR, &buffer);
 	close(s);
 	memcpy(hw_mac, buffer.ifr_hwaddr.sa_data, 6);

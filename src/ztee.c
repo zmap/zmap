@@ -5,6 +5,7 @@
 * use this file except in compliance with the License. You may obtain a copy
 * of the License at http://www.apache.org/licenses/LICENSE-2.0
 */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +15,7 @@
 #include <getopt.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include "../lib/lockfd.h"
 #include "../lib/logger.h"
@@ -31,8 +33,13 @@ typedef struct ztee_conf {
 	// Files
 	char *output_filename;
 	char *status_updates_filename;
+	char *log_file_name;
 	FILE *output_file;
 	FILE *status_updates_file;
+	FILE *log_file;
+
+	// Log level
+	int log_level;
 
 	// Input formats
 	format_t in_format;
@@ -139,7 +146,8 @@ int main(int argc, char *argv[])
 		exit(EXIT_SUCCESS);
 	}
 
-	log_init(stderr, ZLOG_WARN, 0, NULL);
+	signal(SIGPIPE, SIG_IGN);
+
 
 	// Handle help text and version
 	if (args.help_given) {
@@ -150,6 +158,23 @@ int main(int argc, char *argv[])
 		cmdline_parser_print_version();
 		exit(EXIT_SUCCESS);
 	}
+
+	// Try opening the log file
+	tconf.log_level = ZLOG_WARN;
+	if (args.log_file_given) {
+		tconf.log_file = fopen(args.log_file_arg, "w");
+	} else {
+		tconf.log_file = stderr;
+	}
+
+	// Check for an error opening the log file
+	if (tconf.log_file == NULL) {
+		log_init(stderr, tconf.log_level, 0, "ztee");
+		log_fatal("ztee", "Could not open log file");
+	}
+
+	// Actually init the logging infrastructure
+	log_init(tconf.log_file, tconf.log_level, 0, "ztee");
 
 	// Check for an output file
 	if (args.inputs_num < 1) {
@@ -299,19 +324,14 @@ void *process_queue(void* arg)
 
 
 		// Write raw data to output file
-		int output_ret = fprintf(output_file, "%s", node->data);
-		int output_flush = fflush(output_file);
-		if (output_ret < 0) {
-			char *output_file_error = strerror(output_ret);
-			log_fatal("ztee", "%s", output_file_error);
-		}
-		if (output_flush != 0) {
-			char *output_flush_error = strerror(errno);
-			log_fatal("ztee", "%s", output_flush_error);
+		fprintf(output_file, "%s", node->data);
+		fflush(output_file);
+		if (ferror(output_file) != 0) {
+			log_fatal("ztee", "%s", "Error writing to output file");
 		}
 
 		// Dump to stdout
-		int stdout_ret = 0;
+		int stdout_ret;
 		switch (tconf.in_format) {
 		case FORMAT_JSON:
 			log_fatal("ztee", "JSON input format unimplemented");
@@ -322,19 +342,13 @@ void *process_queue(void* arg)
 		default:
 			// Handle raw
 			stdout_ret = fprintf(stdout, "%s", node->data);
-			fflush(stdout);
 			break;
 		}
-		int stdout_flush = fflush(stdout);
 
 		// Check to see if write failed
-		if (stdout_ret < 0) {
-			char *stdout_error = strerror(stdout_ret);
-			log_fatal("ztee", "%s", stdout_error);
-		}
-		if (stdout_flush != 0) {
-			char *stdout_flush_error = strerror(errno);
-			log_fatal("ztee", "%s", stdout_flush_error);
+		fflush(stdout);
+		if (ferror(stdout) != 0 || stdout_ret <= 0) {
+			log_fatal("ztee", "%s", "Error writing to stdout");
 		}
 
 		// Record output lines
@@ -374,12 +388,12 @@ void *read_in(void* arg)
 int print_from_csv(char *line)
 {
 	if (total_written == 0) {
-		return 0;
+		return 1;
 	}
 	if (tconf.success_only) {
 		char *success_entry = csv_get_index(line, tconf.success_field);
 		if (success_entry == NULL) {
-			return 0;
+			return 1;
 		}
 		int success = 0;
 		if (atoi(success_entry)) {
@@ -388,7 +402,7 @@ int print_from_csv(char *line)
 			success = 1;
 		}
 		if (!success) {
-			return 0;
+			return 1;
 		}
 	}
 	// Find the ip

@@ -1,3 +1,11 @@
+/*
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0
+ */
+
 #include "summary.h"
 
 #include <stdio.h>
@@ -15,71 +23,7 @@
 #include "probe_modules/probe_modules.h"
 #include "output_modules/output_modules.h"
 
-
-#define SI(w,x,y) printf("%s\t%s\t%i\n", w, x, y);
-#define SD(w,x,y) printf("%s\t%s\t%f\n", w, x, y);
-#define SU(w,x,y) printf("%s\t%s\t%u\n", w, x, y);
-#define SLU(w,x,y) printf("%s\t%s\t%lu\n", w, x, (long unsigned int) y);
-#define SS(w,x,y) printf("%s\t%s\t%s\n", w, x, y);
 #define STRTIME_LEN 1024
-
-void summary(void)
-{
-	char send_start_time[STRTIME_LEN+1];
-	assert(dstrftime(send_start_time, STRTIME_LEN, "%c", zsend.start));
-	char send_end_time[STRTIME_LEN+1];
-	assert(dstrftime(send_end_time, STRTIME_LEN, "%c", zsend.finish));
-	char recv_start_time[STRTIME_LEN+1];
-	assert(dstrftime(recv_start_time, STRTIME_LEN, "%c", zrecv.start));
-	char recv_end_time[STRTIME_LEN+1];
-	assert(dstrftime(recv_end_time, STRTIME_LEN, "%c", zrecv.finish));
-	double hitrate = ((double) 100 * zrecv.success_unique)/((double)zsend.sent);
-
-	SU("cnf", "target-port", zconf.target_port);
-	SU("cnf", "source-port-range-begin", zconf.source_port_first);
-	SU("cnf", "source-port-range-end", zconf.source_port_last);
-	SS("cnf", "source-addr-range-begin", zconf.source_ip_first);
-	SS("cnf", "source-addr-range-end", zconf.source_ip_last);
-	SU("cnf", "maximum-targets", zconf.max_targets);
-	SU("cnf", "maximum-runtime", zconf.max_runtime);
-	SU("cnf", "maximum-results", zconf.max_results);
-	SLU("cnf", "permutation-seed", zconf.seed);
-	SI("cnf", "cooldown-period", zconf.cooldown_secs);
-	SS("cnf", "send-interface", zconf.iface);
-	SI("cnf", "rate", zconf.rate);
-	SLU("cnf", "bandwidth", zconf.bandwidth);
-	SU("cnf", "shard-num", (unsigned) zconf.shard_num);
-	SU("cnf", "num-shards", (unsigned) zconf.total_shards);
-	SU("cnf", "senders", (unsigned) zconf.senders);
-	SU("env", "nprocessors", (unsigned) sysconf(_SC_NPROCESSORS_ONLN));
-	SS("exc", "send-start-time", send_start_time);
-	SS("exc", "send-end-time", send_end_time);
-	SS("exc", "recv-start-time", recv_start_time);
-	SS("exc", "recv-end-time", recv_end_time);
-	SU("exc", "sent", zsend.sent);
-	SU("exc", "blacklisted", zsend.blacklisted);
-	SU("exc", "whitelisted", zsend.whitelisted);
-	SU("exc", "first-scanned", zsend.first_scanned);
-	SD("exc", "hit-rate", hitrate);
-	SU("exc", "success-total", zrecv.success_total);
-	SU("exc", "success-unique", zrecv.success_unique);
-	// if there are application-level status messages, output
-	if (zconf.fsconf.app_success_index >= 0) {
-		SU("exc", "app-success-total", zrecv.app_success_total);
-		SU("exc", "app-success-unique", zrecv.app_success_unique);
-	}
-	SU("exc", "success-cooldown-total", zrecv.cooldown_total);
-	SU("exc", "success-cooldown-unique", zrecv.cooldown_unique);
-	SU("exc", "failure-total", zrecv.failure_total);
-	SU("exc", "sendto-failures", zsend.sendto_failures);
-	SU("adv", "permutation-gen", zconf.generator);
-	SS("exc", "scan-type", zconf.probe_module->name);
-#ifdef JSON
-    if (zconf.notes) {
-	    SS("exc", "notes", zconf.notes);
-    }
-#endif
-}
 
 #ifdef JSON
 #include <json.h>
@@ -87,13 +31,13 @@ void summary(void)
 void json_metadata(FILE *file)
 {
 	char send_start_time[STRTIME_LEN+1];
-	assert(dstrftime(send_start_time, STRTIME_LEN, "%c", zsend.start));
+	assert(dstrftime(send_start_time, STRTIME_LEN, "%Y-%m-%dT%H:%M:%S%z", zsend.start));
 	char send_end_time[STRTIME_LEN+1];
-	assert(dstrftime(send_end_time, STRTIME_LEN, "%c", zsend.finish));
+	assert(dstrftime(send_end_time, STRTIME_LEN, "%Y-%m-%dT%H:%M:%S%z", zsend.finish));
 	char recv_start_time[STRTIME_LEN+1];
-	assert(dstrftime(recv_start_time, STRTIME_LEN, "%c", zrecv.start));
+	assert(dstrftime(recv_start_time, STRTIME_LEN, "%Y-%m-%dT%H:%M:%S%z", zrecv.start));
 	char recv_end_time[STRTIME_LEN+1];
-	assert(dstrftime(recv_end_time, STRTIME_LEN, "%c", zrecv.finish));
+	assert(dstrftime(recv_end_time, STRTIME_LEN, "%Y-%m-%dT%H:%M:%S%z", zrecv.finish));
 	double hitrate = ((double) 100 * zrecv.success_unique)/((double)zsend.sent);
 
 	json_object *obj = json_object_new_object();
@@ -101,31 +45,31 @@ void json_metadata(FILE *file)
 	// scanner host name
 	char hostname[1024];
 	if (gethostname(hostname, 1023) < 0) {
-		log_error("json-metadata", "unable to retrieve local hostname");
+		log_error("json_metadata", "unable to retrieve local hostname");
 	} else {
 		hostname[1023] = '\0';
-		json_object_object_add(obj, "local-hostname",
+		json_object_object_add(obj, "local_hostname",
                 json_object_new_string(hostname));
 		struct hostent* h = gethostbyname(hostname);
 		if (h) {
-			json_object_object_add(obj, "full-hostname",
+			json_object_object_add(obj, "full_hostname",
                     json_object_new_string(h->h_name));
 		} else {
-			log_error("json-metadata", "unable to retrieve complete hostname");
+			log_error("json_metadata", "unable to retrieve complete hostname");
 		}
 	}
 
-	json_object_object_add(obj, "target-port",
+	json_object_object_add(obj, "target_port",
 			json_object_new_int(zconf.target_port));
-	json_object_object_add(obj, "source-port-first",
+	json_object_object_add(obj, "source_port_first",
 			json_object_new_int(zconf.source_port_first));
-	json_object_object_add(obj, "source_port-last",
+	json_object_object_add(obj, "source_port_last",
 			json_object_new_int(zconf.source_port_last));
-	json_object_object_add(obj, "max-targets",
+	json_object_object_add(obj, "max_targets",
             json_object_new_int(zconf.max_targets));
-	json_object_object_add(obj, "max-runtime",
+	json_object_object_add(obj, "max_runtime",
             json_object_new_int(zconf.max_runtime));
-	json_object_object_add(obj, "max-results",
+	json_object_object_add(obj, "max_results",
             json_object_new_int(zconf.max_results));
 	if (zconf.iface) {
 		json_object_object_add(obj, "iface",
@@ -135,11 +79,11 @@ void json_metadata(FILE *file)
             json_object_new_int(zconf.rate));
 	json_object_object_add(obj, "bandwidth",
             json_object_new_int(zconf.bandwidth));
-	json_object_object_add(obj, "cooldown-secs",
+	json_object_object_add(obj, "cooldown_secs",
             json_object_new_int(zconf.cooldown_secs));
 	json_object_object_add(obj, "senders",
             json_object_new_int(zconf.senders));
-	json_object_object_add(obj, "use-seed",
+	json_object_object_add(obj, "use_seed",
             json_object_new_int(zconf.use_seed));
 	json_object_object_add(obj, "seed",
             json_object_new_int64(zconf.seed));
@@ -147,79 +91,83 @@ void json_metadata(FILE *file)
             json_object_new_int64(zconf.generator));
 	json_object_object_add(obj, "hitrate",
             json_object_new_double(hitrate));
-	json_object_object_add(obj, "shard-num",
+	json_object_object_add(obj, "shard_num",
             json_object_new_int(zconf.shard_num));
-	json_object_object_add(obj, "total-shards",
+	json_object_object_add(obj, "total_shards",
             json_object_new_int(zconf.total_shards));
 
 	json_object_object_add(obj, "syslog",
             json_object_new_int(zconf.syslog));
-	json_object_object_add(obj, "filter-duplicates",
+	json_object_object_add(obj, "filter_duplicates",
             json_object_new_int(zconf.filter_duplicates));
-	json_object_object_add(obj, "filter-unsuccessful",
+	json_object_object_add(obj, "filter_unsuccessful",
             json_object_new_int(zconf.filter_unsuccessful));
 
-	json_object_object_add(obj, "pcap-recv",
+	json_object_object_add(obj, "pcap_recv",
             json_object_new_int(zrecv.pcap_recv));
-	json_object_object_add(obj, "pcap-drop",
+	json_object_object_add(obj, "pcap_drop",
             json_object_new_int(zrecv.pcap_drop));
-	json_object_object_add(obj, "pcap-ifdrop",
+	json_object_object_add(obj, "pcap_ifdrop",
             json_object_new_int(zrecv.pcap_ifdrop));
 
-	json_object_object_add(obj, "blacklisted",
-            json_object_new_int64(zsend.blacklisted));
-	json_object_object_add(obj, "whitelisted",
-            json_object_new_int64(zsend.whitelisted));
-	json_object_object_add(obj, "first-scanned",
+	json_object_object_add(obj, "blacklist_total_allowed",
+		json_object_new_int64(zconf.total_allowed));
+	json_object_object_add(obj, "blacklist_total_not_allowed",
+		json_object_new_int64(zconf.total_disallowed));
+//	json_object_object_add(obj, "blacklisted",
+//            json_object_new_int64(zsend.blacklisted));
+//	json_object_object_add(obj, "whitelisted",
+//            json_object_new_int64(zsend.whitelisted));
+	json_object_object_add(obj, "first_scanned",
             json_object_new_int64(zsend.first_scanned));
-	json_object_object_add(obj, "send-to-failures",
+	json_object_object_add(obj, "send_to_failures",
             json_object_new_int64(zsend.sendto_failures));
-	json_object_object_add(obj, "total-sent",
+	json_object_object_add(obj, "total_sent",
             json_object_new_int64(zsend.sent));
 
-	json_object_object_add(obj, "success-total",
+	json_object_object_add(obj, "success_total",
             json_object_new_int64(zrecv.success_total));
-	json_object_object_add(obj, "success-unique",
+	json_object_object_add(obj, "success_unique",
             json_object_new_int64(zrecv.success_unique));
 	if (zconf.fsconf.app_success_index >= 0) {
-		json_object_object_add(obj, "app-success-total",
+		json_object_object_add(obj, "app_success_total",
                 json_object_new_int64(zrecv.app_success_total));
-		json_object_object_add(obj, "app-success-unique",
+		json_object_object_add(obj, "app_success_unique",
                 json_object_new_int64(zrecv.app_success_unique));
 	}
-	json_object_object_add(obj, "success-cooldown-total",
+	json_object_object_add(obj, "success_cooldown_total",
             json_object_new_int64(zrecv.cooldown_total));
-	json_object_object_add(obj, "success-cooldown-unique",
+	json_object_object_add(obj, "success_cooldown_unique",
             json_object_new_int64(zrecv.cooldown_unique));
-	json_object_object_add(obj, "failure-total",
+	json_object_object_add(obj, "failure_total",
             json_object_new_int64(zrecv.failure_total));
 
-	json_object_object_add(obj, "packet-streams",
+	json_object_object_add(obj, "packet_streams",
 			json_object_new_int(zconf.packet_streams));
-	json_object_object_add(obj, "probe-module",
+	json_object_object_add(obj, "probe_module",
 			json_object_new_string(((probe_module_t *)zconf.probe_module)->name));
-	json_object_object_add(obj, "output-module",
+	json_object_object_add(obj, "output_module",
 			json_object_new_string(((output_module_t *)zconf.output_module)->name));
 
-	json_object_object_add(obj, "send-start-time",
+	json_object_object_add(obj, "send_start_time",
 			json_object_new_string(send_start_time));
-	json_object_object_add(obj, "send-end-time",
+	json_object_object_add(obj, "send_end_time",
 			json_object_new_string(send_end_time));
-	json_object_object_add(obj, "recv-start-time",
+	json_object_object_add(obj, "recv_start_time",
 			json_object_new_string(recv_start_time));
-	json_object_object_add(obj, "recv-end-time",
+	json_object_object_add(obj, "recv_end_time",
 			json_object_new_string(recv_end_time));
 
 	if (zconf.output_filter_str) {
-		json_object_object_add(obj, "output-filter",
+		json_object_object_add(obj, "output_filter",
 				json_object_new_string(zconf.output_filter_str));
 	}
 	if (zconf.log_file) {
-		json_object_object_add(obj, "log-file",
+		json_object_object_add(obj, "log_file",
 				json_object_new_string(zconf.log_file));
 	}
 	if (zconf.log_directory) {
-		json_object_object_add(obj, "log-directory",
+		json_object_object_add(obj, "log_directory",
 				json_object_new_string(zconf.log_directory));
 	}
 
@@ -228,15 +176,15 @@ void json_metadata(FILE *file)
 		for (int i=0; i < zconf.destination_cidrs_len; i++) {
 			json_object_array_add(cli_dest_cidrs, json_object_new_string(zconf.destination_cidrs[i]));
 		}
-		json_object_object_add(obj, "cli-cidr-destinations",
+		json_object_object_add(obj, "cli_cidr_destinations",
 				cli_dest_cidrs);
 	}
 	if (zconf.probe_args) {
-		json_object_object_add(obj, "probe-args",
+		json_object_object_add(obj, "probe_args",
 			json_object_new_string(zconf.probe_args));
 	}
 	if (zconf.output_args) {
-		json_object_object_add(obj, "output-args",
+		json_object_object_add(obj, "output_args",
 			json_object_new_string(zconf.output_args));
 	}
 
@@ -253,12 +201,12 @@ void json_metadata(FILE *file)
 				p += 3;
 			}
 		}
-		json_object_object_add(obj, "gateway-mac", json_object_new_string(mac_buf));
+		json_object_object_add(obj, "gateway_mac", json_object_new_string(mac_buf));
 	}
 	if (zconf.gw_ip) {
 		struct in_addr addr;
 		addr.s_addr = zconf.gw_ip;
-		json_object_object_add(obj, "gateway-ip", json_object_new_string(inet_ntoa(addr)));
+		json_object_object_add(obj, "gateway_ip", json_object_new_string(inet_ntoa(addr)));
 	}
 	if (zconf.hw_mac) {
 		char mac_buf[(ETHER_ADDR_LEN * 2) + (ETHER_ADDR_LEN - 1) + 1];
@@ -272,31 +220,29 @@ void json_metadata(FILE *file)
 				p += 3;
 			}
 		}
-		json_object_object_add(obj, "source-mac", json_object_new_string(mac_buf));
+		json_object_object_add(obj, "source_mac", json_object_new_string(mac_buf));
 	}
 
-	json_object_object_add(obj, "source-ip-first",
+	json_object_object_add(obj, "source_ip_first",
 			json_object_new_string(zconf.source_ip_first));
-	json_object_object_add(obj, "source-ip-last",
+	json_object_object_add(obj, "source_ip_last",
 			json_object_new_string(zconf.source_ip_last));
 	if (zconf.output_filename) {
-		json_object_object_add(obj, "output-filename",
+		json_object_object_add(obj, "output_filename",
 				json_object_new_string(zconf.output_filename));
 	}
 	if (zconf.blacklist_filename) {
 		json_object_object_add(obj,
-			"blacklist-filename",
+			"blacklist_filename",
 			json_object_new_string(zconf.blacklist_filename));
 	}
 	if (zconf.whitelist_filename) {
 		json_object_object_add(obj,
-			"whitelist-filename",
+			"whitelist_filename",
 			json_object_new_string(zconf.whitelist_filename));
 	}
 	json_object_object_add(obj, "dryrun",
             json_object_new_int(zconf.dryrun));
-	json_object_object_add(obj, "summary",
-            json_object_new_int(zconf.summary));
 	json_object_object_add(obj, "quiet",
             json_object_new_int(zconf.quiet));
 	json_object_object_add(obj, "log_level",
@@ -329,7 +275,7 @@ void json_metadata(FILE *file)
 			json_object_array_add(blacklisted_cidrs,
 					json_object_new_string(cidr));
 		} while (b && (b = b->next));
-		json_object_object_add(obj, "blacklisted-networks", blacklisted_cidrs);
+		json_object_object_add(obj, "blacklisted_networks", blacklisted_cidrs);
 	}
 
 	b = get_whitelisted_cidrs();
@@ -343,7 +289,7 @@ void json_metadata(FILE *file)
 			json_object_array_add(whitelisted_cidrs,
 					json_object_new_string(cidr));
 		} while (b && (b = b->next));
-		json_object_object_add(obj, "whitelisted-networks", whitelisted_cidrs);
+		json_object_object_add(obj, "whitelisted_networks", whitelisted_cidrs);
 	}
 
 	fprintf(file, "%s\n", json_object_to_json_string(obj));

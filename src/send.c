@@ -213,14 +213,26 @@ int send_run(sock_t st, shard_t *s)
 	int interval = 0;
 	uint32_t max_targets = s->state.max_targets;
 	volatile int vi;
+    struct timespec ts, rem;
+    double send_rate = (double) zconf.rate / zconf.senders;
+    double slow_rate = 50; // packets per seconds per thread at which it uses the slow methos
+    long nsec_per_sec = 1000 * 1000 * 1000;
+    long long sleep_time = nsec_per_sec;
 	if (zconf.rate > 0) {
-		// estimate initial rate
 		delay = 10000;
-		for (vi = delay; vi--; )
-			;
-		delay *= 1 / (now() - last_time) / (zconf.rate / zconf.senders);
-		interval = (zconf.rate / zconf.senders) / 20;
-		last_time = now();
+        
+        if (send_rate < slow_rate) {
+            // set the inital time difference
+            sleep_time = nsec_per_sec / send_rate;
+            last_time = now() - (1.0 / send_rate);
+        } else {
+		    // estimate initial rate
+		    for (vi = delay; vi--; )
+		    	;
+		    delay *= 1 / (now() - last_time) / (zconf.rate / zconf.senders);
+		    interval = (zconf.rate / zconf.senders) / 20;
+		    last_time = now();
+        }
 	}
 	uint32_t curr = shard_get_cur_ip(s);
 	int attempts = zconf.num_retries + 1;
@@ -229,17 +241,30 @@ int send_run(sock_t st, shard_t *s)
 		// adaptive timing delay
 		if (delay > 0) {
 			count++;
-			for (vi = delay; vi--; )
-				;
-			if (!interval || (count % interval == 0)) {
-				double t = now();
-				delay *= (double)(count - last_count)
-					/ (t - last_time) / (zconf.rate / zconf.senders);
-				if (delay < 1)
-					delay = 1;
-				last_count = count;
-				last_time = t;
-			}
+            if (send_rate < slow_rate) {
+                double t = now();
+                double last_rate = (1.0 / (t - last_time));
+
+                sleep_time *= ((last_rate / send_rate) + 1) / 2;
+                ts.tv_sec = sleep_time / nsec_per_sec;
+                ts.tv_nsec = sleep_time % nsec_per_sec;
+                log_debug("sleep", "sleep for %d sec, %ld nanoseconds", ts.tv_sec, ts.tv_nsec);
+                while (nanosleep(&ts, &rem) == -1) {}
+                
+                last_time = t;
+            } else {
+			    for (vi = delay; vi--; )
+			    	;
+			    if (!interval || (count % interval == 0)) {
+			    	double t = now();
+			    	delay *= (double)(count - last_count)
+			    		/ (t - last_time) / (zconf.rate / zconf.senders);
+			    	if (delay < 1)
+			    		delay = 1;
+			    	last_count = count;
+			    	last_time = t;
+			    }
+            }
 		}
 		if (zrecv.complete) {
 			s->cb(s->id, s->arg);
@@ -247,6 +272,7 @@ int send_run(sock_t st, shard_t *s)
 		}
 		if (s->state.sent >= max_targets) {
 			s->cb(s->id, s->arg);
+			log_trace("send", "send thread %hhu finished (max targets of %u reached)", s->id, max_targets);
 			break;
 		}
 		if (zconf.max_runtime && zconf.max_runtime <= now() - zsend.start) {
@@ -255,6 +281,7 @@ int send_run(sock_t st, shard_t *s)
 		}
 		if (curr == 0) {
 			s->cb(s->id, s->arg);
+			log_trace("send", "send thread %hhu finished, shard depleted", s->id);
 			break;
 		}
 		s->state.sent++;
@@ -292,9 +319,9 @@ int send_run(sock_t st, shard_t *s)
 		curr = shard_get_next_ip(s);
 	}
 	if (zconf.dryrun) {
-		pthread_mutex_lock(&send_mutex);
+		lock_file(stdout);
 		fflush(stdout);
-		pthread_mutex_unlock(&send_mutex);
+		unlock_file(stdout);
 	}
 	log_debug("send", "thread %hu finished", s->id);
 	return EXIT_SUCCESS;

@@ -26,7 +26,7 @@
 
 probe_module_t module_icmp_echo;
 
-int icmp_echo_init_perthread(void* buf, macaddr_t *src,
+static int icmp_echo_init_perthread(void* buf, macaddr_t *src,
 		macaddr_t *gw, __attribute__((unused)) port_h_t dst_port,
 		__attribute__((unused)) void **arg_ptr)
 {
@@ -45,7 +45,7 @@ int icmp_echo_init_perthread(void* buf, macaddr_t *src,
 	return EXIT_SUCCESS;
 }
 
-int icmp_echo_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
+static int icmp_echo_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 				uint32_t *validation, __attribute__((unused)) int probe_num,
 				__attribute__((unused)) void *arg)
 {
@@ -67,14 +67,14 @@ int icmp_echo_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 	return EXIT_SUCCESS;
 }
 
-void icmp_echo_print_packet(FILE *fp, const void* packet)
+static void icmp_echo_print_packet(FILE *fp, const void* packet)
 {
 	struct ether_header *ethh = (struct ether_header *) packet;
 	struct ip *iph = (struct ip *) &ethh[1];
 	struct icmp *icmp_header = (struct icmp*) (&iph[1]);
 
 	fprintf(fp, "icmp { type: %u | code: %u "
-			"| checksum: %u | id: %u | seq: %u }\n",
+			"| checksum: %#04X | id: %u | seq: %u }\n",
 			icmp_header->icmp_type,
 			icmp_header->icmp_code,
 			ntohs(icmp_header->icmp_cksum),
@@ -85,10 +85,8 @@ void icmp_echo_print_packet(FILE *fp, const void* packet)
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
-
-
-int icmp_validate_packet(const void *packet,
-		uint32_t len, uint32_t *src_ip, uint32_t *validation)
+static int icmp_validate_packet(const void *packet, uint32_t len,
+                                uint32_t *src_ip, uint32_t *validation)
 {
 	if (!ip_validate_packet(packet, len, src_ip, validation)) {
 		return 0;
@@ -142,7 +140,7 @@ int icmp_validate_packet(const void *packet,
 	return 1;
 }
 
-void icmp_echo_process_packet(const void *packet,
+static void icmp_echo_process_packet(const void *packet,
 		__attribute__((unused)) uint32_t len, fieldset_t *fs)
 {
 	ip_process_packet(packet, len, fs);

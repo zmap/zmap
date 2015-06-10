@@ -7,7 +7,7 @@
 # ztee option description to be processed by gengetopt
 
 package "ztee"
-version "2.0.0-RC1"
+version "2.1.0-RC1"
 purpose "A buffering output splitter"
 
 section "Basic arguments"
@@ -18,6 +18,8 @@ option "monitor"                m "Print monitor output to stdout"
     optional
 option "status-updates-file"    u "File to write status updates in CSV format"
     typestr="monitor.csv"
+    optional string
+option "log-file"               l "File to log to"
     optional string
 option "raw"                    r "Ignore input formatting"
     optional

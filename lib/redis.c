@@ -66,7 +66,7 @@ redisconf_t *redis_parse_connstr(char *connstr)
 	return retv;
 }
 
-static redisContext* redis_connect(char *connstr)
+redisContext* redis_connect(char *connstr)
 {
 	redisconf_t *c;
 	// handle old behavior where we only connected to a specific
@@ -91,12 +91,11 @@ static redisContext* redis_connect(char *connstr)
 	}
 }
 
-static int chkerr(redisReply *reply)
+static int chkerr(redisContext *rctx, redisReply *reply)
 {
-	assert(rctx);
 	if (reply == NULL || reply->type == REDIS_REPLY_ERROR) {
 		log_error("redis", "an error occurred when "
-				"retreiving item from redis: %s",
+				"retrieving item from redis: %s",
 				rctx->errstr);
 		if (reply) {
 			freeReplyObject(reply);
@@ -129,7 +128,7 @@ redisContext* redis_get_context(void)
 int redis_flush(void)
 {
 	redisReply *reply = (redisReply*) redisCommand(rctx, "FLUSHDB");
-	if (chkerr(reply)) {
+	if (chkerr(rctx, reply)) {
 		return -1;
 	}
 	freeReplyObject(reply);
@@ -140,7 +139,7 @@ int redis_existconf(const char *name)
 {
 	assert(rctx);
 	redisReply *reply = (redisReply*) redisCommand(rctx, "EXISTS %s", name);
-	if (chkerr(reply)) {
+	if (chkerr(rctx, reply)) {
 		return -1;
 	}
 	int v = reply->integer;
@@ -152,7 +151,7 @@ int redis_delconf(const char *name)
 {
 	assert(rctx);
 	redisReply *reply = (redisReply*) redisCommand(rctx, "DEL %s", name);
-	if (chkerr(reply)) {
+	if (chkerr(rctx, reply)) {
 		return -1;
 	}
 	freeReplyObject(reply);
@@ -164,7 +163,7 @@ int redis_setconf(const char *name, char *value)
 	assert(rctx);
 	redisReply *reply = (redisReply*) redisCommand(rctx, "SET %s %s",
 			name, value);
-	if (chkerr(reply)) {
+	if (chkerr(rctx, reply)) {
 		return -1;
 	}
 	freeReplyObject(reply);
@@ -175,7 +174,7 @@ int redis_getconf(const char *name, char *buf, size_t maxlen)
 {
 	assert(rctx);
 	redisReply *reply = (redisReply*) redisCommand(rctx, "GET %s", name);
-	if (chkerr(reply)) {
+	if (chkerr(rctx, reply)) {
 		return -1;
 	}
 	strncpy(buf, reply->str, maxlen);
@@ -277,6 +276,38 @@ int redis_spull(char *redisqueuename, void *buf,
 			maxload, obj_size, numloaded, "SRAND");
 }
 
+static int redis_pull_one(redisContext *rctx, char *queuename, void **buf, size_t *len, const char *cmd)
+{
+	assert(rctx);
+        redisReply *reply = (redisReply*) redisCommand(rctx, "%s %s", cmd, queuename);
+	if (!reply) {
+		log_fatal("redis", "no reply provided by redis.");
+	}
+	if (reply-> type == REDIS_REPLY_NIL) {
+		return REDIS_EMPTY;
+	}
+	if (reply->type != REDIS_REPLY_STRING) {
+		log_fatal("redis", "redis unxpected reply type from redis: %s", reply->str);
+	}
+	*len = reply->len;
+	void *temp = (char*) malloc(*len);
+	assert(temp);
+	*buf = temp;
+	memcpy(temp, reply->str, *len);
+	freeReplyObject(reply);
+	return REDIS_SUCCESS;
+}
+
+int redis_lpull_one(redisContext *rctx, char *queuename, void **buf, size_t *len)
+{
+	return redis_pull_one(rctx, queuename, buf, len, "LPOP");
+}
+
+int redis_spull_one(redisContext *rctx, char *queuename, void **buf, size_t *len)
+{
+	return redis_pull_one(rctx, queuename, buf, len, "SRAND");
+}
+
 static int redis_push(char *redisqueuename,
 		void *buf, int num, size_t len, const char *cmd)
 {
@@ -314,6 +345,29 @@ int redis_spush(char *redisqueuename,
 	return redis_push(redisqueuename, buf, num, len, "SADD");
 }
 
+static int redis_push_one(redisContext *rctx, char *queuename, void *buf, size_t len, const char *cmd)
+{
+	assert(rctx);
+	redisReply *reply = (redisReply*) redisCommand(rctx, "%s %s %b", cmd, queuename, buf, len);
+	if (chkerr(rctx, reply)) {
+		return -1;
+	}
+	freeReplyObject(reply);
+	return 0;
+}
+
+int redis_lpush_one(redisContext *rctx, char *queuename,
+		void *buf, size_t len)
+{
+	return redis_push_one(rctx, queuename, buf, len, "RPUSH");
+}
+
+int redis_spush_one(redisContext *rctx, char *queuename,
+		void *buf, size_t len)
+{
+	return redis_push_one(rctx, queuename, buf, len, "SADD");
+}
+
 static int redis_push_strings(char *redisqueuename, char **buf, int num, const char *cmd)
 {
 	assert(rctx);
@@ -346,4 +400,3 @@ int redis_spush_strings(char *redisqueuename, char **buf, int num)
 {
 	return redis_push_strings(redisqueuename, buf, num, "SADD");
 }
-

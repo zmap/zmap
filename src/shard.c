@@ -1,3 +1,11 @@
+/*
+ * ZMap Copyright 2013 Regents of the University of Michigan
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not
+ * use this file except in compliance with the License. You may obtain a copy
+ * of the License at http://www.apache.org/licenses/LICENSE-2.0
+ */
+
 #include <stdint.h>
 #include <assert.h>
 
@@ -7,7 +15,6 @@
 #include "../lib/blacklist.h"
 #include "shard.h"
 #include "state.h"
-
 
 void shard_init(shard_t* shard,
 		uint8_t shard_id,
@@ -57,10 +64,15 @@ void shard_init(shard_t* shard,
 	shard->params.last *= cycle->offset;
 	shard->params.last %= shard->params.modulus;
 	shard->current = shard->params.first;
-	shard->state.max_targets = zsend.targets / num_subshards;
-	uint32_t leftover = zsend.targets % num_subshards;
-	if (leftover > shard_id) {
-		shard->state.max_targets++;
+	// Handle scanning a sample
+	if (zsend.targets != zsend.max_index) {
+		shard->state.max_targets = zsend.targets / num_subshards;
+		uint32_t leftover = zsend.targets % num_subshards;
+		if (leftover > sub_id) {
+			shard->state.max_targets++;
+		}
+	} else {
+		shard->state.max_targets = zsend.targets;
 	}
 
 
@@ -71,7 +83,7 @@ void shard_init(shard_t* shard,
 	shard->cb = cb;
 	shard->arg = arg;
 
-	if (shard->current > zsend.targets) {
+	if (shard->current - 1 >= zsend.max_index) {
 		shard_get_next_ip(shard);
 	}
 

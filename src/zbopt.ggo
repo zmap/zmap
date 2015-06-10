@@ -1,0 +1,39 @@
+# ZBlacklist Copyright 2014 Regents of the University of Michigan
+
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at http://www.apache.org/licenses/LICENSE-2.0
+
+# zblacklist option description to be processed by gengetopt
+
+package "zblacklist"
+version "2.1.0-RC1"
+purpose "A tool for limiting and deduplicating a list of IP addresses"
+
+section "Basic arguments"
+
+option "blacklist-file"           b "File of subnets to exclude, in CIDR notation, one-per line."
+    optional string
+option "whitelist-file"           w "File of subnets to include, in CIDR notation, one-per line."
+    optional string
+option "log-file"                 l "File to log to"
+    optional string
+option "verbosity"                v "Set log level verbosity (0-5, default 3)"
+    default="3"
+    optional int
+option "no-duplicate-checking"    - "Don't deduplicate IP addresses (default false)"
+    optional
+option "ignore-blacklist-errors"  - "Ignore invalid entires in the blacklist/whitelist (default false)"
+    optional
+
+section "Additional options"
+
+option "help"                   h "Print help and exit"
+    optional
+option "version"                V "Print version and exit"
+    optional
+
+section "Notes"
+
+text
+    "At least one of --whitelist-file or --blacklist-file must be specified. Blacklist files take precedence over whitelist files when both are specified. This results in an output of {whitelist - blacklist}."
