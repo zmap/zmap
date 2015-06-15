@@ -771,8 +771,9 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (zconf.senders >= zsend.targets) {
-		zconf.senders = max_int(zsend.targets - 1, 1);
+	if (2*zconf.senders >= zsend.targets) {
+		log_warn("zmap", "too few targets relative to senders, dropping to one sender");
+		zconf.senders = 1;
 	}
 #else
 	zconf.senders = args.sender_threads_arg;
