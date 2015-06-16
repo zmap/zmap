@@ -29,6 +29,9 @@
 #define UPDATE_INTERVAL 1 //seconds
 #define NUMBER_STR_LEN 20
 
+#define SECONDS_UNDER_HITRATE_MAX 5 //seconds
+
+
 // internal monitor status that is used to track deltas
 typedef struct internal_scan_status {
 	double   last_now;
@@ -38,7 +41,7 @@ typedef struct internal_scan_status {
 	uint32_t last_recv_app_success;
 	uint32_t last_recv_total;
 	uint32_t last_pcap_drop;
-
+	uint32_t seconds_under_min_hitrate;
 } int_status_t;
 
 // exportable status information that can be printed to screen
@@ -88,6 +91,7 @@ typedef struct export_scan_status {
 	uint32_t fail_total;
 	double fail_avg;
 	double fail_last;
+	uint32_t seconds_under_min_hitrate;
 
 } export_status_t;
 
@@ -179,6 +183,13 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp, iterator_t 
 		exp->hitrate = recv_success*100.0/total_sent;
 		exp->app_hitrate = app_success*100.0/total_sent;
 	}
+
+	if (exp->hitrate < zconf.min_hitrate) {
+		intrnl->seconds_under_min_hitrate++;
+	} else {
+		intrnl->seconds_under_min_hitrate = 0;
+	}
+	exp->seconds_under_min_hitrate = intrnl->seconds_under_min_hitrate;
 
 	if (!zsend.complete) {
 		exp->send_rate = (total_sent - intrnl->last_sent)/delta;
@@ -379,6 +390,24 @@ static void update_status_updates_file(export_status_t *exp, FILE *f)
 	fflush(f);
 }
 
+#define WARMUP_PERIOD 10
+
+static inline void check_min_hitrate(export_status_t *exp)
+{
+	if (exp->time_past > WARMUP_PERIOD && 
+			exp->seconds_under_min_hitrate >= SECONDS_UNDER_HITRATE_MAX) {
+		log_fatal("monitor", "hitrate below %f% for more than %s seconds. aborting scan.",
+				zconf.min_hitrate, SECONDS_UNDER_HITRATE_MAX);
+	}
+}
+
+static inline void check_max_sendto_failures(export_status_t *exp)
+{
+	if (zconf.max_sendto_failures >= 0 && exp->fail_total > (uint32_t) zconf.max_sendto_failures) {
+		log_fatal("monitor", "maxiumum number of sendto failures (%i) exceeded",
+				zconf.max_sendto_failures);
+	} 
+}
 
 void monitor_run(iterator_t *it, pthread_mutex_t *lock)
 {
@@ -394,6 +423,8 @@ void monitor_run(iterator_t *it, pthread_mutex_t *lock)
 		update_pcap_stats(lock);
 		export_stats(internal_status, export_status, it);
 		log_drop_warnings(export_status);
+		check_min_hitrate(export_status);
+		check_max_sendto_failures(export_status);
 		if (!zconf.quiet) {
 			lock_file(stderr);
 			if (zconf.fsconf.app_success_index >= 0) {

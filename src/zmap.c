@@ -231,10 +231,12 @@ static void start_zmap(void)
 	mon_arg->it = it;
 	mon_arg->recv_ready_mutex = &recv_ready_mutex;
 	mon_arg->cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
-	int r = pthread_create(&tmon, NULL, start_mon, mon_arg);
-	if (r != 0) {
-		log_fatal("zmap", "unable to create monitor thread");
-		exit(EXIT_FAILURE);
+	{
+		int r = pthread_create(&tmon, NULL, start_mon, mon_arg);
+		if (r != 0) {
+			log_fatal("zmap", "unable to create monitor thread");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 #ifndef PFRING
@@ -532,8 +534,8 @@ int main(int argc, char *argv[])
 				"sendto failures occur", zconf.max_sendto_failures);
 	}
 	if (zconf.min_hitrate > 0.0) {
-        log_debug("zmap", "scan will abort if hitrate falls below %f",
-                zconf.min_hitrate);
+		log_debug("zmap", "scan will abort if hitrate falls below %f",
+				zconf.min_hitrate);
 	}
 	if (args.metadata_file_arg) {
 #ifdef JSON
