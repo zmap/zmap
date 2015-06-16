@@ -29,7 +29,7 @@
 #define UPDATE_INTERVAL 1 //seconds
 #define NUMBER_STR_LEN 20
 
-#define SECONDS_UNDER_HITRATE_MAX 5 //seconds
+#define MIN_HITRATE_TIME_WINDOW 5 //seconds
 
 
 // internal monitor status that is used to track deltas
@@ -395,9 +395,9 @@ static void update_status_updates_file(export_status_t *exp, FILE *f)
 static inline void check_min_hitrate(export_status_t *exp)
 {
 	if (exp->time_past > WARMUP_PERIOD && 
-			exp->seconds_under_min_hitrate >= SECONDS_UNDER_HITRATE_MAX) {
+			exp->seconds_under_min_hitrate >= MIN_HITRATE_TIME_WINDOW) {
 		log_fatal("monitor", "hitrate below %f% for more than %s seconds. aborting scan.",
-				zconf.min_hitrate, SECONDS_UNDER_HITRATE_MAX);
+				zconf.min_hitrate, MIN_HITRATE_TIME_WINDOW);
 	}
 }
 
