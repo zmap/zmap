@@ -118,6 +118,8 @@ struct state_conf {
 	int num_retries;
 	uint64_t total_allowed;
 	uint64_t total_disallowed;
+    int max_sendto_failures;
+    float min_hitrate;
 #ifdef PFRING
 	struct {
 		pfring_zc_cluster *cluster;
@@ -139,6 +141,7 @@ struct state_send {
 	uint32_t sent;
 	uint32_t blacklisted;
 	uint32_t whitelisted;
+    int warmup;
 	int complete;
 	uint32_t first_scanned;
 	uint32_t targets;
