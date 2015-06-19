@@ -46,6 +46,7 @@ int json_output_file_init(struct state_conf *conf, UNUSED char **fields,
 					conf->output_filename);
 		}
 	} 
+	check_and_log_file_error(file, "json");
     return EXIT_SUCCESS;
 }
 
@@ -87,6 +88,7 @@ int json_output_file_ip(fieldset_t *fs)
 
 	fprintf(file, "%s\n", json_object_to_json_string(obj));
 	fflush(file);
+	check_and_log_file_error(file, "json");
 	json_object_put(obj);
 	return EXIT_SUCCESS;
 }
