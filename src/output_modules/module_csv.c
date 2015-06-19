@@ -49,6 +49,7 @@ int csv_init(struct state_conf *conf, char **fields, int fieldlens)
 		}
 			fprintf(file, "\n");
 	}
+	check_and_log_file_error(file, "csv");
 	return EXIT_SUCCESS;
 }
 
@@ -65,10 +66,10 @@ int csv_close(__attribute__((unused)) struct state_conf* c,
 
 static void hex_encode(FILE *f, unsigned char* readbuf, size_t len)
 {
-	for(size_t i=0; i < len; i++) {
-        fprintf(stderr, "%02x", readbuf[i]);
+	for(size_t i=0; i < len; i++) {	
 		fprintf(f, "%02x", readbuf[i]);
 	}
+	check_and_log_file_error(f, "csv");
 }
 
 int csv_process(fieldset_t *fs)
@@ -98,6 +99,8 @@ int csv_process(fieldset_t *fs)
 		}
 	}
 	fprintf(file, "\n");
+	fflush(file);
+	check_and_log_file_error(file, "csv");
 	return EXIT_SUCCESS;
 }
 

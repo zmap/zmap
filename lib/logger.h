@@ -28,6 +28,8 @@ int log_trace(const char *loggerName, const char *logMessage, ...);
 int log_init(FILE *stream, enum LogLevel level,
 		int syslog_enabled, const char *syslog_app);
 
+void check_and_log_file_error(FILE *file, const char*name);
+
 size_t dstrftime(char *, size_t, const char *, double);
 
 double now();
