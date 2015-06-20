@@ -28,6 +28,9 @@
 
 #define UPDATE_INTERVAL 1 //seconds
 #define NUMBER_STR_LEN 20
+#define WARMUP_PERIOD 5
+#define MIN_HITRATE_TIME_WINDOW 5 //seconds
+
 
 // internal monitor status that is used to track deltas
 typedef struct internal_scan_status {
@@ -38,7 +41,7 @@ typedef struct internal_scan_status {
 	uint32_t last_recv_app_success;
 	uint32_t last_recv_total;
 	uint32_t last_pcap_drop;
-
+    double   min_hitrate_start;
 } int_status_t;
 
 // exportable status information that can be printed to screen
@@ -88,6 +91,7 @@ typedef struct export_scan_status {
 	uint32_t fail_total;
 	double fail_avg;
 	double fail_last;
+	float seconds_under_min_hitrate;
 
 } export_status_t;
 
@@ -145,7 +149,7 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp, iterator_t 
 	double remaining_secs = compute_remaining_time(age, total_sent);
 
 	// export amount of time the scan has been running
-	if (age < 5) {
+	if (age < WARMUP_PERIOD) {
 		exp->time_remaining_str[0] = '\0';
 	} else {
 		char buf[20];
@@ -179,6 +183,19 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp, iterator_t 
 		exp->hitrate = recv_success*100.0/total_sent;
 		exp->app_hitrate = app_success*100.0/total_sent;
 	}
+
+	if (age > WARMUP_PERIOD && exp->hitrate < zconf.min_hitrate) {
+        if (!intrnl->min_hitrate_start) {
+            intrnl->min_hitrate_start = cur_time;
+        }
+	} else {
+		intrnl->min_hitrate_start = 0.0;
+	}
+    if (intrnl->min_hitrate_start) {
+    	exp->seconds_under_min_hitrate = cur_time - intrnl->min_hitrate_start;
+    } else {
+        exp->seconds_under_min_hitrate = 0;
+    }
 
 	if (!zsend.complete) {
 		exp->send_rate = (total_sent - intrnl->last_sent)/delta;
@@ -380,6 +397,22 @@ static void update_status_updates_file(export_status_t *exp, FILE *f)
 }
 
 
+static inline void check_min_hitrate(export_status_t *exp)
+{
+	if (exp->seconds_under_min_hitrate >= MIN_HITRATE_TIME_WINDOW) {
+		log_fatal("monitor", "hitrate below %.0f for %.0f seconds. aborting scan.",
+				zconf.min_hitrate, exp->seconds_under_min_hitrate);
+	}
+}
+
+static inline void check_max_sendto_failures(export_status_t *exp)
+{
+	if (zconf.max_sendto_failures >= 0 && exp->fail_total > (uint32_t) zconf.max_sendto_failures) {
+		log_fatal("monitor", "maxiumum number of sendto failures (%i) exceeded",
+				zconf.max_sendto_failures);
+	} 
+}
+
 void monitor_run(iterator_t *it, pthread_mutex_t *lock)
 {
 	int_status_t *internal_status = xmalloc(sizeof(int_status_t));
@@ -394,6 +427,8 @@ void monitor_run(iterator_t *it, pthread_mutex_t *lock)
 		update_pcap_stats(lock);
 		export_stats(internal_status, export_status, it);
 		log_drop_warnings(export_status);
+		check_min_hitrate(export_status);
+		check_max_sendto_failures(export_status);
 		if (!zconf.quiet) {
 			lock_file(stderr);
 			if (zconf.fsconf.app_success_index >= 0) {
