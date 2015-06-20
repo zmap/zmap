@@ -110,6 +110,9 @@ BUGFIX	All calls to malloc checked for failure
 
 2.1.0	2014-06-07
 
+BUGFIX  ZMap would somtimes segfault if the number of threads was greater
+        than the number of destination hosts.
+
 BUGFIX  ZMap did not crash when it was unable to write to the output file
         This would cause ZMap to continue running when it was piped into another
         application and that application died. We not log_fatal if the output is
