@@ -110,6 +110,11 @@ BUGFIX	All calls to malloc checked for failure
 
 2.1.0	2014-06-07
 
+BUGFIX  ZMap did not crash when it was unable to write to the output file
+        This would cause ZMap to continue running when it was piped into another
+        application and that application died. We not log_fatal if the output is
+        no longer accessible per ferror.
+
 CHANGED json output uses underscores instead of hyphens
 
 CHANGED removes support for deprecated simple_file and extended_file options
@@ -159,4 +164,3 @@ FEATURE Add icmp-echo-time probe module for measuring RTT
 CHANGED remove --summary
 
 CHANGED JSON metadata now uses ISO-8601 compatible timestamps instead of proprietary log format.
-
