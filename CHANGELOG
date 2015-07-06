@@ -110,6 +110,10 @@ BUGFIX	All calls to malloc checked for failure
 
 2.1.0	2014-06-07
 
+BUGFIX  ZMap now filters out packets that are from the local MAC instead of
+        only capturing packets from the local gateway. The prior approach
+        caused valid responses to be dropped for a fair number of users.
+
 BUGFIX  ZMap would somtimes segfault if the number of threads was greater
         than the number of destination hosts.
 
@@ -128,9 +132,14 @@ BUGFIX  install overwrites blacklist file
 
 BUGFIX  output is sometimes colored
 
-FEATURE	zblacklist
+FEATURE	zblacklist (a standalone utility that allows you to efficiently check
+        IP addresses against a zmap compatible whitelist and blacklist. This is
+        helpful if you are doing something like cat list-of-ips | zgrab and to
+        make sure that you're still following your blacklist.
 
-FEATURE	ztee
+FEATURE	ztee (a standalone utility that buffers between ZMap and ZGrab) and allows
+        extracting just IP address from a larger ZMap output in order to complete
+        follow up handshakes without losing any data.
 
 CHANGED	remove space in csv output header
 
@@ -140,7 +149,8 @@ FEATURE	ntp probe module
 
 BUGFIX	finding a generator would crash with low probability
 
-CHANGED	don't print blacklisted CIDR blocks to log
+CHANGED	don't print blacklisted CIDR blocks to log. These are available in 
+        --metadata-file and end up flooding the log with a ton of metadata.
 
 FEATURE	status-updates-file (monitor output as a csv)
 
@@ -164,6 +174,6 @@ CHANGED remove type field from json output module and get rid of header
 
 FEATURE Add icmp-echo-time probe module for measuring RTT
 
-CHANGED remove --summary
+CHANGED remove --summary. This has been replaced by --metadata-file.
 
 CHANGED JSON metadata now uses ISO-8601 compatible timestamps instead of proprietary log format.
