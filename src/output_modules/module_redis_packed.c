@@ -29,6 +29,7 @@ static uint32_t *buffer;
 static int buffer_fill = 0;
 static char *queue_name = NULL;
 static int field_index = -1;
+static redisContext* rctx = NULL;
 
 int redismodule_init(struct state_conf *conf, char **fields, int fieldlens)
 {
@@ -44,26 +45,46 @@ int redismodule_init(struct state_conf *conf, char **fields, int fieldlens)
 		log_fatal("redis-module", "saddr-raw not included in output-fields");
 	}
 
+	redisconf_t rconf;
+	memset(&rconf, 0, sizeof(redisconf_t));
+	char *connect_string = NULL;
 	if (conf->output_args) {
-		redisconf_t *rconf = redis_parse_connstr(conf->output_args);
-		if (rconf->type == T_TCP) {
-			log_info("redis-module", "{type: TCP, server: %s, "
-					"port: %u, list: %s}", rconf->server,
-					rconf->port, rconf->list_name);
-		} else {
-			log_info("redis-module", "{type: LOCAL, path: %s, "
-					"list: %s}", rconf->path, rconf->list_name);
-		}
-		queue_name = rconf->list_name;
+		connect_string = conf->output_args;
+	} else {
+		connect_string = strdup("local:///tmp/redis.sock/zmap_output");
+	}
+
+	if (redis_parse_connstr(connect_string, &rconf) != ZMAP_REDIS_SUCCESS) {
+		log_error("redis-module", "configuration error: %s", rconf.error);
+		return EXIT_FAILURE;
+	}
+
+	if (rconf.list_name) {
+		queue_name = rconf.list_name;
 	} else {
 		queue_name = strdup("zmap_output");
 	}
-	return redis_init(conf->output_args);
+
+	if (rconf.type == T_TCP) {
+		log_info("redis-module", "{type: TCP, server: %s, "
+				"port: %u, list: %s}", rconf.server,
+				rconf.port, rconf.list_name);
+	} else {
+		log_info("redis-module", "{type: LOCAL, path: %s, "
+				"list: %s}", rconf.path, queue_name);
+	}
+
+	rctx = redis_connect_from_conf(&rconf);
+	if (!rctx) {
+		log_error("redis-module", "could not connect to redis");
+		return EXIT_FAILURE;
+	}
+	return EXIT_SUCCESS;
 }
 
 static int redismodule_flush(void)
 {
-	if (redis_lpush((char *)queue_name, buffer,
+	if (redis_lpush(rctx, (char *)queue_name, buffer,
 			buffer_fill, sizeof(uint32_t))) {
 		return EXIT_FAILURE;
 	}
@@ -90,7 +111,7 @@ int redismodule_close(UNUSED struct state_conf* c,
 	if (redismodule_flush()) {
 		return EXIT_FAILURE;
 	}
-	if (redis_close()) {
+	if (redis_close(rctx)) {
 		return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;
@@ -106,4 +127,3 @@ output_module_t module_redis = {
 	.process_ip = &redismodule_process,
 	.helptext = "Flushes to redis the ip address as packed binary integer in network order\n"
 };
-
