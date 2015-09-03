@@ -15,6 +15,8 @@ SET(EXTRA_OUTPUT_MODULES
 
 SET(OUTPUT_MODULE_SOURCES
     output_modules/module_csv.c
+    output_modules/module_redis_csv.c
+    output_modules/module_redis_packed.c
     output_modules/output_modules.c
 )
 
