@@ -181,3 +181,5 @@ CHANGED remove --summary. This has been replaced by --metadata-file.
 CHANGED JSON metadata now uses ISO-8601 compatible timestamps instead of proprietary log format.
 
 CHANGED remove buggy and never officially-released DNS probe module
+
+FEATURE MongoDB output module
