@@ -160,13 +160,15 @@ BUGFIX	use correct email for Zakir in AUTHORS
 
 FEATURE	add redis-csv output module
 
+CHANGED rename redis module to redis-packed
+
 CHANGED	probe module API takes user data argument
 
 FEATURE	colored log output
 
 FEATURE	add pf_ring and 10GigE support
 
-BUGFIX	random-number generator is now thread safe
+BUGFIX random-number generator is now thread safe
 
 FEATURE	optional app-success field output in monitor
 
@@ -177,3 +179,5 @@ FEATURE Add icmp-echo-time probe module for measuring RTT
 CHANGED remove --summary. This has been replaced by --metadata-file.
 
 CHANGED JSON metadata now uses ISO-8601 compatible timestamps instead of proprietary log format.
+
+CHANGED remove buggy and never officially-released DNS probe module
