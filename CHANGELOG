@@ -108,7 +108,7 @@ BUGFIX	Integer overflow in json metadata when printing generator
 
 BUGFIX	All calls to malloc checked for failure
 
-2.1.0	2014-06-07
+2.1.0	2015-09-02
 
 BUGFIX  ZMap now filters out packets that are from the local MAC instead of
         only capturing packets from the local gateway. The prior approach
