@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 2.8.12)
 project (ZMAP C)
-SET (VERSION 2.0.0)
+SET (VERSION 2.1.0)
 
 option(WITH_REDIS "Build with support for Redis DB" OFF)
 option(WITH_MONGO "Build with support for MongoDB" OFF)
