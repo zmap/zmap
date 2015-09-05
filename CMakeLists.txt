@@ -131,14 +131,14 @@ endif()
 
 FILE(GLOB CONF_FILES "${PROJECT_SOURCE_DIR}/conf/*")
 
+message(STATUS "Default ZMap configuration file location is /etc/zmap")
 foreach(EACH_CONF ${CONF_FILES})
     get_filename_component(CONF_BASENAME ${EACH_CONF} NAME)
-    message(STATUS "Default ZMap configuration file location is /etc/zmap")
     message(STATUS "Checking if ${CONF_BASENAME} exists there...")
     if(NOT EXISTS "/etc/zmap/${CONF_BASENAME}")
         install(FILES ${EACH_CONF} DESTINATION ${CONFIG_DESTINATION})
     else()
-        message(WARNING "Existing configuration file detected at /etc/zmap/${CONF_BASENAME}, it will NOT be installed. Please check and install manually!")
+        message(WARNING "Existing configuration file detected at /etc/zmap/${CONF_BASENAME}, ${CONF_BASENAME} from sources will NOT be installed. Please check and install manually!")
     endif()
 endforeach()
 
