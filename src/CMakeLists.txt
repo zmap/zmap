@@ -7,32 +7,32 @@ include_directories(
 )
 
 # ADD YOUR PROBE MODULE HERE
-SET(EXTRA_PROBE_MODULES
+set(EXTRA_PROBE_MODULES
 )
 
 # ADD YOUR OUTPUT MODULE HERE
-SET(EXTRA_OUTPUT_MODULES
+set(EXTRA_OUTPUT_MODULES
 )
 
-SET(OUTPUT_MODULE_SOURCES
+set(OUTPUT_MODULE_SOURCES
     output_modules/module_csv.c
     output_modules/output_modules.c
 )
 
 # Handle optional output modules
-if (WITH_JSON)
-    SET(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_json.c)
+if(WITH_JSON)
+    set(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_json.c)
 endif()
 
-if (WITH_REDIS)
-    SET(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_redis_packed.c output_modules/module_redis_csv.c)
+if(WITH_REDIS)
+    set(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_redis_packed.c output_modules/module_redis_csv.c)
 endif()
 
-if (WITH_MONGO)
-    SET(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_mongodb.c)
+if(WITH_MONGO)
+    set(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_mongodb.c)
 endif()
 
-SET(PROBE_MODULE_SOURCES
+set(PROBE_MODULE_SOURCES
     probe_modules/module_icmp_echo.c
     probe_modules/module_icmp_echo_time.c
     probe_modules/module_tcp_synscan.c
@@ -43,7 +43,7 @@ SET(PROBE_MODULE_SOURCES
     probe_modules/module_upnp.c
 )
 
-SET(SOURCES
+set(SOURCES
     aesrand.c
     cyclic.c
     expression.c
@@ -70,7 +70,7 @@ SET(SOURCES
     ${OUTPUT_MODULE_SOURCES}
 )
 
-SET(ZTESTSOURCES
+set(ZTESTSOURCES
     aesrand.c
     cyclic.c
     expression.c
@@ -97,13 +97,13 @@ SET(ZTESTSOURCES
     ${OUTPUT_MODULE_SOURCES}
 )
 
-SET(ZBLSOURCES
+set(ZBLSOURCES
     zblacklist.c
     zbopt_compat.c
     "${CMAKE_CURRENT_BINARY_DIR}/zbopt.h"
 )
 
-SET(ZTEESOURCES
+set(ZTEESOURCES
     ztee.c
     topt_compat.c
     "${CMAKE_CURRENT_BINARY_DIR}/topt.h"
@@ -111,24 +111,28 @@ SET(ZTEESOURCES
 
 # Handle various versions of socket
 if(WITH_PFRING)
-    SET(SOURCES ${SOURCES} socket-pfring.c)
-    SET(ZTESTSOURCES ${ZTESTSOURCES} socket-pfring.c)
+    set(SOURCES ${SOURCES} socket-pfring.c)
+    set(ZTESTSOURCES ${ZTESTSOURCES} socket-pfring.c)
 elseif (APPLE OR BSD)
-    SET(SOURCES ${SOURCES} socket-bsd.c)
-    SET(ZTESTSOURCES ${ZTESTSOURCES} socket-bsd.c)
+    set(SOURCES ${SOURCES} socket-bsd.c)
+    set(ZTESTSOURCES ${ZTESTSOURCES} socket-bsd.c)
 else()
-    SET(SOURCES ${SOURCES} socket-linux.c)
-    SET(ZTESTSOURCES ${ZTESTSOURCES} socket-linux.c)
+    set(SOURCES ${SOURCES} socket-linux.c)
+    set(ZTESTSOURCES ${ZTESTSOURCES} socket-linux.c)
 endif()
 
 # Handle various versions of recv
 if(WITH_PFRING)
-    SET(SOURCES ${SOURCES} recv-pfring.c)
-    SET(ZTESTSOURCES ${ZTESTSOURCES} recv-pfring.c)
+    set(SOURCES ${SOURCES} recv-pfring.c)
+    set(ZTESTSOURCES ${ZTESTSOURCES} recv-pfring.c)
 else()
-    SET(SOURCES ${SOURCES} recv-pcap.c)
-    SET(ZTESTSOURCES ${ZTESTSOURCES} recv-pcap.c)
+    set(SOURCES ${SOURCES} recv-pcap.c)
+    set(ZTESTSOURCES ${ZTESTSOURCES} recv-pcap.c)
 endif()
+
+configure_file(topt.ggo ${CMAKE_BINARY_DIR}/src/topt.ggo @ONLY)
+configure_file(zbopt.ggo ${CMAKE_BINARY_DIR}/src/zbopt.ggo @ONLY)
+configure_file(zopt.ggo ${CMAKE_BINARY_DIR}/src/zopt.ggo @ONLY)
 
 add_custom_command(OUTPUT zopt.h
     COMMAND gengetopt -C --no-help --no-version --unamed-opts=SUBNETS -i "${CMAKE_CURRENT_SOURCE_DIR}/zopt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/zopt"
@@ -160,7 +164,7 @@ add_executable(zblacklist ${ZBLSOURCES})
 add_executable(ztee ${ZTEESOURCES})
 add_executable(ztests ${ZTESTSOURCES})
 
-if (APPLE OR BSD)
+if(APPLE OR BSD)
     set(DNET_LIBRARIES "dnet")
 else()
     set(DNET_LIBRARIES "")
