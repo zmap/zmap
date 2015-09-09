@@ -699,13 +699,13 @@ int main(int argc, char *argv[])
 		if (*suffix) {
 			switch (*suffix) {
 			case 'G': case 'g':
-				zconf.bandwidth *= 1000000000;
+				zconf.bandwidth *= 1024*1024*1024;
 				break;
 			case 'M': case 'm':
-				zconf.bandwidth *= 1000000;
+				zconf.bandwidth *= 1024*1024;
 				break;
 			case 'K': case 'k':
-				zconf.bandwidth *= 1000;
+				zconf.bandwidth *= 1024;
 				break;
 			default:
 			  	fprintf(stderr, "%s: unknown bandwidth suffix '%s' "
