@@ -123,6 +123,7 @@ output_module_t module_redis = {
 	.start = NULL,
 	.update = NULL,
 	.update_interval = 0,
+    .supports_dynamic_output = NO_DYNAMIC_SUPPORT,
 	.close = &redismodule_close,
 	.process_ip = &redismodule_process,
 	.helptext = "Flushes to redis the ip address as packed binary integer in network order\n"

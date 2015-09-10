@@ -206,6 +206,7 @@ output_module_t module_redis_csv = {
 	.update_interval = 0,
 	.close = &rediscsvmodule_close,
 	.process_ip = &rediscsvmodule_process,
+    .supports_dynamic_output = NO_DYNAMIC_SUPPORT,
 	.helptext = "Outputs one or more output fields in csv, and then flushes out to redis. \n"
     "By default, the probe module does not filter out duplicates or limit to successful fields, \n"
     "but rather includes all received packets. Fields can be controlled by \n"

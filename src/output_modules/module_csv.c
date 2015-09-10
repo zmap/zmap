@@ -115,6 +115,7 @@ output_module_t module_csv_file = {
 	.update_interval = 0,
 	.close = &csv_close,
 	.process_ip = &csv_process,
+    .supports_dynamic_output = NO_DYNAMIC_SUPPORT,
 	.helptext = "Outputs one or more output fields as a comma-delimited file. By default, the "
 	"probe module does not filter out duplicates or limit to successful fields, "
 	"but rather includes all received packets. Fields can be controlled by "

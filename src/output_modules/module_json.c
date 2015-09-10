@@ -113,6 +113,7 @@ output_module_t module_json_file = {
 	.update_interval = 0,
 	.close = &json_output_file_close,
 	.process_ip = &json_output_file_ip,
+    .supports_dynamic_output = DYNAMIC_SUPPORT,
 	.helptext = "Outputs one or more output fileds as a json valid file. By default, the \n"
 	"probe module does not filter out duplicates or limit to successful fields, \n"
 	"but rather includes all received packets. Fields can be controlled by \n"
