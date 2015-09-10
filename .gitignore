@@ -26,5 +26,6 @@ _CPack_Packages/*
 !.travis.yml
 src/zblacklist
 src/ztee
+src/ztests
 cmake_installer.sh
 !InstallConfFiles.cmake

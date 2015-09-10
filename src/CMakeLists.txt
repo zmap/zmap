@@ -71,7 +71,6 @@ SET(SOURCES
 )
 
 SET(ZTESTSOURCES
-    tests/test_harness.c
     aesrand.c
     cyclic.c
     expression.c
@@ -88,6 +87,7 @@ SET(ZTESTSOURCES
     summary.c
     validate.c
     zopt_compat.c
+    tests/test_harness.c
     "${CMAKE_CURRENT_BINARY_DIR}/zopt.h"
     "${CMAKE_CURRENT_BINARY_DIR}/lexer.c"
     "${CMAKE_CURRENT_BINARY_DIR}/parser.c"
@@ -112,17 +112,22 @@ SET(ZTEESOURCES
 # Handle various versions of socket
 if(WITH_PFRING)
     SET(SOURCES ${SOURCES} socket-pfring.c)
+    SET(ZTESTSOURCES ${ZTESTSOURCES} socket-pfring.c)
 elseif (APPLE OR BSD)
     SET(SOURCES ${SOURCES} socket-bsd.c)
+    SET(ZTESTSOURCES ${ZTESTSOURCES} socket-bsd.c)
 else()
     SET(SOURCES ${SOURCES} socket-linux.c)
+    SET(ZTESTSOURCES ${ZTESTSOURCES} socket-linux.c)
 endif()
 
 # Handle various versions of recv
 if(WITH_PFRING)
     SET(SOURCES ${SOURCES} recv-pfring.c)
+    SET(ZTESTSOURCES ${ZTESTSOURCES} recv-pfring.c)
 else()
     SET(SOURCES ${SOURCES} recv-pcap.c)
+    SET(ZTESTSOURCES ${ZTESTSOURCES} recv-pcap.c)
 endif()
 
 add_custom_command(OUTPUT zopt.h
@@ -189,6 +194,7 @@ target_link_libraries(
     zmaplib
     ${PFRING_LIBRARIES}
     pcap gmp m
+    ${DNET_LIBRARIES}
     ${REDIS_LIBS}
     ${JSON_LIBRARIES}
     ${MONGO_LIBRARIES}
