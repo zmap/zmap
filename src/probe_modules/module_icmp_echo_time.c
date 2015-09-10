@@ -199,7 +199,6 @@ static fielddef_t fields[] = {
     {.name="success", .type="int", .desc="did probe module classify response as success"}
 };
 
-
 probe_module_t module_icmp_echo_time = {
     .name = "icmp_echo_time",
     .packet_length = 62,
@@ -212,5 +211,6 @@ probe_module_t module_icmp_echo_time = {
     .process_packet = &icmp_echo_process_packet,
     .validate_packet = &icmp_validate_packet,
     .close = NULL,
+    .output_type = OUTPUT_TYPE_STATIC,
     .fields = fields,
     .numfields = 9};

@@ -3,6 +3,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/lib
     ${PROJECT_SOURCE_DIR}/src
     ${PROJECT_SOURCE_DIR}/src/output_modules
+    ${PROJECT_SOURCE_DIR}/src/tests
 )
 
 # ADD YOUR PROBE MODULE HERE
@@ -69,6 +70,33 @@ SET(SOURCES
     ${OUTPUT_MODULE_SOURCES}
 )
 
+SET(ZTESTSOURCES
+    tests/test_harness.c
+    aesrand.c
+    cyclic.c
+    expression.c
+    fieldset.c
+    filter.c
+    get_gateway.c
+    iterator.c
+    monitor.c
+    recv.c
+    send.c
+    shard.c
+    socket.c
+    state.c
+    summary.c
+    validate.c
+    zopt_compat.c
+    "${CMAKE_CURRENT_BINARY_DIR}/zopt.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/lexer.c"
+    "${CMAKE_CURRENT_BINARY_DIR}/parser.c"
+    ${EXTRA_PROBE_MODULES}
+    ${EXTRA_OUTPUT_MODULES}
+    ${PROBE_MODULE_SOURCES}
+    ${OUTPUT_MODULE_SOURCES}
+)
+
 SET(ZBLSOURCES
     zblacklist.c
     zbopt_compat.c
@@ -125,6 +153,7 @@ add_custom_command(OUTPUT parser.c
 add_executable(zmap ${SOURCES})
 add_executable(zblacklist ${ZBLSOURCES})
 add_executable(ztee ${ZTEESOURCES})
+add_executable(ztests ${ZTESTSOURCES})
 
 if (APPLE OR BSD)
     set(DNET_LIBRARIES "dnet")
@@ -153,6 +182,16 @@ target_link_libraries(
     ztee
     zmaplib
     m
+)
+
+target_link_libraries(
+    ztests
+    zmaplib
+    ${PFRING_LIBRARIES}
+    pcap gmp m
+    ${REDIS_LIBS}
+    ${JSON_LIBRARIES}
+    ${MONGO_LIBRARIES}
 )
 
 # Install binary
