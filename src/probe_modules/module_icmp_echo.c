@@ -194,6 +194,7 @@ probe_module_t module_icmp_echo = {
 	.process_packet = &icmp_echo_process_packet,
 	.validate_packet = &icmp_validate_packet,
 	.close = NULL,
+    .output_type = OUTPUT_TYPE_STATIC,
 	.fields = fields,
 	.numfields = 6};
 

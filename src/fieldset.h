@@ -15,12 +15,20 @@
 
 // maximum number of records that can be stored in a fieldset
 #define MAX_FIELDS 128
+#define MAX_LIST_LENGTH 255
 
 // types of data that can be stored in a field
 #define FS_STRING 0
 #define FS_UINT64 1
 #define FS_BINARY 2
 #define FS_NULL 3
+// recursive support
+#define FS_FIELDSET 4
+// list of elements
+#define FS_LIST_STRING 5
+#define FS_LIST_UINT64 6
+#define FS_LIST_BINARY 7
+#define FS_LIST_FIELDSET 8
 
 // definition of a field that's provided by a probe module
 // these are used so that users can ask at the command-line
@@ -39,6 +47,8 @@ typedef struct fielddef_set {
 typedef union field_val {
 	void	  *ptr;
 	uint64_t   num;
+    uint64_t   list_of_num[MAX_LIST_LENGTH];
+    void*      list_of_ptr[MAX_LIST_LENGTH];
 } field_val_t;
 
 // the internal field type used by fieldset
@@ -47,7 +57,7 @@ typedef struct field {
 	int type;
 	int free_;
 	size_t len;
-	union field_val value;
+	field_val_t value;
 } field_t;
 
 // data structure that is populated by the probe module
