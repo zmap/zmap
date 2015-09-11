@@ -59,6 +59,11 @@ fieldset_t *fs_new_repeated_binary(int free_)
 	return fs_new_repeated_field(FS_BINARY, free_);
 }
 
+fieldset_t *fs_new_repeated_fieldset(void)
+{
+	return fs_new_repeated_field(FS_BINARY, 0);
+}
+
 
 static inline void fs_add_word(fieldset_t *fs, const char *name, int type,
 		int free_, size_t len, field_val_t value)
