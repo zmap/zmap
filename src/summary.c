@@ -96,6 +96,12 @@ void json_metadata(FILE *file)
 	json_object_object_add(obj, "total_shards",
             json_object_new_int(zconf.total_shards));
 
+	json_object_object_add(obj, "min_hitrate",
+            json_object_new_double(zconf.min_hitrate));
+	json_object_object_add(obj, "max_sendto_failures",
+            json_object_new_int(zconf.max_sendto_failures));
+
+
 	json_object_object_add(obj, "syslog",
             json_object_new_int(zconf.syslog));
 	json_object_object_add(obj, "filter_duplicates",

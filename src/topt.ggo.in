@@ -7,7 +7,7 @@
 # ztee option description to be processed by gengetopt
 
 package "ztee"
-version "2.1.0"
+version "@ZMAP_VERSION@"
 purpose "A buffering output splitter"
 
 section "Basic arguments"

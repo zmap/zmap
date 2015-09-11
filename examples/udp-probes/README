@@ -32,6 +32,7 @@ ntp_123_monlist.pkt     This probe triggers a response for command "monlist" fro
 pca_nq_5632.pkt         This probe triggers a response from PC Anywhere services on UDP port 5632 (network query)
 pca_st_5632.pkt         This probe triggers a response from PC Anywhere services on UDP port 5632 (status)
 portmap_111.pkt         This probe triggers a response from SunRPC portmapper services on UDP port 111
+ripv1_520.pkt       	This probe triggers a response from the RIPv1 enabled routers/devices on UDP port 520
 sentinel_5093.pkt       This probe triggers a response from the Sentinel license manager service on UDP port 5093
 snmp1_161.pkt           This probe queries for the system description field of SNMP v1 services using community string public over UDP port 161
 snmp2_161.pkt           This probe queries for the system description field of aNMP v2 services using community string public over UDP port 161
