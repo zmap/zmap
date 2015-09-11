@@ -61,7 +61,7 @@ fieldset_t *fs_new_repeated_binary(int free_)
 
 fieldset_t *fs_new_repeated_fieldset(void)
 {
-	return fs_new_repeated_field(FS_BINARY, 0);
+	return fs_new_repeated_field(FS_FIELDSET, 0);
 }
 
 
