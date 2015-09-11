@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.12 FATAL_ERROR)
 project(ZMAP C)
-set(ZMAP_VERSION 2.1.0)
+set(ZMAP_VERSION 2.1.1)
 
 option(WITH_REDIS "Build with support for Redis DB" OFF)
 option(WITH_MONGO "Build with support for MongoDB" OFF)
