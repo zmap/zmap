@@ -66,14 +66,15 @@ int test_recursive_fieldsets(void)
     fs_add_fieldset(outer, "inner", inner);
 
     print_json_fieldset(outer);
-    //fs_free(outer);
+    fs_free(outer);
 
     return EXIT_SUCCESS;
 }
 
 int main(int argc, char **argv)
 {
-    test_recursive_fieldsets();
+    for (int i=0; i< 100000000; i++) 
+        test_recursive_fieldsets();
     return EXIT_SUCCESS;
 }
 
