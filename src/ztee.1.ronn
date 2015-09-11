@@ -1,5 +1,5 @@
-ztee(1)
-=============
+ztee(1) - output buffer and splitter
+====================================
 
 ## SYNOPSIS
 
