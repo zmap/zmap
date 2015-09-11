@@ -36,9 +36,9 @@ int json_output_file_init(struct state_conf *conf, UNUSED char **fields,
 		UNUSED int fieldlens)
 {
 	assert(conf);
-    if (!conf->output_filename) {
+	if (!conf->output_filename) {
 		file = stdout;
-    } else if (!strcmp(conf->output_filename, "-")) {
+	} else if (!strcmp(conf->output_filename, "-")) {
 		file = stdout;
 	} else {
 		if (!(file = fopen(conf->output_filename, "w"))) {
@@ -47,7 +47,7 @@ int json_output_file_init(struct state_conf *conf, UNUSED char **fields,
 		}
 	} 
 	check_and_log_file_error(file, "json");
-    return EXIT_SUCCESS;
+	return EXIT_SUCCESS;
 }
 
 char *hex_encode(char *packet, int buflen)
@@ -57,7 +57,7 @@ char *hex_encode(char *packet, int buflen)
 		snprintf(buf + (i*2), 3, "%.2x", packet[i]);
 	}
 	buf[buflen*2] = 0;
-    return buf;
+	return buf;
 }
 
 json_object *fs_to_jsonobj(fieldset_t *fs);
@@ -70,20 +70,19 @@ json_object *field_to_jsonobj(field_t *f)
 	} else if (f->type == FS_UINT64) {
 		return json_object_new_int64(f->value.num);
 	} else if (f->type == FS_BINARY) {
-        char *encoded = hex_encode(f->value.ptr, f->len);
-        json_object *t = json_object_new_string(encoded);
-        free(encoded);
-        return t;
+		char *encoded = hex_encode(f->value.ptr, f->len);
+		json_object *t = json_object_new_string(encoded);
+		free(encoded);
+		return t;
 	} else if (f->type == FS_NULL) {
-        return NULL;
-    } else if (f->type == FS_FIELDSET) {
-        return fs_to_jsonobj((fieldset_t*) f->value.ptr);
-    } else if (f->type == FS_REPEATED) {
-        return repeated_to_jsonobj((fieldset_t*) f->value.ptr);
+		return NULL;
+	} else if (f->type == FS_FIELDSET) {
+		return fs_to_jsonobj((fieldset_t*) f->value.ptr);
+	} else if (f->type == FS_REPEATED) {
+		return repeated_to_jsonobj((fieldset_t*) f->value.ptr);
 	} else {
-		log_fatal("json", "received unknown output type");
+		log_fatal("json", "received unknown output type: %i", f->type);
 	}
-
 }
 
 json_object *repeated_to_jsonobj(fieldset_t *fs)
@@ -91,9 +90,9 @@ json_object *repeated_to_jsonobj(fieldset_t *fs)
 	json_object *obj = json_object_new_array();
 	for (int i=0; i < fs->len; i++) {
 		field_t *f = &(fs->fields[i]);
-        json_object_array_add(obj, field_to_jsonobj(f));   
+		json_object_array_add(obj, field_to_jsonobj(f));   
 	}
-    return obj;
+	return obj;
 }
 
 json_object *fs_to_jsonobj(fieldset_t *fs)
@@ -101,17 +100,17 @@ json_object *fs_to_jsonobj(fieldset_t *fs)
 	json_object *obj = json_object_new_object();
 	for (int i=0; i < fs->len; i++) {
 		field_t *f = &(fs->fields[i]);
-        json_object_object_add(obj, f->name, field_to_jsonobj(f));   
+		json_object_object_add(obj, f->name, field_to_jsonobj(f));   
 	}
-    return obj;
+	return obj;
 }
 
-int json_output_file_ip(fieldset_t *fs)
+int json_output_to_file(fieldset_t *fs)
 {
 	if (!file) {
 		return EXIT_SUCCESS;
 	}
-    json_object *record = fs_to_jsonobj(fs);
+	json_object *record = fs_to_jsonobj(fs);
 	fprintf(file, "%s\n", json_object_to_json_string(record));
 	fflush(file);
 	check_and_log_file_error(file, "json");
@@ -129,6 +128,14 @@ int json_output_file_close(UNUSED struct state_conf* c,
 	return EXIT_SUCCESS;
 }
 
+int print_json_fieldset(fieldset_t *fs)
+{
+	json_object *record = fs_to_jsonobj(fs);
+	//json_object *record = repeated_to_jsonobj(fs);
+    fprintf(stdout, "%s\n", json_object_to_json_string(record)); 
+    json_object_put(record); 
+}
+
 output_module_t module_json_file = {
 	.name = "json",
 	.init = &json_output_file_init,
@@ -138,11 +145,12 @@ output_module_t module_json_file = {
 	.update = NULL,
 	.update_interval = 0,
 	.close = &json_output_file_close,
-	.process_ip = &json_output_file_ip,
-    .supports_dynamic_output = DYNAMIC_SUPPORT,
+	.process_ip = &json_output_to_file,
+	.supports_dynamic_output = DYNAMIC_SUPPORT,
 	.helptext = "Outputs one or more output fileds as a json valid file. By default, the \n"
 	"probe module does not filter out duplicates or limit to successful fields, \n"
 	"but rather includes all received packets. Fields can be controlled by \n"
 	"setting --output-fields. Filtering out failures and duplicate pakcets can \n"
 	"be achieved by setting an --output-filter."
 };
+

@@ -18,13 +18,14 @@
 #define MAX_LIST_LENGTH 255
 
 // types of data that can be stored in a field
-#define FS_STRING 0
-#define FS_UINT64 1
-#define FS_BINARY 2
-#define FS_NULL 3
+#define FS_RESERVED 0
+#define FS_STRING 1
+#define FS_UINT64 2
+#define FS_BINARY 3
+#define FS_NULL 4
 // recursive support
-#define FS_FIELDSET 4
-#define FS_REPEATED 5
+#define FS_FIELDSET 5
+#define FS_REPEATED 6
 
 // definition of a field that's provided by a probe module
 // these are used so that users can ask at the command-line
@@ -61,7 +62,8 @@ typedef struct fieldset {
 	int len;
 	field_t fields[MAX_FIELDS];
     // only used for repeated.
-    int type; // type of repeated element. e.g., FS_STRING
+    int inner_type; // type of repeated element. e.g., FS_STRING
+    int type; // REPEATED or FIELDSET 
     int free_; // should elements be freed
 } fieldset_t;
 

@@ -29,13 +29,17 @@ void gen_fielddef_set(fielddefset_t *fds, fielddef_t fs[], int len)
 fieldset_t *fs_new_fieldset(void)
 {
 	fieldset_t *f = xcalloc(1, sizeof(fieldset_t));
+    f->len = 0;
+	f->type = FS_FIELDSET;
 	return f;
 }
 
 fieldset_t *fs_new_repeated_field(int type, int free_)
 {
 	fieldset_t *f = xcalloc(1, sizeof(fieldset_t));
-	f->type = type;
+    f->len = 0;
+	f->type = FS_REPEATED;
+	f->inner_type = type;
 	f->free_ = free_;
 	return f;
 }
@@ -62,7 +66,7 @@ static inline void fs_add_word(fieldset_t *fs, const char *name, int type,
 	if (fs->len + 1 >= MAX_FIELDS) {
 		log_fatal("fieldset", "out of room in fieldset");
 	}
-	if (fs->type != type) {
+	if (fs->type == FS_REPEATED && fs->inner_type != type) {
 		log_fatal("fieldset", "object added to repeated field does not match type of repeated field.");
 	}
 	field_t *f = &(fs->fields[fs->len]);
