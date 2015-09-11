@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <float.h>
 #include <math.h>
 #include <time.h>
 #include <sys/time.h>
@@ -41,7 +42,7 @@ typedef struct internal_scan_status {
 	uint32_t last_recv_app_success;
 	uint32_t last_recv_total;
 	uint32_t last_pcap_drop;
-    double   min_hitrate_start;
+	double   min_hitrate_start;
 } int_status_t;
 
 // exportable status information that can be printed to screen
@@ -185,13 +186,13 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp, iterator_t 
 	}
 
 	if (age > WARMUP_PERIOD && exp->hitrate < zconf.min_hitrate) {
-        if (!intrnl->min_hitrate_start) {
+        if (fabs(intrnl->min_hitrate_start - 0.0) > 0.0 * DBL_EPSILON) {
             intrnl->min_hitrate_start = cur_time;
         }
 	} else {
 		intrnl->min_hitrate_start = 0.0;
 	}
-    if (intrnl->min_hitrate_start) {
+    if (fabs(intrnl->min_hitrate_start - 0.0) <= 0.0 * DBL_EPSILON) {
     	exp->seconds_under_min_hitrate = cur_time - intrnl->min_hitrate_start;
     } else {
         exp->seconds_under_min_hitrate = 0;
