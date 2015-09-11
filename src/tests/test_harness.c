@@ -61,8 +61,8 @@ int test_recursive_fieldsets(void)
         fs_add_string(repeated, NULL, (char*) "hello world!", 0);
     }
     fs_add_repeated(outer, (char*) "repeatedstuff", repeated);
-    fs_add_string(outer, "name", "value", 0);
-    fs_add_string(inner, "name2", "value2", 0);
+    fs_add_string(outer, "name", strdup("value"), 0);
+    fs_add_string(inner, "name2", strdup("value2"), 0);
     fs_add_fieldset(outer, "inner", inner);
 
     print_json_fieldset(outer);
@@ -71,7 +71,7 @@ int test_recursive_fieldsets(void)
     return EXIT_SUCCESS;
 }
 
-int main(int argc, char **argv)
+int main(UNUSED int argc, UNUSED char **argv)
 {
     for (int i=0; i< 100000000; i++) 
         test_recursive_fieldsets();
