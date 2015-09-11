@@ -116,6 +116,8 @@ void json_metadata(FILE *file)
 	json_object_object_add(obj, "pcap_ifdrop",
             json_object_new_int(zrecv.pcap_ifdrop));
 
+	json_object_object_add(obj, "ip_fragments",
+            json_object_new_int(zrecv.ip_fragments));
 	json_object_object_add(obj, "blacklist_total_allowed",
 		json_object_new_int64(zconf.total_allowed));
 	json_object_object_add(obj, "blacklist_total_not_allowed",
