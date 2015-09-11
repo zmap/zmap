@@ -111,3 +111,12 @@
 * Colored log output.
 * Add pf_ring and 10GigE support.
 * Optional app-success field output in monitor.
+
+# 2.1.1	2015-09-11
+## BUGFIX
+* make install works on more systems
+
+## CHANGED
+* CMakeLists.txt is now much more sane and packager-friendly
+* Switch CHANGELOG and INSTALL to Markdown
+* Generate `*.ggo` files from `*.ggo.in` files that define ZMap version as a macro
