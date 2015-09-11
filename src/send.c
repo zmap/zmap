@@ -105,7 +105,9 @@ iterator_t* send_init(void)
 	// global initialization for send module
 	assert(zconf.probe_module);
 	if (zconf.probe_module->global_initialize) {
-		zconf.probe_module->global_initialize(&zconf);
+		if (zconf.probe_module->global_initialize(&zconf)) {
+            log_fatal("send", "global initialization for probe module failed.");
+        }
 	}
 
 	// concert specified bandwidth to packet rate

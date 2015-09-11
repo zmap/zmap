@@ -162,8 +162,10 @@ static void start_zmap(void)
 	// Initialization
 	log_info("zmap", "output module: %s", zconf.output_module->name);
 	if (zconf.output_module && zconf.output_module->init) {
-		zconf.output_module->init(&zconf, zconf.output_fields,
-				zconf.output_fields_len);
+		if (zconf.output_module->init(&zconf, zconf.output_fields,
+				zconf.output_fields_len)) {
+            log_fatal("zmap", "output module did not initialize successfully.");
+        }
 	}
 
 	iterator_t *it = send_init();
