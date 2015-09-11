@@ -177,6 +177,15 @@ int fds_get_index_by_name(fielddefset_t *fds, char *name)
 	return -1;
 }
 
+void field_free(field_t *f)
+{
+    if (f->type == FS_FIELDSET || f->type == FS_REPEATED) {
+        fs_free((fieldset_t *) f->value.ptr);
+    } else if (f->free_) {
+		free(f->value.ptr);
+	}
+}
+
 void fs_free(fieldset_t *fs)
 {
 	if (!fs) {
@@ -184,9 +193,7 @@ void fs_free(fieldset_t *fs)
 	}
 	for (int i=0; i < fs->len; i++) {
 		field_t *f = &(fs->fields[i]);
-		if (f->free_) {
-			free(f->value.ptr);
-		}
+        field_free(f);
 	}
 	free(fs);
 }
