@@ -54,13 +54,13 @@ struct state_conf zconf = {
 	.syslog = 1,
 	.filter_duplicates = 0,
 	.filter_unsuccessful = 0,
-    .max_sendto_failures = 1,
-    .min_hitrate = 0.0,
+	.max_sendto_failures = 1,
+	.min_hitrate = 0.0,
 #ifdef JSON
 	.metadata_file = NULL,
 	.metadata_filename = NULL,
-    .notes = NULL,
-    .custom_metadata_str = NULL,
+	.notes = NULL,
+	.custom_metadata_str = NULL,
 #endif
 	.recv_ready = 0
 };
@@ -72,7 +72,7 @@ struct state_send zsend = {
 	.sent = 0,
 	.blacklisted = 0,
 	.whitelisted = 0,
-    .warmup = 1,
+	.warmup = 1,
 	.complete = 0,
 	.sendto_failures = 0,
 	.targets = 0,
@@ -87,6 +87,7 @@ struct state_recv zrecv = {
 	.cooldown_unique = 0,
 	.cooldown_total = 0,
 	.failure_total = 0,
+	.ip_fragments = 0,
 	.complete = 0,
 	.pcap_recv = 0,
 	.pcap_drop = 0,

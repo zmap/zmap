@@ -136,7 +136,8 @@ static int icmp_validate_packet(const struct ip *ip_hdr,
 }
 
 static void icmp_echo_process_packet(const u_char *packet,
-		__attribute__((unused)) uint32_t len, fieldset_t *fs)
+		__attribute__((unused)) uint32_t len, fieldset_t *fs,
+        __attribute__((unused)) uint32_t *validation)
 {
 	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
 	struct icmp *icmp_hdr = (struct icmp *) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
@@ -194,6 +195,7 @@ probe_module_t module_icmp_echo = {
 	.process_packet = &icmp_echo_process_packet,
 	.validate_packet = &icmp_validate_packet,
 	.close = NULL,
+    .output_type = OUTPUT_TYPE_STATIC,
 	.fields = fields,
 	.numfields = 6};
 

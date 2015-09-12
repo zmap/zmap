@@ -29,14 +29,50 @@ void gen_fielddef_set(fielddefset_t *fds, fielddef_t fs[], int len)
 fieldset_t *fs_new_fieldset(void)
 {
 	fieldset_t *f = xcalloc(1, sizeof(fieldset_t));
+    f->len = 0;
+	f->type = FS_FIELDSET;
 	return f;
 }
+
+fieldset_t *fs_new_repeated_field(int type, int free_)
+{
+	fieldset_t *f = xcalloc(1, sizeof(fieldset_t));
+    f->len = 0;
+	f->type = FS_REPEATED;
+	f->inner_type = type;
+	f->free_ = free_;
+	return f;
+}
+
+fieldset_t *fs_new_repeated_uint64(void)
+{
+	return fs_new_repeated_field(FS_UINT64, 0);
+}
+
+fieldset_t *fs_new_repeated_string(int free_)
+{
+	return fs_new_repeated_field(FS_STRING, free_);
+}
+
+fieldset_t *fs_new_repeated_binary(int free_)
+{
+	return fs_new_repeated_field(FS_BINARY, free_);
+}
+
+fieldset_t *fs_new_repeated_fieldset(void)
+{
+	return fs_new_repeated_field(FS_FIELDSET, 0);
+}
+
 
 static inline void fs_add_word(fieldset_t *fs, const char *name, int type,
 		int free_, size_t len, field_val_t value)
 {
 	if (fs->len + 1 >= MAX_FIELDS) {
 		log_fatal("fieldset", "out of room in fieldset");
+	}
+	if (fs->type == FS_REPEATED && fs->inner_type != type) {
+		log_fatal("fieldset", "object added to repeated field does not match type of repeated field.");
 	}
 	field_t *f = &(fs->fields[fs->len]);
 	fs->len++;
@@ -91,6 +127,19 @@ void fs_add_binary(fieldset_t *fs, const char *name, size_t len,
 	fs_add_word(fs, name, FS_BINARY, free_, len, val);
 }
 
+void fs_add_fieldset(fieldset_t *fs, const char *name, fieldset_t *child)
+{
+	field_val_t val = { .ptr = child };
+	fs_add_word(fs, name, FS_FIELDSET, 1, sizeof(void*), val);
+}
+
+void fs_add_repeated(fieldset_t *fs, const char *name, fieldset_t *child)
+{
+	field_val_t val = { .ptr = child };
+	fs_add_word(fs, name, FS_REPEATED, 1, sizeof(void*), val);
+}
+
+
 // Modify
 void fs_modify_null(fieldset_t *fs, const char *name)
 {
@@ -137,6 +186,15 @@ int fds_get_index_by_name(fielddefset_t *fds, char *name)
 	return -1;
 }
 
+void field_free(field_t *f)
+{
+    if (f->type == FS_FIELDSET || f->type == FS_REPEATED) {
+        fs_free((fieldset_t *) f->value.ptr);
+    } else if (f->free_) {
+		free(f->value.ptr);
+	}
+}
+
 void fs_free(fieldset_t *fs)
 {
 	if (!fs) {
@@ -144,9 +202,7 @@ void fs_free(fieldset_t *fs)
 	}
 	for (int i=0; i < fs->len; i++) {
 		field_t *f = &(fs->fields[i]);
-		if (f->free_) {
-			free(f->value.ptr);
-		}
+        field_free(f);
 	}
 	free(fs);
 }
@@ -162,8 +218,8 @@ void fs_generate_fieldset_translation(translation_t *t,
 		int l = fds_get_index_by_name(avail, req[i]);
 		if (l < 0) {
 			log_fatal("fieldset", "specified field (%s) not "
-					      "available in selected "
-					      "probe module.", req[i]);
+						  "available in selected "
+						  "probe module.", req[i]);
 		}
 		t->translation[t->len++] = l;
 	}

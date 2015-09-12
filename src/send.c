@@ -105,19 +105,22 @@ iterator_t* send_init(void)
 	// global initialization for send module
 	assert(zconf.probe_module);
 	if (zconf.probe_module->global_initialize) {
-		zconf.probe_module->global_initialize(&zconf);
+		if (zconf.probe_module->global_initialize(&zconf)) {
+            log_fatal("send", "global initialization for probe module failed.");
+        }
 	}
 
 	// concert specified bandwidth to packet rate
 	if (zconf.bandwidth > 0) {
-		int pkt_len = zconf.probe_module->packet_length;
+		size_t pkt_len = zconf.probe_module->packet_length;
 		pkt_len *= 8;
 		pkt_len += 8*24;	// 7 byte MAC preamble, 1 byte Start frame,
-		                        // 4 byte CRC, 12 byte inter-frame gap
+		                    // 4 byte CRC, 12 byte inter-frame gap
 		if (pkt_len < 84*8) {
 			pkt_len = 84*8;
 		}
-		if (zconf.bandwidth / pkt_len > 0xFFFFFFFF) {
+        // rate is a uint32_t so, don't overflow
+		if (zconf.bandwidth / pkt_len > 0xFFFFFFFFu) {
 			zconf.rate = 0;
 		} else {
 			zconf.rate = zconf.bandwidth / pkt_len;
