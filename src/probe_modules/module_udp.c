@@ -310,7 +310,8 @@ void udp_print_packet(FILE *fp, void* packet)
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
-void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *fs)
+void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *fs,
+       __attribute__((unused)) uint32_t *validation)
 {
 	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {

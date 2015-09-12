@@ -66,7 +66,7 @@ void handle_packet(uint32_t buflen, const u_char *bytes) {
 		memcpy(&fake_eth_hdr[sizeof(struct ether_header)], bytes, buflen);
 		bytes = fake_eth_hdr;
 	}
-	zconf.probe_module->process_packet(bytes, buflen, fs);
+	zconf.probe_module->process_packet(bytes, buflen, fs, validation);
 	fs_add_system_fields(fs, is_repeat, zsend.complete);
 	int success_index = zconf.fsconf.success_index;
 	assert(success_index < fs->len);

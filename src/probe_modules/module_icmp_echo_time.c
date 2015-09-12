@@ -146,7 +146,8 @@ static int icmp_validate_packet(const struct ip *ip_hdr,
 }
 
 static void icmp_echo_process_packet(const u_char *packet,
-        __attribute__((unused)) uint32_t len, fieldset_t *fs)
+        __attribute__((unused)) uint32_t len, fieldset_t *fs,
+        __attribute__((unused)) uint32_t *validation)
 {
     struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
     struct icmp *icmp_hdr = (struct icmp *) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
