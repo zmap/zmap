@@ -260,6 +260,7 @@ probe_module_t module_ntp = {
         .validate_packet = &ntp_validate_packet,
         .process_packet = &ntp_process_packet,
         .close = &udp_global_cleanup,
+        .output_type = OUTPUT_TYPE_STATIC,
         .fields = fields,
         .numfields = sizeof(fields)/sizeof(fields[0])
 };

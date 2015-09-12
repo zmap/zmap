@@ -1,5 +1,5 @@
-zblacklist(1)
-=============
+zblacklist(1) - zmap IP blacklist tool
+======================================
 
 ## SYNOPSIS
 
