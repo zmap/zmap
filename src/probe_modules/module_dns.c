@@ -20,6 +20,8 @@
  * - That the response bytes that should be the ID field matches the send bytes.
  * - That the response bytes that should be question match send bytes.
  * 
+ * Example: zmap -p 53 --probe-module=dns --probe-args="ANY,www.example.com" -O json --output-fields=* 8.8.8.8
+ * 
  * Based on a deprecated udp_dns module. 
  */ 
 
@@ -46,6 +48,14 @@
 #define UNUSED __attribute__((unused))
 #define MAX_QTYPE 255
 #define ICMP_UNREACH_HEADER_SIZE 8
+#define BAD_QTYPE_STR "BAD QTYPE"
+#define BAD_QTYPE_VAL -1
+
+// Note: each label has a max length of 63 bytes. So someone has to be doing
+// something really annoying. Will raise a warning.
+// THIS INCLUDES THE NULL BYTE
+#define MAX_NAME_LENGTH 512 
+
 typedef uint8_t bool;
 
 // zmap boilerplate
@@ -85,7 +95,7 @@ const dns_qtype qtype_strid_to_qtype[] = { DNS_QTYPE_A, DNS_QTYPE_NS, DNS_QTYPE_
         DNS_QTYPE_AAAA, DNS_QTYPE_RRSIG, DNS_QTYPE_ALL
 };
 
-int8_t qtype_qtype_to_strid[256] = { -1 };
+int8_t qtype_qtype_to_strid[256] = { BAD_QTYPE_VAL };
 
 void _setup_qtype_str_map() 
 { 
@@ -127,71 +137,6 @@ void _domain_to_qname(char* dns, char* host) {
     *dns++ = '\0';
 }
 
-// xxx: Paul hasn't even looked at this.
-// allocates and returns a string representation of a hexadecimal IP
-// hexadecimal ip must be passed in network byte order
-char* _hex_to_ip(void* hex_ip) {
-
-    if(!hex_ip){
-        return NULL;
-    }
-    char* addrstr = malloc(INET_ADDRSTRLEN);
-    if(addrstr == NULL){
-        exit(1);
-    }
-    //fprintf(stderr, "hex_ip %s\n", (char*)hex_ip);
-
-    //memcpy(addrstr, hex_ip, sizeof(&hex_ip));
-    if(inet_ntop(AF_INET, (struct sockaddr_in *)hex_ip, addrstr, INET_ADDRSTRLEN) == NULL){
-        free(addrstr);
-        return NULL;
-    }
-    return addrstr;
-}
-
-// xxx: Paul hasn't even looked at this. Given the comments below from deprication
-// this may take some time. I suspect it will be completely deleted.
-char* _parse_dns_ip_results(struct dnshdr* dns_hdr) {
-    (void) dns_hdr;
-    return strdup(""); // This is why we don't accept pull requests
-#if 0
-    // parse through dns_query since it can be of variable length
-    char* dns_ans_start = (char *) (&dns_hdr[1]);
-    while (*dns_ans_start++); // <---- SERIOUSLY FUCK THAT
-    // skip  qtype and qclass octets
-    dns_ans_start += 4;
-    // number of answers * 16 chars each (each followed by space or null, and quotes)
-    size_t size = ntohs(dns_hdr->ancount)*INET_ADDRSTRLEN+2;
-    char* ip_addrs = malloc(size);
-
-    // should always be 4 for ipv4 addrs, but include in case of unexpected response
-    //uint16_t prev_data_len = 4;
-    int output_pos = 0;
-    if(ntohs(dns_hdr->ancount) > 1000){
-        return NULL;
-    }
-    for (int i = 0; i < ntohs(dns_hdr->ancount); i++) {
-        //dnsans* dns_ans = (dnsans *) ((char*) dns_ans_start + (12 + prev_data_len)*i);
-        dnsans* dns_ans = (dnsans *) ((char*) dns_ans_start + (12)*i);
-        if(!dns_ans->addr){
-            //prev_data_len = ntohs(dns_ans->length);
-            continue;
-        }
-        char* ip_addr = hex_to_ip(&dns_ans->addr);
-        if (!ip_addr) {
-            //prev_data_len = ntohs(dns_ans->length);
-            continue;
-        }
-        output_pos += i == 0 ? sprintf(ip_addrs + output_pos, "\"%s", ip_addr) : sprintf(ip_addrs + output_pos, " %s", ip_addr);
-        //prev_data_len = ntohs(dns_ans->length);
-    }
-    if (output_pos) {
-        sprintf(ip_addrs + output_pos, "\"");
-    }
-    return ip_addrs;
-#endif
-}
-
 uint8_t _build_global_dns_packet(char* domain) 
 {    
     // domain + null + 1 byte head
@@ -227,15 +172,305 @@ uint8_t _build_global_dns_packet(char* domain)
     return EXIT_SUCCESS;
 }
 
-// XXX: Paul needs to write this.
-bool _process_response_question(char **data, uint16_t* data_len, fieldset_t* list)
-{    
+uint16_t _decode_labels(char* name, uint16_t name_len, char* data, uint16_t data_len, bool stop)
+{
+    // We don't handle null bytes in name in this function.
+    int bytes_used = 0;
+
+    while(data_len > 0) { 
+        uint16_t seg_len = *data;
+        
+        // We've now consumed another byte.
+        data_len--;
+        data++;
+
+        // We don't support pointer calls (stop == 1) that call other pointers
+        if (stop && (seg_len >= 0xc0)) {
+            return 0;
+        }
+
+        // Are we done? Our next byte is either an offset pointer or null.
+        if (seg_len >= 0xc0 || seg_len == '\0') {
+            return bytes_used;
+        }
+
+        // Do we need to add a dot?
+        if (bytes_used > 0) { 
+           
+            if (name_len < 1) {
+                log_warn("dns", "Exceeded static name field allocation.");
+                return 0;
+            }
+            
+            name[0] = '.';
+            name++;
+            name_len--;
+            bytes_used += 1;
+        }
+
+        // Do we have enough data left?
+        if (seg_len > data_len) {
+            return 0;
+        }
+
+        // Did we run out of our arbitrary buffer?
+        if (seg_len > name_len) {
+            log_warn("dns", "Exceeded static name field allocation.");
+            return 0;
+        }
+
+        assert(data_len > 0);
+
+        memcpy(name, data, seg_len);
+    
+        name += seg_len;
+        name_len -= seg_len;
+    
+        data_len -= seg_len;
+        data += seg_len;
+        bytes_used += seg_len;
+    }
+
+    return bytes_used;
+
+}
+
+char* _get_name(char* data, uint16_t data_len, char* payload, 
+        uint16_t payload_len, uint16_t* bytes_consumed)
+{
+    uint8_t byte = 0;
+
+    char* name = xmalloc(MAX_NAME_LENGTH);
+    memset(name, 0x00, MAX_NAME_LENGTH);
+
+    uint16_t name_pos = 0;
+
+    int i = 0;
+    while(i < data_len) { 
+        byte = data[i];
+    
+        // Is this a pointer?
+        if (byte >= 0xc0) {
+           
+            // Not enough bytes
+            if ((i + 1) >= data_len) {
+                free(name);
+                return NULL;      
+            }
+
+            // XXX No. ntohs isn't needed here. It's because of
+            // the upper 2 bits indicating a pointer.
+            uint16_t offset = ((byte & 0x03) << 8) | data[i+1];
+
+            if (offset >= payload_len) { 
+                free(name);
+                return NULL;      
+            }
+        
+            uint16_t name_bytes_used = _decode_labels(name + name_pos, 
+                        MAX_NAME_LENGTH - name_pos - 1, payload + offset, 
+                        payload_len - offset, 1); // -1 to make room for \0
+
+            if (name_bytes_used == 0) {
+                free(name);
+                return NULL;      
+            }
+
+            name_pos += name_bytes_used;
+
+            // We've consumed 2 bytes here.
+            i = i + 2;
+
+            // Once we hit a pointer we are done.
+            break;
+
+        } else if (byte == '\0') {
+            // Done
+            i += 1;
+            break;
+        } else {
+
+            uint16_t name_bytes_used = _decode_labels(name + name_pos, 
+                        MAX_NAME_LENGTH - name_pos - 1, data + i , data_len - i, 0); 
+                        // -1 to make room for \0
+
+            if (name_bytes_used == 0) {
+                free(name);
+                return NULL;      
+            }
+
+            // XXX off by something in parsing? check this.
+            // Is name bytes used always the right value here?
+            
+            // We consumed the size plus the label.
+            i += name_bytes_used + 1;
+
+            name_pos += name_bytes_used;
+            
+            // We don't handle null bytes in the decode helper
+            assert(i < data_len - 1);
+
+            // Peak ahead.
+            if (data[i] != '\0') {
+
+                // We need to add a dot. Make sure we have room.
+                if ((name_pos + 1) < MAX_NAME_LENGTH) {
+                    
+                    name[name_pos++] = '.';
+
+                } else {
+                    log_warn("dns", "Exceeded static name field allocation.");
+                    free(name);
+                    return NULL;      
+                }
+            }
+        } 
+    }
+
+    *bytes_consumed = i;
+
+    // Our memset ensured null byte.
+    assert(name[name_pos] == '\0');             
+    return name;
+
+}
+
+
+bool _process_response_question(char **data, uint16_t* data_len, char* payload,
+        uint16_t payload_len, fieldset_t* list)
+{   
+    // Payload is the start of the DNS packet, including header
+    // data is handle to the start of this RR
+    // data_len is a pointer to the how much total data we have to work with.
+    // This is awful. I'm bad and should feel bad.
+    uint16_t bytes_consumed = 0;
+
+    char* question_name = _get_name(*data, *data_len, payload, payload_len,  &bytes_consumed);
+
+    // Error.
+    if (question_name == NULL) {
+        return 1;
+    }
+
+    assert(bytes_consumed > 0);
+
+    if ( (bytes_consumed + sizeof(dns_question_tail)) > *data_len) {
+        free(question_name);
+        return 1;
+    }
+
+    dns_question_tail* tail = (dns_question_tail*)(*data + bytes_consumed);
+
+    uint16_t qtype = ntohs(tail->qtype);
+    uint16_t qclass = ntohs(tail->qclass);
+    
+    // Build our new question fieldset
+    fieldset_t *qfs = fs_new_fieldset(); 
+    fs_add_string(qfs, "name", question_name, 1);
+    fs_add_uint64(qfs, "qtype", qtype);
+    if (qtype > MAX_QTYPE || qtype_qtype_to_strid[qtype] == BAD_QTYPE_VAL) {
+        fs_add_string(qfs, "qtype_str", (char*) BAD_QTYPE_STR, 0);
+    } else {
+        // I've written worse things than this 3rd arg. But I want to be fast.
+        fs_add_string(qfs, "qtype_str", (char*)qtype_strs[qtype_qtype_to_strid[qtype]], 0);
+    }
+    fs_add_uint64(qfs, "qclass", qclass);
+
+    // Now we're adding the new fs to the list.
+    fs_add_fieldset(list, "question", qfs);
+
+    // Now update the pointers.
+    *data = *data + bytes_consumed + sizeof(dns_question_tail);
+    *data_len = *data_len - bytes_consumed - sizeof(dns_question_tail);
+
     return 0;
 }
 
-// XXX: Paul needs to write this.
-bool _process_response_answer(char **data, uint16_t* data_len, fieldset_t* list)
-{    
+// XXX This should be merged with _process_response_question. 
+// Ended up being almost exactly the same
+bool _process_response_answer(char **data, uint16_t* data_len, char* payload,
+        uint16_t payload_len, fieldset_t* list)
+{   
+    // Payload is the start of the DNS packet, including header
+    // data is handle to the start of this RR
+    // data_len is a pointer to the how much total data we have to work with.
+    // This is awful. I'm bad and should feel bad.
+    uint16_t bytes_consumed = 0;
+
+    char* answer_name = _get_name(*data, *data_len, payload, payload_len,  &bytes_consumed);
+
+    // Error.
+    if (answer_name == NULL) {
+        return 1;
+    }
+
+    assert(bytes_consumed > 0);
+
+    if ( (bytes_consumed + sizeof(dns_answer_tail)) > *data_len) {
+        free(answer_name);
+        return 1;
+    }
+
+    dns_answer_tail* tail = (dns_answer_tail*)(*data + bytes_consumed);
+
+    uint16_t type = ntohs(tail->type);
+    uint16_t class = ntohs(tail->class);
+    uint32_t ttl = ntohl(tail->ttl);
+    uint16_t rdlength = ntohs(tail->rdlength);
+    char* rdata = tail->rdata;
+
+    if ((rdlength + bytes_consumed + sizeof(dns_answer_tail)) > *data_len) {
+        free(answer_name);
+        return 1;
+    }
+
+    // Build our new question fieldset
+    fieldset_t *afs = fs_new_fieldset(); 
+    fs_add_string(afs, "name", answer_name, 1);
+    fs_add_uint64(afs, "type", type);
+    if (type > MAX_QTYPE || qtype_qtype_to_strid[type] == BAD_QTYPE_VAL) {
+        fs_add_string(afs, "type_str", (char*) BAD_QTYPE_STR, 0);
+    } else {
+        // I've written worse things than this 3rd arg. But I want to be fast.
+        fs_add_string(afs, "type_str", (char*)qtype_strs[qtype_qtype_to_strid[type]], 0);
+    }
+    fs_add_uint64(afs, "class", class);
+    fs_add_uint64(afs, "ttl", ttl);
+    fs_add_uint64(afs, "rdlength", rdlength);
+    fs_add_binary(afs, "rdata_raw", rdlength, rdata, 0);
+    
+    // XXX Fill this out
+    if (type == DNS_QTYPE_NS) {
+
+        uint16_t ns_bytes_consumed = 0;
+        char* ns_name = _get_name(rdata, rdlength, payload, payload_len,  &ns_bytes_consumed);
+
+        fs_add_uint64(afs, "rdata_parse_error", 0);
+        fs_add_string(afs, "rdata_parsed", ns_name, 1);
+   
+    } else if (type == DNS_QTYPE_A) {
+
+        if (rdlength != 4) {
+            log_warn("dns", "A record with IP of length %d. Not processing.", rdlength);
+            fs_add_uint64(afs, "rdata_parse_error", 1);
+            fs_add_string(afs, "rdata_parsed", (char*)"", 0);
+        } else {
+            fs_add_uint64(afs, "rdata_parse_error", 0);
+            fs_add_string(afs, "rdata_parsed", 
+                (char*) inet_ntoa( *(struct in_addr*)rdata ), 0);
+        }
+    } else {
+        fs_add_uint64(afs, "rdata_parse_error", 1);
+        fs_add_string(afs, "rdata_parsed", (char*)"", 0);
+    }
+
+    // Now we're adding the new fs to the list.
+    fs_add_fieldset(list, "question", afs);
+
+    // Now update the pointers.
+    *data = *data + bytes_consumed + sizeof(dns_answer_tail) + rdlength;
+    *data_len = *data_len - bytes_consumed - sizeof(dns_answer_tail) - rdlength;
+
     return 0;
 }
 
@@ -357,9 +592,11 @@ int dns_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 }
 
 // XXX: Paul hasn't looked at this.
-void dns_print_packet(FILE *fp, void* packet) {
+void dns_print_packet(UNUSED FILE *fp, UNUSED void* packet) {
     return;
 #if 0
+void dns_print_packet(FILE *fp, void* packet) 
+{
     struct ether_header *ethh = (struct ether_header *) packet;
     struct ip *iph = (struct ip *) &ethh[1];
     struct udphdr *udph  = (struct udphdr*) (iph + 4*iph->ip_hl);
@@ -429,7 +666,9 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
     if (len < udp_len) {
         return 0;
     }
-    
+
+    //XXX: Move these checks to process once zakir adds validation data to the sig.
+        
     // Verify our dns transaction id
     dns_header* dns_header_p = (dns_header*) &udp[1];
     if (dns_header_p->id != (validation[2] & 0xFFFF)) {
@@ -468,7 +707,13 @@ void dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
         
         uint16_t qr = dns_hdr->qr;
         uint16_t rcode = dns_hdr->rcode;
-    
+        uint16_t udp_len = ntohs(udp_hdr->uh_ulen);
+
+        // XXX: new success layout once we have validation bits.
+        // XXX: Success: Looks like DNS
+        // XXX: App success: has qr and rcode bits right
+        // XXX: can't parse? parse error bits.
+
         // High level info    
         fs_add_string(fs, "classification", (char*) "dns", 0);
         fs_add_uint64(fs, "success", (qr == DNS_QR_ANSWER) && (rcode == DNS_RCODE_NOERR));
@@ -476,7 +721,7 @@ void dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
         // UDP info
         fs_add_uint64(fs, "udp_sport", ntohs(udp_hdr->uh_sport));
         fs_add_uint64(fs, "udp_dport", ntohs(udp_hdr->uh_dport));
-        fs_add_uint64(fs, "udp_len", ntohs(udp_hdr->uh_ulen));
+        fs_add_uint64(fs, "udp_len", udp_len);
         
         // ICMP info
         fs_add_null(fs, "icmp_responder");
@@ -502,43 +747,51 @@ void dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
         fs_add_uint64(fs, "dns_arcount", ntohs(dns_hdr->arcount)); 
   
         // And now for the complicated part. Hierarchical data. 
-        char* data = (char*)dns_hdr + sizeof(dns_hdr);
-        uint16_t data_len = ntohs(udp_hdr->uh_ulen) - sizeof(dns_hdr);
+        char* data = ((char*)dns_hdr) + sizeof(dns_header);
+        uint16_t data_len = udp_len - sizeof(udp_hdr) - sizeof(dns_header);
         bool err = 0;
 
         // Questions
         fieldset_t *list = fs_new_repeated_fieldset();
         for (int i = 0; i < ntohs(dns_hdr->qdcount) && !err; i++) {
-            err = _process_response_question(&data, &data_len, list);    
+            err = _process_response_question(&data, &data_len, (char*)dns_hdr, 
+                        udp_len, list);    
         }
         fs_add_repeated(fs, "dns_questions", list);
 
         // Answers
         list = fs_new_repeated_fieldset();
         for (int i = 0; i < ntohs(dns_hdr->ancount) && !err; i++) {
-            err = _process_response_answer(&data, &data_len, list); 
+            err = _process_response_answer(&data, &data_len, (char*)dns_hdr, udp_len, list); 
         }
         fs_add_repeated(fs, "dns_answers", list);
 
         // Authorities
         list = fs_new_repeated_fieldset();
         for (int i = 0; i < ntohs(dns_hdr->nscount) && !err; i++) {
-            err = _process_response_answer(&data, &data_len, list);  
+            err = _process_response_answer(&data, &data_len, (char*)dns_hdr, udp_len, list);  
         }
         fs_add_repeated(fs, "dns_authorities", list);
 
         // Additionals
         list = fs_new_repeated_fieldset();
         for (int i = 0; i < ntohs(dns_hdr->arcount) && !err; i++) {
-            err = _process_response_answer(&data, &data_len, list);   
+            err = _process_response_answer(&data, &data_len, (char*)dns_hdr, udp_len, list);   
         }
         fs_add_repeated(fs, "dns_additionals", list);
 
+        // Do we have unconsumed data?
+        if (data_len != 0) {
+            err = 1;
+        }
+
         // Did we parse OK?
-        fs_add_uint64(fs, "dns_parseerr", err); 
+        fs_add_uint64(fs, "dns_parse_err", err); 
     
         // Now the raw stuff.
-        fs_add_binary(fs, "raw_data", (ntohs(udp_hdr->uh_ulen) - sizeof(struct udphdr)), (void*) &udp_hdr[1], 0);
+        fs_add_binary(fs, "raw_data", (udp_len - sizeof(struct udphdr)), (void*) &udp_hdr[1], 0);
+   
+        return;
     
     } else if (ip_hdr->ip_p == IPPROTO_ICMP) {
         assert(0);
@@ -605,7 +858,7 @@ static fielddef_t fields[] = {
     {.name = "dns_answers", .type = "repeated", .desc ="DNS answer list"},
     {.name = "dns_authorities", .type = "repeated", .desc ="DNS authority list"},
     {.name = "dns_additionals", .type = "repeated", .desc ="DNS additional list"},
-    {.name = "dns_parseerr", .type = "uint64", .desc ="Problem parsing the DNS response"},
+    {.name = "dns_parse_err", .type = "uint64", .desc ="Problem parsing the DNS response"},
     {.name = "raw_data", .type="binary", .desc = "UDP payload"},
 };
 

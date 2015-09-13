@@ -37,6 +37,14 @@ typedef struct __attribute__((packed)) {
     uint16_t qclass;
 } dns_question_tail;
 
+typedef struct __attribute__((packed)) {
+    uint16_t type;
+    uint16_t class;
+    uint32_t ttl;
+    uint16_t rdlength;
+    char rdata[]; 
+} dns_answer_tail;
+
 // XXX
 typedef struct __attribute__((packed)) {
     uint16_t name;
