@@ -120,27 +120,54 @@ uint16_t _qtype_str_to_code(char* str)
     return 0;
 }
 
-// xxx: Paul hasn't reviewed or rewritten this function. But it works.
-//this will convert www.google.com to \3www\6google\3com
-void _domain_to_qname(char* dns, char* host) {
-    int lock = 0;
-    strcat((char*)host,".");
-    for(int i = 0; i < ((int) strlen((char*)host)); i++) {
-        if(host[i]=='.') {
-            *dns++=i-lock;
-            for(;lock<i;lock++) {
-                *dns++=host[lock];
+
+uint16_t _domain_to_qname(char** qname_handle, char* domain) 
+{   
+    // String + 1byte header + null byte
+    uint16_t len = strlen(domain) + 1 + 1;
+
+    // Make room.
+    char* qname = xmalloc(len);
+
+    // Clear the memory
+    memset(qname, 0x00, len);
+
+    // Add a . before the domain. This will make the following simpler.
+    qname[0] = '.';
+
+    // Move the domain into the qname buffer.
+    memcpy(qname + 1, domain, strlen(domain));
+
+    for (int i = 0; i < len; i++) {
+
+        if (qname[i] == '.') {
+            
+            int j;
+            for (j = i+1; j < (len-1); j++) {
+                if (qname[j] == '.') {
+                    break;
+                }
             }
-            lock++;
+
+            qname[i] = j - i - 1;
         }
     }
-    *dns++ = '\0';
+
+    // Update the handle
+    *qname_handle = qname;
+
+    // Check the basics
+    assert((*qname_handle)[len-1] == '\0');
+
+    
+
+    // Return length.
+    return len;
 }
 
 uint8_t _build_global_dns_packet(char* domain) 
 {    
-    // domain + null + 1 byte head
-    qname_len = strlen(domain) + 1 + 1;
+    qname_len = _domain_to_qname(&qname, domain);
  
     dns_packet_len = sizeof(dns_header) + qname_len + sizeof(dns_question_tail);
 
@@ -150,9 +177,6 @@ uint8_t _build_global_dns_packet(char* domain)
             return EXIT_FAILURE;
     }
     
-    qname = xmalloc(qname_len);
-    _domain_to_qname(qname, domain);
-
     dns_packet = xmalloc(dns_packet_len);
     memset(dns_packet, 0x00, dns_packet_len);
 
