@@ -29,3 +29,4 @@ Makefile
 CMakeCache.txt
 install_manifest.txt
 _CPack_Packages/*
+src/ztests
