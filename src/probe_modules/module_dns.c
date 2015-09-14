@@ -113,7 +113,7 @@ void _setup_qtype_str_map()
 
 uint16_t _qtype_str_to_code(char* str) 
 {
-    for (int i = 0; i < sizeof(qtype_strs)/sizeof(qtype_strs[0]); i++) {
+    for (int i = 0; i < (int) (sizeof(qtype_strs)/sizeof(qtype_strs[0])); i++) {
         if (strcmp(qtype_strs[i], str) == 0)
             return qtype_strid_to_qtype[i];
     }
@@ -473,6 +473,7 @@ bool _process_response_answer(char **data, uint16_t* data_len, char* payload,
             } else {
             
                 //answer + "pref:" + "xxxxx" (largest value 16bit) + "," + null
+                //XXX: paul  fix now
                 char* rdata_with_pref = xmalloc(strlen(rdata_name) + 5 + 5 + 1 + 1);
                 memcpy(rdata_with_pref, rdata_name, strlen(rdata_name));
                 memcpy(rdata_with_pref + strlen(rdata_name), ",pref:", 6);
@@ -996,5 +997,15 @@ probe_module_t module_dns = {
     .process_packet = &dns_process_packet,
     .close = &dns_global_cleanup,
     .fields = fields,
-    .numfields = sizeof(fields)/sizeof(fields[0])
+    .numfields = sizeof(fields)/sizeof(fields[0]),
+    .helptext = "This module sends out DNS queries and parses basic responses. "
+                "By default, the module will perform an A record lookup for "
+                "google.com. You can specify other queries using the --probe-args "
+                "argument in the form: 'type,query', e.g. 'A,google.com'. The module "
+                "supports sending the the following types: of queries: A, NS, CNAME, SOA, "
+                "PTR, MX, TXT, AAAA, RRSIG, and ALL. The module will accept and attempt "
+                "to parse all DNS responses. There is currently support for parsing out "
+                "full data from A, NS, CNAME, MX, TXT, and AAAA. Any other types will be "
+                "output in raw form."
+
 };
