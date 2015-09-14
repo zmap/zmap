@@ -282,7 +282,7 @@ char* _get_name(char* data, uint16_t data_len, char* payload,
                 return NULL;      
             }
 
-            // XXX No. ntohs isn't needed here. It's because of
+            // No. ntohs isn't needed here. It's because of
             // the upper 2 bits indicating a pointer.
             uint16_t offset = ((byte & 0x03) << 8) | data[i+1];
 
@@ -325,6 +325,7 @@ char* _get_name(char* data, uint16_t data_len, char* payload,
 
             // XXX off by something in parsing? check this.
             // Is name bytes used always the right value here?
+            // It is for current uses. Not sure about future extensions.
             
             // We consumed the size plus the label.
             i += name_bytes_used + 1;
@@ -676,15 +677,12 @@ int dns_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
     return EXIT_SUCCESS;
 }
 
-// XXX: Paul hasn't looked at this.
-void dns_print_packet(UNUSED FILE *fp, UNUSED void* packet) {
-    return;
-#if 0
 void dns_print_packet(FILE *fp, void* packet) 
 {
     struct ether_header *ethh = (struct ether_header *) packet;
     struct ip *iph = (struct ip *) &ethh[1];
     struct udphdr *udph  = (struct udphdr*) (iph + 4*iph->ip_hl);
+    fprintf(fp, "------------------------------------------------------\n");
     fprintf(fp, "dns { source: %u | dest: %u | checksum: %#04X }\n",
         ntohs(udph->uh_sport),
         ntohs(udph->uh_dport),
@@ -692,7 +690,6 @@ void dns_print_packet(FILE *fp, void* packet)
     fprintf_ip_header(fp, iph);
     fprintf_eth_header(fp, ethh);
     fprintf(fp, "------------------------------------------------------\n");
-#endif
 }
 
 int dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
@@ -703,11 +700,15 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
         return 0;
     }
 
+    uint16_t sport = 0;
+
     // This entire if..elif..else block is getting at the udp body
     struct udphdr *udp = NULL;
     if (ip_hdr->ip_p == IPPROTO_UDP) {
         udp = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
+        sport = ntohs(udp->uh_sport);
     } else if (ip_hdr->ip_p == IPPROTO_ICMP) {
+        
         // UDP can return ICMP Destination unreach
         // IP( ICMP( IP( UDP ) ) ) for a destination unreach
         uint32_t min_len = 4*ip_hdr->ip_hl + ICMP_UNREACH_HEADER_SIZE
@@ -718,17 +719,21 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
         }
 
         struct icmp *icmp = (struct icmp*) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
-        if (icmp->icmp_type != ICMP_UNREACH) {
+        // We want to handle more of this.
+        /*if (icmp->icmp_type != ICMP_UNREACH) {
             return 0;
-        }
+        }*/
 
         struct ip *ip_inner = (struct ip*) ((char *) icmp + ICMP_UNREACH_HEADER_SIZE);
         // Now we know the actual inner ip length, we should recheck the buffer
         if (len < 4*ip_inner->ip_hl - sizeof(struct ip) + min_len) {
             return 0;
         }
+        
         // This is the packet we sent
         udp = (struct udphdr *) ((char*) ip_inner + 4*ip_inner->ip_hl);
+    
+        sport = ntohs(udp->uh_dport);
     } else {
         // We should never get here unless udp_validate_packet() has changed.
         assert(0);
@@ -736,7 +741,6 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
     }
 
     // Verify our source port.
-    uint16_t sport = ntohs(udp->uh_sport);
     if (sport != zconf.target_port) {
         return 0;
     }
@@ -756,7 +760,7 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
     return 1;
 }
 
-void dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *fs,
+void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
         uint32_t *validation) 
 {    
     struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
@@ -911,19 +915,25 @@ void dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
         return;
     
     } else if (ip_hdr->ip_p == IPPROTO_ICMP) {
-        assert(0);
-        //xxx: Paul hasn't gotten to this part yet.
-        return;
-
-        #if 0
         struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
         struct ip *ip_inner = (struct ip *) &icmp[1];
-        // ICMP unreachable comes from another server, set saddr to original dst
-        fs_modify_string(fs, "saddr", make_ip_str(ip_inner->ip_dst.s_addr), 1);
-        fs_add_string(fs, "classification", (char*) "icmp-unreach", 0);
+ 
+        // This is the packet we sent
+        struct udphdr *udp_hdr = (struct udphdr *) ((char*) ip_inner + 4*ip_inner->ip_hl);
+        uint16_t udp_len = ntohs(udp_hdr->uh_ulen);
+
+        // High level info    
+        fs_add_string(fs, "classification", (char*) "dns", 0);
         fs_add_uint64(fs, "success", 0);
-        fs_add_null(fs, "sport");
-        fs_add_null(fs, "dport");
+        fs_add_uint64(fs, "app_success", 0);
+        
+        // UDP info
+        fs_add_uint64(fs, "udp_sport", ntohs(udp_hdr->uh_sport));
+        fs_add_uint64(fs, "udp_dport", ntohs(udp_hdr->uh_dport));
+        fs_add_uint64(fs, "udp_len", udp_len);
+        
+        // ICMP info
+        // XXX This is legacy. not well tested.
         fs_add_string(fs, "icmp_responder", make_ip_str(ip_hdr->ip_src.s_addr), 1);
         fs_add_uint64(fs, "icmp_type", icmp->icmp_type);
         fs_add_uint64(fs, "icmp_code", icmp->icmp_code);
@@ -933,12 +943,34 @@ void dns_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
         } else {
             fs_add_string(fs, "icmp_unreach_str", (char *) "unknown", 0);
         }
-        fs_add_null(fs, "app_response_str");
-        fs_add_null(fs, "app_response_code");
-        fs_add_null(fs, "udp_pkt_size");
-        fs_add_null(fs, "data");
-        fs_add_null(fs, "addrs");
-        #endif
+        
+        // DNS header
+        fs_add_null(fs, "dns_id"); 
+        fs_add_null(fs, "dns_rd"); 
+        fs_add_null(fs, "dns_tc"); 
+        fs_add_null(fs, "dns_aa"); 
+        fs_add_null(fs, "dns_opcode"); 
+        fs_add_null(fs, "dns_qr"); 
+        fs_add_null(fs, "dns_rcode"); 
+        fs_add_null(fs, "dns_cd"); 
+        fs_add_null(fs, "dns_ad"); 
+        fs_add_null(fs, "dns_z"); 
+        fs_add_null(fs, "dns_ra"); 
+        fs_add_null(fs, "dns_qdcount"); 
+        fs_add_null(fs, "dns_ancount"); 
+        fs_add_null(fs, "dns_nscount"); 
+        fs_add_null(fs, "dns_arcount"); 
+
+        fs_add_null(fs, "dns_questions");
+        fs_add_null(fs, "dns_answers");
+        fs_add_null(fs, "dns_authorities");
+        fs_add_null(fs, "dns_additionals");
+
+        fs_add_uint64(fs, "dns_parse_err", 1); 
+        fs_add_binary(fs, "raw_data", len, (char*)packet, 0);
+        
+        return;
+
     } else {
         // This should not happen. Both the pcap filter and validate packet prevent this.
         assert(0);
