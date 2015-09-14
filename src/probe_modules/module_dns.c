@@ -483,6 +483,21 @@ bool _process_response_answer(char **data, uint16_t* data_len, char* payload,
             fs_add_string(afs, "rdata", 
                 (char*) inet_ntoa( *(struct in_addr*)rdata ), 0);
         }
+    } else if (type == DNS_QTYPE_AAAA) {
+
+        if (rdlength != 16) {
+            log_warn("dns", "AAAA record with IP of length %d. Not processing.", rdlength);
+            fs_add_uint64(afs, "rdata_is_parsed", 0);
+            fs_add_binary(afs, "rdata", rdlength, rdata, 0);
+        } else {
+            fs_add_uint64(afs, "rdata_is_parsed", 1);
+            char* ipv6_str = xmalloc(INET6_ADDRSTRLEN);
+
+            inet_ntop(AF_INET6, (struct sockaddr_in6*)rdata, 
+                    ipv6_str,INET6_ADDRSTRLEN);
+
+            fs_add_string(afs, "rdata", ipv6_str, 1);
+        }
     } else {
         fs_add_uint64(afs, "rdata_is_parsed", 0);
         fs_add_binary(afs, "rdata", rdlength, rdata, 0);
