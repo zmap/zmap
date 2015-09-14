@@ -88,14 +88,14 @@ set(ZTESTSOURCES
     summary.c
     validate.c
     zopt_compat.c
+    ${PROBE_MODULE_SOURCES}
+    ${OUTPUT_MODULE_SOURCES}
     tests/test_harness.c
     "${CMAKE_CURRENT_BINARY_DIR}/zopt.h"
     "${CMAKE_CURRENT_BINARY_DIR}/lexer.c"
     "${CMAKE_CURRENT_BINARY_DIR}/parser.c"
     ${EXTRA_PROBE_MODULES}
     ${EXTRA_OUTPUT_MODULES}
-    ${PROBE_MODULE_SOURCES}
-    ${OUTPUT_MODULE_SOURCES}
 )
 
 set(ZBLSOURCES

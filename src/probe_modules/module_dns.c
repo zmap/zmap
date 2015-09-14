@@ -738,7 +738,10 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
         uint32_t *validation) 
 {    
     struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
-    
+
+    //fs_add_string(fs, "icmp_responder", make_ip_str(ip_hdr->ip_src.s_addr), 1);
+    printf("about to process %s\n", inet_ntoa(ip_hdr->ip_src));
+
     if (ip_hdr->ip_p == IPPROTO_UDP) {
 
         struct udphdr *udp_hdr = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
@@ -997,6 +1000,7 @@ probe_module_t module_dns = {
     .validate_packet = &dns_validate_packet,
     .process_packet = &dns_process_packet,
     .close = &dns_global_cleanup,
+    .output_type = OUTPUT_TYPE_DYNAMIC,
     .fields = fields,
     .numfields = sizeof(fields)/sizeof(fields[0]),
     .helptext = "This module sends out DNS queries and parses basic responses. "

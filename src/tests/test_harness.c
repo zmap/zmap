@@ -48,9 +48,6 @@
 #include "output_modules/module_json.h"
 
 
-extern int print_json_fieldset(fieldset_t *fs);
-
-
 int test_recursive_fieldsets(void)
 {
     fieldset_t *outer = fs_new_fieldset();
