@@ -95,6 +95,8 @@ const dns_qtype qtype_strid_to_qtype[] = { DNS_QTYPE_A, DNS_QTYPE_NS, DNS_QTYPE_
         DNS_QTYPE_AAAA, DNS_QTYPE_RRSIG, DNS_QTYPE_ALL
 };
 
+#define DNS_QR_ANSWER   1
+
 int8_t qtype_qtype_to_strid[256] = { BAD_QTYPE_VAL };
 
 void _setup_qtype_str_map() 
@@ -777,7 +779,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
         // App success: has qr and rcode bits right
         // Any app level parsing issues: dns_parse_err
 
-        // High level info    
+        // High level info
         fs_add_string(fs, "classification", (char*) "dns", 0);
         fs_add_uint64(fs, "success", is_valid);
         fs_add_uint64(fs, "app_success", (qr == DNS_QR_ANSWER) && (rcode == DNS_RCODE_NOERR));
@@ -793,8 +795,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
         fs_add_null(fs, "icmp_code");
         fs_add_null(fs, "icmp_unreach_str");
         
-        if (! is_valid) {
-
+        if (!is_valid) {
             // DNS header
             fs_add_null(fs, "dns_id"); 
             fs_add_null(fs, "dns_rd"); 
