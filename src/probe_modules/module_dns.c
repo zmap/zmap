@@ -505,6 +505,19 @@ bool _process_response_answer(char **data, uint16_t* data_len, char* payload,
                 fs_add_string(afs, "rdata", rdata_with_pref, 1);
             }
         }
+    } else if (type == DNS_QTYPE_TXT) {
+
+        if (rdlength >= 1 && (rdlength - 1) != *(uint8_t*)rdata ) {
+            log_warn("dns", "TXT record with wrong TXT len. Not processing.");
+            fs_add_uint64(afs, "rdata_is_parsed", 0);
+            fs_add_binary(afs, "rdata", rdlength, rdata, 0);
+        } else {
+            fs_add_uint64(afs, "rdata_is_parsed", 1);
+            char* txt = xmalloc(rdlength);
+            memset(txt, 0x00, rdlength);
+            memcpy(txt, rdata + 1, rdlength-1);
+            fs_add_string(afs, "rdata", txt, 1);
+        }
     } else if (type == DNS_QTYPE_A) {
 
         if (rdlength != 4) {
