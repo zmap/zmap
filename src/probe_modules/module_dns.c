@@ -437,31 +437,31 @@ bool _process_response_answer(char **data, uint16_t* data_len, char* payload,
     fs_add_uint64(afs, "class", class);
     fs_add_uint64(afs, "ttl", ttl);
     fs_add_uint64(afs, "rdlength", rdlength);
-    fs_add_binary(afs, "rdata_raw", rdlength, rdata, 0);
+    //fs_add_binary(afs, "rdata_raw", rdlength, rdata, 0);
     
-    // XXX Fill this out
+    // XXX Fill this out for the other types we care about.
     if (type == DNS_QTYPE_NS) {
 
         uint16_t ns_bytes_consumed = 0;
         char* ns_name = _get_name(rdata, rdlength, payload, payload_len,  &ns_bytes_consumed);
 
-        fs_add_uint64(afs, "rdata_parse_error", 0);
-        fs_add_string(afs, "rdata_parsed", ns_name, 1);
+        fs_add_uint64(afs, "rdata_is_parsed", 1);
+        fs_add_string(afs, "rdata", ns_name, 1);
    
     } else if (type == DNS_QTYPE_A) {
 
         if (rdlength != 4) {
             log_warn("dns", "A record with IP of length %d. Not processing.", rdlength);
-            fs_add_uint64(afs, "rdata_parse_error", 1);
-            fs_add_string(afs, "rdata_parsed", (char*)"", 0);
+            fs_add_uint64(afs, "rdata_is_parsed", 0);
+            fs_add_binary(afs, "rdata", rdlength, rdata, 0);
         } else {
-            fs_add_uint64(afs, "rdata_parse_error", 0);
-            fs_add_string(afs, "rdata_parsed", 
+            fs_add_uint64(afs, "rdata_is_parsed", 1);
+            fs_add_string(afs, "rdata", 
                 (char*) inet_ntoa( *(struct in_addr*)rdata ), 0);
         }
     } else {
-        fs_add_uint64(afs, "rdata_parse_error", 1);
-        fs_add_string(afs, "rdata_parsed", (char*)"", 0);
+        fs_add_uint64(afs, "rdata_is_parsed", 0);
+        fs_add_binary(afs, "rdata", rdlength, rdata, 0);
     }
 
     // Now we're adding the new fs to the list.
