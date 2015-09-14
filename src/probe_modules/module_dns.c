@@ -69,7 +69,7 @@ static char *dns_packet = NULL;
 static uint16_t dns_packet_len = 0; // Not including udp header
 static uint16_t qname_len = 0;
 static char* qname = NULL;
-uint16_t qtype = 0;
+static uint16_t qtype = 0;
 
 /* Array of qtypes we support. Jumping through some hoops (1 level of 
  * indirection) so the per-packet processing time is fast. Keep this in sync with:
@@ -113,7 +113,7 @@ void _setup_qtype_str_map()
 
 uint16_t _qtype_str_to_code(char* str) 
 {
-    for (unsigned long i = 0; i < sizeof(qtype_strs)/sizeof(qtype_strs[0]); i++) {
+    for (int i = 0; i < sizeof(qtype_strs)/sizeof(qtype_strs[0]); i++) {
         if (strcmp(qtype_strs[i], str) == 0)
             return qtype_strid_to_qtype[i];
     }
@@ -121,54 +121,34 @@ uint16_t _qtype_str_to_code(char* str)
 }
 
 
-uint16_t _domain_to_qname(char** qname_handle, char* domain) 
+static uint16_t _domain_to_qname(char** qname_handle, char* domain) 
 {   
     // String + 1byte header + null byte
     uint16_t len = strlen(domain) + 1 + 1;
-
-    // Make room.
     char* qname = xmalloc(len);
-
-    // Clear the memory
-    memset(qname, 0x00, len);
-
     // Add a . before the domain. This will make the following simpler.
     qname[0] = '.';
-
     // Move the domain into the qname buffer.
     memcpy(qname + 1, domain, strlen(domain));
-
     for (int i = 0; i < len; i++) {
-
         if (qname[i] == '.') {
-            
             int j;
             for (j = i+1; j < (len-1); j++) {
                 if (qname[j] == '.') {
                     break;
                 }
             }
-
             qname[i] = j - i - 1;
         }
     }
-
-    // Update the handle
     *qname_handle = qname;
-
-    // Check the basics
     assert((*qname_handle)[len-1] == '\0');
-
-    
-
-    // Return length.
     return len;
 }
 
-uint8_t _build_global_dns_packet(char* domain) 
+static int _build_global_dns_packet(char* domain) 
 {    
     qname_len = _domain_to_qname(&qname, domain);
- 
     dns_packet_len = sizeof(dns_header) + qname_len + sizeof(dns_question_tail);
 
     if (dns_packet_len > DNS_SEND_LEN) {
@@ -196,7 +176,7 @@ uint8_t _build_global_dns_packet(char* domain)
     return EXIT_SUCCESS;
 }
 
-uint16_t _decode_labels(char* name, uint16_t name_len, char* data, uint16_t data_len, bool stop)
+static uint16_t _decode_labels(char* name, uint16_t name_len, char* data, uint16_t data_len, bool stop)
 {
     // We don't handle null bytes in name in this function.
     int bytes_used = 0;
@@ -254,9 +234,7 @@ uint16_t _decode_labels(char* name, uint16_t name_len, char* data, uint16_t data
         data += seg_len;
         bytes_used += seg_len;
     }
-
     return bytes_used;
-
 }
 
 char* _get_name(char* data, uint16_t data_len, char* payload, 
@@ -265,7 +243,6 @@ char* _get_name(char* data, uint16_t data_len, char* payload,
     uint8_t byte = 0;
 
     char* name = xmalloc(MAX_NAME_LENGTH);
-    memset(name, 0x00, MAX_NAME_LENGTH);
 
     uint16_t name_pos = 0;
 
@@ -361,7 +338,7 @@ char* _get_name(char* data, uint16_t data_len, char* payload,
 }
 
 
-bool _process_response_question(char **data, uint16_t* data_len, char* payload,
+static bool _process_response_question(char **data, uint16_t* data_len, char* payload,
         uint16_t payload_len, fieldset_t* list)
 {   
     // Payload is the start of the DNS packet, including header
@@ -566,9 +543,8 @@ bool _process_response_answer(char **data, uint16_t* data_len, char* payload,
 
 static int dns_global_initialize(struct state_conf *conf) 
 {
-    char *probe_arg_delimiter_p = NULL;
     char *qtype_str = NULL;
-    char* domain = NULL;
+    char *domain = NULL;
 
     // This is zmap boilerplate. Why do I have to write this? 
     num_ports = conf->source_port_last - conf->source_port_first + 1;
@@ -577,30 +553,25 @@ static int dns_global_initialize(struct state_conf *conf)
     _setup_qtype_str_map();
 
     // Want to add support for multiple questions? Start here. 
-    if (conf->probe_args == NULL) {
-        domain = (char*)default_domain; 
+    if (!conf->probe_args) { // no parameters passed in. Use defaults
+        domain = (char*) default_domain; 
         qtype = default_qtype;
     } else {
-
-        probe_arg_delimiter_p = strchr(conf->probe_args, ','); 
-        
+        char *probe_arg_delimiter_p = strchr(conf->probe_args, ','); 
         if (probe_arg_delimiter_p == NULL || 
                 probe_arg_delimiter_p == conf->probe_args ||
                 conf->probe_args + strlen(conf->probe_args) == probe_arg_delimiter_p + 1) {
-            log_fatal("dns", "Incorrect probe args. Format: \"A,google.com\"");
-            return EXIT_FAILURE;
+            log_fatal("dns", "Invalid probe args. Format: \"A,google.com\"");
         }
-
         domain = probe_arg_delimiter_p + 1;
-    
-        qtype_str = xmalloc( probe_arg_delimiter_p - conf->probe_args + 1);
+        qtype_str = xmalloc(probe_arg_delimiter_p - conf->probe_args + 1);
         strncpy(qtype_str, conf->probe_args, 
                 probe_arg_delimiter_p - conf->probe_args);
         qtype_str[probe_arg_delimiter_p - conf->probe_args] = '\0'; 
 
         qtype = _qtype_str_to_code(qtype_str);
         
-        if (qtype == 0) {  
+        if (!qtype) {
             log_fatal("dns", "Incorrect qtype supplied. %s", qtype_str);
             return EXIT_FAILURE;
         }
