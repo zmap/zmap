@@ -41,7 +41,6 @@ set(PROBE_MODULE_SOURCES
     probe_modules/probe_modules.c
     probe_modules/module_ntp.c
     probe_modules/module_upnp.c
-    probe_modules/module_tcp_cisco_backdoor.c
 )
 
 set(SOURCES
