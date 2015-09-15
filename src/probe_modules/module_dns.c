@@ -185,7 +185,7 @@ static uint16_t _decode_labels(char* name, uint16_t name_len, char* data, uint16
 
     while(data_len > 0) { 
         uint16_t seg_len = *data;
-        
+
         // We've now consumed another byte.
         data_len--;
         data++;
@@ -211,6 +211,7 @@ static uint16_t _decode_labels(char* name, uint16_t name_len, char* data, uint16
             name[0] = '.';
             name++;
             name_len--;
+
             bytes_used += 1;
         }
 
@@ -236,25 +237,29 @@ static uint16_t _decode_labels(char* name, uint16_t name_len, char* data, uint16
         data += seg_len;
         bytes_used += seg_len;
     }
+
     return bytes_used;
 }
 
 char* _get_name(char* data, uint16_t data_len, char* payload, 
         uint16_t payload_len, uint16_t* bytes_consumed)
 {
+
     uint8_t byte = 0;
 
     char* name = xmalloc(MAX_NAME_LENGTH);
 
+    memset(name, 0x00, MAX_NAME_LENGTH);
+    
     uint16_t name_pos = 0;
 
     int i = 0;
     while(i < data_len) { 
         byte = data[i];
-    
+   
         // Is this a pointer?
         if (byte >= 0xc0) {
-           
+          
             // Not enough bytes
             if ((i + 1) >= data_len) {
                 free(name);
@@ -263,18 +268,18 @@ char* _get_name(char* data, uint16_t data_len, char* payload,
 
             // No. ntohs isn't needed here. It's because of
             // the upper 2 bits indicating a pointer.
-            uint16_t offset = ((byte & 0x03) << 8) | data[i+1];
+            uint16_t offset = ((byte & 0x03) << 8) | (uint8_t)data[i+1];
 
             if (offset >= payload_len) { 
                 free(name);
                 return NULL;      
             }
-        
+
             uint16_t name_bytes_used = _decode_labels(name + name_pos, 
                         MAX_NAME_LENGTH - name_pos - 1, payload + offset, 
                         payload_len - offset, 1); // -1 to make room for \0
 
-            if (name_bytes_used == 0) {
+            if (name_bytes_used == 0 && payload[offset] != '\0') { // thx root
                 free(name);
                 return NULL;      
             }
@@ -297,7 +302,7 @@ char* _get_name(char* data, uint16_t data_len, char* payload,
                         MAX_NAME_LENGTH - name_pos - 1, data + i , data_len - i, 0); 
                         // -1 to make room for \0
 
-            if (name_bytes_used == 0) {
+            if (name_bytes_used == 0 && data[i] != '\0') { // thx root
                 free(name);
                 return NULL;      
             }
@@ -312,7 +317,8 @@ char* _get_name(char* data, uint16_t data_len, char* payload,
             name_pos += name_bytes_used;
             
             // We don't handle null bytes in the decode helper
-            assert(i < data_len - 1);
+            
+            assert(i < data_len);
 
             // Peak ahead.
             if (data[i] != '\0') {
@@ -335,6 +341,7 @@ char* _get_name(char* data, uint16_t data_len, char* payload,
 
     // Our memset ensured null byte.
     assert(name[name_pos] == '\0');             
+
     return name;
 
 }
@@ -992,7 +999,7 @@ probe_module_t module_dns = {
     .packet_length = DNS_SEND_LEN + UDP_HEADER_LEN,
     .pcap_filter = "udp || icmp",
     .pcap_snaplen = PCAP_SNAPLEN,
-    .port_args = 1, // I have no idea what this does. Zakir made me do it
+    .port_args = 1, 
     .thread_initialize = &dns_init_perthread,
     .global_initialize = &dns_global_initialize,
     .make_packet = &dns_make_packet,
