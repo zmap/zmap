@@ -747,8 +747,6 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
     struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
 
     //fs_add_string(fs, "icmp_responder", make_ip_str(ip_hdr->ip_src.s_addr), 1);
-    printf("about to process %s\n", inet_ntoa(ip_hdr->ip_src));
-
     if (ip_hdr->ip_p == IPPROTO_UDP) {
 
         struct udphdr *udp_hdr = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
