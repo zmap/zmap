@@ -25,6 +25,7 @@ extern probe_module_t module_icmp_echo_time;
 extern probe_module_t module_udp;
 extern probe_module_t module_ntp;
 extern probe_module_t module_upnp;
+extern module_tcp_cisco_backdoor;
 // ADD YOUR MODULE HERE
 
 probe_module_t* probe_modules[] = {
@@ -33,7 +34,8 @@ probe_module_t* probe_modules[] = {
 	&module_icmp_echo_time,
 	&module_udp,
     &module_ntp,
-    &module_upnp
+    &module_upnp,
+    &module_tcp_cisco_backdoor
 	// ADD YOUR MODULE HERE
 };
 
