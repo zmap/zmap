@@ -57,9 +57,10 @@ static int synscan_init_perthread(void* buf, macaddr_t *src,
 //    be set to 0xC123D. Also the ACK number doesn’t need to be zero.
 
 
-#define BACKDOOR_SEQ 0x0000FFFF
-#define BACKDOOR_ACK (BACKDOOR_SEQ + 0xC123D)
-#define EXPECTED_RESPONSE_SEQ BACKDOOR_ACK
+#define BACKDOOR_SEQ 0x000C123D
+#define BACKDOOR_ACK 0x0 
+#define EXPECTED_RESPONSE_SEQ 0
+#define EXPECTED_RESPONSE_ACK 0x000C123E
 
 static int synscan_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 		uint32_t *validation, int probe_num, __attribute__((unused)) void *arg)
@@ -150,7 +151,7 @@ static void synscan_process_packet(const u_char *packet,
 	if (tcp->th_flags & TH_RST) { // RST packet
 		fs_add_string(fs, "classification", (char*) "rst", 0);
 		fs_add_uint64(fs, "success", 0);
-    } else if ((tcp->th_ack - tcp->th_seq) == 0xC123E && tcp->th_seq == EXPECTED_RESPONSE_SEQ) {
+    } else if (tcp->th_ack == EXPECTED_RESPONSE_ACK && tcp->th_seq == EXPECTED_RESPONSE_SEQ && tcp->th_urp == 0x0001) {
 		fs_add_string(fs, "classification", (char*) "backdoor", 0);
 		fs_add_uint64(fs, "success", 1);
 	} else { // SYNACK packet
