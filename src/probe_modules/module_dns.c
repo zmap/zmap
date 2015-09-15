@@ -751,8 +751,10 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
 
 void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
         uint32_t *validation) 
-{    
+{   
     struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
+
+    log_trace("dns", "processing packet from %s", make_ip_str(ip_hdr->ip_src.s_addr));
 
     //fs_add_string(fs, "icmp_responder", make_ip_str(ip_hdr->ip_src.s_addr), 1);
     if (ip_hdr->ip_p == IPPROTO_UDP) {
@@ -798,7 +800,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
         // High level info
         fs_add_string(fs, "classification", (char*) "dns", 0);
         fs_add_uint64(fs, "success", is_valid);
-        fs_add_uint64(fs, "app_success", (qr == DNS_QR_ANSWER) && (rcode == DNS_RCODE_NOERR));
+        fs_add_uint64(fs, "app_success", is_valid && (qr == DNS_QR_ANSWER) && (rcode == DNS_RCODE_NOERR));
         
         // UDP info
         fs_add_uint64(fs, "udp_sport", ntohs(udp_hdr->uh_sport));
@@ -890,8 +892,10 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
             fs_add_repeated(fs, "dns_additionals", list);
 
             // Do we have unconsumed data?
-            if (data_len != 0) {
-                err = 1;
+            if (err == 0) {
+                fs_add_uint64(fs, "dns_unconsumed_bytes", data_len); 
+            } else {
+                fs_add_uint64(fs, "dns_unconsumed_bytes", 0); 
             }
 
             // Did we parse OK?
@@ -955,6 +959,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
         fs_add_null(fs, "dns_authorities");
         fs_add_null(fs, "dns_additionals");
 
+        fs_add_uint64(fs, "dns_unconsumed_bytes", 0); 
         fs_add_uint64(fs, "dns_parse_err", 1); 
         fs_add_binary(fs, "raw_data", len, (char*)packet, 0);
         
@@ -998,6 +1003,7 @@ static fielddef_t fields[] = {
     {.name = "dns_authorities", .type = "repeated", .desc ="DNS authority list"},
     {.name = "dns_additionals", .type = "repeated", .desc ="DNS additional list"},
     {.name = "dns_parse_err", .type = "int", .desc ="Problem parsing the DNS response"},
+    {.name = "dns_unconsumed_bytes", .type = "int", .desc ="Bytes left over when parsing the DNS response"},
     {.name = "raw_data", .type="binary", .desc = "UDP payload"},
 };
 
