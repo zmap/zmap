@@ -963,7 +963,8 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 
 static fielddef_t fields[] = {
     {.name = "classification", .type="string", .desc = "packet protocol"},
-    {.name = "success", .type="int", .desc = "Is the RA bit set with no error code?"},
+    {.name = "success", .type="int", .desc = "Are the validation bits and question correct"},
+    {.name = "app_success", .type="int", .desc = "Is the RA bit set with no error code?"},
     {.name = "udp_sport",  .type = "int", .desc = "UDP source port"},
     {.name = "udp_dport",  .type = "int", .desc = "UDP destination port"},
     {.name = "udp_len", .type="int", .desc = "UDP packet lenght"},
