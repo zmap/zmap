@@ -909,11 +909,12 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
         return;
     
     } else if (ip_hdr->ip_p == IPPROTO_ICMP) {
-        struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
-        struct ip *ip_inner = (struct ip *) &icmp[1];
- 
+        struct icmp *icmp = (struct icmp*) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
+        struct ip *ip_inner = (struct ip*) ((char *) icmp + ICMP_UNREACH_HEADER_SIZE);
+        
         // This is the packet we sent
         struct udphdr *udp_hdr = (struct udphdr *) ((char*) ip_inner + 4*ip_inner->ip_hl);
+        
         uint16_t udp_len = ntohs(udp_hdr->uh_ulen);
 
         // High level info    
