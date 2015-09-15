@@ -836,6 +836,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
             fs_add_null(fs, "dns_authorities");
             fs_add_null(fs, "dns_additionals");
 
+            fs_add_uint64(fs, "dns_unconsumed_bytes", 0); 
             fs_add_uint64(fs, "dns_parse_err", 1); 
 
         } else {
