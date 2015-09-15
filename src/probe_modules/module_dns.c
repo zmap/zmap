@@ -50,6 +50,7 @@
 #define ICMP_UNREACH_HEADER_SIZE 8
 #define BAD_QTYPE_STR "BAD QTYPE"
 #define BAD_QTYPE_VAL -1
+#define MAX_LABEL_RECURSION 10
 
 // Note: each label has a max length of 63 bytes. So someone has to be doing
 // something really annoying. Will raise a warning.
@@ -178,174 +179,178 @@ static int _build_global_dns_packet(char* domain)
     return EXIT_SUCCESS;
 }
 
-static uint16_t _decode_labels(char* name, uint16_t name_len, char* data, uint16_t data_len, bool stop)
+uint16_t _get_name_helper(char* data, uint16_t data_len, char* payload, 
+        uint16_t payload_len, char* name, uint16_t name_len,
+        uint16_t recursion_level)
 {
-    // We don't handle null bytes in name in this function.
-    int bytes_used = 0;
+    log_trace("dns", "_get_name_helper IN, datalen: %d namelen: %d recusion: %d", 
+            data_len, name_len, recursion_level);
 
-    while(data_len > 0) { 
-        uint16_t seg_len = *data;
-
-        // We've now consumed another byte.
-        data_len--;
-        data++;
-
-        // We don't support pointer calls (stop == 1) that call other pointers
-        if (stop && (seg_len >= 0xc0)) {
-            return 0;
-        }
-
-        // Are we done? Our next byte is either an offset pointer or null.
-        if (seg_len >= 0xc0 || seg_len == '\0') {
-            return bytes_used;
-        }
-
-        // Do we need to add a dot?
-        if (bytes_used > 0) { 
-           
-            if (name_len < 1) {
-                log_warn("dns", "Exceeded static name field allocation.");
-                return 0;
-            }
-            
-            name[0] = '.';
-            name++;
-            name_len--;
-
-            bytes_used += 1;
-        }
-
-        // Do we have enough data left?
-        if (seg_len > data_len) {
-            return 0;
-        }
-
-        // Did we run out of our arbitrary buffer?
-        if (seg_len > name_len) {
-            log_warn("dns", "Exceeded static name field allocation.");
-            return 0;
-        }
-
-        assert(data_len > 0);
-
-        memcpy(name, data, seg_len);
-    
-        name += seg_len;
-        name_len -= seg_len;
-    
-        data_len -= seg_len;
-        data += seg_len;
-        bytes_used += seg_len;
+    if (data_len == 0 || name_len == 0 || payload_len == 0) {
+        log_trace("dns", "_get_name_helper OUT, err. 0 length field. datalen %d namelen %d payloadlen %d", data_len, name_len, payload_len);
+        return 0;
     }
 
-    return bytes_used;
-}
+    if (recursion_level > MAX_LABEL_RECURSION) {
+        log_trace("dns", "_get_name_helper OUT. ERR, MAX RECUSION");
+        return 0;
+    }
 
-char* _get_name(char* data, uint16_t data_len, char* payload, 
-        uint16_t payload_len, uint16_t* bytes_consumed)
-{
+    uint16_t bytes_consumed = 0;
 
-    uint8_t byte = 0;
+    // The start of data is either a sequence of labels or a ptr.
+    while(data_len > 0) { 
 
-    char* name = xmalloc(MAX_NAME_LENGTH);
-
-    memset(name, 0x00, MAX_NAME_LENGTH);
-    
-    uint16_t name_pos = 0;
-
-    int i = 0;
-    while(i < data_len) { 
-        byte = data[i];
+        uint8_t byte = data[0];
    
         // Is this a pointer?
         if (byte >= 0xc0) {
+         
+            log_trace("dns", "_get_name_helper, ptr encountered");
           
-            // Not enough bytes
-            if ((i + 1) >= data_len) {
-                free(name);
-                return NULL;      
+            // Do we have enough bytes to check ahead?
+            if (data_len < 2) {
+                log_trace("dns", "_get_name_helper OUT. ptr byte encountered. No offset. ERR.");
+                return 0;
             }
 
             // No. ntohs isn't needed here. It's because of
             // the upper 2 bits indicating a pointer.
-            uint16_t offset = ((byte & 0x03) << 8) | (uint8_t)data[i+1];
+            uint16_t offset = ((byte & 0x03) << 8) | (uint8_t)data[1];
+
+            log_trace("dns", "_get_name_helper. ptr offset 0x%x", offset);
 
             if (offset >= payload_len) { 
-                free(name);
-                return NULL;      
+                log_trace("dns", "_get_name_helper OUT. offset exceeded payload len %d ERR", payload_len);
+                return 0;
             }
 
-            uint16_t name_bytes_used = _decode_labels(name + name_pos, 
-                        MAX_NAME_LENGTH - name_pos - 1, payload + offset, 
-                        payload_len - offset, 1); // -1 to make room for \0
+            // We need to add a dot if we are:
+            // -- Not first level recursion.
+            // -- have consumed bytes
+            if (recursion_level > 0 || bytes_consumed > 0) {
 
-            if (name_bytes_used == 0 && payload[offset] != '\0') { // thx root
-                free(name);
-                return NULL;      
+                if (name_len < 1) {
+                    log_warn("dns", "Exceeded static name field allocation.");
+                    return 0;
+                }
+            
+                name[0] = '.';
+                name++;
+                name_len--;
             }
 
-            name_pos += name_bytes_used;
+            uint16_t rec_bytes_consumed = _get_name_helper(payload + offset, 
+                    payload_len - offset, payload, payload_len, name, name_len, 
+                    recursion_level + 1);
 
-            // We've consumed 2 bytes here.
-            i = i + 2;
-
-            // Once we hit a pointer we are done.
-            break;
+            // We are done so don't bother to increment the pointers.
+            if (rec_bytes_consumed == 0) {
+                log_trace("dns", "_get_name_helper OUT. rec level %d failed", recursion_level);
+                return 0;
+            } else {
+                bytes_consumed += 2;
+                log_trace("dns", "_get_name_helper OUT. rec level %d success. %d rec bytes consumed. %d bytes consumed.", recursion_level, rec_bytes_consumed, bytes_consumed);
+                return bytes_consumed;
+            }
 
         } else if (byte == '\0') {
-            // Done
-            i += 1;
-            break;
+
+            // don't bother with pointer incrementation. We're done.
+            bytes_consumed += 1;
+            log_trace("dns", "_get_name_helper OUT. rec level %d success. %d bytes consumed.", recursion_level, bytes_consumed);
+            return bytes_consumed; 
+        
         } else {
 
-            uint16_t name_bytes_used = _decode_labels(name + name_pos, 
-                        MAX_NAME_LENGTH - name_pos - 1, data + i , data_len - i, 0); 
-                        // -1 to make room for \0
+            log_trace("dns", "_get_name_helper, segment 0x%hx encountered", byte);
 
-            if (name_bytes_used == 0 && data[i] != '\0') { // thx root
-                free(name);
-                return NULL;      
-            }
+            // We've now consumed a byte.
+            ++data;
+            --data_len;
+            // Mark byte consumed after we check for first iteration.
 
-            // XXX off by something in parsing? check this.
-            // Is name bytes used always the right value here?
-            // It is for current uses. Not sure about future extensions.
-            
-            // We consumed the size plus the label.
-            i += name_bytes_used + 1;
+            // Do we have enough data left (must have null byte too)?
+            if ((byte+1) > data_len) {
+                log_trace("dns", "_get_name_helper OUT. ERR. Not enough data for segment %hd"); 
+                return 0;
+            }   
 
-            name_pos += name_bytes_used;
-            
-            // We don't handle null bytes in the decode helper
-            
-            assert(i < data_len);
+            // If we've consumed any bytes and are in a label, we're in a 
+            // label chain. We need to add a dot.
+            if (bytes_consumed > 0) { 
 
-            // Peak ahead.
-            if (data[i] != '\0') {
-
-                // We need to add a dot. Make sure we have room.
-                if ((name_pos + 1) < MAX_NAME_LENGTH) {
-                    
-                    name[name_pos++] = '.';
-
-                } else {
+                if (name_len < 1) {
                     log_warn("dns", "Exceeded static name field allocation.");
-                    free(name);
-                    return NULL;      
+                    return 0;
                 }
+            
+                name[0] = '.';
+                name++;
+                name_len--;
             }
-        } 
+
+            // Now we've consumed a byte.
+            ++bytes_consumed;
+
+            // Did we run out of our arbitrary buffer?
+            if (byte > name_len) {
+                log_warn("dns", "Exceeded static name field allocation.");
+                return 0;
+            }
+
+            assert(data_len > 0);
+
+            memcpy(name, data, byte);
+    
+            name += byte;
+            name_len -= byte;
+    
+            data_len -= byte;
+            data += byte;
+            bytes_consumed += byte;
+ 
+            // Handled in the byte+1 check above.
+            assert(data_len > 0);
+        }
     }
 
-    *bytes_consumed = i;
+    // We should never get here.
+    // For each byte we either have:
+    // -- a ptr, which terminates
+    // -- a null byte, which terminates
+    // -- a segment length which either terminates or ensures we keep looping
+
+    assert(0);
+    return 0;
+}
+
+// data: Where we are in the dns payload
+// payload: the entire udp payload
+char* _get_name(char* data, uint16_t data_len, char* payload, 
+        uint16_t payload_len, uint16_t* bytes_consumed)
+{
+    log_trace("dns", "call to _get_name, data_len: %d", data_len);
+
+    char* name = xmalloc(MAX_NAME_LENGTH);
+    memset(name, 0x00, MAX_NAME_LENGTH);
+    
+    *bytes_consumed = _get_name_helper(data, data_len, payload, 
+            payload_len, name, MAX_NAME_LENGTH - 1, 0);
+
+    if (*bytes_consumed == 0) {
+        free(name);
+        return NULL;
+    }
 
     // Our memset ensured null byte.
-    assert(name[name_pos] == '\0');             
+    assert(name[MAX_NAME_LENGTH - 1] == '\0');             
+
+    log_trace("dns", "return success from _get_name, bytes_consumed: %d, string: %s", *bytes_consumed, name);
 
     return name;
 
 }
-
 
 static bool _process_response_question(char **data, uint16_t* data_len, char* payload,
         uint16_t payload_len, fieldset_t* list)
@@ -402,6 +407,7 @@ static bool _process_response_question(char **data, uint16_t* data_len, char* pa
 bool _process_response_answer(char **data, uint16_t* data_len, char* payload,
         uint16_t payload_len, fieldset_t* list)
 {   
+    log_trace("dns", "call to _process_response_answer, data_len: %d", *data_len);
     // Payload is the start of the DNS packet, including header
     // data is handle to the start of this RR
     // data_len is a pointer to the how much total data we have to work with.
@@ -543,6 +549,8 @@ bool _process_response_answer(char **data, uint16_t* data_len, char* payload,
     // Now update the pointers.
     *data = *data + bytes_consumed + sizeof(dns_answer_tail) + rdlength;
     *data_len = *data_len - bytes_consumed - sizeof(dns_answer_tail) - rdlength;
+
+    log_trace("dns", "return success from _process_response_answer, data_len: %d", *data_len);
 
     return 0;
 }
