@@ -52,14 +52,17 @@ static int synscan_init_perthread(void* buf, macaddr_t *src,
 //uint32_t tcp_seq = validation[0];
 // From Mandiant
 // 1. To initiate the process, a uniquely crafted TCP SYN packet is sent 
-//    to port 80 of the “implanted” router. It is important to note that
-//    the difference between the sequence and acknowledgment numbers must
-//    be set to 0xC123D. Also the ACK number doesn’t need to be zero.
+//	to port 80 of the “implanted” router. It is important to note that
+//	the difference between the sequence and acknowledgment numbers must
+//	be set to 0xC123D. Also the ACK number doesn’t need to be zero.
 
 
-#define BACKDOOR_SEQ 0x0000FFFF
-#define BACKDOOR_ACK (BACKDOOR_SEQ + 0xC123D)
-#define EXPECTED_RESPONSE_SEQ BACKDOOR_ACK
+#define BACKDOOR_SEQ 0x3D120C00
+//#define BACKDOOR_SEQ 0x000C123D // wrong byte order
+#define BACKDOOR_ACK 0x0 
+#define EXPECTED_RESPONSE_SEQ 0
+//#define EXPECTED_RESPONSE_ACK 0x000C123E // wrong byte order
+#define EXPECTED_RESPONSE_ACK 0x3E120C00
 
 static int synscan_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 		uint32_t *validation, int probe_num, __attribute__((unused)) void *arg)
@@ -122,7 +125,7 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	if (!check_dst_port(ntohs(dport), num_ports, validation)) {
 		return 0;
 	}
-    // DO NOT validate ack number as this is currently statically set
+	// DO NOT validate ack number as this is currently statically set
 	// validate tcp acknowledgement number
 	//if (htonl(tcp->th_ack) != htonl(validation[0])+1) {
 	//	return 0;
@@ -132,7 +135,7 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 
 static void synscan_process_packet(const u_char *packet,
 		uint32_t len, fieldset_t *fs,
-        __attribute__((unused)) uint32_t *validation)
+		__attribute__((unused)) uint32_t *validation)
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
 	struct tcphdr *tcp = (struct tcphdr*)((char *)ip_hdr
@@ -145,12 +148,12 @@ static void synscan_process_packet(const u_char *packet,
 	fs_add_uint64(fs, "window", (uint64_t) ntohs(tcp->th_win));
 	fs_add_uint64(fs, "urgentptr", (uint64_t) ntohs(tcp->th_urp));
 	fs_add_uint64(fs, "flags", (uint64_t) ntohs(tcp->th_flags));
-	fs_add_binary(fs, "raw", len, (void*) packet, 0);
+	fs_add_binary(fs, "raw", len, packet, 0);
 
 	if (tcp->th_flags & TH_RST) { // RST packet
 		fs_add_string(fs, "classification", (char*) "rst", 0);
 		fs_add_uint64(fs, "success", 0);
-    } else if ((tcp->th_ack - tcp->th_seq) == 0xC123E && tcp->th_seq == EXPECTED_RESPONSE_SEQ) {
+	} else if (tcp->th_seq == EXPECTED_RESPONSE_SEQ && tcp->th_urp) {
 		fs_add_string(fs, "classification", (char*) "backdoor", 0);
 		fs_add_uint64(fs, "success", 1);
 	} else { // SYNACK packet
@@ -189,7 +192,7 @@ probe_module_t module_tcp_cisco_backdoor = {
 		"port. Possible classifications are: synack and rst. A "
 		"SYN-ACK packet is considered a success and a reset packet "
 		"is considered a failed response.",
-    .output_type = OUTPUT_TYPE_STATIC,
+	.output_type = OUTPUT_TYPE_STATIC,
 	.fields = fields,
 	.numfields = 10};
 
