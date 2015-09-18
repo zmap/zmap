@@ -9,18 +9,23 @@
 /* Module for scanning for open UDP DNS resolvers. 
  *
  * This module optionally takes in an argument of the form "TYPE,QUESTION"
- * (e.g. "A,google.com").  Given no arguments it will default to asking for an
- * A record for www.google.com.
+ * (e.g. "A,google.com").  
+ *
+ * Given no arguments it will default to asking for an A record for www.google.com.
  * 
  * This module does minimal answer verification. It only verifies that the 
  * response roughly looks like a DNS response. It will not, for example,
  * require the QR bit be set to 1. All such analysis should happen offline.
- * Specifically, it checks for:
+ * Specifically, to be included in the output it requires:
  * - That the response packet is >= the query packet.
+ * - That the ports match and the packet is complete.
+ * To be marked as success it also requires:
  * - That the response bytes that should be the ID field matches the send bytes.
  * - That the response bytes that should be question match send bytes.
- * 
- * Example: zmap -p 53 --probe-module=dns --probe-args="ANY,www.example.com" -O json --output-fields=* 8.8.8.8
+ * To be marked as app_success it also requires:
+ * - That the QR bit be 1 and rcode ==0.
+ *
+ * Usage: zmap -p 53 --probe-module=dns --probe-args="ANY,www.example.com" -O json --output-fields=* 8.8.8.8
  * 
  * Based on a deprecated udp_dns module. 
  */ 
@@ -486,14 +491,13 @@ bool _process_response_answer(char **data, uint16_t* data_len, char* payload,
                 fs_add_uint64(afs, "rdata_is_parsed", 0);
                 fs_add_binary(afs, "rdata", rdlength, rdata, 0);
             } else {
-            
-                //answer + "pref:" + "xxxxx" (largest value 16bit) + "," + null
-                //XXX: paul  fix now
-                char* rdata_with_pref = xmalloc(strlen(rdata_name) + 5 + 5 + 1 + 1);
-                memcpy(rdata_with_pref, rdata_name, strlen(rdata_name));
-                memcpy(rdata_with_pref + strlen(rdata_name), ",pref:", 6);
-                snprintf(rdata_with_pref + strlen(rdata_name) + 6, 5, "%hu",
-                        ntohs( *(uint16_t*)rdata));
+           
+                // (largest value 16bit) + " " + answer + null 
+                char* rdata_with_pref = xmalloc(5 + 1 + strlen(rdata_name) + 1);
+                memset(rdata_with_pref, 0x00, 5 + 1 + strlen(rdata_name) + 1);
+                
+                uint8_t num_printed = snprintf(rdata_with_pref, 6, "%hu ", ntohs( *(uint16_t*)rdata));
+                memcpy(rdata_with_pref + num_printed, rdata_name, strlen(rdata_name));
 
                 fs_add_uint64(afs, "rdata_is_parsed", 1);
                 fs_add_string(afs, "rdata", rdata_with_pref, 1);
