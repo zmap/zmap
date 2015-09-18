@@ -758,7 +758,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 {   
     struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
 
-    log_trace("dns", "processing packet from %s", make_ip_str(ip_hdr->ip_src.s_addr));
+    log_trace("dns", "processing packet from %s len %u", make_ip_str(ip_hdr->ip_src.s_addr), len);
 
     //fs_add_string(fs, "icmp_responder", make_ip_str(ip_hdr->ip_src.s_addr), 1);
     if (ip_hdr->ip_p == IPPROTO_UDP) {
