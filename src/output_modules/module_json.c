@@ -50,11 +50,11 @@ int json_output_file_init(struct state_conf *conf, UNUSED char **fields,
 	return EXIT_SUCCESS;
 }
 
-char *hex_encode(char *packet, int buflen)
+char *hex_encode(unsigned char *packet, int buflen)
 {
 	char *buf = xmalloc(2*buflen + 1);
 	for (int i=0; i < buflen; i++) {
-		snprintf(buf + (i*2), 3, "%.2hhx", packet[i]);
+		snprintf(buf + (i*2), 3, "%.2x", packet[i]);
 	}
 	buf[buflen*2] = 0;
 	return buf;
