@@ -897,10 +897,10 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
             fs_add_repeated(fs, "dns_additionals", list);
 
             // Do we have unconsumed data?
-            if (err == 0) {
-                fs_add_uint64(fs, "dns_unconsumed_bytes", data_len); 
-            } else {
-                fs_add_uint64(fs, "dns_unconsumed_bytes", 0); 
+            fs_add_uint64(fs, "dns_unconsumed_bytes", data_len); 
+
+            if (data_len != 0) {
+                err = 1;
             }
 
             // Did we parse OK?
@@ -909,6 +909,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
     
         // Now the raw stuff.
         fs_add_binary(fs, "raw_data", (udp_len - sizeof(struct udphdr)), (void*) &udp_hdr[1], 0);
+        //fs_add_binary(fs, "raw_data", len, (void*)packet, 0);
    
         return;
     
