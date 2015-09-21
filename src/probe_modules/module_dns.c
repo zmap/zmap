@@ -415,7 +415,7 @@ static bool process_response_question(char **data, uint16_t* data_len,
     fs_add_uint64(qfs, "qclass", qclass);
 
     // Now we're adding the new fs to the list.
-    fs_add_fieldset(list, "question", qfs);
+    fs_add_fieldset(list, NULL, qfs);
 
     // Now update the pointers.
     *data = *data + bytes_consumed + sizeof(dns_question_tail);
@@ -567,7 +567,7 @@ static bool process_response_answer(char **data, uint16_t* data_len,
     }
 
     // Now we're adding the new fs to the list.
-    fs_add_fieldset(list, "question", afs);
+    fs_add_fieldset(list, NULL, afs);
 
     // Now update the pointers.
     *data = *data + bytes_consumed + sizeof(dns_answer_tail) + rdlength;
