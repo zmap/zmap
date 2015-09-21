@@ -30,6 +30,7 @@
  * Based on a deprecated udp_dns module. 
  */ 
 
+#include "module_dns.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -43,13 +44,12 @@
 #include "probe_modules.h"
 #include "packet.h"
 #include "logger.h"
-#include "module_dns.h"
 #include "module_udp.h"
 #include "../fieldset.h"
 
 #define DNS_SEND_LEN 512    // This is arbitrary 
 #define UDP_HEADER_LEN 8
-#define PCAP_SNAPLEN 3000   // This is even more arbitrary
+#define PCAP_SNAPLEN 1500   // This is even more arbitrary
 #define UNUSED __attribute__((unused))
 #define MAX_QTYPE 255
 #define ICMP_UNREACH_HEADER_SIZE 8
@@ -95,6 +95,7 @@ const char *qtype_strs[] = {
         "RRSIG",
         "ALL"
 };
+const int qtype_strs_len = 10;
 
 const dns_qtype qtype_strid_to_qtype[] = { DNS_QTYPE_A, DNS_QTYPE_NS, DNS_QTYPE_CNAME, 
         DNS_QTYPE_SOA, DNS_QTYPE_PTR, DNS_QTYPE_MX, DNS_QTYPE_TXT, 
@@ -119,9 +120,9 @@ void _setup_qtype_str_map()
     qtype_qtype_to_strid[DNS_QTYPE_ALL] = 9;
 }
 
-uint16_t _qtype_str_to_code(char* str) 
+static uint16_t _qtype_str_to_code(const char* str) 
 {
-    for (int i = 0; i < (int) (sizeof(qtype_strs)/sizeof(qtype_strs[0])); i++) {
+    for (int i = 0; i < qtype_strs_len; i++) {
         if (strcmp(qtype_strs[i], str) == 0)
             return qtype_strid_to_qtype[i];
     }
@@ -129,7 +130,7 @@ uint16_t _qtype_str_to_code(char* str)
 }
 
 
-static uint16_t _domain_to_qname(char** qname_handle, char* domain) 
+static uint16_t _domain_to_qname(char** qname_handle, const char* domain) 
 {   
     // String + 1byte header + null byte
     uint16_t len = strlen(domain) + 1 + 1;
@@ -137,7 +138,7 @@ static uint16_t _domain_to_qname(char** qname_handle, char* domain)
     // Add a . before the domain. This will make the following simpler.
     qname[0] = '.';
     // Move the domain into the qname buffer.
-    memcpy(qname + 1, domain, strlen(domain));
+    strcpy(qname + 1, domain);
     for (int i = 0; i < len; i++) {
         if (qname[i] == '.') {
             int j;
@@ -154,7 +155,7 @@ static uint16_t _domain_to_qname(char** qname_handle, char* domain)
     return len;
 }
 
-static int _build_global_dns_packet(char* domain) 
+static int _build_global_dns_packet(const char* domain) 
 {    
     qname_len = _domain_to_qname(&qname, domain);
     dns_packet_len = sizeof(dns_header) + qname_len + sizeof(dns_question_tail);
@@ -184,7 +185,7 @@ static int _build_global_dns_packet(char* domain)
     return EXIT_SUCCESS;
 }
 
-uint16_t _get_name_helper(char* data, uint16_t data_len, char* payload, 
+uint16_t _get_name_helper(const char* data, uint16_t data_len, const char* payload, 
         uint16_t payload_len, char* name, uint16_t name_len,
         uint16_t recursion_level)
 {
@@ -332,7 +333,7 @@ uint16_t _get_name_helper(char* data, uint16_t data_len, char* payload,
 
 // data: Where we are in the dns payload
 // payload: the entire udp payload
-char* _get_name(char* data, uint16_t data_len, char* payload, 
+char* _get_name(const char* data, uint16_t data_len, const char* payload, 
         uint16_t payload_len, uint16_t* bytes_consumed)
 {
     log_trace("dns", "call to _get_name, data_len: %d", data_len);
@@ -357,7 +358,7 @@ char* _get_name(char* data, uint16_t data_len, char* payload,
 
 }
 
-static bool _process_response_question(char **data, uint16_t* data_len, char* payload,
+static bool _process_response_question(char **data, uint16_t* data_len, const char* payload,
         uint16_t payload_len, fieldset_t* list)
 {   
     // Payload is the start of the DNS packet, including header
@@ -409,7 +410,7 @@ static bool _process_response_question(char **data, uint16_t* data_len, char* pa
 
 // XXX This should be merged with _process_response_question. 
 // Ended up being almost exactly the same
-bool _process_response_answer(char **data, uint16_t* data_len, char* payload,
+bool _process_response_answer(char **data, uint16_t* data_len, const char* payload,
         uint16_t payload_len, fieldset_t* list)
 {   
     log_trace("dns", "call to _process_response_answer, data_len: %d", *data_len);
