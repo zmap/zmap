@@ -36,7 +36,7 @@ probe_module_t* probe_modules[] = {
     &module_udp,
     &module_ntp,
     &module_upnp,
-    &module_dns
+    &module_dns,
     &module_tcp_cisco_backdoor
 	// ADD YOUR MODULE HERE
 };
