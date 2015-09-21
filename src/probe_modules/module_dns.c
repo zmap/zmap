@@ -172,18 +172,25 @@ static int build_global_dns_packet(const char* domain)
     dns_question_tail* tail_p = (dns_question_tail*)(dns_packet + sizeof(dns_header) + qname_len);
 
     // All other header fields should be 0. Except id, which we set per thread.
+    
+    // Please recurse as needed.
     dns_header_p->rd = 1; // Is one bit. Don't need htons
+    
+    // We have 1 question
     dns_header_p->qdcount = htons(1);
 
     memcpy(qname_p, qname, qname_len);
 
+    // Set the qtype to what we passed from args
     tail_p->qtype = htons(qtype);
+
+    // Set the qclass to The Internet (TM) (R) (I hope you're happy now Zakir)
     tail_p->qclass = htons(0x01); // MAGIC NUMBER. Let's be honest. This is only ever 1
 
     return EXIT_SUCCESS;
 }
 
-uint16_t get_name_helper(const char* data, uint16_t data_len, const char* payload, 
+static uint16_t get_name_helper(const char* data, uint16_t data_len, const char* payload, 
         uint16_t payload_len, char* name, uint16_t name_len,
         uint16_t recursion_level)
 {
@@ -331,7 +338,7 @@ uint16_t get_name_helper(const char* data, uint16_t data_len, const char* payloa
 
 // data: Where we are in the dns payload
 // payload: the entire udp payload
-char* get_name(const char* data, uint16_t data_len, const char* payload, 
+static char* get_name(const char* data, uint16_t data_len, const char* payload, 
         uint16_t payload_len, uint16_t* bytes_consumed)
 {
     log_trace("dns", "call to get_name, data_len: %d", data_len);
@@ -405,9 +412,7 @@ static bool process_response_question(char **data, uint16_t* data_len, const cha
     return 0;
 }
 
-// XXX This should be merged with process_response_question. 
-// Ended up being almost exactly the same
-bool process_response_answer(char **data, uint16_t* data_len, const char* payload,
+static bool process_response_answer(char **data, uint16_t* data_len, const char* payload,
         uint16_t payload_len, fieldset_t* list)
 {   
     log_trace("dns", "call to process_response_answer, data_len: %d", *data_len);
@@ -600,7 +605,7 @@ static int dns_global_initialize(struct state_conf *conf)
     return build_global_dns_packet(domain);
 }
  
-int dns_global_cleanup(UNUSED struct state_conf *zconf, 
+static int dns_global_cleanup(UNUSED struct state_conf *zconf, 
         UNUSED struct state_send *zsend, UNUSED struct state_recv *zrecv) 
 {
     if (dns_packet) {
