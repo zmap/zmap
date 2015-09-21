@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 ../src/zmap -p 80 -c 1 -b configs/blacklist_shard.conf --seed=1234 --dryrun 1.1.0.0/16 -T 5 --shards=5 --shard=0 > outfile
 cat outfile | grep ip | cut -d '|' -f 2 | cut -d ' ' -f 3 | sort > shardfile

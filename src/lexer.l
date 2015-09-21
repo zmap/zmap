@@ -31,6 +31,6 @@
 "<"                  return '<';
 "("                  return '(';
 ")"                  return ')';
-[a-zA-Z][a-zA-Z0-9_]+ yylval.string_literal = strdup(yytext); return T_FIELD;
+[a-zA-Z][-_a-zA-Z0-9]+ yylval.string_literal = strdup(yytext); return T_FIELD;
 
 %%
