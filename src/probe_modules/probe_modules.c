@@ -30,14 +30,14 @@ extern probe_module_t module_dns;
 // ADD YOUR MODULE HERE
 
 probe_module_t* probe_modules[] = {
-    &module_tcp_synscan,
-    &module_icmp_echo,
-    &module_icmp_echo_time,
-    &module_udp,
-    &module_ntp,
-    &module_upnp,
-    &module_dns,
-    &module_tcp_cisco_backdoor
+	&module_tcp_synscan,
+	&module_icmp_echo,
+	&module_icmp_echo_time,
+	&module_udp,
+	&module_ntp,
+	&module_upnp,
+	&module_dns,
+	&module_tcp_cisco_backdoor
 	// ADD YOUR MODULE HERE
 };
 
