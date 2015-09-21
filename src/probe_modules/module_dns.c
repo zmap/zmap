@@ -82,7 +82,7 @@ static uint16_t qtype = 0;
  * indirection) so the per-packet processing time is fast. Keep this in sync with:
  * dns_qtype (.h)
  * qtype_strid_to_qtype (below)
- * qtype_qtype_to_strid (below, and _setup_qtype_str_map())
+ * qtype_qtype_to_strid (below, and setup_qtype_str_map())
  */
 const char *qtype_strs[] = {
         "A",
@@ -105,7 +105,7 @@ const dns_qtype qtype_strid_to_qtype[] = { DNS_QTYPE_A, DNS_QTYPE_NS, DNS_QTYPE_
 
 int8_t qtype_qtype_to_strid[256] = { BAD_QTYPE_VAL };
 
-void _setup_qtype_str_map() 
+void setup_qtype_str_map() 
 { 
     qtype_qtype_to_strid[DNS_QTYPE_A] = 0;
     qtype_qtype_to_strid[DNS_QTYPE_NS] = 1;
@@ -119,7 +119,7 @@ void _setup_qtype_str_map()
     qtype_qtype_to_strid[DNS_QTYPE_ALL] = 9;
 }
 
-static uint16_t _qtype_str_to_code(const char* str) 
+static uint16_t qtype_str_to_code(const char* str) 
 {
     for (int i = 0; i < qtype_strs_len; i++) {
         if (strcmp(qtype_strs[i], str) == 0)
@@ -129,7 +129,7 @@ static uint16_t _qtype_str_to_code(const char* str)
 }
 
 
-static uint16_t _domain_to_qname(char** qname_handle, const char* domain) 
+static uint16_t domain_to_qname(char** qname_handle, const char* domain) 
 {   
     // String + 1byte header + null byte
     uint16_t len = strlen(domain) + 1 + 1;
@@ -154,9 +154,9 @@ static uint16_t _domain_to_qname(char** qname_handle, const char* domain)
     return len;
 }
 
-static int _build_global_dns_packet(const char* domain) 
+static int build_global_dns_packet(const char* domain) 
 {    
-    qname_len = _domain_to_qname(&qname, domain);
+    qname_len = domain_to_qname(&qname, domain);
     dns_packet_len = sizeof(dns_header) + qname_len + sizeof(dns_question_tail);
 
     if (dns_packet_len > DNS_SEND_LEN) {
@@ -183,7 +183,7 @@ static int _build_global_dns_packet(const char* domain)
     return EXIT_SUCCESS;
 }
 
-uint16_t _get_name_helper(const char* data, uint16_t data_len, const char* payload, 
+uint16_t get_name_helper(const char* data, uint16_t data_len, const char* payload, 
         uint16_t payload_len, char* name, uint16_t name_len,
         uint16_t recursion_level)
 {
@@ -244,7 +244,7 @@ uint16_t _get_name_helper(const char* data, uint16_t data_len, const char* paylo
                 name_len--;
             }
 
-            uint16_t rec_bytes_consumed = _get_name_helper(payload + offset, 
+            uint16_t rec_bytes_consumed = get_name_helper(payload + offset, 
                     payload_len - offset, payload, payload_len, name, name_len, 
                     recursion_level + 1);
 
@@ -331,14 +331,14 @@ uint16_t _get_name_helper(const char* data, uint16_t data_len, const char* paylo
 
 // data: Where we are in the dns payload
 // payload: the entire udp payload
-char* _get_name(const char* data, uint16_t data_len, const char* payload, 
+char* get_name(const char* data, uint16_t data_len, const char* payload, 
         uint16_t payload_len, uint16_t* bytes_consumed)
 {
-    log_trace("dns", "call to _get_name, data_len: %d", data_len);
+    log_trace("dns", "call to get_name, data_len: %d", data_len);
 
     char* name = xmalloc(MAX_NAME_LENGTH);
     
-    *bytes_consumed = _get_name_helper(data, data_len, payload, 
+    *bytes_consumed = get_name_helper(data, data_len, payload, 
             payload_len, name, MAX_NAME_LENGTH - 1, 0);
 
     if (*bytes_consumed == 0) {
@@ -349,13 +349,13 @@ char* _get_name(const char* data, uint16_t data_len, const char* payload,
     // Our memset ensured null byte.
     assert(name[MAX_NAME_LENGTH - 1] == '\0');             
 
-    log_trace("dns", "return success from _get_name, bytes_consumed: %d, string: %s", *bytes_consumed, name);
+    log_trace("dns", "return success from get_name, bytes_consumed: %d, string: %s", *bytes_consumed, name);
 
     return name;
 
 }
 
-static bool _process_response_question(char **data, uint16_t* data_len, const char* payload,
+static bool process_response_question(char **data, uint16_t* data_len, const char* payload,
         uint16_t payload_len, fieldset_t* list)
 {   
     // Payload is the start of the DNS packet, including header
@@ -364,7 +364,7 @@ static bool _process_response_question(char **data, uint16_t* data_len, const ch
     // This is awful. I'm bad and should feel bad.
     uint16_t bytes_consumed = 0;
 
-    char* question_name = _get_name(*data, *data_len, payload, payload_len,  &bytes_consumed);
+    char* question_name = get_name(*data, *data_len, payload, payload_len,  &bytes_consumed);
 
     // Error.
     if (question_name == NULL) {
@@ -405,19 +405,19 @@ static bool _process_response_question(char **data, uint16_t* data_len, const ch
     return 0;
 }
 
-// XXX This should be merged with _process_response_question. 
+// XXX This should be merged with process_response_question. 
 // Ended up being almost exactly the same
-bool _process_response_answer(char **data, uint16_t* data_len, const char* payload,
+bool process_response_answer(char **data, uint16_t* data_len, const char* payload,
         uint16_t payload_len, fieldset_t* list)
 {   
-    log_trace("dns", "call to _process_response_answer, data_len: %d", *data_len);
+    log_trace("dns", "call to process_response_answer, data_len: %d", *data_len);
     // Payload is the start of the DNS packet, including header
     // data is handle to the start of this RR
     // data_len is a pointer to the how much total data we have to work with.
     // This is awful. I'm bad and should feel bad.
     uint16_t bytes_consumed = 0;
 
-    char* answer_name = _get_name(*data, *data_len, payload, payload_len,  &bytes_consumed);
+    char* answer_name = get_name(*data, *data_len, payload, payload_len,  &bytes_consumed);
 
     // Error.
     if (answer_name == NULL) {
@@ -462,7 +462,7 @@ bool _process_response_answer(char **data, uint16_t* data_len, const char* paylo
     if (type == DNS_QTYPE_NS || type == DNS_QTYPE_CNAME) {
 
         uint16_t rdata_bytes_consumed = 0;
-        char* rdata_name = _get_name(rdata, rdlength, payload, payload_len,  
+        char* rdata_name = get_name(rdata, rdlength, payload, payload_len,  
                 &rdata_bytes_consumed);
 
         if (rdata_name == NULL) {
@@ -482,7 +482,7 @@ bool _process_response_answer(char **data, uint16_t* data_len, const char* paylo
             fs_add_binary(afs, "rdata", rdlength, rdata, 0);
         } else {
 
-            char* rdata_name = _get_name(rdata + 2, rdlength-2, payload, payload_len,  
+            char* rdata_name = get_name(rdata + 2, rdlength-2, payload, payload_len,  
                     &rdata_bytes_consumed);
 
             if (rdata_name == NULL) {
@@ -550,7 +550,7 @@ bool _process_response_answer(char **data, uint16_t* data_len, const char* paylo
     *data = *data + bytes_consumed + sizeof(dns_answer_tail) + rdlength;
     *data_len = *data_len - bytes_consumed - sizeof(dns_answer_tail) - rdlength;
 
-    log_trace("dns", "return success from _process_response_answer, data_len: %d", *data_len);
+    log_trace("dns", "return success from process_response_answer, data_len: %d", *data_len);
 
     return 0;
 }
@@ -568,7 +568,7 @@ static int dns_global_initialize(struct state_conf *conf)
     num_ports = conf->source_port_last - conf->source_port_first + 1;
     udp_set_num_ports(num_ports);
 
-    _setup_qtype_str_map();
+    setup_qtype_str_map();
 
     // Want to add support for multiple questions? Start here. 
     if (!conf->probe_args) { // no parameters passed in. Use defaults
@@ -587,7 +587,7 @@ static int dns_global_initialize(struct state_conf *conf)
                 probe_arg_delimiter_p - conf->probe_args);
         qtype_str[probe_arg_delimiter_p - conf->probe_args] = '\0'; 
 
-        qtype = _qtype_str_to_code(qtype_str);
+        qtype = qtype_str_to_code(qtype_str);
         
         if (!qtype) {
             log_fatal("dns", "Incorrect qtype supplied. %s", qtype_str);
@@ -597,7 +597,7 @@ static int dns_global_initialize(struct state_conf *conf)
 
     free(qtype_str);
 
-    return _build_global_dns_packet(domain);
+    return build_global_dns_packet(domain);
 }
  
 int dns_global_cleanup(UNUSED struct state_conf *zconf, 
@@ -866,7 +866,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
             // Questions
             fieldset_t *list = fs_new_repeated_fieldset();
             for (int i = 0; i < ntohs(dns_hdr->qdcount) && !err; i++) {
-                err = _process_response_question(&data, &data_len, (char*)dns_hdr, 
+                err = process_response_question(&data, &data_len, (char*)dns_hdr, 
                             udp_len, list);    
             }
             fs_add_repeated(fs, "dns_questions", list);
@@ -874,21 +874,21 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
             // Answers
             list = fs_new_repeated_fieldset();
             for (int i = 0; i < ntohs(dns_hdr->ancount) && !err; i++) {
-                err = _process_response_answer(&data, &data_len, (char*)dns_hdr, udp_len, list); 
+                err = process_response_answer(&data, &data_len, (char*)dns_hdr, udp_len, list); 
             }
             fs_add_repeated(fs, "dns_answers", list);
 
             // Authorities
             list = fs_new_repeated_fieldset();
             for (int i = 0; i < ntohs(dns_hdr->nscount) && !err; i++) {
-                err = _process_response_answer(&data, &data_len, (char*)dns_hdr, udp_len, list);  
+                err = process_response_answer(&data, &data_len, (char*)dns_hdr, udp_len, list);  
             }
             fs_add_repeated(fs, "dns_authorities", list);
 
             // Additionals
             list = fs_new_repeated_fieldset();
             for (int i = 0; i < ntohs(dns_hdr->arcount) && !err; i++) {
-                err = _process_response_answer(&data, &data_len, (char*)dns_hdr, udp_len, list);   
+                err = process_response_answer(&data, &data_len, (char*)dns_hdr, udp_len, list);   
             }
             fs_add_repeated(fs, "dns_additionals", list);
 
