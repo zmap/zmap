@@ -56,6 +56,7 @@
 #define BAD_QTYPE_STR "BAD QTYPE"
 #define BAD_QTYPE_VAL -1
 #define MAX_LABEL_RECURSION 10
+#define DNS_QR_ANSWER   1
 
 // Note: each label has a max length of 63 bytes. So someone has to be doing
 // something really annoying. Will raise a warning.
@@ -101,8 +102,6 @@ const dns_qtype qtype_strid_to_qtype[] = { DNS_QTYPE_A, DNS_QTYPE_NS, DNS_QTYPE_
         DNS_QTYPE_SOA, DNS_QTYPE_PTR, DNS_QTYPE_MX, DNS_QTYPE_TXT, 
         DNS_QTYPE_AAAA, DNS_QTYPE_RRSIG, DNS_QTYPE_ALL
 };
-
-#define DNS_QR_ANSWER   1
 
 int8_t qtype_qtype_to_strid[256] = { BAD_QTYPE_VAL };
 
@@ -167,7 +166,6 @@ static int _build_global_dns_packet(const char* domain)
     }
     
     dns_packet = xmalloc(dns_packet_len);
-    memset(dns_packet, 0x00, dns_packet_len);
 
     dns_header* dns_header_p = (dns_header*)dns_packet;
     char* qname_p = dns_packet + sizeof(dns_header);
@@ -339,7 +337,6 @@ char* _get_name(const char* data, uint16_t data_len, const char* payload,
     log_trace("dns", "call to _get_name, data_len: %d", data_len);
 
     char* name = xmalloc(MAX_NAME_LENGTH);
-    memset(name, 0x00, MAX_NAME_LENGTH);
     
     *bytes_consumed = _get_name_helper(data, data_len, payload, 
             payload_len, name, MAX_NAME_LENGTH - 1, 0);
@@ -495,7 +492,6 @@ bool _process_response_answer(char **data, uint16_t* data_len, const char* paylo
            
                 // (largest value 16bit) + " " + answer + null 
                 char* rdata_with_pref = xmalloc(5 + 1 + strlen(rdata_name) + 1);
-                memset(rdata_with_pref, 0x00, 5 + 1 + strlen(rdata_name) + 1);
                 
                 uint8_t num_printed = snprintf(rdata_with_pref, 6, "%hu ", ntohs( *(uint16_t*)rdata));
                 memcpy(rdata_with_pref + num_printed, rdata_name, strlen(rdata_name));
@@ -513,7 +509,6 @@ bool _process_response_answer(char **data, uint16_t* data_len, const char* paylo
         } else {
             fs_add_uint64(afs, "rdata_is_parsed", 1);
             char* txt = xmalloc(rdlength);
-            memset(txt, 0x00, rdlength);
             memcpy(txt, rdata + 1, rdlength-1);
             fs_add_string(afs, "rdata", txt, 1);
         }
