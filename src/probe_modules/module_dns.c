@@ -713,10 +713,6 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
         }
 
         struct icmp *icmp = (struct icmp*) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
-        // We want to handle more of this.
-        /*if (icmp->icmp_type != ICMP_UNREACH) {
-            return 0;
-        }*/
 
         struct ip *ip_inner = (struct ip*) ((char *) icmp + ICMP_UNREACH_HEADER_SIZE);
         // Now we know the actual inner ip length, we should recheck the buffer
@@ -808,8 +804,8 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
         fs_add_uint64(fs, "app_success", is_valid && (qr == DNS_QR_ANSWER) && (rcode == DNS_RCODE_NOERR));
         
         // UDP info
-        fs_add_uint64(fs, "udp_sport", ntohs(udp_hdr->uh_sport));
-        fs_add_uint64(fs, "udp_dport", ntohs(udp_hdr->uh_dport));
+        fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
+        fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
         fs_add_uint64(fs, "udp_len", udp_len);
         
         // ICMP info
@@ -910,7 +906,6 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
     
         // Now the raw stuff.
         fs_add_binary(fs, "raw_data", (udp_len - sizeof(struct udphdr)), (void*) &udp_hdr[1], 0);
-        //fs_add_binary(fs, "raw_data", len, (void*)packet, 0);
    
         return;
     
@@ -929,8 +924,8 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
         fs_add_uint64(fs, "app_success", 0);
         
         // UDP info
-        fs_add_uint64(fs, "udp_sport", ntohs(udp_hdr->uh_sport));
-        fs_add_uint64(fs, "udp_dport", ntohs(udp_hdr->uh_dport));
+        fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
+        fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
         fs_add_uint64(fs, "udp_len", udp_len);
         
         // ICMP info
@@ -975,7 +970,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 
     } else {
         // This should not happen. Both the pcap filter and validate packet prevent this.
-        assert(0);
+        log_fatal("dns", "Die. This can only happen if you change the pcap filter and don't update the process function.");
         return;
     }
 }
@@ -984,8 +979,8 @@ static fielddef_t fields[] = {
     {.name = "classification", .type="string", .desc = "packet protocol"},
     {.name = "success", .type="int", .desc = "Are the validation bits and question correct"},
     {.name = "app_success", .type="int", .desc = "Is the RA bit set with no error code?"},
-    {.name = "udp_sport",  .type = "int", .desc = "UDP source port"},
-    {.name = "udp_dport",  .type = "int", .desc = "UDP destination port"},
+    {.name = "sport",  .type = "int", .desc = "UDP source port"},
+    {.name = "dport",  .type = "int", .desc = "UDP destination port"},
     {.name = "udp_len", .type="int", .desc = "UDP packet lenght"},
     {.name = "icmp_responder", .type = "string", .desc = "Source IP of ICMP_UNREACH message"},
     {.name = "icmp_type", .type = "int", .desc = "icmp message type"},
