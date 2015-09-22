@@ -45,9 +45,7 @@
 
 #include "output_modules/output_modules.h"
 #include "probe_modules/probe_modules.h"
-
-
-extern int print_json_fieldset(fieldset_t *fs);
+#include "output_modules/module_json.h"
 
 
 int test_recursive_fieldsets(void)

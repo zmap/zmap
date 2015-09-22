@@ -50,7 +50,7 @@ int json_output_file_init(struct state_conf *conf, UNUSED char **fields,
 	return EXIT_SUCCESS;
 }
 
-char *hex_encode(char *packet, int buflen)
+char *hex_encode(unsigned char *packet, int buflen)
 {
 	char *buf = xmalloc(2*buflen + 1);
 	for (int i=0; i < buflen; i++) {
@@ -131,9 +131,9 @@ int json_output_file_close(UNUSED struct state_conf* c,
 int print_json_fieldset(fieldset_t *fs)
 {
 	json_object *record = fs_to_jsonobj(fs);
-    fprintf(stdout, "%s\n", json_object_to_json_string(record)); 
-    json_object_put(record); 
-    return EXIT_SUCCESS;
+	fprintf(stdout, "%s\n", json_object_to_json_string(record)); 
+	json_object_put(record); 
+	return EXIT_SUCCESS;
 }
 
 output_module_t module_json_file = {

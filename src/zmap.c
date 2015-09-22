@@ -393,7 +393,7 @@ int main(int argc, char *argv[])
     // check whether the probe module is going to generate dynamic data
     // and that the output module can support exporting that data out of
     // zmap. If they can't, then quit.
-    if (!zconf.probe_module->output_type == OUTPUT_TYPE_DYNAMIC 
+    if (zconf.probe_module->output_type == OUTPUT_TYPE_DYNAMIC 
             && !zconf.output_module->supports_dynamic_output) {
         log_fatal("zmap", "specified probe module (%s) requires dynamic "
                 "output support, which output module (%s) does not support. "

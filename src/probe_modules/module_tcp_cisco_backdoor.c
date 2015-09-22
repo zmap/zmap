@@ -148,7 +148,7 @@ static void synscan_process_packet(const u_char *packet,
 	fs_add_uint64(fs, "window", (uint64_t) ntohs(tcp->th_win));
 	fs_add_uint64(fs, "urgentptr", (uint64_t) ntohs(tcp->th_urp));
 	fs_add_uint64(fs, "flags", (uint64_t) ntohs(tcp->th_flags));
-	fs_add_binary(fs, "raw", len, packet, 0);
+	fs_add_binary(fs, "raw", len, (void*)packet, 0);
 
 	if (tcp->th_flags & TH_RST) { // RST packet
 		fs_add_string(fs, "classification", (char*) "rst", 0);
