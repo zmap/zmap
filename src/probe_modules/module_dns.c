@@ -856,10 +856,10 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 			fs_add_null(fs, "dns_nscount"); 
 			fs_add_null(fs, "dns_arcount"); 
 
-			fs_add_null(fs, "dns_questions");
-			fs_add_null(fs, "dns_answers");
-			fs_add_null(fs, "dns_authorities");
-			fs_add_null(fs, "dns_additionals");
+			fs_add_repeated(fs, "dns_questions", fs_new_repeated_fieldset());
+			fs_add_repeated(fs, "dns_answers", fs_new_repeated_fieldset());
+			fs_add_repeated(fs, "dns_authorities", fs_new_repeated_fieldset());
+			fs_add_repeated(fs, "dns_additionals", fs_new_repeated_fieldset());
 
 			fs_add_uint64(fs, "dns_unconsumed_bytes", 0); 
 			fs_add_uint64(fs, "dns_parse_err", 1); 
