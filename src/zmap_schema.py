@@ -1,7 +1,6 @@
 from zschema import *
 
-zmap_upnp = Record({
-    "type":String(),
+zmap_base = Record({
     "saddr":IPv4Address(),
     "saddr-raw":Long(),
     "daddr":IPv4Address(),
@@ -10,6 +9,25 @@ zmap_upnp = Record({
     "ttl":Integer(),
     "classification":String(),
     "success":Integer(),
+    "app_success":Integer(),
+    "repeat":Integer(),
+    "cooldown":Integer(),
+    "timestamp-str":DateTime(),
+    "timestamp-ts":Long(),
+    "timestamp-us":Long(),
+    "icmp_responder":String(),
+    "icmp_type":Integer(),
+    "icmp_code":Integer(),
+    "icmp_unreach_str":String(),
+    "sport":Integer(),
+    "dport":Integer(),
+    "data":String(),
+    "length":Integer(),
+
+})
+
+zmap_upnp = Record({
+    "type":String(),
     "server":AnalyzedString(),
     "location":AnalyzedString(),
     "usn":String(),
@@ -19,21 +37,7 @@ zmap_upnp = Record({
     "x-user-agent":String(),
     "agent":String(),
     "date":String(),
-    "sport":Integer(),
-    "dport":Integer(),
-    "data":String(),
-    "length":Integer(),
-    "repeat":Integer(),
-    "cooldown":Integer(),
-    "timestamp-str":DateTime(),
-    "timestamp-ts":Long(),
-    "timestamp-us":Long(),
-
-    "icmp_responder":String(),
-    "icmp_type":Integer(),
-    "icmp_code":Integer(),
-    "icmp_unreach_str":String()
-})
+}, extends=zmap_base)
 
 register_schema("zmap-upnp", zmap_upnp)
 
@@ -48,6 +52,7 @@ dns_question = SubRecord({
 dns_answer = SubRecord({
   "name":String(),
   "type":Integer(),
+  "type_str":String(),
   "class":Integer(),
   "ttl":Integer(),
   "rdlength":Integer(),
@@ -56,40 +61,31 @@ dns_answer = SubRecord({
 })
 
 zmap_dns = Record({
-        "qr":Short(),
-        "rcode":Short(),
-        "classification":String(),
-        "success":Short(),
-        "app_success":Short(),
-        "sport":Short(),
-        "dport":Short(),
-        "len":Integer(),
-        "icmp_responder":String(),
-        "icmp_type":String(),
-        "icmp_code":Integer(),
-        "icmp_unreach_str":String(),
-        "dns_id":Integer(),
-        "dns_rd":Integer(),
-        "dns_tc":Integer(),
-        "dns_aa":Integer(),
-        "dns_opcode":Integer(),
-        "dns_qr":Integer(),
-        "dns_rcode":Integer(),
-        "dns_cd":Integer(),
-        "dns_ad":Integer(),
-        "dns_z":Integer(),
-        "dns_ra":Integer(),
-        "dns_qdcount":Integer(),
-        "dns_ancount":Integer(),
-        "dns_nscount":Integer(),
-        "dns_arcount":Integer(),
-        "dns_questions":ListOf(dns_question),
-        "dns_answers":ListOf(dns_answer),
-        "dns_authorities":ListOf(dns_answer),
-        "dns_additionals":ListOf(dns_answer),
-        "dns_unconsumed_bytes":String(), 
-        "dns_parse_err":Integer(),
-        "raw_data":String(),
-})
+    "qr":Short(),
+    "rcode":Short(),
+    "dns_id":Integer(),
+    "dns_rd":Integer(),
+    "dns_tc":Integer(),
+    "dns_aa":Integer(),
+    "dns_opcode":Integer(),
+    "dns_qr":Integer(),
+    "dns_rcode":Integer(),
+    "dns_cd":Integer(),
+    "dns_ad":Integer(),
+    "dns_z":Integer(),
+    "dns_ra":Integer(),
+    "dns_qdcount":Integer(),
+    "dns_ancount":Integer(),
+    "dns_nscount":Integer(),
+    "dns_arcount":Integer(),
+    "dns_questions":ListOf(dns_question),
+    "dns_answers":ListOf(dns_answer),
+    "dns_authorities":ListOf(dns_answer),
+    "dns_additionals":ListOf(dns_answer),
+    "dns_unconsumed_bytes":Integer(), 
+    "dns_parse_err":Integer(),
+    "raw_data":String(),
+    "udp_len":Integer(),
+}, extends=zmap_base)
 
 register_schema("zmap-dns", zmap_dns)
