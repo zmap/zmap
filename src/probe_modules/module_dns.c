@@ -24,7 +24,7 @@
  * - That the response bytes that should be the ID field matches the send bytes.
  * - That the response bytes that should be question match send bytes.
  * To be marked as app_success it also requires:
- * - That the QR bit be 1 and rcode ==0.
+ * - That the QR bit be 1 and rcode == 0.
  *
  * Usage: zmap -p 53 --probe-module=dns --probe-args="ANY,www.example.com" 
  *			-O json --output-fields=* 8.8.8.8
@@ -774,49 +774,33 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		uint32_t *validation) 
 {	
 	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
-
-	log_trace("dns", "processing packet from %s len %u", 
-			make_ip_str(ip_hdr->ip_src.s_addr), len);
-
-	//fs_add_string(fs, "icmp_responder", make_ip_str(ip_hdr->ip_src.s_addr), 1);
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
-
 		struct udphdr *udp_hdr = (struct udphdr *) ((char *) ip_hdr + 
 				ip_hdr->ip_hl * 4);
 		uint16_t udp_len = ntohs(udp_hdr->uh_ulen);
-
-		// Handles in validate.
 		assert(udp_len >= dns_packet_len); 
-
 		char* qname_p = NULL;
 		dns_question_tail* tail_p = NULL;
 		bool is_valid = 0;
-		
 		dns_header* dns_header_p = (dns_header*) &udp_hdr[1];
-	 
 		// verify our dns transaction id
 		if (dns_header_p->id == (validation[2] & 0xFFFF)) {
-
 			// Verify our question
 			qname_p = (char*) dns_header_p + sizeof(dns_header);
 			tail_p = (dns_question_tail*)(dns_packet + sizeof(dns_header) + 
 					qname_len);
-
 			// Verify our qname
 			if (strcmp(qname, qname_p) == 0) {
-			
 				// Verify the qtype and qclass.
-				if (tail_p->qtype == htons(qtype) && tail_p->qclass == htons(0x01)) {
+				if (tail_p->qtype == htons(qtype) && tail_p->qclass \
+						== htons(0x01)) {
 					is_valid = 1;
 				}
 			}
 		}
-	
 		dns_header* dns_hdr = (dns_header*) &udp_hdr[1];
-		
 		uint16_t qr = dns_hdr->qr;
 		uint16_t rcode = dns_hdr->rcode;
-
 		// Success: Has the right validation bits and the right Q
 		// App success: has qr and rcode bits right
 		// Any app level parsing issues: dns_parse_err
@@ -826,18 +810,16 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		fs_add_uint64(fs, "success", is_valid);
 		fs_add_uint64(fs, "app_success", 
 				is_valid && (qr == DNS_QR_ANSWER) && (rcode == DNS_RCODE_NOERR));
-		
 		// UDP info
 		fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
 		fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
 		fs_add_uint64(fs, "udp_len", udp_len);
-		
 		// ICMP info
 		fs_add_null(fs, "icmp_responder");
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
-		
+	        // DNS data	
 		if (!is_valid) {
 			// DNS header
 			fs_add_null(fs, "dns_id"); 
@@ -863,9 +845,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 
 			fs_add_uint64(fs, "dns_unconsumed_bytes", 0); 
 			fs_add_uint64(fs, "dns_parse_err", 1); 
-
 		} else {
-
 			// DNS header
 			fs_add_uint64(fs, "dns_id", ntohs(dns_hdr->id)); 
 			fs_add_uint64(fs, "dns_rd", dns_hdr->rd); 
@@ -882,12 +862,10 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 			fs_add_uint64(fs, "dns_ancount", ntohs(dns_hdr->ancount)); 
 			fs_add_uint64(fs, "dns_nscount", ntohs(dns_hdr->nscount)); 
 			fs_add_uint64(fs, "dns_arcount", ntohs(dns_hdr->arcount)); 
-
 			// And now for the complicated part. Hierarchical data. 
 			char* data = ((char*)dns_hdr) + sizeof(dns_header);
 			uint16_t data_len = udp_len - sizeof(udp_hdr) - sizeof(dns_header);
 			bool err = 0;
-
 			// Questions
 			fieldset_t *list = fs_new_repeated_fieldset();
 			for (int i = 0; i < ntohs(dns_hdr->qdcount) && !err; i++) {
@@ -895,7 +873,6 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 							udp_len, list);    
 			}
 			fs_add_repeated(fs, "dns_questions", list);
-
 			// Answers
 			list = fs_new_repeated_fieldset();
 			for (int i = 0; i < ntohs(dns_hdr->ancount) && !err; i++) {
@@ -903,7 +880,6 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 						 udp_len, list); 
 			}
 			fs_add_repeated(fs, "dns_answers", list);
-
 			// Authorities
 			list = fs_new_repeated_fieldset();
 			for (int i = 0; i < ntohs(dns_hdr->nscount) && !err; i++) {
@@ -916,27 +892,21 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 			list = fs_new_repeated_fieldset();
 			for (int i = 0; i < ntohs(dns_hdr->arcount) && !err; i++) {
 				err = process_response_answer(&data, &data_len, (char*)dns_hdr, 
-						udp_len, list);   
+						udp_len, list);
 			}
 			fs_add_repeated(fs, "dns_additionals", list);
-
 			// Do we have unconsumed data?
 			fs_add_uint64(fs, "dns_unconsumed_bytes", data_len); 
-
 			if (data_len != 0) {
 				err = 1;
 			}
-
 			// Did we parse OK?
 			fs_add_uint64(fs, "dns_parse_err", err); 
 		}
-	
 		// Now the raw stuff.
 		fs_add_binary(fs, "raw_data", (udp_len - sizeof(struct udphdr)),
 				(void*) &udp_hdr[1], 0);
-   
 		return;
-	
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		struct icmp *icmp = (struct icmp*) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
 		struct ip *ip_inner = (struct ip*) ((char *) icmp + 
@@ -947,17 +917,14 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 				4*ip_inner->ip_hl);
 		
 		uint16_t udp_len = ntohs(udp_hdr->uh_ulen);
-
 		// High level info	  
-		fs_add_string(fs, "classification", (char*) "dns", 0);
+		fs_add_string(fs, "classification", (char*) "icmp-unreach", 0);
 		fs_add_uint64(fs, "success", 0);
 		fs_add_uint64(fs, "app_success", 0);
-		
 		// UDP info
 		fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
 		fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
 		fs_add_uint64(fs, "udp_len", udp_len);
-		
 		// ICMP info
 		// XXX This is legacy. not well tested.
 		fs_add_string(fs, "icmp_responder", make_ip_str(ip_hdr->ip_src.s_addr), 1);
@@ -969,7 +936,6 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		} else {
 			fs_add_string(fs, "icmp_unreach_str", (char *) "unknown", 0);
 		}
-		
 		// DNS header
 		fs_add_null(fs, "dns_id"); 
 		fs_add_null(fs, "dns_rd"); 
@@ -999,8 +965,11 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		return;
 
 	} else {
-		// This should not happen. Both the pcap filter and validate packet prevent this.
-		log_fatal("dns", "Die. This can only happen if you change the pcap filter and don't update the process function.");
+		// This should not happen. Both the pcap filter and validate
+		// packet prevent this.
+		log_fatal("dns", "Die. This can only happen if you "
+				"change the pcap filter and don't update the "
+				"process function.");
 		return;
 	}
 }
@@ -1015,28 +984,30 @@ static fielddef_t fields[] = {
 	{.name = "icmp_responder", .type = "string", .desc = "Source IP of ICMP_UNREACH message"},
 	{.name = "icmp_type", .type = "int", .desc = "icmp message type"},
 	{.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
-	{.name = "icmp_unreach_str", .type = "string", .desc = "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"},
-	{.name = "dns_id", .type = "int", .desc ="DNS transaction ID"},
-	{.name = "dns_rd", .type = "int", .desc ="DNS recursion desired"},
-	{.name = "dns_tc", .type = "int", .desc ="DNS packet truncated"},
-	{.name = "dns_aa", .type = "int", .desc ="DNS authoritative answer"},
-	{.name = "dns_opcode", .type = "int", .desc ="DNS opcode (query type)"},
-	{.name = "dns_qr", .type = "int", .desc ="DNS query(0) or response (1)"},
-	{.name = "dns_rcode", .type = "int", .desc ="DNS response code"},
-	{.name = "dns_cd", .type = "int", .desc ="DNS checking disabled"},
-	{.name = "dns_ad", .type = "int", .desc ="DNS authenticated data"},
-	{.name = "dns_z", .type = "int", .desc ="DNS reserved"},
-	{.name = "dns_ra", .type = "int", .desc ="DNS recursion available"},
-	{.name = "dns_qdcount", .type = "int", .desc ="DNS number questions"},
-	{.name = "dns_ancount", .type = "int", .desc ="DNS number answer RR's"},
-	{.name = "dns_nscount", .type = "int", .desc ="DNS number NS RR's in authority section"},
-	{.name = "dns_arcount", .type = "int", .desc ="DNS number additional RR's"},
-	{.name = "dns_questions", .type = "repeated", .desc ="DNS question list"},
-	{.name = "dns_answers", .type = "repeated", .desc ="DNS answer list"},
-	{.name = "dns_authorities", .type = "repeated", .desc ="DNS authority list"},
-	{.name = "dns_additionals", .type = "repeated", .desc ="DNS additional list"},
-	{.name = "dns_parse_err", .type = "int", .desc ="Problem parsing the DNS response"},
-	{.name = "dns_unconsumed_bytes", .type = "int", .desc ="Bytes left over when parsing the DNS response"},
+	{.name = "icmp_unreach_str", .type = "string", .desc = "for icmp_unreach responses, "
+			"the string version of icmp_code (e.g. network-unreach)"},
+	{.name = "dns_id", .type = "int", .desc = "DNS transaction ID"},
+	{.name = "dns_rd", .type = "int", .desc = "DNS recursion desired"},
+	{.name = "dns_tc", .type = "int", .desc = "DNS packet truncated"},
+	{.name = "dns_aa", .type = "int", .desc = "DNS authoritative answer"},
+	{.name = "dns_opcode", .type = "int", .desc = "DNS opcode (query type)"},
+	{.name = "dns_qr", .type = "int", .desc = "DNS query(0) or response (1)"},
+	{.name = "dns_rcode", .type = "int", .desc = "DNS response code"},
+	{.name = "dns_cd", .type = "int", .desc = "DNS checking disabled"},
+	{.name = "dns_ad", .type = "int", .desc = "DNS authenticated data"},
+	{.name = "dns_z", .type = "int", .desc = "DNS reserved"},
+	{.name = "dns_ra", .type = "int", .desc = "DNS recursion available"},
+	{.name = "dns_qdcount", .type = "int", .desc = "DNS number questions"},
+	{.name = "dns_ancount", .type = "int", .desc = "DNS number answer RR's"},
+	{.name = "dns_nscount", .type = "int", .desc = "DNS number NS RR's in authority section"},
+	{.name = "dns_arcount", .type = "int", .desc = "DNS number additional RR's"},
+	{.name = "dns_questions", .type = "repeated", .desc = "DNS question list"},
+	{.name = "dns_answers", .type = "repeated", .desc = "DNS answer list"},
+	{.name = "dns_authorities", .type = "repeated", .desc = "DNS authority list"},
+	{.name = "dns_additionals", .type = "repeated", .desc = "DNS additional list"},
+	{.name = "dns_parse_err", .type = "int", .desc = "Problem parsing the DNS response"},
+	{.name = "dns_unconsumed_bytes", .type = "int", .desc = "Bytes left over when parsing"
+			" the DNS response"},
 	{.name = "raw_data", .type="binary", .desc = "UDP payload"},
 };
 
