@@ -1,5 +1,5 @@
 /*
- * ZMap Redis Helpers Copyright 2013 Regents of the University of Michigan
+ * ZMap Copyright 2013 Regents of the University of Michigan
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
@@ -34,7 +34,10 @@ int redis_parse_connstr(char *connstr, redisconf_t* redis_conf)
 		uint32_t port;
 		if (sscanf(connstr, "tcp://%[^:]:%u/%s", servername,
 						&port, list_name) != 3) {
-			char *back = stpncpy(&redis_conf->error[0], "unable to parse redis connection string. This should be of the form tcp://server:port/list-name for TCP connections. All fields are required.", ZMAP_REDIS_ERRLEN);
+			char *back = stpncpy(&redis_conf->error[0], "unable to "
+				"parse redis connection string. This should be of the form "
+				"tcp://server:port/list-name for TCP connections. All fields"
+				" are required.", ZMAP_REDIS_ERRLEN);
 			*back = '\0';
 			return ZMAP_REDIS_ERROR;
 		}
@@ -52,7 +55,9 @@ int redis_parse_connstr(char *connstr, redisconf_t* redis_conf)
 		connstr = connstr + (size_t) 8;
 		char *listname = strrchr(connstr, '/');
 		if (listname == NULL) {
-			char *back = stpncpy(&redis_conf->error[0], "bad local url (missing a slash)", ZMAP_REDIS_ERRLEN);
+			char *back = stpncpy(&redis_conf->error[0], 
+					"bad local url (missing a slash)",
+					ZMAP_REDIS_ERRLEN);
 			*back = '\0';
 			return ZMAP_REDIS_ERROR;
 		}
@@ -74,7 +79,9 @@ int redis_parse_connstr(char *connstr, redisconf_t* redis_conf)
 		redis_conf->server = NULL;
 		redis_conf->port = 0;
 	} else {
-		char *back = stpncpy(&redis_conf->error[0], "redis connection string does not being with tcp:// or local://", ZMAP_REDIS_ERRLEN);
+		char *back = stpncpy(&redis_conf->error[0],
+				"redis connection string does not being with "
+				"tcp:// or local://", ZMAP_REDIS_ERRLEN);
 		*back = '\0';
 		return ZMAP_REDIS_ERROR;
 	}
@@ -238,7 +245,8 @@ int redis_pull(redisContext* rctx, char *redisqueuename, void *buf,
 	assert(rctx);
 	long elems_in_redis = redis_get_sizeof_list(rctx, redisqueuename);
 	long num_to_add = MIN(elems_in_redis, maxload);
-	log_trace("redis", "redis load called on %s. Transferring %li of %li elements to in-memory queue.",
+	log_debug("redis", "redis load called on %s. Transferring %li of %li elements "
+			"to in-memory queue.",
 			redisqueuename, num_to_add, elems_in_redis);
 	for (int i = 0; i < num_to_add; i++) {
 		redisAppendCommand(rctx, "%s %s", cmd, redisqueuename);
@@ -287,10 +295,11 @@ int redis_spull(redisContext* rctx, char *redisqueuename, void *buf,
 			maxload, obj_size, numloaded, "SRAND");
 }
 
-static int redis_pull_one(redisContext *rctx, char *queuename, void **buf, size_t *len, const char *cmd)
+static int redis_pull_one(redisContext *rctx, char *queuename, void **buf,
+		size_t *len, const char *cmd)
 {
 	assert(rctx);
-    redisReply *reply = redisCommand(rctx, "%s %s", cmd, queuename);
+	redisReply *reply = redisCommand(rctx, "%s %s", cmd, queuename);
 	if (chkerr(rctx, reply)) {
 		return ZMAP_REDIS_ERROR;
 	}
@@ -307,12 +316,14 @@ static int redis_pull_one(redisContext *rctx, char *queuename, void **buf, size_
 	return ZMAP_REDIS_SUCCESS;
 }
 
-int redis_lpull_one(redisContext *rctx, char *queuename, void **buf, size_t *len)
+int redis_lpull_one(redisContext *rctx, char *queuename, void **buf,
+		size_t *len)
 {
 	return redis_pull_one(rctx, queuename, buf, len, "LPOP");
 }
 
-int redis_spull_one(redisContext *rctx, char *queuename, void **buf, size_t *len)
+int redis_spull_one(redisContext *rctx, char *queuename, void **buf, 
+		size_t *len)
 {
 	return redis_pull_one(rctx, queuename, buf, len, "SRAND");
 }
@@ -364,7 +375,8 @@ int redis_spush(redisContext* rctx, char *redisqueuename,
 	return redis_push(rctx, redisqueuename, buf, num, len, "SADD");
 }
 
-static int redis_push_one(redisContext *rctx, char *queuename, void *buf, size_t len, const char *cmd)
+static int redis_push_one(redisContext *rctx, char *queuename, void *buf,
+		size_t len, const char *cmd)
 {
 	assert(rctx);
 	redisReply *reply = redisCommand(rctx, "%s %s %b", cmd, queuename, buf, len);
@@ -387,7 +399,8 @@ int redis_spush_one(redisContext *rctx, char *queuename,
 	return redis_push_one(rctx, queuename, buf, len, "SADD");
 }
 
-static int redis_push_strings(redisContext* rctx, char *redisqueuename, char **buf, int num, const char *cmd)
+static int redis_push_strings(redisContext* rctx, char *redisqueuename,
+		char **buf, int num, const char *cmd)
 {
 	assert(rctx);
 	for (int i = 0; i < num; i++) {

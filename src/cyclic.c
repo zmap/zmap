@@ -155,7 +155,7 @@ uint64_t isomorphism(uint64_t additive_elt, const cyclic_group_t* mult_group)
 	mpz_init(primroot);
 	mpz_powm(primroot, base, power, prime);
 	uint64_t retv = (uint64_t) mpz_get_ui(primroot);
-	log_trace("zmap", "Isomorphism: %llu", retv);
+	log_debug("zmap", "Isomorphism: %llu", retv);
 	mpz_clear(base);
 	mpz_clear(power);
 	mpz_clear(prime);

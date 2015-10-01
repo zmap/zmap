@@ -295,7 +295,7 @@ static node_t* _lookup_node(node_t *root, uint32_t prefix, int len)
 void constraint_paint_value(constraint_t *con, value_t value)
 {
 	assert(con);
-	log_trace("constraint", "Painting value %lu", value);
+	log_debug("constraint", "Painting value %lu", value);
 
 	// Paint everything except what we will put in radix
 	_count_ips_recurse(con->root, value, (uint64_t)1 << 32, 1, 1);
@@ -343,7 +343,7 @@ constraint_t* constraint_init(value_t value)
 void constraint_free(constraint_t *con)
 {
 	assert(con);
-	log_trace("constraint", "Cleaning up");
+	log_debug("constraint", "Cleaning up");
 	_destroy_subtree(con->root);
 	free(con->radix);
 	free(con);

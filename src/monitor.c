@@ -354,7 +354,7 @@ static FILE* init_status_update_file(char *path)
 			log_fatal("csv", "could not open output file (%s)",
 					zconf.status_updates_file);
 		}
-		log_trace("monitor", "status updates CSV will be saved to %s",
+		log_debug("monitor", "status updates CSV will be saved to %s",
 				zconf.status_updates_file);
 		fprintf(f,
 				"real-time,time-elapsed,time-remaining,"

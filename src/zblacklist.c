@@ -188,7 +188,7 @@ int main(int argc, char **argv)
                         strchr(line, '#'));
 		assert(n);
 		n[0] = 0;
-		log_trace("zblacklist", "input value %s", line);
+		log_debug("zblacklist", "input value %s", line);
 		// parse into int
 		struct in_addr addr;
 		if (!inet_aton(line, &addr)) {
@@ -196,13 +196,13 @@ int main(int argc, char **argv)
 		}
 		if (conf.check_duplicates) {
 			if (pbm_check(seen, ntohl(addr.s_addr))) {
-				log_trace("zblacklist", "%s is a duplicate: skipped", line);
+				log_debug("zblacklist", "%s is a duplicate: skipped", line);
 				continue;
 			} else {
-				log_trace("zblacklist", "%s not a duplicate: skipped", line);
+				log_debug("zblacklist", "%s not a duplicate: skipped", line);
 			}
 		} else {
-				log_trace("zblacklist", "no duplicate checking for %s", line);
+				log_debug("zblacklist", "no duplicate checking for %s", line);
 		}
 		// check if in blacklist
 		if (blacklist_is_allowed(addr.s_addr)) {

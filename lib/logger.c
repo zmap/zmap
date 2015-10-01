@@ -188,6 +188,7 @@ int log_debug(const char *name, const char *message, ...) {
 	return ret;
 }
 
+#ifdef DEBUG
 extern int log_trace(const char *name, const char *message, ...) {
 	va_list va;
 	va_start(va, message);
@@ -206,8 +207,8 @@ extern int log_trace(const char *name, const char *message, ...) {
 	free(prefixed);
 
 	return ret;
-
 }
+#endif
 
 int log_init(FILE *stream, enum LogLevel level,
 		int syslog_enabled, const char *appname)
