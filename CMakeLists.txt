@@ -6,6 +6,7 @@ option(WITH_REDIS "Build with support for Redis DB" OFF)
 option(WITH_MONGO "Build with support for MongoDB" OFF)
 option(WITH_JSON "Build with support for JSON" ON)
 option(ENABLE_DEVELOPMENT "Enable development specific compiler and linker flags" OFF)
+option(ENABLE_LOG_TRACE "Enable log trace messages" OFF)
 option(RESPECT_INSTALL_PREFIX_CONFIG "Respect CMAKE_INSTALL_PREFIX for /etc" OFF)
 option(WITH_WERROR "Build with -Werror" OFF)
 option(WITH_PFRING "Build with PF_RING ZC for send (10 GigE)" OFF)
@@ -43,7 +44,6 @@ endif()
 if(ENABLE_DEVELOPMENT)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ggdb")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -g")
-    add_definitions("-DDEBUG")
 else()
     # Hardening and optimizations for building with gcc
     set(GCCHARDENING "-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fstack-protector-all -fwrapv -fPIC --param ssp-buffer-size=1")
@@ -56,6 +56,11 @@ else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${GCCHARDENING} -O2")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LDHARDENING}")
 endif()
+
+if(ENABLE_LOG_TRACE)
+    add_definitions("-DDEBUG")
+endif()
+
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${GCCWARNINGS}")
 
