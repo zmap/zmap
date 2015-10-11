@@ -316,7 +316,7 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		struct udphdr *udp = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
-		fs_add_string(fs, "classification", (char*) "udp", 0);
+		fs_add_constchar(fs, "classification", "udp");
 		fs_add_uint64(fs, "success", 1);
 		fs_add_uint64(fs, "sport", ntohs(udp->uh_sport));
 		fs_add_uint64(fs, "dport", ntohs(udp->uh_dport));

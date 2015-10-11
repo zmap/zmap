@@ -114,6 +114,21 @@ void fs_add_string(fieldset_t *fs, const char *name, char *value, int free_)
 	fs_add_word(fs, name, FS_STRING, free_, strlen(value), val);
 }
 
+void fs_chkadd_string(fieldset_t *fs, const char *name, char *value, int free_)
+{
+	if (value) {
+		fs_add_string(fs, name, value, free_);
+	} else {
+		fs_add_null(fs, name);
+	}
+}
+
+void fs_add_constchar(fieldset_t *fs, const char *name, const char *value)
+{
+	field_val_t val = { .ptr = (char*) value };
+	fs_add_word(fs, name, FS_STRING, 0, strlen(value), val);
+}
+
 void fs_add_uint64(fieldset_t *fs, const char *name, uint64_t value)
 {
 	field_val_t val = { .num = value };
