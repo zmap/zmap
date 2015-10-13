@@ -141,7 +141,8 @@ static int icmp_validate_packet(const void *packet, uint32_t len,
 }
 
 static void icmp_echo_process_packet(const void *packet,
-		__attribute__((unused)) uint32_t len, fieldset_t *fs)
+                __attribute__((unused)) uint32_t len, fieldset_t *fs,
+                __attribute__((unused)) uint32_t *validation)
 {
 	ip_process_packet(packet, len, fs);
 
@@ -203,6 +204,7 @@ probe_module_t module_icmp_echo = {
 	.process_packet = &icmp_echo_process_packet,
 	.validate_packet = &icmp_validate_packet,
 	.close = NULL,
+        .output_type = OUTPUT_TYPE_STATIC,
 	.fieldsets = (fielddefset_t*[]){
     		&ip_fields,
 		&fields

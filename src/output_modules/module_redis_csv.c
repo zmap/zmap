@@ -29,25 +29,42 @@
 static char **buffer;
 static int buffer_fill = 0;
 static char *queue_name = NULL;
+static redisContext *rctx = NULL;
 
 int rediscsvmodule_init(struct state_conf *conf, UNUSED char **fields, UNUSED int fieldlens)
 {
+	// This function leaks memory but not much
 	buffer = xcalloc(BUFFER_SIZE, sizeof(char*));
 	buffer_fill = 0;
+	redisconf_t c;
+	redisconf_t *rconf = &c;
+	char *connect_string = NULL;
 	if (conf->output_args) {
-		redisconf_t *rconf = redis_parse_connstr(conf->output_args);
-		if (rconf->type == T_TCP) {
-			log_info("redis-module", "{type: TCP, server: %s, "
-					"port: %u, list: %s}", rconf->server,
-					rconf->port, rconf->list_name);
-		} else {
-			log_info("redis-module", "{type: LOCAL, path: %s, "
-					"list: %s}", rconf->path, rconf->list_name);
-		}
+		log_debug("redis-csv", "output args %s", conf->output_args);
+		connect_string = conf->output_args;
+	} else {
+		connect_string = strdup("local:///tmp/redis.sock/zmap");
+	}
+	if (redis_parse_connstr(connect_string, rconf) != ZMAP_REDIS_SUCCESS) {
+		log_error("redis-csv", "error parsing connect string (%s)",
+				rconf->error);
+		return EXIT_FAILURE;
+	}
+	if (rconf->type == T_TCP) {
+		log_info("redis-csv", "{type: TCP, server: %s, "
+				"port: %u, list: %s}", rconf->server,
+				rconf->port, rconf->list_name);
+	} else {
+		log_info("redis-csv", "{type: LOCAL, path: %s, "
+				"list: %s}", rconf->path, rconf->list_name);
+	}
+
+	if (rconf && rconf->list_name) {
 		queue_name = rconf->list_name;
 	} else {
 		queue_name = strdup("zmap");
 	}
+
 	// generate field names CSV list to be logged.
 	char *fieldstring = xcalloc(1000, fieldlens);
 	memset(fieldstring, 0, sizeof(fields));
@@ -60,12 +77,18 @@ int rediscsvmodule_init(struct state_conf *conf, UNUSED char **fields, UNUSED in
 	log_info("redis-csv", "the following fields will be output to redis: %s.",
 			fieldstring);
 	free(fields);
-	return redis_init(conf->output_args);
+
+	rctx = redis_connect_from_conf(rconf);
+	if (!rctx) {
+		log_error("redis-csv", "could not connect to redis");
+		return EXIT_FAILURE;
+	}
+	return EXIT_SUCCESS;
 }
 
 static int rediscsvmodule_flush(void)
 {
-	if (redis_lpush_strings((char*) queue_name, buffer, buffer_fill)) {
+	if (redis_lpush_strings(rctx, (char*) queue_name, buffer, buffer_fill)) {
 		return EXIT_FAILURE;
 	}
 	for (int i=0; i < buffer_fill; i++) {
@@ -169,7 +192,7 @@ int rediscsvmodule_close(UNUSED struct state_conf* c,
 	if (rediscsvmodule_flush()) {
 		return EXIT_FAILURE;
 	}
-	if (redis_close()) {
+	if (redis_close(rctx)) {
 		return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;
@@ -183,10 +206,10 @@ output_module_t module_redis_csv = {
 	.update_interval = 0,
 	.close = &rediscsvmodule_close,
 	.process_ip = &rediscsvmodule_process,
+    .supports_dynamic_output = NO_DYNAMIC_SUPPORT,
 	.helptext = "Outputs one or more output fields in csv, and then flushes out to redis. \n"
     "By default, the probe module does not filter out duplicates or limit to successful fields, \n"
     "but rather includes all received packets. Fields can be controlled by \n"
     "setting --output-fileds. Filtering out failures and duplicate packets can \n"
     "be achieved by setting an --output-filter."
 };
-

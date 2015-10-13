@@ -12,6 +12,9 @@
 #include "../state.h"
 #include "../fieldset.h"
 
+#define NO_DYNAMIC_SUPPORT 0
+#define DYNAMIC_SUPPORT 1
+
 // called at scanner initialization
 typedef int (*output_init_cb)(struct state_conf *, char **fields, int fieldslen);
 
@@ -24,6 +27,7 @@ typedef int (*output_update_cb)(struct state_conf*,
 
 typedef struct output_module {
 	const char *name;
+    int supports_dynamic_output;
 	int filter_duplicates;
 	int filter_unsuccessful;
 	unsigned update_interval;

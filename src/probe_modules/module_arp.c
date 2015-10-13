@@ -147,7 +147,8 @@ int arp_validate_packet(const void *packet,
 }
 
 void arp_process_packet(const void *packet,
-		__attribute__((unused)) uint32_t len, fieldset_t *fs)
+                        __attribute__((unused)) uint32_t len, fieldset_t *fs,
+                        __attribute__((unused)) uint32_t *validation)
 {
 	struct ether_header *ethh = (struct ether_header *) packet;
 	struct arp_pkt *arp_packet = (struct arp_pkt *)(&ethh[1]);

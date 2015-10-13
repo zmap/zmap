@@ -68,9 +68,11 @@ int ntp_validate_packet(const void *packet, uint32_t len,
 	return 1;
 }
 
-void ntp_process_packet(const void *packet, __attribute__((unused)) uint32_t len, fieldset_t *fs)
+void ntp_process_packet(const void *packet, 
+                        __attribute__((unused)) uint32_t len, fieldset_t *fs,
+                        uint32_t *validation)
 {
-	udp_process_packet(packet, len, fs);
+        udp_process_packet(packet, len, fs, validation);
 
 	struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
 	uint8_t *ptr;
@@ -215,6 +217,7 @@ probe_module_t module_ntp = {
 	.validate_packet = &ntp_validate_packet,
 	.process_packet = &ntp_process_packet,
 	.close = &udp_global_cleanup,
+        .output_type = OUTPUT_TYPE_STATIC,
 	.fieldsets = (fielddefset_t*[]){
     		&ip_fields,
 		&udp_fields,

@@ -3,49 +3,50 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/lib
     ${PROJECT_SOURCE_DIR}/src
     ${PROJECT_SOURCE_DIR}/src/output_modules
+    ${PROJECT_SOURCE_DIR}/src/tests
 )
 
 # ADD YOUR PROBE MODULE HERE
-SET(EXTRA_PROBE_MODULES
+set(EXTRA_PROBE_MODULES
 )
 
 # ADD YOUR OUTPUT MODULE HERE
-SET(EXTRA_OUTPUT_MODULES
+set(EXTRA_OUTPUT_MODULES
 )
 
-SET(OUTPUT_MODULE_SOURCES
+set(OUTPUT_MODULE_SOURCES
     output_modules/module_csv.c
     output_modules/output_modules.c
 )
 
 # Handle optional output modules
-if (WITH_JSON)
-    SET(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_json.c)
+if(WITH_JSON)
+    set(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_json.c)
 endif()
 
-if (WITH_REDIS)
-    SET(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_redis_packed.c output_modules/module_redis_csv.c)
+if(WITH_REDIS)
+    set(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_redis_packed.c output_modules/module_redis_csv.c)
 endif()
 
-if (WITH_MONGO)
-    SET(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_mongodb.c)
+if(WITH_MONGO)
+    set(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_mongodb.c)
 endif()
 
-SET(PROBE_MODULE_SOURCES
+set(PROBE_MODULE_SOURCES
     probe_modules/module_icmp_echo.c
     probe_modules/module_icmp_echo_time.c
     probe_modules/module_tcp_synscan.c
+    probe_modules/module_tcp_cisco_backdoor.c
     probe_modules/module_udp.c
-    probe_modules/module_udp_dns.c
-    probe_modules/module_dns_mx.c
     probe_modules/packet.c
     probe_modules/probe_modules.c
     probe_modules/module_arp.c
     probe_modules/module_ntp.c
     probe_modules/module_upnp.c
+    probe_modules/module_dns.c
 )
 
-SET(SOURCES
+set(SOURCES
     aesrand.c
     cyclic.c
     expression.c
@@ -72,13 +73,40 @@ SET(SOURCES
     ${OUTPUT_MODULE_SOURCES}
 )
 
-SET(ZBLSOURCES
+set(ZTESTSOURCES
+    aesrand.c
+    cyclic.c
+    expression.c
+    fieldset.c
+    filter.c
+    get_gateway.c
+    iterator.c
+    monitor.c
+    recv.c
+    send.c
+    shard.c
+    socket.c
+    state.c
+    summary.c
+    validate.c
+    zopt_compat.c
+    ${PROBE_MODULE_SOURCES}
+    ${OUTPUT_MODULE_SOURCES}
+    tests/test_harness.c
+    "${CMAKE_CURRENT_BINARY_DIR}/zopt.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/lexer.c"
+    "${CMAKE_CURRENT_BINARY_DIR}/parser.c"
+    ${EXTRA_PROBE_MODULES}
+    ${EXTRA_OUTPUT_MODULES}
+)
+
+set(ZBLSOURCES
     zblacklist.c
     zbopt_compat.c
     "${CMAKE_CURRENT_BINARY_DIR}/zbopt.h"
 )
 
-SET(ZTEESOURCES
+set(ZTEESOURCES
     ztee.c
     topt_compat.c
     "${CMAKE_CURRENT_BINARY_DIR}/topt.h"
@@ -86,19 +114,28 @@ SET(ZTEESOURCES
 
 # Handle various versions of socket
 if(WITH_PFRING)
-    SET(SOURCES ${SOURCES} socket-pfring.c)
+    set(SOURCES ${SOURCES} socket-pfring.c)
+    set(ZTESTSOURCES ${ZTESTSOURCES} socket-pfring.c)
 elseif (APPLE OR BSD)
-    SET(SOURCES ${SOURCES} socket-bsd.c)
+    set(SOURCES ${SOURCES} socket-bsd.c)
+    set(ZTESTSOURCES ${ZTESTSOURCES} socket-bsd.c)
 else()
-    SET(SOURCES ${SOURCES} socket-linux.c)
+    set(SOURCES ${SOURCES} socket-linux.c)
+    set(ZTESTSOURCES ${ZTESTSOURCES} socket-linux.c)
 endif()
 
 # Handle various versions of recv
 if(WITH_PFRING)
-    SET(SOURCES ${SOURCES} recv-pfring.c)
+    set(SOURCES ${SOURCES} recv-pfring.c)
+    set(ZTESTSOURCES ${ZTESTSOURCES} recv-pfring.c)
 else()
-    SET(SOURCES ${SOURCES} recv-pcap.c)
+    set(SOURCES ${SOURCES} recv-pcap.c)
+    set(ZTESTSOURCES ${ZTESTSOURCES} recv-pcap.c)
 endif()
+
+configure_file(topt.ggo.in ${CMAKE_BINARY_DIR}/src/topt.ggo @ONLY)
+configure_file(zbopt.ggo.in ${CMAKE_BINARY_DIR}/src/zbopt.ggo @ONLY)
+configure_file(zopt.ggo.in ${CMAKE_BINARY_DIR}/src/zopt.ggo @ONLY)
 
 add_custom_command(OUTPUT zopt.h
     COMMAND gengetopt -C --no-help --no-version --unamed-opts=SUBNETS -i "${CMAKE_CURRENT_SOURCE_DIR}/zopt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/zopt"
@@ -128,8 +165,9 @@ add_custom_command(OUTPUT parser.c
 add_executable(zmap ${SOURCES})
 add_executable(zblacklist ${ZBLSOURCES})
 add_executable(ztee ${ZTEESOURCES})
+add_executable(ztests ${ZTESTSOURCES})
 
-if (APPLE OR BSD)
+if(APPLE OR BSD)
     set(DNET_LIBRARIES "dnet")
 else()
     set(DNET_LIBRARIES "")
@@ -156,6 +194,17 @@ target_link_libraries(
     ztee
     zmaplib
     m
+)
+
+target_link_libraries(
+    ztests
+    zmaplib
+    ${PFRING_LIBRARIES}
+    pcap gmp m
+    ${DNET_LIBRARIES}
+    ${REDIS_LIBS}
+    ${JSON_LIBRARIES}
+    ${MONGO_LIBRARIES}
 )
 
 # Install binary

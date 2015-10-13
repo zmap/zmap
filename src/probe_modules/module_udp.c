@@ -310,7 +310,8 @@ void udp_print_packet(FILE *fp, const void* packet)
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
-void udp_process_packet(const void *packet, uint32_t len, fieldset_t *fs)
+void udp_process_packet(const void *packet, UNUSED uint32_t len, fieldset_t *fs,
+       __attribute__((unused)) uint32_t *validation)
 {
 	ip_process_packet(packet, len, fs);
  

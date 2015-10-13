@@ -116,12 +116,11 @@ static int icmp_validate_packet(const void *packet, uint32_t len,
     }
 
     struct icmp *icmp_h = (struct icmp *) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
-    uint16_t icmp_idnum = icmp_h->icmp_id;
 
     // ICMP validation is tricky: for some packet types, we must look inside
     // the payload
     if (icmp_h->icmp_type == ICMP_TIMXCEED || icmp_h->icmp_type == ICMP_UNREACH) {
-
+        //uint16_t icmp_idnum = icmp_h->icmp_id;
         // Should have 16B TimeExceeded/Dest_Unreachable header + original IP header
         // + 1st 8B of original ICMP frame
         if ((4*ip_hdr->ip_hl + ICMP_TIMXCEED_UNREACH_HEADER_SIZE +
@@ -135,10 +134,10 @@ static int icmp_validate_packet(const void *packet, uint32_t len,
             return 0;
         }
 
-        struct icmp *icmp_inner = (struct icmp *)((char *) ip_inner + 4*ip_hdr->ip_hl);
+        //struct icmp *icmp_inner = (struct icmp *)((char *) ip_inner + 4*ip_hdr->ip_hl);
 
         // Regenerate validation and icmp id based off inner payload
-        icmp_idnum = icmp_inner->icmp_id;
+        //icmp_idnum = icmp_inner->icmp_id;
         *src_ip = ip_inner->ip_dst.s_addr;
         validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
                  (uint8_t *) validation);
@@ -148,7 +147,8 @@ static int icmp_validate_packet(const void *packet, uint32_t len,
 }
 
 static void icmp_echo_process_packet(const void *packet,
-        __attribute__((unused)) uint32_t len, fieldset_t *fs)
+        __attribute__((unused)) uint32_t len, fieldset_t *fs,
+        __attribute__((unused)) uint32_t *validation)
 {
     struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
     struct icmp *icmp_hdr = (struct icmp *) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
@@ -204,7 +204,6 @@ static fielddefset_t fields = {
   .len = 9
 };
 
-
 probe_module_t module_icmp_echo_time = {
     .name = "icmp_echo_time",
     .packet_length = 62,
@@ -217,6 +216,7 @@ probe_module_t module_icmp_echo_time = {
     .process_packet = &icmp_echo_process_packet,
     .validate_packet = &icmp_validate_packet,
     .close = NULL,
+    .output_type = OUTPUT_TYPE_STATIC,
     .fieldsets = (fielddefset_t*[]){
       &ip_fields,
       &fields

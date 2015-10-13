@@ -15,12 +15,17 @@
 
 // maximum number of records that can be stored in a fieldset
 #define MAX_FIELDS 128
+#define MAX_LIST_LENGTH 255
 
 // types of data that can be stored in a field
-#define FS_STRING 0
-#define FS_UINT64 1
-#define FS_BINARY 2
-#define FS_NULL 3
+#define FS_RESERVED 0
+#define FS_STRING 1
+#define FS_UINT64 2
+#define FS_BINARY 3
+#define FS_NULL 4
+// recursive support
+#define FS_FIELDSET 5
+#define FS_REPEATED 6
 
 // definition of a field that's provided by a probe module
 // these are used so that users can ask at the command-line
@@ -47,7 +52,7 @@ typedef struct field {
 	int type;
 	int free_;
 	size_t len;
-	union field_val value;
+	field_val_t value;
 } field_t;
 
 // data structure that is populated by the probe module
@@ -56,6 +61,10 @@ typedef struct field {
 typedef struct fieldset {
 	int len;
 	field_t fields[MAX_FIELDS];
+    // only used for repeated.
+    int inner_type; // type of repeated element. e.g., FS_STRING
+    int type; // REPEATED or FIELDSET 
+    int free_; // should elements be freed
 } fieldset_t;
 
 // we pass a different fieldset to an output module than
@@ -70,8 +79,13 @@ typedef struct translation {
 	int translation[MAX_FIELDS];
 } translation_t;
 
-
 fieldset_t *fs_new_fieldset(void);
+
+fieldset_t *fs_new_repeated_field(int type, int free_);
+fieldset_t *fs_new_repeated_uint64(void);
+fieldset_t *fs_new_repeated_string(int free_);
+fieldset_t *fs_new_repeated_binary(int free_);
+fieldset_t *fs_new_repeated_fieldset();
 
 char* fs_get_string_by_index(fieldset_t *fs, int index);
 
@@ -87,6 +101,9 @@ void fs_add_string(fieldset_t *fs, const char *name, char *value, int free_);
 
 void fs_add_binary(fieldset_t *fs, const char *name, size_t len,
 		void *value, int free_);
+
+void fs_add_fieldset(fieldset_t *fs, const char *name, fieldset_t *child);
+void fs_add_repeated(fieldset_t *fs, const char *name, fieldset_t *child);
 
 // Modify
 void fs_modify_null(fieldset_t *fs, const char *name);

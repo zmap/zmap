@@ -60,7 +60,6 @@ void recv_packets()
 	handle_packet(pf_buffer->len, pf_buffer->data);
 }
 
-
 int recv_update_stats(void)
 {
 	if (!pf_recv) {
@@ -76,3 +75,4 @@ int recv_update_stats(void)
 	}
 	return EXIT_SUCCESS;
 }
+

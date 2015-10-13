@@ -148,7 +148,6 @@ int main(int argc, char *argv[])
 
 	signal(SIGPIPE, SIG_IGN);
 
-
 	// Handle help text and version
 	if (args.help_given) {
 		cmdline_parser_print_help();
@@ -326,28 +325,27 @@ void *process_queue(void* arg)
 		// Write raw data to output file
 		fprintf(output_file, "%s", node->data);
 		fflush(output_file);
-		if (ferror(output_file) != 0) {
-			log_fatal("ztee", "%s", "Error writing to output file");
+		if (ferror(output_file)) {
+			log_fatal("ztee", "Error writing to output file");
 		}
 
 		// Dump to stdout
-		int stdout_ret;
 		switch (tconf.in_format) {
 		case FORMAT_JSON:
 			log_fatal("ztee", "JSON input format unimplemented");
 			break;
 		case FORMAT_CSV:
-			stdout_ret = print_from_csv(node->data);
+			print_from_csv(node->data);
 			break;
 		default:
 			// Handle raw
-			stdout_ret = fprintf(stdout, "%s", node->data);
+			fprintf(stdout, "%s", node->data);
 			break;
 		}
 
 		// Check to see if write failed
 		fflush(stdout);
-		if (ferror(stdout) != 0 || stdout_ret <= 0) {
+		if (ferror(stdout)) {
 			log_fatal("ztee", "%s", "Error writing to stdout");
 		}
 
@@ -408,6 +406,9 @@ int print_from_csv(char *line)
 	// Find the ip
 	char *ip = csv_get_index(line, tconf.ip_field);
 	int ret = fprintf(stdout, "%s\n", ip);
+	if (ferror(stdout)) {
+		log_fatal("ztee", "unable to write to stdout");
+	}
 	return ret;
 }
 
@@ -485,8 +486,13 @@ void *monitor_ztee(void* arg)
 	stats_t *stats = xmalloc(sizeof(stats_t));
 
 	if (tconf.status_updates_file) {
-		fprintf(tconf.status_updates_file, "time_past,total_read_in,read_in_last_sec,read_per_sec_avg,buffer_current_size,buffer_avg_size\n");
+		fprintf(tconf.status_updates_file, 
+				"time_past,total_read_in,read_in_last_sec,read_per_sec_avg,"
+				"buffer_current_size,buffer_avg_size\n");
 		fflush(tconf.status_updates_file);
+		if (ferror(tconf.status_updates_file)) {
+			log_fatal("ztee", "unable to write to status updates file");
+		}
 	}
 	while (!process_done) {
 		sleep(1);
@@ -502,6 +508,9 @@ void *monitor_ztee(void* arg)
 					stats->buffer_avg_size);
 			fflush(stderr);
 			unlock_file(stderr);
+			if (ferror(stderr)) {
+				log_fatal("ztee", "unable to write status updates to stderr");
+			}
 		}
 		if (tconf.status_updates_file) {
 			fprintf(tconf.status_updates_file, "%u,%u,%u,%u,%u,%u\n",
@@ -512,6 +521,9 @@ void *monitor_ztee(void* arg)
 					stats->buffer_cur_size,
 					stats->buffer_avg_size);
 			fflush(tconf.status_updates_file);
+			if (ferror(tconf.status_updates_file)) {
+				log_fatal("ztee", "unable to write to status updates file");
+			}
 		}
 	}
 	if (tconf.monitor) {

@@ -63,11 +63,15 @@ void handle_packet(uint32_t buflen, const u_char *bytes) {
 				&src_ip, validation)) {
 		return;
 	}
-
+    // woo! We've validated that the packet is a response to our scan
 	int is_repeat = pbm_check(seen, ntohl(src_ip));
+    // track whether this is the first packet in an IP fragment.
+    if (ip_hdr->ip_off & IP_MF) {
+        zrecv.ip_fragments++;   
+    }
 
 	fieldset_t *fs = fs_new_fieldset();
-	zconf.probe_module->process_packet(bytes, buflen, fs);
+        zconf.probe_module->process_packet(bytes, buflen, fs, validation);
 	fs_add_eth_fields(fs, (struct ether_header *) bytes);
 	fs_add_system_fields(fs, is_repeat, zsend.complete);
 	int success_index = zconf.fsconf.success_index;
@@ -181,3 +185,4 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 	log_debug("recv", "thread finished");
 	return 0;
 }
+

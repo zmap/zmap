@@ -4,6 +4,9 @@
 #ifndef PROBE_MODULES_H
 #define PROBE_MODULES_H
 
+#define OUTPUT_TYPE_STATIC 1
+#define OUTPUT_TYPE_DYNAMIC 2
+
 typedef struct probe_response_type {
 		const uint8_t is_success;
 		const char *name;
@@ -24,7 +27,7 @@ typedef int (*probe_validate_packet_cb)(const void* packetbuf,
 		uint32_t len, uint32_t *src_ip, uint32_t *validation);
 
 typedef void (*probe_classify_packet_cb)(const void* packetbuf,
-		uint32_t len, fieldset_t*);
+		uint32_t len, fieldset_t*, uint32_t *validation);
 
 typedef struct probe_module {
 	const char *name;
@@ -43,6 +46,7 @@ typedef struct probe_module {
 	probe_validate_packet_cb validate_packet;
 	probe_classify_packet_cb process_packet;
 	probe_close_cb close;
+        int output_type;
 	fielddefset_t **fieldsets;
 	int num_fieldsets;
 	const char *helptext;

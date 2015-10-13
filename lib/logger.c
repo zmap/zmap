@@ -223,6 +223,13 @@ int log_init(FILE *stream, enum LogLevel level,
 	return 0;
 }
 
+void check_and_log_file_error(FILE *file, const char*name)
+{
+	if (ferror(file)) {
+		log_fatal(name, "unable to write to file");
+	}
+}
+
 double now(void)
 {
 	struct timeval now;
