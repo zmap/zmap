@@ -51,7 +51,7 @@ void mongodb_module_log(mongoc_log_level_t log_level, const char *log_domain,
 		log_debug("mongodb-module", "%s: %s", log_domain, msg);
 	}
 	else {
-		log_trace("mongodb-module", "%s: %s", log_domain, msg);
+		log_debug("mongodb-module", "%s: %s", log_domain, msg);
 	}
 }
 

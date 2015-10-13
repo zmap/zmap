@@ -91,7 +91,7 @@ static void enforce_range(const char *name, int v, int min, int max)
 static void* start_send(void *arg)
 {
 	send_arg_t *s = (send_arg_t *) arg;
-	log_trace("zmap", "Pinning a send thread to core %u", s->cpu);
+	log_debug("zmap", "Pinning a send thread to core %u", s->cpu);
 	set_cpu(s->cpu);
 	send_run(s->sock, s->shard);
 	free(s);
@@ -101,7 +101,7 @@ static void* start_send(void *arg)
 static void* start_recv(void *arg)
 {
 	recv_arg_t *r = (recv_arg_t *) arg;
-	log_trace("zmap", "Pinning receive thread to core %u", r->cpu);
+	log_debug("zmap", "Pinning receive thread to core %u", r->cpu);
 	set_cpu(r->cpu);
 	recv_run(&recv_ready_mutex);
 	return NULL;
@@ -110,7 +110,7 @@ static void* start_recv(void *arg)
 static void *start_mon(void *arg)
 {
 	mon_start_arg_t *mon_arg = (mon_start_arg_t *) arg;
-	log_trace("zmap", "Pinning monitor thread to core %u", mon_arg->cpu);
+	log_debug("zmap", "Pinning monitor thread to core %u", mon_arg->cpu);
 	set_cpu(mon_arg->cpu);
 	monitor_run(mon_arg->it, mon_arg->recv_ready_mutex);
 	free(mon_arg);
@@ -355,7 +355,7 @@ int main(int argc, char *argv[])
 				strerror(errno));
 	}
 	log_init(log_location, zconf.log_level, zconf.syslog, "zmap");
-	log_trace("zmap", "zmap main thread started");
+	log_debug("zmap", "zmap main thread started");
 	if (config_loaded) {
 		log_debug("zmap", "Loaded configuration file %s",
 				args.config_arg);
@@ -367,7 +367,7 @@ int main(int argc, char *argv[])
 	}
 	// parse the provided probe and output module s.t. that we can support
 	// other command-line helpers (e.g. probe help)
-	log_trace("zmap", "requested ouput-module: %s", args.output_module_arg);
+	log_debug("zmap", "requested ouput-module: %s", args.output_module_arg);
 
 	// zmap's default behavior is to provide a simple file of the unique IP
 	// addresses that responded successfully.
@@ -469,10 +469,10 @@ int main(int argc, char *argv[])
 	zconf.fsconf.app_success_index =
 			fds_get_index_by_name(fds, (char*) "app_success");
 	if (zconf.fsconf.app_success_index < 0) {
-		log_trace("fieldset", "probe module does not supply "
+		log_debug("fieldset", "probe module does not supply "
 					  "application success field.");
 	} else {
-		log_trace("fieldset", "probe module supplies app_success"
+		log_debug("fieldset", "probe module supplies app_success"
 				" output field. It will be included in monitor output");
 	}
 	zconf.fsconf.classification_index =
@@ -563,7 +563,7 @@ int main(int argc, char *argv[])
 		if (!zconf.metadata_file) {
 			log_fatal("metadata", "unable to open metadata file");
 		}
-		log_trace("metadata", "metdata will be saved to %s",
+		log_debug("metadata", "metdata will be saved to %s",
 				zconf.metadata_filename);
 #else
 		log_fatal("zmap", "JSON support not compiled into ZMap. "

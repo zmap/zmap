@@ -150,7 +150,7 @@ static void icmp_echo_process_packet(const void *packet,
  	struct icmp *icmp_hdr = (struct icmp *) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
 	fs_add_uint64(fs, "type", icmp_hdr->icmp_type);
 	fs_add_uint64(fs, "code", icmp_hdr->icmp_code);
-	fs_add_uint64(fs, "icmp-id", ntohs(icmp_hdr->icmp_id));
+	fs_add_uint64(fs, "icmp_id", ntohs(icmp_hdr->icmp_id));
 	fs_add_uint64(fs, "seq", ntohs(icmp_hdr->icmp_seq));
 	switch (icmp_hdr->icmp_type) {
 		case ICMP_ECHOREPLY:

@@ -154,12 +154,12 @@ static void icmp_echo_process_packet(const void *packet,
     struct icmp *icmp_hdr = (struct icmp *) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
     fs_add_uint64(fs, "type", icmp_hdr->icmp_type);
     fs_add_uint64(fs, "code", icmp_hdr->icmp_code);
-    fs_add_uint64(fs, "icmp-id", ntohs(icmp_hdr->icmp_id));
+    fs_add_uint64(fs, "icmp_id", ntohs(icmp_hdr->icmp_id));
     fs_add_uint64(fs, "seq", ntohs(icmp_hdr->icmp_seq));
     struct icmp_payload_for_rtt *payload = (struct icmp_payload_for_rtt *)(((char *)icmp_hdr) + 8);
-    fs_add_uint64(fs, "sent-timestamp-ts", (uint64_t)payload->sent_tv_sec);
-    fs_add_uint64(fs, "sent-timestamp-us", (uint64_t)payload->sent_tv_usec);
-    fs_add_uint64(fs, "dst-raw", (uint64_t)payload->dst);
+    fs_add_uint64(fs, "sent_timestamp_ts", (uint64_t)payload->sent_tv_sec);
+    fs_add_uint64(fs, "sent_timestamp_us", (uint64_t)payload->sent_tv_usec);
+    fs_add_uint64(fs, "dst_raw", (uint64_t)payload->dst);
 
     switch (icmp_hdr->icmp_type) {
         case ICMP_ECHOREPLY:
@@ -193,10 +193,10 @@ static fielddefset_t fields = {
   .fielddefs = {
     {.name="type", .type="int", .desc="icmp message type"},
     {.name="code", .type="int", .desc="icmp message sub type code"},
-    {.name="icmp-id", .type="int", .desc="icmp id number"},
+    {.name="icmp_id", .type="int", .desc="icmp id number"},
     {.name="seq", .type="int", .desc="icmp sequence number"},
-    {.name="sent-timestamp-ts", .type="int", .desc="timestamp of sent probe in seconds since Epoch"},
-    {.name="sent-timestamp-us", .type="int", .desc="microsecond part of sent timestamp"},
+    {.name="sent_timestamp_ts", .type="int", .desc="timestamp of sent probe in seconds since Epoch"},
+    {.name="sent_timestamp_us", .type="int", .desc="microsecond part of sent timestamp"},
     {.name="dst-raw", .type="int", .desc="raw destination IP address of sent probe"},
     {.name="classification", .type="string", .desc="probe module classification"},
     {.name="success", .type="int", .desc="did probe module classify response as success"}

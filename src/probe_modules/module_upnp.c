@@ -21,9 +21,9 @@
 #include "module_udp.h"
 
 static const char *upnp_query = "M-SEARCH * HTTP/1.1\r\n"
-		"Host:239.255.255.250:1900\r\n"
-		"ST:upnp:rootdevice\r\n"
-		"Man:\"ssdp:discover\"\r\nMX:3\r\n\r\n";
+"Host:239.255.255.250:1900\r\n"
+"ST:upnp:rootdevice\r\n"
+"Man:\"ssdp:discover\"\r\nMX:3\r\n\r\n";
 
 probe_module_t module_upnp;
 #define ICMP_UNREACH_HEADER_SIZE 8
@@ -53,7 +53,7 @@ int upnp_init_perthread(void* buf, macaddr_t *src, macaddr_t *gw,
 	char* payload = (char*)(&udp_header[1]);
 
 	assert(sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr)
-		+ strlen(upnp_query) <= MAX_PACKET_SIZE);
+			+ strlen(upnp_query) <= MAX_PACKET_SIZE);
 
 	assert(MAX_PACKET_SIZE - ((char*)payload - (char*)buf) > (int) strlen(upnp_query));
 	strcpy(payload, upnp_query);
@@ -84,13 +84,14 @@ int upnp_validate_packet(const void *packet, uint32_t len,
 
 void upnp_process_packet(const void *packet,
 		__attribute__((unused)) uint32_t len, fieldset_t *fs,
-        __attribute__((unused)) uint32_t *validation)
+		__attribute__((unused)) uint32_t *validation)
 {
 	ip_process_packet(packet, len, fs);
 
         struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
         if (ip_hdr->ip_p == IPPROTO_UDP) {
 	  	struct udphdr *udp = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
+
 		char *payload = (char*)(&udp[1]);
 		uint16_t plen = udp->uh_ulen - 8;
 
@@ -107,8 +108,8 @@ void upnp_process_packet(const void *packet,
 		uint64_t is_success = 0;
 
 		char *server=NULL, *location=NULL, *usn=NULL, *st=NULL,
-				*cachecontrol=NULL, *ext=NULL, *xusragent=NULL,
-				*date=NULL, *agent=NULL;
+		     *cachecontrol=NULL, *ext=NULL, *xusragent=NULL,
+		     *date=NULL, *agent=NULL;
 		char *pch = strtok(s, "\n");
 		while (pch != NULL) {
 			if (pch[strlen(pch)-1] == '\r') {
@@ -167,87 +168,32 @@ void upnp_process_packet(const void *packet,
 			  	//log_debug("upnp-module", "new key: %s", key);
 			}
 			pch = strtok(NULL, "\n");
-        	}
-
-	cleanup:
+		}
+cleanup:
 		fs_add_string(fs, "classification", (char *) classification, 0);
 		fs_add_uint64(fs, "success", is_success);
+		fs_chkadd_string(fs, "server", server, 1);
+		fs_chkadd_string(fs, "location", location, 1);
+		fs_chkadd_string(fs, "usn", usn, 1);
+		fs_chkadd_string(fs, "st", st, 1);
+		fs_chkadd_string(fs, "ext", ext, 1);
+		fs_chkadd_string(fs, "cache_control", cachecontrol, 1);
+		fs_chkadd_string(fs, "x_user_agent", xusragent, 1);
+		fs_chkadd_string(fs, "agent", agent, 1);
+		fs_chkadd_string(fs, "date", date, 1);
+		fs_add_uint64(fs, "sport", ntohs(udp->uh_sport));
+		fs_add_uint64(fs, "dport", ntohs(udp->uh_dport));
+		fs_add_null(fs, "icmp_responder");
+		fs_add_null(fs, "icmp_type");
+		fs_add_null(fs, "icmp_code");
+		fs_add_null(fs, "icmp_unreach_str");
 
-		if (server) {
-			fs_add_string(fs, "server", server, 1);
-		}
-		else {
-			fs_add_null(fs, "server");
-		}
-
-		if (location) {
-			fs_add_string(fs, "location", location, 1);
-		}
-		else {
-			fs_add_null(fs, "location");
-		}
-
-		if (usn) {
-			fs_add_string(fs, "usn", usn, 1);
-		}
-		else {
-			fs_add_null(fs, "usn");
-		}
-
-		if (st) {
-			fs_add_string(fs, "st", st, 1);
-		}
-		else {
-			fs_add_null(fs, "st");
-		}
-
-		if (ext) {
-			fs_add_string(fs, "ext", ext, 1);
-		}
-		else {
-			fs_add_null(fs, "ext");
-		}
-
-		if (cachecontrol) {
-			fs_add_string(fs, "cache-control", cachecontrol, 1);
-		}
-		else {
-			fs_add_null(fs, "cache-control");
-		}
-
-		if (xusragent) {
-			fs_add_string(fs, "x-user-agent", xusragent, 1);
-		}
-		else {
-			fs_add_null(fs, "x-user-agent");
-		}
-
-		if (agent) {
-			fs_add_string(fs, "agent", agent, 1);
-		}
-		else {
-			fs_add_null(fs, "agent");
-		}
-
-		if (date) {
-			fs_add_string(fs, "date", date, 1);
-		}
-		else {
-			fs_add_null(fs, "date");
-		}
-
-				fs_add_uint64(fs, "sport", ntohs(udp->uh_sport));
-				fs_add_uint64(fs, "dport", ntohs(udp->uh_dport));
-				fs_add_null(fs, "icmp_responder");
-				fs_add_null(fs, "icmp_type");
-				fs_add_null(fs, "icmp_code");
-				fs_add_null(fs, "icmp_unreach_str");
-
-			fs_add_binary(fs, "data", (ntohs(udp->uh_ulen) - sizeof(struct udphdr)), (void*) &udp[1], 0);
+		fs_add_binary(fs, "data", (ntohs(udp->uh_ulen) - sizeof(struct udphdr)), 
+				(void*) &udp[1], 0);
 
 		free(s);
 
-		} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
+	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
 		struct ip *ip_inner = (struct ip *) ((char *) icmp + ICMP_UNREACH_HEADER_SIZE);
 		// ICMP unreach comes from another server (not the one we sent a probe to);
@@ -261,8 +207,8 @@ void upnp_process_packet(const void *packet,
 		fs_add_null(fs, "usn");
 		fs_add_null(fs, "st");
 		fs_add_null(fs, "ext");
-		fs_add_null(fs, "cache-control");
-		fs_add_null(fs, "x-user-agent");
+		fs_add_null(fs, "cache_control");
+		fs_add_null(fs, "x_user_agent");
 		fs_add_null(fs, "agent");
 		fs_add_null(fs, "date");
 
@@ -277,28 +223,28 @@ void upnp_process_packet(const void *packet,
 			fs_add_string(fs, "icmp_unreach_str", (char *) "unknown", 0);
 		}
 		fs_add_null(fs, "data");
-		} else {
-				fs_add_string(fs, "classification", (char *) "other", 0);
-				fs_add_uint64(fs, "success", 0);
+	} else {
+		fs_add_string(fs, "classification", (char *) "other", 0);
+		fs_add_uint64(fs, "success", 0);
 
 		fs_add_null(fs, "server");
 		fs_add_null(fs, "location");
 		fs_add_null(fs, "usn");
 		fs_add_null(fs, "st");
 		fs_add_null(fs, "ext");
-		fs_add_null(fs, "cache-control");
-		fs_add_null(fs, "x-user-agent");
+		fs_add_null(fs, "cache_control");
+		fs_add_null(fs, "x_user_agent");
 		fs_add_null(fs, "agent");
 		fs_add_null(fs, "date");
 
-				fs_add_null(fs, "sport");
-				fs_add_null(fs, "dport");
-				fs_add_null(fs, "icmp_responder");
-				fs_add_null(fs, "icmp_type");
-				fs_add_null(fs, "icmp_code");
-				fs_add_null(fs, "icmp_unreach_str");
-				fs_add_null(fs, "data");
-		}
+		fs_add_null(fs, "sport");
+		fs_add_null(fs, "dport");
+		fs_add_null(fs, "icmp_responder");
+		fs_add_null(fs, "icmp_type");
+		fs_add_null(fs, "icmp_code");
+		fs_add_null(fs, "icmp_unreach_str");
+		fs_add_null(fs, "data");
+	}
 }
 
 static fielddefset_t fields = {

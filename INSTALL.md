@@ -71,8 +71,12 @@ and installed by running:
 - **Enabling development turns on debug symbols, and turns off optimizations.
 Release builds should be built with `-DENABLE_DEVELOPMENT=OFF`.**
 
+- **Enabling log_trace can have a major performance impact and should not be used
+except during early development. Release builds shoudl be built with `-DENABLE_LOG_TRACE=OFF`.**
+
 - Redis support is not enabled by default. If you want to use ZMap with Redis, you will first need to install hiredis. Then run cmake with `-DWITH_REDIS=ON`. Debian has packaged it as `libhiredis-dev`, Fedora and RHEL have packaged it as `hiredis-devel`.
 
 - MongoDB support is not enabled by default. If you want to use ZMap with MongoDB, you will first need to install mongo-c-driver. Then run cmake with `-DWITH_MONGO=ON`.
 
 - Building packages for some systems like Fedora and RHEL requires a user-definable directory(buildroot) to put files, the conducive way to respect prefix is to run cmake with `-DRESPECT_INSTALL_PREFIX_CONFIG=ON`.
+

@@ -185,18 +185,17 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp, iterator_t 
 	}
 
 	if (age > WARMUP_PERIOD && exp->hitrate < zconf.min_hitrate) {
-        if (!intrnl->min_hitrate_start) {
-            intrnl->min_hitrate_start = cur_time;
-        }
+            if (fabs(intrnl->min_hitrate_start) < .00001) {
+                intrnl->min_hitrate_start = cur_time;
+            }
 	} else {
 		intrnl->min_hitrate_start = 0.0;
 	}
-    if (intrnl->min_hitrate_start) {
-    	exp->seconds_under_min_hitrate = cur_time - intrnl->min_hitrate_start;
-    } else {
-        exp->seconds_under_min_hitrate = 0;
-    }
-
+	if (fabs(intrnl->min_hitrate_start) < .00001) {
+	    exp->seconds_under_min_hitrate = 0;
+	} else {
+		exp->seconds_under_min_hitrate = cur_time - intrnl->min_hitrate_start;
+	}
 	if (!zsend.complete) {
 		exp->send_rate = (total_sent - intrnl->last_sent)/delta;
 		number_string(exp->send_rate, exp->send_rate_str, NUMBER_STR_LEN);
@@ -354,7 +353,7 @@ static FILE* init_status_update_file(char *path)
 			log_fatal("csv", "could not open output file (%s)",
 					zconf.status_updates_file);
 		}
-		log_trace("monitor", "status updates CSV will be saved to %s",
+		log_debug("monitor", "status updates CSV will be saved to %s",
 				zconf.status_updates_file);
 		fprintf(f,
 				"real-time,time-elapsed,time-remaining,"

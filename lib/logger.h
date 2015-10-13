@@ -23,7 +23,12 @@ int log_info(const char *loggerName, const char *logMessage, ...);
 
 int log_debug(const char *loggerName, const char *logMessage, ...);
 
+#ifdef DEBUG
 int log_trace(const char *loggerName, const char *logMessage, ...);
+#else
+#define log_trace(...) ;
+#endif
+
 
 int log_init(FILE *stream, enum LogLevel level,
 		int syslog_enabled, const char *syslog_app);
