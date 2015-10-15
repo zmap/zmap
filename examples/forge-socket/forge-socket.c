@@ -350,7 +350,7 @@ void stdin_readcb(struct bufferevent *bev, void *arg)
         int cooldown, repeat=1;
 
 
-        int ret = sscanf(line, "%11[^,], %15[^,], %15[^,], %hu, %hu, %u, %u, %d, %d,%*s",
+        int ret = sscanf(line, "%11[^,],%15[^,],%15[^,],%hu,%hu,%u,%u,%d,%d,%*s",
             synack, srcip, dstip, &sport, &dport, &seq, &seq_ack, &cooldown, &repeat);
 
         log_trace("forge-socket", "%d '%s' sip: '%s', dip: '%s', sport: %d, dport: %d, seq: %d, seq_ack: %d",

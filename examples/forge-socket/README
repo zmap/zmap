@@ -1,5 +1,5 @@
 Forge-socket banner grab
-======
+========================
 
 This utility, in combination with a kernel module
 (https://github.com/ewust/forge_socket/) will complete the half-open connection
@@ -35,7 +35,7 @@ make
 #echo -e -n "GET / HTTP/1.1\r\nHost: %s\r\n\r\n" > http-req
 sudo su
 ulimit -SHn 1000000 && ulimit -SSn 1000000
-zmap -p 80 -B 50M -N 1000 -O extended_file -o - | ./forge-socket -c 8000 -d http-req > http-banners.out
+zmap -p 80 -B 50M -N 1000 --output-fields=classification,saddr,daddr,sport,dport,seqnum,acknum,cooldown,repeat  -o - | ./forge-socket -c 8000 -d http-req > http-banners.out
 
 
 The options are similar to banner-grab-tcp, except there is no connection timeout :)
