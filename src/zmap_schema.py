@@ -12,7 +12,7 @@ zmap_base = Record({
     "app_success":Integer(),
     "repeat":Integer(),
     "cooldown":Integer(),
-    "timestamp_str":DateTime(),
+    "timestamp_str":String(),
     "timestamp_ts":Long(),
     "timestamp_us":Long(),
     "icmp_responder":String(),
@@ -57,7 +57,7 @@ dns_answer = SubRecord({
   "ttl":Integer(),
   "rdlength":Integer(),
   "rdata_is_parsed":Integer(),
-  "rdata":String(), # hex  
+  "rdata":String(), # hex
 })
 
 zmap_dns = Record({
@@ -82,7 +82,7 @@ zmap_dns = Record({
     "dns_answers":ListOf(dns_answer),
     "dns_authorities":ListOf(dns_answer),
     "dns_additionals":ListOf(dns_answer),
-    "dns_unconsumed_bytes":Integer(), 
+    "dns_unconsumed_bytes":Integer(),
     "dns_parse_err":Integer(),
     "raw_data":String(),
     "udp_len":Integer(),
