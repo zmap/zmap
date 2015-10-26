@@ -176,7 +176,7 @@ target_link_libraries(
     zmap
     zmaplib
     ${PFRING_LIBRARIES}
-    pcap gmp m
+    pcap gmp m unistring
     ${DNET_LIBRARIES}
     ${REDIS_LIBS}
     ${JSON_LIBRARIES}
@@ -199,7 +199,7 @@ target_link_libraries(
     ztests
     zmaplib
     ${PFRING_LIBRARIES}
-    pcap gmp m
+    pcap gmp m unistring
     ${DNET_LIBRARIES}
     ${REDIS_LIBS}
     ${JSON_LIBRARIES}
