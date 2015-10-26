@@ -123,7 +123,7 @@ static char *sanitize_utf8(const char *buf)
 		i++;
 	}
 
-	// i is the total number of errors. We need 5 characters for each error \u00XX
+	// i is the total number of errors. We need 5 more chars for each error \u00XX
 	char *safe_buf = xmalloc(strlen(buf) + i*5 + 1);
 	char *safe_ptr = NULL;
 	memcpy(safe_buf, buf, strlen(buf));
