@@ -403,7 +403,7 @@ static bool process_response_question(char **data, uint16_t* data_len,
 	
 	// Build our new question fieldset
 	fieldset_t *qfs = fs_new_fieldset(); 
-	fs_add_string(qfs, "name", question_name, 1);
+	fs_add_unsafe_string(qfs, "name", question_name, 1);
 	fs_add_uint64(qfs, "qtype", qtype);
 	if (qtype > MAX_QTYPE || qtype_qtype_to_strid[qtype] == BAD_QTYPE_VAL) {
 		fs_add_string(qfs, "qtype_str", (char*) BAD_QTYPE_STR, 0);
@@ -464,7 +464,7 @@ static bool process_response_answer(char **data, uint16_t* data_len,
 
 	// Build our new question fieldset
 	fieldset_t *afs = fs_new_fieldset(); 
-	fs_add_string(afs, "name", answer_name, 1);
+	fs_add_unsafe_string(afs, "name", answer_name, 1);
 	fs_add_uint64(afs, "type", type);
 	if (type > MAX_QTYPE || qtype_qtype_to_strid[type] == BAD_QTYPE_VAL) {
 		fs_add_string(afs, "type_str", (char*) BAD_QTYPE_STR, 0);
@@ -489,7 +489,7 @@ static bool process_response_answer(char **data, uint16_t* data_len,
 			fs_add_binary(afs, "rdata", rdlength, rdata, 0);
 		} else {
 			fs_add_uint64(afs, "rdata_is_parsed", 1);
-			fs_add_string(afs, "rdata", rdata_name, 1);
+			fs_add_unsafe_string(afs, "rdata", rdata_name, 1);
 		}
 
 	 } else if (type == DNS_QTYPE_MX) {
@@ -518,7 +518,7 @@ static bool process_response_answer(char **data, uint16_t* data_len,
 						strlen(rdata_name));
 
 				fs_add_uint64(afs, "rdata_is_parsed", 1);
-				fs_add_string(afs, "rdata", rdata_with_pref, 1);
+				fs_add_unsafe_string(afs, "rdata", rdata_with_pref, 1);
 			}
 		}
 	} else if (type == DNS_QTYPE_TXT) {
@@ -531,7 +531,7 @@ static bool process_response_answer(char **data, uint16_t* data_len,
 			fs_add_uint64(afs, "rdata_is_parsed", 1);
 			char* txt = xmalloc(rdlength);
 			memcpy(txt, rdata + 1, rdlength-1);
-			fs_add_string(afs, "rdata", txt, 1);
+			fs_add_unsafe_string(afs, "rdata", txt, 1);
 		}
 	} else if (type == DNS_QTYPE_A) {
 
@@ -542,7 +542,7 @@ static bool process_response_answer(char **data, uint16_t* data_len,
 			fs_add_binary(afs, "rdata", rdlength, rdata, 0);
 		} else {
 			fs_add_uint64(afs, "rdata_is_parsed", 1);
-			fs_add_string(afs, "rdata", 
+			fs_add_unsafe_string(afs, "rdata",
 				(char*) inet_ntoa( *(struct in_addr*)rdata ), 0);
 		}
 	} else if (type == DNS_QTYPE_AAAA) {
@@ -559,7 +559,7 @@ static bool process_response_answer(char **data, uint16_t* data_len,
 			inet_ntop(AF_INET6, (struct sockaddr_in6*)rdata, 
 					ipv6_str,INET6_ADDRSTRLEN);
 
-			fs_add_string(afs, "rdata", ipv6_str, 1);
+			fs_add_unsafe_string(afs, "rdata", ipv6_str, 1);
 		}
 	} else {
 		fs_add_uint64(afs, "rdata_is_parsed", 0);

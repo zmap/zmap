@@ -29,6 +29,7 @@ You can also build ZMap from sources, following fundamentals required:
   - [libpcap](http://www.tcpdump.org/) - Famous user-level packet capture library
   - [flex](http://flex.sourceforge.net/) and [byacc](http://invisible-island.net/byacc/) - Output filter lexer and parser generator.
   - [json-c](https://github.com/json-c/json-c/) - JSON implementation in C
+  - [libunistring](https://www.gnu.org/software/libunistring/) - Unicode string library for C
 
 In addition, you can get following packages to get further functionalities:
   - [hiredis](https://github.com/redis/hiredis) - RedisDB support in C
@@ -42,17 +43,17 @@ In addition, you can get following packages to get further functionalities:
 
 * On Debian-based systems by running:
    ```sh
-   sudo apt-get install build-essential cmake libgmp3-dev gengetopt libpcap-dev flex byacc libjson-c-dev pkg-config
+   sudo apt-get install build-essential cmake libgmp3-dev gengetopt libpcap-dev flex byacc libjson-c-dev pkg-config libunistring-dev
    ```
 
 * On RHEL- and Fedora-based systems by running:
    ```sh
-   sudo yum install cmake gmp-devel gengetopt libpcap-devel flex byacc json-c-devel
+   sudo yum install cmake gmp-devel gengetopt libpcap-devel flex byacc json-c-devel libunistring
    ```
 
 * On Mac OS systems [Homebrew](http://brew.sh/):
   ```sh
-  brew install cmake gmp gengetopt json-c byacc libdnet
+  brew install cmake gmp gengetopt json-c byacc libdnet libunistring
   ```
 
 Once these prerequisites have been installed, ZMap can be compiled

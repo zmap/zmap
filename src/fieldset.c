@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <unistr.h>
 
 #include "../lib/logger.h"
 #include "../lib/xalloc.h"
@@ -29,7 +30,7 @@ void gen_fielddef_set(fielddefset_t *fds, fielddef_t fs[], int len)
 fieldset_t *fs_new_fieldset(void)
 {
 	fieldset_t *f = xcalloc(1, sizeof(fieldset_t));
-    f->len = 0;
+	f->len = 0;
 	f->type = FS_FIELDSET;
 	return f;
 }
@@ -37,7 +38,7 @@ fieldset_t *fs_new_fieldset(void)
 fieldset_t *fs_new_repeated_field(int type, int free_)
 {
 	fieldset_t *f = xcalloc(1, sizeof(fieldset_t));
-    f->len = 0;
+	f->len = 0;
 	f->type = FS_REPEATED;
 	f->inner_type = type;
 	f->free_ = free_;
@@ -102,6 +103,64 @@ static void fs_modify_word(fieldset_t *fs, const char *name, int type,
 	fs_add_word(fs, name, type, free_, len, value);
 }
 
+static char *sanitize_utf8(const char *buf)
+{
+	const char *ptr = buf;
+
+	// Count how many errors we encounter
+	uint32_t i = 0;
+	// Upper bounds to ensure termination even if u8_check is unsafe
+	while (i < strlen(buf) && ptr < buf + strlen(buf)) {
+		ptr = (char*)u8_check((uint8_t*)ptr, strlen(ptr));
+		if (ptr == NULL) {
+			break;
+		}
+
+		assert(ptr >= buf);
+		assert(ptr < buf + strlen(buf));
+
+		ptr++;
+		i++;
+	}
+
+	// i is the total number of errors. We need 5 more chars for each error \u00XX
+	char *safe_buf = xmalloc(strlen(buf) + i*5 + 1);
+	char *safe_ptr = NULL;
+	memcpy(safe_buf, buf, strlen(buf));
+
+	// Fix exactly i errors
+	for (uint32_t j = 0; j < i; j++) {
+		// Always operate on the working buffer
+		safe_ptr = (char*)u8_check((uint8_t*)safe_buf, strlen(safe_buf));
+
+		// This implies we had less errors than we should.
+		assert(safe_ptr != NULL);
+		assert(safe_ptr >= safe_buf);
+		assert(safe_ptr < safe_buf + strlen(safe_buf));
+
+		// Shift the rest of the string by 5 chars
+		if (strlen(safe_ptr) > 1) {
+			memcpy(safe_ptr + 6, safe_ptr + 1, strlen(safe_ptr + 1));
+		}
+
+		// Write out the hex for the bad byte
+		char temp[7];
+		memset(temp, 0x00, 7);
+		snprintf(temp, 7, "\\u00%2hhX", safe_ptr[0]);
+
+		memcpy(safe_ptr, temp, 6);
+	}
+
+	// We now have a valid utf8 string
+	assert(u8_check((uint8_t*)safe_buf, strlen(safe_buf)) == NULL);
+	// We should be null terminated
+	assert(safe_buf[strlen(buf) + i*5] == '\0');
+	// We should be the right length
+	assert(strlen(safe_buf) == (strlen(buf) + i*5));
+
+	return safe_buf;
+}
+
 void fs_add_null(fieldset_t *fs, const char *name)
 {
 	field_val_t val = { .ptr = NULL };
@@ -112,6 +171,23 @@ void fs_add_string(fieldset_t *fs, const char *name, char *value, int free_)
 {
 	field_val_t val = { .ptr = value };
 	fs_add_word(fs, name, FS_STRING, free_, strlen(value), val);
+}
+
+void fs_add_unsafe_string(fieldset_t *fs, const char *name, char *value, int free_)
+{
+	if (u8_check((uint8_t*)value, strlen(value)) == NULL) {
+		field_val_t val = { .ptr = value };
+		fs_add_word(fs, name, FS_STRING, free_, strlen(value), val);
+	} else {
+		char* safe_value = sanitize_utf8(value);
+
+		if (free_) {
+			free(value);
+		}
+
+		field_val_t val = { .ptr = safe_value };
+		fs_add_word(fs, name, FS_STRING, 1, strlen(safe_value), val);
+	}
 }
 
 void fs_chkadd_string(fieldset_t *fs, const char *name, char *value, int free_)
@@ -203,9 +279,9 @@ int fds_get_index_by_name(fielddefset_t *fds, char *name)
 
 void field_free(field_t *f)
 {
-    if (f->type == FS_FIELDSET || f->type == FS_REPEATED) {
-        fs_free((fieldset_t *) f->value.ptr);
-    } else if (f->free_) {
+	if (f->type == FS_FIELDSET || f->type == FS_REPEATED) {
+		fs_free((fieldset_t *) f->value.ptr);
+	} else if (f->free_) {
 		free(f->value.ptr);
 	}
 }
@@ -217,7 +293,7 @@ void fs_free(fieldset_t *fs)
 	}
 	for (int i=0; i < fs->len; i++) {
 		field_t *f = &(fs->fields[i]);
-        field_free(f);
+		field_free(f);
 	}
 	free(fs);
 }
