@@ -123,8 +123,8 @@ static char *sanitize_utf8(const char *buf)
 		i++;
 	}
 
-	// i is the total number of errors. We need 5 more chars for each error \u00XX
-	char *safe_buf = xmalloc(strlen(buf) + i*5 + 1);
+	// i is the total number of errors. We need 2 extra bytes for each rune
+	char *safe_buf = xmalloc(strlen(buf) + i*2 + 1);
 	char *safe_ptr = NULL;
 	memcpy(safe_buf, buf, strlen(buf));
 
@@ -138,25 +138,23 @@ static char *sanitize_utf8(const char *buf)
 		assert(safe_ptr >= safe_buf);
 		assert(safe_ptr < safe_buf + strlen(safe_buf));
 
-		// Shift the rest of the string by 5 chars
+		// Shift the rest of the string by 2 bytes
 		if (strlen(safe_ptr) > 1) {
-			memcpy(safe_ptr + 6, safe_ptr + 1, strlen(safe_ptr + 1));
+			memcpy(safe_ptr + 3, safe_ptr + 1, strlen(safe_ptr + 1));
 		}
 
-		// Write out the hex for the bad byte
-		char temp[7];
-		memset(temp, 0x00, 7);
-		snprintf(temp, 7, "\\u00%2hhX", safe_ptr[0]);
-
-		memcpy(safe_ptr, temp, 6);
+		// UTF8 replacement rune
+		safe_ptr[0] = (char)0xef;
+		safe_ptr[1] = (char)0xbf;
+		safe_ptr[2] = (char)0xbd;
 	}
 
 	// We now have a valid utf8 string
 	assert(u8_check((uint8_t*)safe_buf, strlen(safe_buf)) == NULL);
 	// We should be null terminated
-	assert(safe_buf[strlen(buf) + i*5] == '\0');
+	assert(safe_buf[strlen(buf) + i*2] == '\0');
 	// We should be the right length
-	assert(strlen(safe_buf) == (strlen(buf) + i*5));
+	assert(strlen(safe_buf) == (strlen(buf) + i*2));
 
 	return safe_buf;
 }
