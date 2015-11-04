@@ -55,7 +55,7 @@ int redis_parse_connstr(char *connstr, redisconf_t* redis_conf)
 		connstr = connstr + (size_t) 8;
 		char *listname = strrchr(connstr, '/');
 		if (listname == NULL) {
-			char *back = stpncpy(&redis_conf->error[0], 
+			char *back = stpncpy(&redis_conf->error[0],
 					"bad local url (missing a slash)",
 					ZMAP_REDIS_ERRLEN);
 			*back = '\0';
@@ -304,6 +304,7 @@ static int redis_pull_one(redisContext *rctx, char *queuename, void **buf,
 		return ZMAP_REDIS_ERROR;
 	}
 	if (reply->type == REDIS_REPLY_NIL) {
+		freeReplyObject(reply);
 		return ZMAP_REDIS_EMPTY;
 	}
 	assert(reply->type == REDIS_REPLY_STRING);
@@ -322,7 +323,7 @@ int redis_lpull_one(redisContext *rctx, char *queuename, void **buf,
 	return redis_pull_one(rctx, queuename, buf, len, "LPOP");
 }
 
-int redis_spull_one(redisContext *rctx, char *queuename, void **buf, 
+int redis_spull_one(redisContext *rctx, char *queuename, void **buf,
 		size_t *len)
 {
 	return redis_pull_one(rctx, queuename, buf, len, "SRAND");
