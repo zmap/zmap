@@ -393,7 +393,7 @@ int main(int argc, char *argv[])
     // check whether the probe module is going to generate dynamic data
     // and that the output module can support exporting that data out of
     // zmap. If they can't, then quit.
-    if (zconf.probe_module->output_type == OUTPUT_TYPE_DYNAMIC 
+    if (zconf.probe_module->output_type == OUTPUT_TYPE_DYNAMIC
             && !zconf.output_module->supports_dynamic_output) {
         log_fatal("zmap", "specified probe module (%s) requires dynamic "
                 "output support, which output module (%s) does not support. "
@@ -669,14 +669,16 @@ int main(int argc, char *argv[])
 	// Check for a random seed
 	if (args.seed_given) {
 		zconf.seed = args.seed_arg;
-		zconf.use_seed = 1;
-	}
-	// Seed the RNG
-	if (zconf.use_seed) {
-		zconf.aes = aesrand_init_from_seed(zconf.seed);
+		zconf.seed_provided = 1;
 	} else {
-		zconf.aes = aesrand_init_from_random();
+		// generate a seed randomly
+		if (!random_bytes(&zconf.seed, sizeof(uint64_t))) {
+			log_fatal("zmap", "unable to generate random bytes "
+ 					"needed for seed");
+		}
+		zconf.seed_provided = 0;
 	}
+	zconf.aes = aesrand_init_from_seed(zconf.seed);
 
 	// Set up sharding
 	zconf.shard_num = 0;
