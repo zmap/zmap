@@ -99,6 +99,8 @@ void fs_add_uint64(fieldset_t *fs, const char *name, uint64_t value);
 
 void fs_add_string(fieldset_t *fs, const char *name, char *value, int free_);
 
+void fs_add_unsafe_string(fieldset_t *fs, const char *name, char *value, int free_);
+
 void fs_chkadd_string(fieldset_t *fs, const char *name, char *value, int free_);
 
 void fs_add_constchar(fieldset_t *fs, const char *name, const char *value);
