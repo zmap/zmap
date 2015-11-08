@@ -109,3 +109,4 @@ uint32_t iterator_get_curr_send_threads(iterator_t *it)
 	assert(it);
 	return it->curr_threads;
 }
+

@@ -29,6 +29,8 @@ uint64_t blacklist_count_allowed();
 
 uint64_t blacklist_count_not_allowed();
 
+uint32_t blacklist_ip_to_index(uint32_t ip);
+
 bl_cidr_node_t *get_blacklisted_cidrs(void);
 bl_cidr_node_t *get_whitelisted_cidrs(void);
 

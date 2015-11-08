@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 typedef struct _constraint constraint_t;
-typedef unsigned int value_t;
+typedef uint32_t value_t;
 
 constraint_t* constraint_init(value_t value);
 void constraint_free(constraint_t *con);

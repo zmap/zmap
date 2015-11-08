@@ -168,7 +168,8 @@ option "sender-threads"         T "Threads used to send packets"
     default="1"
     optional int
 
-option "resume-scan"		- "Resumes a previous scan given a known scanned address"
+option "resume-scan-from"	- "Resumes a previous scan given a known scanned address"
+    optional string
 
 option "cores"                  - "Comma-separated list of cores to pin to"
     optional string

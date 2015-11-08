@@ -196,17 +196,26 @@ static void init_from_array(char **cidrs, size_t len, int value, int ignore_inva
 	}
 }
 
-uint64_t blacklist_count_allowed()
+uint64_t blacklist_count_allowed(void)
 {
 	assert(constraint);
 	return constraint_count_ips(constraint, ADDR_ALLOWED);
 }
 
-uint64_t blacklist_count_not_allowed()
+uint64_t blacklist_count_not_allowed(void)
 {
 	assert(constraint);
 	return constraint_count_ips(constraint, ADDR_DISALLOWED);
 }
+
+// network order
+uint32_t blacklist_ip_to_index(uint32_t ip)
+{
+	assert(constraint);
+	uint32_t ip_hostorder = ntohl(ip);
+	return constraint_lookup_ip(constraint, ip_hostorder);
+}
+
 
 // Initialize address constraints from whitelist and blacklist files.
 // Either can be set to NULL to omit.
@@ -269,3 +278,4 @@ int blacklist_init(char *whitelist_filename, char *blacklist_filename,
 	}
 	return EXIT_SUCCESS;
 }
+
