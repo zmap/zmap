@@ -53,7 +53,7 @@ In addition, you can get following packages to get further functionalities:
 
 * On Mac OS systems [Homebrew](http://brew.sh/):
   ```sh
-  brew install cmake gmp gengetopt json-c byacc libdnet libunistring
+  brew install pkg-config cmake gmp gengetopt json-c byacc libdnet libunistring
   ```
 
 Once these prerequisites have been installed, ZMap can be compiled

@@ -105,8 +105,13 @@ iterator_t* send_init(void)
 	assert(zconf.probe_module);
 	if (zconf.probe_module->global_initialize) {
 		if (zconf.probe_module->global_initialize(&zconf)) {
+<<<<<<< HEAD
 				log_fatal("send", "global initialization for probe module failed.");
 			}
+=======
+        		log_fatal("send", "global initialization for probe module failed.");
+	        }
+>>>>>>> parent of 93b76be... Revert "fixes for new warnings in el capitan"
 	}
 
 	// concert specified bandwidth to packet rate
@@ -225,6 +230,7 @@ int send_run(sock_t st, shard_t *s)
 	if (zconf.rate > 0) {
 		delay = 10000;
 
+<<<<<<< HEAD
 		if (send_rate < slow_rate) {
 			// set the inital time difference
 			sleep_time = nsec_per_sec / send_rate;
@@ -237,6 +243,20 @@ int send_run(sock_t st, shard_t *s)
 			interval = (zconf.rate / zconf.senders) / 20;
 			last_time = now();
 		}
+=======
+        if (send_rate < slow_rate) {
+            // set the inital time difference
+            sleep_time = nsec_per_sec / send_rate;
+            last_time = now() - (1.0 / send_rate);
+        } else {
+		    // estimate initial rate
+		    for (vi = delay; vi--; )
+		    	;
+		    delay *= 1 / (now() - last_time) / (zconf.rate / zconf.senders);
+		    interval = (zconf.rate / zconf.senders) / 20;
+		    last_time = now();
+        }
+>>>>>>> parent of 93b76be... Revert "fixes for new warnings in el capitan"
 	}
 	uint32_t curr = shard_get_cur_ip(s);
 	int attempts = zconf.num_retries + 1;
