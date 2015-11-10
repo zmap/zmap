@@ -883,6 +883,9 @@ int main(int argc, char *argv[])
 				strerror(errno));
 	}
 #endif
+
+	// resume scan if requested
+
 	start_zmap();
 
 	fclose(log_location);
