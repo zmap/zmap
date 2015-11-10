@@ -83,10 +83,10 @@ void json_metadata(FILE *file)
             json_object_new_int(zconf.cooldown_secs));
 	json_object_object_add(obj, "senders",
             json_object_new_int(zconf.senders));
+	json_object_object_add(obj, "use_seed",
+            json_object_new_int(zconf.use_seed));
 	json_object_object_add(obj, "seed",
             json_object_new_int64(zconf.seed));
-	json_object_object_add(obj, "seed_provided",
-            json_object_new_int64(zconf.seed_provided));
 	json_object_object_add(obj, "generator",
             json_object_new_int64(zconf.generator));
 	json_object_object_add(obj, "hitrate",
@@ -195,8 +195,9 @@ void json_metadata(FILE *file)
 		json_object_object_add(obj, "output_args",
 			json_object_new_string(zconf.output_args));
 	}
-	{
-		char mac_buf[(MAC_ADDR_LEN * 2) + (MAC_ADDR_LEN - 1) + 1];
+
+	if (zconf.gw_mac) {
+		char mac_buf[ (MAC_ADDR_LEN * 2) + (MAC_ADDR_LEN - 1) + 1 ];
 		memset(mac_buf, 0, sizeof(mac_buf));
 		char *p = mac_buf;
 		for(int i=0; i < MAC_ADDR_LEN; i++) {
@@ -215,7 +216,7 @@ void json_metadata(FILE *file)
 		addr.s_addr = zconf.gw_ip;
 		json_object_object_add(obj, "gateway_ip", json_object_new_string(inet_ntoa(addr)));
 	}
-	{
+	if (zconf.hw_mac) {
 		char mac_buf[(ETHER_ADDR_LEN * 2) + (ETHER_ADDR_LEN - 1) + 1];
 		char *p = mac_buf;
 		for(int i=0; i < ETHER_ADDR_LEN; i++) {
@@ -229,6 +230,7 @@ void json_metadata(FILE *file)
 		}
 		json_object_object_add(obj, "source_mac", json_object_new_string(mac_buf));
 	}
+
 	json_object_object_add(obj, "source_ip_first",
 			json_object_new_string(zconf.source_ip_first));
 	json_object_object_add(obj, "source_ip_last",

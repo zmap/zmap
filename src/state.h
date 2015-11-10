@@ -5,7 +5,6 @@
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
-
 #ifndef STATE_H
 #define STATE_H
 
@@ -67,7 +66,7 @@ struct state_conf {
 	uint32_t *pin_cores;
 	// should use CLI provided randomization seed instead of generating
 	// a random seed.
-	int seed_provided;
+	int use_seed;
 	uint64_t seed;
 	aesrand_t *aes;
 	// generator of the cyclic multiplicative group that is utilized for

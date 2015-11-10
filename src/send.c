@@ -37,6 +37,7 @@
 static inline int send_packet(sock_t sock, void *buf, int len, uint32_t idx);
 static inline int send_run_init(sock_t sock);
 
+
 // Include the right implementations
 #if defined(PFRING)
 #include "send-pfring.h"
@@ -63,6 +64,7 @@ static uint16_t num_src_ports;
 // global sender initialize (not thread specific)
 iterator_t* send_init(void)
 {
+
 	// generate a new primitive root and starting position
 	iterator_t *it;
 	it = iterator_init(zconf.senders, zconf.shard_num, zconf.total_shards);
@@ -89,7 +91,7 @@ iterator_t* send_init(void)
 		uint32_t ip_last = ntohl(srcip_last);
 		assert(ip_first && ip_last);
 		assert(ip_last > ip_first);
-		uint32_t offset = (uint32_t) (aesrand_getword(zconf.aes)
+		uint32_t offset = (uint32_t) (aesrand_getword(zconf.aes) 
 						& 0xFFFFFFFF);
 		srcip_offset = offset % (srcip_last - srcip_first);
 		num_src_addrs = ip_last - ip_first + 1;
@@ -105,8 +107,8 @@ iterator_t* send_init(void)
 	assert(zconf.probe_module);
 	if (zconf.probe_module->global_initialize) {
 		if (zconf.probe_module->global_initialize(&zconf)) {
-        		log_fatal("send", "global initialization for probe module failed.");
-	        }
+            log_fatal("send", "global initialization for probe module failed.");
+        }
 	}
 
 	// concert specified bandwidth to packet rate
@@ -202,7 +204,7 @@ int send_run(sock_t st, shard_t *s)
 			mac_buf);
 	void *probe_data;
 	if (zconf.probe_module->thread_initialize) {
-		zconf.probe_module->thread_initialize(buf, zconf.hw_mac,
+		zconf.probe_module->thread_initialize(buf, zconf.hw_mac, 
 						zconf.gw_mac,
 						zconf.target_port, &probe_data);
 	}
@@ -224,7 +226,7 @@ int send_run(sock_t st, shard_t *s)
     long long sleep_time = nsec_per_sec;
 	if (zconf.rate > 0) {
 		delay = 10000;
-
+        
         if (send_rate < slow_rate) {
             // set the inital time difference
             sleep_time = nsec_per_sec / send_rate;
@@ -294,7 +296,7 @@ int send_run(sock_t st, shard_t *s)
 
 		  	uint32_t validation[VALIDATE_BYTES/sizeof(uint32_t)];
 			validate_gen(src_ip, curr, (uint8_t *)validation);
-			zconf.probe_module->make_packet(buf, src_ip, curr,
+			zconf.probe_module->make_packet(buf, src_ip, curr, 
 					validation, i, probe_data);
 			if (zconf.dryrun) {
 				lock_file(stdout);
