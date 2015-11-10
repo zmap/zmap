@@ -156,12 +156,6 @@ fields, and write filters over the output fields.
    * `-V`, `--version`:
      Print version and exit
 
-   * `--resume-scan`:
-     Resume a scan from a given IP address. Warning: this feature is
-     only safe when scanning with a single thread, with a known seed,
-     and if the blacklist and whitelist have not changed.
-
-
 ### UDP PROBE MODULE OPTIONS ###
 
 These arguments are all passed using the `--probe-args=args` option. Only one
