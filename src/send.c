@@ -308,8 +308,12 @@ int send_run(sock_t st, shard_t *s)
 					if (rc < 0) {
 						struct in_addr addr;
 						addr.s_addr = curr;
-						log_debug("send", "send_packet failed for %s. %s",
-								  inet_ntoa(addr), strerror(errno));
+						char addr_str_buf[INET_ADDRSTRLEN];
+						const char *addr_str = inet_ntop(AF_INET, &addr, addr_str_buf, INET_ADDRSTRLEN);
+						if (addr_str != NULL) {
+							log_debug("send", "send_packet failed for %s. %s",
+								addr_str, strerror(errno));
+						}
 						s->state.failures++;
 					} else {
 						break;
@@ -330,4 +334,3 @@ int send_run(sock_t st, shard_t *s)
 	log_debug("send", "thread %hu finished", s->id);
 	return EXIT_SUCCESS;
 }
-
