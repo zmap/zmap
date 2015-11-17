@@ -542,8 +542,8 @@ static bool process_response_answer(char **data, uint16_t* data_len,
 			fs_add_binary(afs, "rdata", rdlength, rdata, 0);
 		} else {
 			fs_add_uint64(afs, "rdata_is_parsed", 1);
-			fs_add_unsafe_string(afs, "rdata",
-				(char*) inet_ntoa( *(struct in_addr*)rdata ), 0);
+			char* addr = strdup(inet_ntoa( *(struct in_addr*)rdata ));
+			fs_add_unsafe_string(afs, "rdata", addr, 1);
 		}
 	} else if (type == DNS_QTYPE_AAAA) {
 
