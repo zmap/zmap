@@ -9,8 +9,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <unistd.h>
 #include <string.h>
+
+#include <unistd.h>
+
+#include "aesrand.h"
+#include "types.h"
+
+#include "state.h"
 
 typedef enum udp_payload_field_type
 {
