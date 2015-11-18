@@ -62,6 +62,9 @@ int udp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 int udp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		__attribute__((unused))uint32_t *src_ip, uint32_t *validation);
 
+int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
+		__attribute__((unused))uint32_t *src_ip, uint32_t *validation,
+		int num_ports);
 
 extern const char *udp_unreach_strings[];
 int udp_global_initialize(struct state_conf *conf);

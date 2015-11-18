@@ -27,6 +27,7 @@ extern probe_module_t module_udp;
 extern probe_module_t module_ntp;
 extern probe_module_t module_upnp;
 extern probe_module_t module_dns;
+extern probe_module_t module_bacnet;
 // ADD YOUR MODULE HERE
 
 probe_module_t* probe_modules[] = {
@@ -37,7 +38,8 @@ probe_module_t* probe_modules[] = {
 	&module_ntp,
 	&module_upnp,
 	&module_dns,
-	&module_tcp_cisco_backdoor
+	&module_tcp_cisco_backdoor,
+	&module_bacnet
 	// ADD YOUR MODULE HERE
 };
 
