@@ -61,12 +61,16 @@ int upnp_init_perthread(void* buf, macaddr_t *src, macaddr_t *gw,
 	return EXIT_SUCCESS;
 }
 
-int upnp_validate_packet(const struct ip *ip_hdr, uint32_t len,
-		uint32_t *src_ip, uint32_t *validation)
+int upnp_validate_packet(const void *packet, uint32_t len,
+		__attribute__((unused))uint32_t *src_ip, uint32_t *validation)
 {
-	if (!udp_validate_packet(ip_hdr, len, src_ip, validation)) {
+        struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
+	// 	uint32_t ip_len = len - sizeof(struct ether_header);
+
+	if (!udp_validate_packet(packet, len, src_ip, validation)) {
 		return 0;
 	}
+
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		struct udphdr *udp = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
 		uint16_t sport = ntohs(udp->uh_sport);
@@ -78,14 +82,15 @@ int upnp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 }
 
 
-void upnp_process_packet(const u_char *packet,
+void upnp_process_packet(const void *packet,
 		__attribute__((unused)) uint32_t len, fieldset_t *fs,
 		__attribute__((unused)) uint32_t *validation)
 {
+	ip_process_packet(packet, len, fs);
 
-	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
-	if (ip_hdr->ip_p == IPPROTO_UDP) {
-		struct udphdr *udp = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
+        struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
+        if (ip_hdr->ip_p == IPPROTO_UDP) {
+	  	struct udphdr *udp = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
 
 		char *payload = (char*)(&udp[1]);
 		uint16_t plen = udp->uh_ulen - 8;
@@ -93,6 +98,7 @@ void upnp_process_packet(const u_char *packet,
 		char *s = malloc(plen+1);
 		//char *t = malloc(plen+1);
 		assert(s);
+
 		strncpy(s, payload, plen);
 		//strncpy(t, payload, plen);
 		s[plen] = 0;
@@ -108,9 +114,9 @@ void upnp_process_packet(const u_char *packet,
 		while (pch != NULL) {
 			if (pch[strlen(pch)-1] == '\r') {
 				pch[strlen(pch)-1] = '\0';
-			}
-			if (strlen(pch) == 0) {
-				pch = strtok(NULL, "\n");
+            		}
+            		if (strlen(pch) == 0) {
+            			pch = strtok(NULL, "\n");
 				continue;
 			}
 			// the first pch is always supposed to be an HTTP response
@@ -147,19 +153,19 @@ void upnp_process_packet(const u_char *packet,
 			} else if (!strcasecmp(key, "USN")) {
 				usn = strdup(value);
 			} else if (!strcasecmp(key, "EXT")) {
-				ext = strdup(value);
+			  	ext = strdup(value);
 			} else if (!strcasecmp(key, "ST")) {
-				st = strdup(value);
+			  	st = strdup(value);
 			} else if (!strcasecmp(key, "Agent")) {
-				agent = strdup(value);
+			  	agent = strdup(value);
 			} else if (!strcasecmp(key, "X-User-Agent")) {
-				xusragent = strdup(value);
+			  	xusragent = strdup(value);
 			} else if (!strcasecmp(key, "date")) {
-				date = strdup(value);
+			  	date = strdup(value);
 			} else if (!strcasecmp(key, "Cache-Control")) {
-				cachecontrol = strdup(value);
+			  	cachecontrol = strdup(value);
 			} else {
-				//log_debug("upnp-module", "new key: %s", key);
+			  	//log_debug("upnp-module", "new key: %s", key);
 			}
 			pch = strtok(NULL, "\n");
 		}
@@ -241,49 +247,54 @@ cleanup:
 	}
 }
 
-static fielddef_t fields[] = {
-	{.name = "classification", .type="string", .desc = "packet classification"},
-	{.name = "success", .type="int", .desc = "is response considered success"},
+static fielddefset_t fields = {
+	.fielddefs = {
+	        {.name = "classification", .type="string", .desc = "packet classification"},
+	        {.name = "success", .type="int", .desc = "is response considered success"},
 
-	{.name = "server", .type="string", .desc = "UPnP server"},
-	{.name = "location", .type="string", .desc = "UPnP location"},
-	{.name = "usn", .type="string", .desc = "UPnP usn"},
-	{.name = "st", .type="string", .desc = "UPnP st"},
-	{.name = "ext", .type="string", .desc = "UPnP ext"},
-	{.name = "cache_control", .type="string", .desc = "UPnP cache-control"},
-	{.name = "x_user_agent", .type="string", .desc = "UPnP x-user-agent"},
-	{.name = "agent", .type="string", .desc = "UPnP agent"},
-	{.name = "date", .type="string", .desc = "UPnP date"},
+		{.name = "server", .type="string", .desc = "UPnP server"},
+        	{.name = "location", .type="string", .desc = "UPnP location"},
+        	{.name = "usn", .type="string", .desc = "UPnP usn"},
+        	{.name = "st", .type="string", .desc = "UPnP st"},
+		{.name = "ext", .type="string", .desc = "UPnP ext"},
+        	{.name = "cache-control", .type="string", .desc = "UPnP cache-control"},
+        	{.name = "x-user-agent", .type="string", .desc = "UPnP x-user-agent"},
+        	{.name = "agent", .type="string", .desc = "UPnP agent"},
+        	{.name = "date", .type="string", .desc = "UPnP date"},
 
-	{.name = "sport",  .type = "int", .desc = "UDP source port"},
-	{.name = "dport",  .type = "int", .desc = "UDP destination port"},
-	{.name = "icmp_responder", .type = "string", .desc = "Source IP of ICMP_UNREACH message"},
-	{.name = "icmp_type", .type = "int", .desc = "icmp message type"},
-	{.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
-	{.name = "icmp_unreach_str", .type = "string", .desc = "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"},
+	        {.name = "sport",  .type = "int", .desc = "UDP source port"},
+        	{.name = "dport",  .type = "int", .desc = "UDP destination port"},
+        	{.name = "icmp_responder", .type = "string", .desc = "Source IP of ICMP_UNREACH message"},
+        	{.name = "icmp_type", .type = "int", .desc = "icmp message type"},
+        	{.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
+        	{.name = "icmp_unreach_str", .type = "string", .desc = "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"},
 
-	{.name = "data", .type="binary", .desc = "UDP payload"}
+        	{.name = "data", .type="binary", .desc = "UDP payload"}
+	},
+	.len = 18
 };
 
 probe_module_t module_upnp = {
-	.name = "upnp",
-	.packet_length = 139,
-	.pcap_filter = "udp || icmp",
-	.pcap_snaplen = 1500,
-	.port_args = 1,
-	.global_initialize = &upnp_global_initialize,
-	.thread_initialize = &upnp_init_perthread,
-	.make_packet = &udp_make_packet,
-	.print_packet = &udp_print_packet,
-	.process_packet = &upnp_process_packet,
-	.validate_packet = &upnp_validate_packet,
-	.close = NULL,
-	.helptext = "Probe module that sends a TCP SYN packet to a specific "
-		"port. Possible classifications are: synack and rst. A "
-		"SYN-ACK packet is considered a success and a reset packet "
-		"is considered a failed response.",
-	.output_type = OUTPUT_TYPE_STATIC,
-	.fields = fields,
-	.numfields = 18
+    .name = "upnp",
+    .packet_length = 139,
+    .pcap_filter = "udp || icmp",
+    .pcap_snaplen = 1500,
+    .port_args = 1,
+    .global_initialize = &upnp_global_initialize,
+    .thread_initialize = &upnp_init_perthread,
+    .make_packet = &udp_make_packet,
+    .print_packet = &udp_print_packet,
+    .process_packet = &upnp_process_packet,
+    .validate_packet = &upnp_validate_packet,
+    .close = NULL,
+    .helptext = "Probe module that sends a TCP SYN packet to a specific "
+        "port. Possible classifications are: synack and rst. A "
+        "SYN-ACK packet is considered a success and a reset packet "
+        "is considered a failed response.",
+    .output_type = OUTPUT_TYPE_STATIC,
+    .fieldsets = (fielddefset_t *[]){
+	&ip_fields,
+	&fields
+    },
+    .num_fieldsets = 2
 };
-

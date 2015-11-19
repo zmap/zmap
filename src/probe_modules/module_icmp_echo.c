@@ -67,7 +67,7 @@ static int icmp_echo_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip
 	return EXIT_SUCCESS;
 }
 
-static void icmp_echo_print_packet(FILE *fp, void* packet)
+static void icmp_echo_print_packet(FILE *fp, const void* packet)
 {
 	struct ether_header *ethh = (struct ether_header *) packet;
 	struct ip *iph = (struct ip *) &ethh[1];
@@ -85,16 +85,21 @@ static void icmp_echo_print_packet(FILE *fp, void* packet)
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
-
-
-static int icmp_validate_packet(const struct ip *ip_hdr,
-		uint32_t len, uint32_t *src_ip, uint32_t *validation)
+static int icmp_validate_packet(const void *packet, uint32_t len,
+                                uint32_t *src_ip, uint32_t *validation)
 {
+	if (!ip_validate_packet(packet, len, src_ip, validation)) {
+		return 0;
+	}
+
+        struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
+ 	uint32_t ip_len = len - sizeof(struct ether_header);
+
 	if (ip_hdr->ip_p != IPPROTO_ICMP) {
 		return 0;
 	}
 
-	if (((uint32_t) 4 * ip_hdr->ip_hl + ICMP_SMALLEST_SIZE) > len) {
+	if (((uint32_t) 4 * ip_hdr->ip_hl + ICMP_SMALLEST_SIZE) > ip_len) {
 		// buffer not large enough to contain expected icmp header
 		return 0;
 	}
@@ -109,13 +114,13 @@ static int icmp_validate_packet(const struct ip *ip_hdr,
 		// Should have 16B TimeExceeded/Dest_Unreachable header + original IP header
 		// + 1st 8B of original ICMP frame
 		if ((4*ip_hdr->ip_hl + ICMP_TIMXCEED_UNREACH_HEADER_SIZE +
-			sizeof(struct ip)) > len) {
+		     sizeof(struct ip)) > ip_len) {
 			return 0;
 		}
 
 		struct ip *ip_inner = (struct ip *)(icmp_h + 1);
 		if (((uint32_t) 4 * ip_hdr->ip_hl + ICMP_TIMXCEED_UNREACH_HEADER_SIZE +
-				4*ip_inner->ip_hl + 8 /*1st 8 bytes of original*/ ) > len) {
+		     4*ip_inner->ip_hl + 8 /*1st 8 bytes of original*/ ) > ip_len) {
 			return 0;
 		}
 
@@ -135,12 +140,14 @@ static int icmp_validate_packet(const struct ip *ip_hdr,
 	return 1;
 }
 
-static void icmp_echo_process_packet(const u_char *packet,
-		__attribute__((unused)) uint32_t len, fieldset_t *fs,
-        __attribute__((unused)) uint32_t *validation)
+static void icmp_echo_process_packet(const void *packet,
+                __attribute__((unused)) uint32_t len, fieldset_t *fs,
+                __attribute__((unused)) uint32_t *validation)
 {
-	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
-	struct icmp *icmp_hdr = (struct icmp *) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
+	ip_process_packet(packet, len, fs);
+
+        struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
+ 	struct icmp *icmp_hdr = (struct icmp *) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
 	fs_add_uint64(fs, "type", icmp_hdr->icmp_type);
 	fs_add_uint64(fs, "code", icmp_hdr->icmp_code);
 	fs_add_uint64(fs, "icmp_id", ntohs(icmp_hdr->icmp_id));
@@ -173,15 +180,17 @@ static void icmp_echo_process_packet(const u_char *packet,
 	}
 }
 
-static fielddef_t fields[] = {
-	{.name="type", .type="int", .desc="icmp message type"},
-	{.name="code", .type="int", .desc="icmp message sub type code"},
-	{.name="icmp-id", .type="int", .desc="icmp id number"},
-	{.name="seq", .type="int", .desc="icmp sequence number"},
-	{.name="classification", .type="string", .desc="probe module classification"},
-	{.name="success", .type="int", .desc="did probe module classify response as success"}
+static fielddefset_t fields = {
+	.fielddefs = {
+		{.name="type", .type="int", .desc="icmp message type"},
+		{.name="code", .type="int", .desc="icmp message sub type code"},
+		{.name="icmp-id", .type="int", .desc="icmp id number"},
+		{.name="seq", .type="int", .desc="icmp sequence number"},
+		{.name="classification", .type="string", .desc="probe module classification"},
+		{.name="success", .type="int", .desc="did probe module classify response as success"}
+	},
+	.len = 6
 };
-
 
 probe_module_t module_icmp_echo = {
 	.name = "icmp_echoscan",
@@ -195,7 +204,11 @@ probe_module_t module_icmp_echo = {
 	.process_packet = &icmp_echo_process_packet,
 	.validate_packet = &icmp_validate_packet,
 	.close = NULL,
-    .output_type = OUTPUT_TYPE_STATIC,
-	.fields = fields,
-	.numfields = 6};
+        .output_type = OUTPUT_TYPE_STATIC,
+	.fieldsets = (fielddefset_t*[]){
+    		&ip_fields,
+		&fields
+	},
+	.num_fieldsets = 2
+};
 

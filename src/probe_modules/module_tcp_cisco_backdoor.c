@@ -88,7 +88,7 @@ static int synscan_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 	return EXIT_SUCCESS;
 }
 
-static void synscan_print_packet(FILE *fp, void* packet)
+static void synscan_print_packet(FILE *fp, const void* packet)
 {
 	struct ether_header *ethh = (struct ether_header *) packet;
 	struct ip *iph = (struct ip *) &ethh[1];
@@ -103,14 +103,17 @@ static void synscan_print_packet(FILE *fp, void* packet)
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
-static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
+static int synscan_validate_packet(const void *packet, uint32_t len,
 		__attribute__((unused))uint32_t *src_ip,
 		uint32_t *validation)
 {
+        struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
+        uint32_t ip_len = len - sizeof(struct ether_header);
+
 	if (ip_hdr->ip_p != IPPROTO_TCP) {
 		return 0;
 	}
-	if ((4*ip_hdr->ip_hl + sizeof(struct tcphdr)) > len) {
+	if ((4*ip_hdr->ip_hl + sizeof(struct tcphdr)) > ip_len) {
 		// buffer not large enough to contain expected tcp header
 		return 0;
 	}
@@ -133,11 +136,13 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	return 1;
 }
 
-static void synscan_process_packet(const u_char *packet,
+static void synscan_process_packet(const void *packet,
 		uint32_t len, fieldset_t *fs,
 		__attribute__((unused)) uint32_t *validation)
 {
-	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
+        ip_process_packet(packet, len, fs);
+
+	struct ip *ip_hdr = (struct ip *)&(((struct ether_header *)packet)[1]);
 	struct tcphdr *tcp = (struct tcphdr*)((char *)ip_hdr
 					+ 4*ip_hdr->ip_hl);
 
@@ -162,7 +167,8 @@ static void synscan_process_packet(const u_char *packet,
 	}
 }
 
-static fielddef_t fields[] = {
+static fielddefset_t fields = {
+  .fielddefs = {
 	{.name = "sport",  .type = "int", .desc = "TCP source port"},
 	{.name = "dport",  .type = "int", .desc = "TCP destination port"},
 	{.name = "seqnum", .type = "int", .desc = "TCP sequence number"},
@@ -173,6 +179,8 @@ static fielddef_t fields[] = {
 	{.name = "raw", .type = "binary", .desc = "raw packet"},
 	{.name = "classification", .type="string", .desc = "packet classification"},
 	{.name = "success", .type="int", .desc = "is response considered success"}
+  },
+  .len = 10
 };
 
 probe_module_t module_tcp_cisco_backdoor = {
@@ -193,6 +201,9 @@ probe_module_t module_tcp_cisco_backdoor = {
 		"SYN-ACK packet is considered a success and a reset packet "
 		"is considered a failed response.",
 	.output_type = OUTPUT_TYPE_STATIC,
-	.fields = fields,
-	.numfields = 10};
-
+	.fieldsets = (fielddefset_t *[]){
+                &ip_fields,
+                &fields
+        },
+	.num_fieldsets = 2
+};

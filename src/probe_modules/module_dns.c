@@ -690,7 +690,7 @@ int dns_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 	return EXIT_SUCCESS;
 }
 
-void dns_print_packet(FILE *fp, void* packet) 
+void dns_print_packet(FILE *fp, const void* packet)
 {
 	struct ether_header *ethh = (struct ether_header *) packet;
 	struct ip *iph = (struct ip *) &ethh[1];
@@ -705,14 +705,16 @@ void dns_print_packet(FILE *fp, void* packet)
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
-int dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
+int dns_validate_packet(const void *packet, uint32_t len,
 		uint32_t *src_ip, uint32_t *validation)
 {
 	// This does the heavy lifting.
-	if (!udp_validate_packet(ip_hdr, len, src_ip, validation)) {
+	if (!udp_validate_packet(packet, len, src_ip, validation)) {
 		return 0;
 	}
 
+        struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
+ 	uint32_t ip_len = len - sizeof(struct ether_header);
 	uint16_t sport = 0;
 
 	// This entire if..elif..else block is getting at the udp body
@@ -726,7 +728,7 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		// IP( ICMP( IP( UDP ) ) ) for a destination unreach
 		uint32_t min_len = 4*ip_hdr->ip_hl + ICMP_UNREACH_HEADER_SIZE
 				+ sizeof(struct ip) + sizeof(struct udphdr);
-		if (len < min_len) {
+		if (ip_len < min_len) {
 			// Not enough information for us to validate
 			return 0;
 		}
@@ -736,7 +738,7 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		struct ip *ip_inner = (struct ip*) ((char *) icmp + 
 				ICMP_UNREACH_HEADER_SIZE);
 		// Now we know the actual inner ip length, we should recheck the buffer
-		if (len < 4*ip_inner->ip_hl - sizeof(struct ip) + min_len) {
+		if (ip_len < 4*ip_inner->ip_hl - sizeof(struct ip) + min_len) {
 			return 0;
 		}
 		
@@ -762,7 +764,7 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	}
 
 	// Verify the packet length is ok.
-	if (len < udp_len) {
+	if (ip_len < udp_len) {
 		return 0;
 	}
 
@@ -770,10 +772,10 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	return 1;
 }
 
-void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
-		uint32_t *validation) 
+void dns_process_packet(const void *packet, uint32_t len, fieldset_t *fs,
+                        uint32_t *validation) 
 {	
-	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
+	struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		struct udphdr *udp_hdr = (struct udphdr *) ((char *) ip_hdr + 
 				ip_hdr->ip_hl * 4);
@@ -974,7 +976,8 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 	}
 }
 
-static fielddef_t fields[] = {
+fielddefset_t fields = {
+  .fielddefs = {
 	{.name = "classification", .type="string", .desc = "packet protocol"},
 	{.name = "success", .type="int", .desc = "Are the validation bits and question correct"},
 	{.name = "app_success", .type="int", .desc = "Is the RA bit set with no error code?"},
@@ -1009,6 +1012,8 @@ static fielddef_t fields[] = {
 	{.name = "dns_unconsumed_bytes", .type = "int", .desc = "Bytes left over when parsing"
 			" the DNS response"},
 	{.name = "raw_data", .type="binary", .desc = "UDP payload"},
+  },
+  .len = 32
 };
 
 probe_module_t module_dns = {
@@ -1025,8 +1030,6 @@ probe_module_t module_dns = {
 	.process_packet = &dns_process_packet,
 	.close = &dns_global_cleanup,
 	.output_type = OUTPUT_TYPE_DYNAMIC,
-	.fields = fields,
-	.numfields = sizeof(fields)/sizeof(fields[0]),
 	.helptext = "This module sends out DNS queries and parses basic responses. "
 				"By default, the module will perform an A record lookup for "
 				"google.com. You can specify other queries using the --probe-args "
@@ -1035,6 +1038,10 @@ probe_module_t module_dns = {
 				"PTR, MX, TXT, AAAA, RRSIG, and ALL. The module will accept and attempt "
 				"to parse all DNS responses. There is currently support for parsing out "
 				"full data from A, NS, CNAME, MX, TXT, and AAAA. Any other types will be "
-				"output in raw form."
-
+				"output in raw form.",
+        .fieldsets = (fielddefset_t *[]){
+            &ip_fields,
+            &fields
+        },
+        .num_fieldsets = 2
 };

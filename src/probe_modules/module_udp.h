@@ -54,12 +54,12 @@ typedef struct udp_payload_output
 	char *data;
 } udp_payload_output_t;
 
-void udp_print_packet(FILE *fp, void* packet);
+void udp_print_packet(FILE *fp, const void* packet);
 
 int udp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 		uint32_t *validation, int probe_num, void *arg);
 
-int udp_validate_packet(const struct ip *ip_hdr, uint32_t len,
+int udp_validate_packet(const void *buf, uint32_t len,
 		__attribute__((unused))uint32_t *src_ip, uint32_t *validation);
 
 
@@ -81,3 +81,8 @@ int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len, s
 int udp_template_field_lookup(char *vname, udp_payload_field_t *c);
 
 udp_payload_template_t * udp_template_load(char *buf, unsigned int len);
+
+void udp_process_packet(const void *packet, uint32_t len, fieldset_t *fs,
+                        __attribute__((unused)) uint32_t *validation);
+
+extern fielddefset_t udp_fields;

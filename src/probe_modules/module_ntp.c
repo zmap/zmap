@@ -49,10 +49,13 @@ int ntp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
         return EXIT_SUCCESS;
 }
 
-int ntp_validate_packet(const struct ip *ip_hdr, uint32_t len,
-                uint32_t *src_ip, uint32_t *validation)
+int ntp_validate_packet(const void *packet, uint32_t len,
+		__attribute__((unused))uint32_t *src_ip, uint32_t *validation)
 {
-	if (!udp_validate_packet(ip_hdr, len, src_ip, validation)) {
+        struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
+	// 	uint32_t ip_len = len - sizeof(struct ether_header);
+
+	if (!udp_validate_packet(packet, len, src_ip, validation)) {
 		return 0;
 	}
         if (ip_hdr->ip_p ==  IPPROTO_UDP) {
@@ -65,52 +68,50 @@ int ntp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	return 1;
 }
 
-void ntp_process_packet(const u_char *packet, 
-		__attribute__((unused)) uint32_t len, fieldset_t *fs,
-        __attribute__((unused)) uint32_t *validation)
+void ntp_process_packet(const void *packet, 
+                        __attribute__((unused)) uint32_t len, fieldset_t *fs,
+                        uint32_t *validation)
 {
-        struct ip *ip_hdr = (struct ip*) &packet[sizeof(struct ether_header)];
-        uint64_t temp64;
-        uint8_t temp8;
-        uint32_t temp32;
+        udp_process_packet(packet, len, fs, validation);
 
-        if (ip_hdr->ip_p == IPPROTO_UDP){
-                struct udphdr *udp = (struct udphdr*) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
-                uint8_t *ptr = (uint8_t*) &udp[1];
+	struct ip *ip_hdr = (struct ip *) &((struct ether_header *)packet)[1];
+	uint8_t *ptr;
+	uint64_t temp64;
+	uint8_t temp8;
+	uint32_t temp32;
 
-                fs_add_string(fs, "classification", (char*) "ntp", 0);
-                fs_add_uint64(fs, "success", 1);
-                fs_add_uint64(fs, "sport", ntohs(udp->uh_sport));
-                fs_add_uint64(fs, "dport", ntohs(udp->uh_dport));
-                fs_add_null(fs, "icmp_responder");
-                fs_add_null(fs, "icmp_type");
-                fs_add_null(fs, "icmp_code");
-                fs_add_null(fs, "icmp_unreach_str");
-
+	if(ip_hdr->ip_p ==  IPPROTO_UDP) {
+        	struct udphdr *udp = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
+		struct module_ntp *ntp = (struct module_ntp *) &udp[1];
+		
+		fs_modify_string(fs, "classification", (char*) "ntp", 0);
+        
+		ptr = (uint8_t *)ntp;
+		
 		if (len > 90) {
-                	temp8 = *((uint8_t *)ptr);
-                	fs_add_uint64(fs, "LI_VN_MODE", temp8);
-                	temp8 = *((uint8_t *)ptr +1);
-                	fs_add_uint64(fs, "stratum", temp8);
-                	temp8 = *((uint8_t *)ptr +2);
-                	fs_add_uint64(fs, "poll", temp8);
-                	temp8 = *((uint8_t *)ptr + 3);
-                	fs_add_uint64(fs, "precision", temp8);
-
+			temp8 = *((uint8_t *)ptr); 
+			fs_add_uint64(fs, "LI_VN_MODE", temp8);
+			temp8 = *((uint8_t *)ptr +1);
+			fs_add_uint64(fs, "stratum", temp8);
+			temp8 = *((uint8_t *)ptr +2);
+			fs_add_uint64(fs, "poll", temp8);
+			temp8 = *((uint8_t *)ptr + 3);
+			fs_add_uint64(fs, "precision", temp8);
+    
 			temp32 = *((uint32_t *)ptr + 4);
 			fs_add_uint64(fs, "root_delay", temp32);
 			temp32 = *((uint32_t *)ptr + 8);
 			fs_add_uint64(fs, "root_dispersion", temp32);
 			temp32 = *((uint32_t *)ptr + 12);
 			fs_add_uint64(fs, "reference_clock_identifier", temp32);
-			
+
 			temp64 = *((uint64_t *)ptr + 16);
 			fs_add_uint64(fs, "reference_timestamp", temp64);
 			temp64 = *((uint64_t *)ptr + 24);
 			fs_add_uint64(fs, "originate_timestap", temp64);
 			temp64 = *((uint64_t *)ptr + 32);
 			fs_add_uint64(fs, "receive_timestamp", temp64);
-			temp64 = *((uint64_t *)ptr + 39);
+			temp64 = *((uint64_t *)ptr + 40);
 			fs_add_uint64(fs, "transmit_timestamp", temp64);
 		} else {
 			fs_add_null(fs, "LI_VN_MODE");
@@ -125,42 +126,8 @@ void ntp_process_packet(const u_char *packet,
 			fs_add_null(fs, "receive_timestamp");
 			fs_add_null(fs, "transmit_timestamp");
 		}
-        } else if (ip_hdr->ip_p ==  IPPROTO_ICMP) {
-                struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr -> ip_hl * 4);
-                struct ip *ip_inner = (struct ip *) ((char*) icmp + ICMP_UNREACH_HEADER_SIZE);
-
-                fs_modify_string(fs, "saddr", make_ip_str(ip_inner->ip_dst.s_addr), 1);
-                fs_add_string(fs, "classification", (char*) "icmp-unreach", 0);
-                fs_add_uint64(fs, "success", 0);
-                fs_add_null(fs, "sport");
-                fs_add_null(fs, "dport");
-                fs_add_string(fs, "icmp_responder", make_ip_str(ip_hdr->ip_src.s_addr), 1);
-                fs_add_uint64(fs, "icmp_type", icmp->icmp_type);
-                fs_add_uint64(fs, "icmp_code", icmp->icmp_code);
-                fs_add_null(fs, "icmp_unreach_str");
-
-                fs_add_null(fs, "LI_VN_MODE");
-                fs_add_null(fs, "stratum");
-                fs_add_null(fs, "poll");
-                fs_add_null(fs, "precision");
-                fs_add_null(fs, "root_delay");
-                fs_add_null(fs, "root_dispersion");
-                fs_add_null(fs, "reference_clock_identifier");
-                fs_add_null(fs, "reference_timestamp");
-                fs_add_null(fs, "originate_timestap");
-                fs_add_null(fs, "receive_timestamp");
-                fs_add_null(fs, "transmit_timestamp");
-
-
         } else {
-                fs_add_string(fs, "classification", (char *) "other", 0);
-                fs_add_uint64(fs, "success", 0);
-                fs_add_null(fs, "sport");
-                fs_add_null(fs, "dport");
-                fs_add_null(fs, "icmp_responder");
-                fs_add_null(fs, "icmp_type");
-                fs_add_null(fs, "icmp_code");
-                fs_add_null(fs, "icmp_unreach_str");
+		// ICMP case is handled by udp_process_packet at the beginning
                 fs_add_null(fs, "LI_VN_MODE");
                 fs_add_null(fs, "stratum");
                 fs_add_null(fs, "poll");
@@ -209,59 +176,52 @@ int ntp_init_perthread(void *buf, macaddr_t *src,
         return EXIT_SUCCESS;
 }
 
-void ntp_print_packet(FILE *fp, void *packet){
-
-        struct ether_header *ethh = (struct ether_header *)packet;
-        struct ip *iph = (struct ip *) &ethh[1];
-        struct udphdr *udph = (struct udphdr *) (iph + 4*iph->ip_hl);
-        struct ntphdr *ntph = (struct ntphdr *) &udph[1];
-        fprintf(fp, "ntp { LI_VN_MODE: %u | stratum: %u | poll: %u }\n",
-        ntph->LI_VN_MODE, ntph->stratum, ntph->poll);
-        fprintf(fp, "udp { source: %u | dest: %u | checksum: %#04X }\n",
-        ntohs(udph->uh_sport),
-        ntohs(udph->uh_dport),
-        ntohs(udph->uh_sum));
-        fprintf_ip_header(fp, iph);
-        fprintf_eth_header(fp, ethh);
-        fprintf(fp, "-------------------------------------------------\n");
+void ntp_print_packet(FILE *fp, const void *packet)
+{    
+	struct ether_header *ethh = (struct ether_header *)packet;
+	struct ip *iph = (struct ip *) &ethh[1];
+	struct udphdr *udph = (struct udphdr *) (iph + 4*iph->ip_hl);
+	struct ntphdr *ntph = (struct ntphdr *) &udph[1];
+	fprintf(fp, "ntp { LI_VN_MODE: %u | stratum: %u | poll: %u }\n",
+		ntph->LI_VN_MODE, ntph->stratum, ntph->poll);
+	udp_print_packet(fp, packet);
 }
 
-static fielddef_t fields[] = {
-        {.name = "classification", .type = "string", .desc = "packet classification"},
-        {.name = "success", .type = "int", .desc = "is  response considered success"},
-        {.name = "sport", .type = "int", .desc = "UDP source port"},
-        {.name = "dport", .type = "int", .desc = "UDP destination port"},
-        {.name = "icmp_responder", .type = "string", .desc = "Source IP of ICMP_UNREACH messages"},
-        {.name = "icmp_type", .type = "int", .desc = "icmp message type"},
-        {.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
-        {.name = "icmp_unreach_str", .type = "string", .desc = "for icmp_unreach responses, the string version of icmp_code "},
-        {.name = "LI_VN_MODE", .type = "int", .desc = "leap indication, version number, mode"},
-        {.name = "stratum", .type = "int", .desc = "stratum"},
-        {.name = "poll", .type ="int", .desc = "poll"},
-        {.name = "precision", .type = "int", .desc = "precision"},
-        {.name = "root_delay", .type = "int", .desc = "root delay"},
-        {.name = "root_dispersion", .type = "int", .desc = "root dispersion"},
-        {.name = "reference_clock_identifier", .type = "int", .desc = "code identifying clock reference"},
-        {.name = "reference_timestamp", .type = "int", .desc = "local time at which local clock was last set or corrected"},
-        {.name = "originate_timestamp", .type = "int", .desc = "local time at which request deparated client for service"},
-        {.name = "receive_timestamp", .type = "int", .desc = "local time at which request arrvied at service host"},
-        {.name = "transmit_timestamp", .type = "int", .desc = "local time which reply departed service host for client"},
+static fielddefset_t fields = {
+	.fielddefs = {
+		{.name = "LI_VN_MODE", .type = "int", .desc = "leap indication, version number, mode"},
+		{.name = "stratum", .type = "int", .desc = "stratum"},
+		{.name = "poll", .type ="int", .desc = "poll"},
+		{.name = "precision", .type = "int", .desc = "precision"},
+		{.name = "root_delay", .type = "int", .desc = "root delay"},
+		{.name = "root_dispersion", .type = "int", .desc = "root dispersion"},
+		{.name = "reference_clock_identifier", .type = "int", .desc = "code identifying clock reference"},
+		{.name = "reference_timestamp", .type = "int", .desc = "local time at which local clock was last set or corrected"},
+		{.name = "originate_timestamp", .type = "int", .desc = "local time at which request deparated client for service"},
+		{.name = "receive_timestamp", .type = "int", .desc = "local time at which request arrvied at service host"},
+		{.name = "transmit_timestamp", .type = "int", .desc = "local time which reply departed service host for client"},
+	},
+	.len = 11
 };
 
 probe_module_t module_ntp = {
-        .name = "ntp",
-        .packet_length = 1,
-        .pcap_filter = "udp || icmp",
-        .pcap_snaplen = 1500,
-        .port_args = 1,
-        .thread_initialize = &ntp_init_perthread,
-        .global_initialize = &udp_global_initialize,
-        .make_packet = &udp_make_packet,
-        .print_packet = &ntp_print_packet,
-        .validate_packet = &ntp_validate_packet,
-        .process_packet = &ntp_process_packet,
-        .close = &udp_global_cleanup,
+	.name = "ntp",
+	.packet_length = 1,
+	.pcap_filter = "udp || icmp",
+	.pcap_snaplen = 1500,
+	.port_args = 1,
+	.thread_initialize = &ntp_init_perthread,
+	.global_initialize = &udp_global_initialize,
+	.make_packet = &udp_make_packet,
+	.print_packet = &ntp_print_packet,
+	.validate_packet = &ntp_validate_packet,
+	.process_packet = &ntp_process_packet,
+	.close = &udp_global_cleanup,
         .output_type = OUTPUT_TYPE_STATIC,
-        .fields = fields,
-        .numfields = sizeof(fields)/sizeof(fields[0])
+	.fieldsets = (fielddefset_t*[]){
+    		&ip_fields,
+		&udp_fields,
+		&fields
+    	},
+    	.num_fieldsets = 3
 };
