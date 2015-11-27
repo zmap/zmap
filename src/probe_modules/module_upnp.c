@@ -185,11 +185,11 @@ cleanup:
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
 
-		fs_add_binary(fs, "data", (ntohs(udp->uh_ulen) - sizeof(struct udphdr)), 
+		fs_add_binary(fs, "data", (ntohs(udp->uh_ulen) - sizeof(struct udphdr)),
 				(void*) &udp[1], 0);
 
 		free(s);
-
+#if 0
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
 		struct ip *ip_inner = (struct ip *) ((char *) icmp + ICMP_UNREACH_HEADER_SIZE);
@@ -220,6 +220,7 @@ cleanup:
 			fs_add_string(fs, "icmp_unreach_str", (char *) "unknown", 0);
 		}
 		fs_add_null(fs, "data");
+#endif
 	} else {
 		fs_add_string(fs, "classification", (char *) "other", 0);
 		fs_add_uint64(fs, "success", 0);
