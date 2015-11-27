@@ -73,6 +73,10 @@ int upnp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		if (sport != zconf.target_port) {
 			return 0;
 		}
+		size_t expected_length = 4*ip_hdr->ip_hl + ntohs(udp->uh_ulen);
+		if (expected_length > len) {
+			return 0;
+		}
 	}
 	return 1;
 }
@@ -128,9 +132,6 @@ void upnp_process_packet(const u_char *packet,
 			}
 			char *value = pch;
 			char *key = strsep(&value, ":");
-			if (value && value[0] == ' ') {
-				value += (size_t)1;
-			}
 			if (!key) {
 				pch = strtok(NULL, "\n");
 				continue;
@@ -139,7 +140,9 @@ void upnp_process_packet(const u_char *packet,
 				pch = strtok(NULL, "\n");
 				continue;
 			}
-
+			if (value[0] == ' ') {
+				value += (size_t)1;
+			}
 			if (!strcasecmp(key, "server")) {
 				server = strdup(value);
 			} else if (!strcasecmp(key, "location")) {
@@ -269,7 +272,7 @@ probe_module_t module_upnp = {
 	.name = "upnp",
 	.packet_length = 139,
 	.pcap_filter = "udp || icmp",
-	.pcap_snaplen = 1500,
+	.pcap_snaplen = 2048,
 	.port_args = 1,
 	.global_initialize = &upnp_global_initialize,
 	.thread_initialize = &upnp_init_perthread,
