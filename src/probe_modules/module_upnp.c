@@ -15,18 +15,20 @@
 
 #include "../../lib/includes.h"
 #include "../../lib/logger.h"
+#include "../../lib/xalloc.h"
 #include "../fieldset.h"
 #include "probe_modules.h"
 #include "packet.h"
 #include "module_udp.h"
 
+#define ICMP_UNREACH_HEADER_SIZE 8
+
 static const char *upnp_query = "M-SEARCH * HTTP/1.1\r\n"
-"Host:239.255.255.250:1900\r\n"
-"ST:upnp:rootdevice\r\n"
-"Man:\"ssdp:discover\"\r\nMX:3\r\n\r\n";
+	"Host:239.255.255.250:1900\r\n"
+	"ST:upnp:rootdevice\r\n"
+	"Man:\"ssdp:discover\"\r\nMX:3\r\n\r\n";
 
 probe_module_t module_upnp;
-#define ICMP_UNREACH_HEADER_SIZE 8
 
 int upnp_global_initialize(struct state_conf *state)
 {
@@ -40,22 +42,22 @@ int upnp_init_perthread(void* buf, macaddr_t *src, macaddr_t *gw,
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 	struct ether_header *eth_header = (struct ether_header *) buf;
-	make_eth_header(eth_header, src, gw);
 	struct ip *ip_header = (struct ip*)(&eth_header[1]);
-
-	uint16_t len = htons(sizeof(struct ip) + sizeof(struct udphdr) + strlen(upnp_query));
-	make_ip_header(ip_header, IPPROTO_UDP, len);
-
 	struct udphdr *udp_header = (struct udphdr*)(&ip_header[1]);
-	len = sizeof(struct udphdr) + strlen(upnp_query);
-	make_udp_header(udp_header, dst_port, len);
-
 	char* payload = (char*)(&udp_header[1]);
+
+	uint16_t len = htons(sizeof(struct ip) + sizeof(struct udphdr)
+			+ strlen(upnp_query));
+	//uint16_t udp_len = sizeof(struct udphdr) + strlen(upnp_query);
 
 	assert(sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr)
 			+ strlen(upnp_query) <= MAX_PACKET_SIZE);
-
 	assert(MAX_PACKET_SIZE - ((char*)payload - (char*)buf) > (int) strlen(upnp_query));
+
+	make_eth_header(eth_header, src, gw);
+	make_ip_header(ip_header, IPPROTO_UDP, len);
+	make_udp_header(udp_header, dst_port, len);
+
 	strcpy(payload, upnp_query);
 
 	return EXIT_SUCCESS;
@@ -68,9 +70,15 @@ int upnp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		return 0;
 	}
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
-		struct udphdr *udp = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
+		struct udphdr *udp = (struct udphdr *) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
 		uint16_t sport = ntohs(udp->uh_sport);
 		if (sport != zconf.target_port) {
+			return 0;
+		}
+		// reject packets where the buffer doesn't contain the entire
+		// packet it should.
+		size_t expected_length = 4*ip_hdr->ip_hl + udp->uh_ulen;
+		if (expected_length > len) {
 			return 0;
 		}
 	}
@@ -78,11 +86,9 @@ int upnp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 }
 
 
-void upnp_process_packet(const u_char *packet,
-		__attribute__((unused)) uint32_t len, fieldset_t *fs,
-		__attribute__((unused)) uint32_t *validation)
+void upnp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *fs,
+		UNUSED uint32_t *validation)
 {
-
 	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		struct udphdr *udp = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
@@ -90,20 +96,18 @@ void upnp_process_packet(const u_char *packet,
 		char *payload = (char*)(&udp[1]);
 		uint16_t plen = udp->uh_ulen - 8;
 
-		char *s = malloc(plen+1);
-		//char *t = malloc(plen+1);
-		assert(s);
+		char *s = xmalloc(plen+1);
 		strncpy(s, payload, plen);
-		//strncpy(t, payload, plen);
 		s[plen] = 0;
 
-		int is_first = 1;
 		const char *classification = "none";
 		uint64_t is_success = 0;
 
+		int is_first = 1;
 		char *server=NULL, *location=NULL, *usn=NULL, *st=NULL,
 		     *cachecontrol=NULL, *ext=NULL, *xusragent=NULL,
 		     *date=NULL, *agent=NULL;
+
 		char *pch = strtok(s, "\n");
 		while (pch != NULL) {
 			if (pch[strlen(pch)-1] == '\r') {
@@ -128,9 +132,6 @@ void upnp_process_packet(const u_char *packet,
 			}
 			char *value = pch;
 			char *key = strsep(&value, ":");
-			if (value && value[0] == ' ') {
-				value += (size_t)1;
-			}
 			if (!key) {
 				pch = strtok(NULL, "\n");
 				continue;
@@ -139,7 +140,9 @@ void upnp_process_packet(const u_char *packet,
 				pch = strtok(NULL, "\n");
 				continue;
 			}
-
+			if (value && value[0] == ' ') {
+				value += (size_t) 1;
+			}
 			if (!strcasecmp(key, "server")) {
 				server = strdup(value);
 			} else if (!strcasecmp(key, "location")) {
@@ -181,42 +184,40 @@ cleanup:
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
-
-		fs_add_binary(fs, "data", (ntohs(udp->uh_ulen) - sizeof(struct udphdr)), 
+		fs_add_binary(fs, "data", (ntohs(udp->uh_ulen) - sizeof(struct udphdr)),
 				(void*) &udp[1], 0);
-
 		free(s);
 
-	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
-		struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
-		struct ip *ip_inner = (struct ip *) ((char *) icmp + ICMP_UNREACH_HEADER_SIZE);
-		// ICMP unreach comes from another server (not the one we sent a probe to);
-		// But we will fix up saddr to be who we sent the probe to, in case you care.
-		fs_modify_string(fs, "saddr", make_ip_str(ip_inner->ip_dst.s_addr), 1);
-		fs_add_string(fs, "classification", (char*) "icmp-unreach", 0);
-		fs_add_uint64(fs, "success", 0);
+	//} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
+	//	struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
+	//	struct ip *ip_inner = (struct ip *) ((char *) icmp + ICMP_UNREACH_HEADER_SIZE);
+	//	// ICMP unreach comes from another server (not the one we sent a probe to);
+	//	// But we will fix up saddr to be who we sent the probe to, in case you care.
+	//	fs_modify_string(fs, "saddr", make_ip_str(ip_inner->ip_dst.s_addr), 1);
+	//	fs_add_string(fs, "classification", (char*) "icmp-unreach", 0);
+	//	fs_add_uint64(fs, "success", 0);
 
-		fs_add_null(fs, "server");
-		fs_add_null(fs, "location");
-		fs_add_null(fs, "usn");
-		fs_add_null(fs, "st");
-		fs_add_null(fs, "ext");
-		fs_add_null(fs, "cache_control");
-		fs_add_null(fs, "x_user_agent");
-		fs_add_null(fs, "agent");
-		fs_add_null(fs, "date");
+	//	fs_add_null(fs, "server");
+	//	fs_add_null(fs, "location");
+	//	fs_add_null(fs, "usn");
+	//	fs_add_null(fs, "st");
+	//	fs_add_null(fs, "ext");
+	//	fs_add_null(fs, "cache_control");
+	//	fs_add_null(fs, "x_user_agent");
+	//	fs_add_null(fs, "agent");
+	//	fs_add_null(fs, "date");
 
-		fs_add_null(fs, "sport");
-		fs_add_null(fs, "dport");
-		fs_add_string(fs, "icmp_responder", make_ip_str(ip_hdr->ip_src.s_addr), 1);
-		fs_add_uint64(fs, "icmp_type", icmp->icmp_type);
-		fs_add_uint64(fs, "icmp_code", icmp->icmp_code);
-		if (icmp->icmp_code <= ICMP_UNREACH_PRECEDENCE_CUTOFF) {
-			fs_add_string(fs, "icmp_unreach_str", (char *) udp_unreach_strings[icmp->icmp_code], 0);
-		} else {
-			fs_add_string(fs, "icmp_unreach_str", (char *) "unknown", 0);
-		}
-		fs_add_null(fs, "data");
+	//	fs_add_null(fs, "sport");
+	//	fs_add_null(fs, "dport");
+	//	fs_add_string(fs, "icmp_responder", make_ip_str(ip_hdr->ip_src.s_addr), 1);
+	//	fs_add_uint64(fs, "icmp_type", icmp->icmp_type);
+	//	fs_add_uint64(fs, "icmp_code", icmp->icmp_code);
+	//	if (icmp->icmp_code <= ICMP_UNREACH_PRECEDENCE_CUTOFF) {
+	//		fs_add_string(fs, "icmp_unreach_str", (char *) udp_unreach_strings[icmp->icmp_code], 0);
+	//	} else {
+	//		fs_add_string(fs, "icmp_unreach_str", (char *) "unknown", 0);
+	//	}
+	//	fs_add_null(fs, "data");
 	} else {
 		fs_add_string(fs, "classification", (char *) "other", 0);
 		fs_add_uint64(fs, "success", 0);
