@@ -15,6 +15,7 @@
 
 #include "../../lib/includes.h"
 #include "../../lib/logger.h"
+#include "../../lib/xalloc.h"
 #include "../fieldset.h"
 #include "probe_modules.h"
 #include "packet.h"
@@ -86,7 +87,6 @@ void upnp_process_packet(const u_char *packet,
 		__attribute__((unused)) uint32_t len, fieldset_t *fs,
 		__attribute__((unused)) uint32_t *validation)
 {
-
 	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		struct udphdr *udp = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
@@ -94,11 +94,8 @@ void upnp_process_packet(const u_char *packet,
 		char *payload = (char*)(&udp[1]);
 		uint16_t plen = udp->uh_ulen - 8;
 
-		char *s = malloc(plen+1);
-		//char *t = malloc(plen+1);
-		assert(s);
+		char *s = xmalloc(plen+1);
 		strncpy(s, payload, plen);
-		//strncpy(t, payload, plen);
 		s[plen] = 0;
 
 		int is_first = 1;
@@ -224,7 +221,6 @@ cleanup:
 	} else {
 		fs_add_string(fs, "classification", (char *) "other", 0);
 		fs_add_uint64(fs, "success", 0);
-
 		fs_add_null(fs, "server");
 		fs_add_null(fs, "location");
 		fs_add_null(fs, "usn");
@@ -234,7 +230,6 @@ cleanup:
 		fs_add_null(fs, "x_user_agent");
 		fs_add_null(fs, "agent");
 		fs_add_null(fs, "date");
-
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");
 		fs_add_null(fs, "icmp_responder");
@@ -281,6 +276,9 @@ probe_module_t module_upnp = {
 	.print_packet = &udp_print_packet,
 	.process_packet = &upnp_process_packet,
 	.validate_packet = &upnp_validate_packet,
+	// UPnP isn't actually dynamic, however, we don't handle escaping
+	// properly in the CSV module and this will force users to use JSON.
+	.output_type = OUTPUT_TYPE_DYNAMIC,
 	.close = NULL,
 	.helptext = "Probe module that sends a TCP SYN packet to a specific "
 		"port. Possible classifications are: synack and rst. A "
