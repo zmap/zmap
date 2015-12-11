@@ -82,7 +82,7 @@ static __attribute__((unused)) inline int check_dst_port(uint16_t port,
 {
 	if (port > zconf.source_port_last
 					|| port < zconf.source_port_first) {
-		return -1;
+		return 0;
 	}
 	int32_t to_validate = port - zconf.source_port_first;
 	int32_t min = validation[1] % num_ports;
