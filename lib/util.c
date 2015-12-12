@@ -234,6 +234,19 @@ int set_cpu(uint32_t core)
 	return EXIT_SUCCESS;
 }
 
+#elif defined(__DragonFly__)
+
+#include <sys/usched.h>
+
+
+int set_cpu(uint32_t core)
+{
+	if (usched_set(getpid(), USCHED_SET_CPU, &core, sizeof(core)) != 0) {
+		return EXIT_FAILURE;
+	}
+	return EXIT_SUCCESS;
+}
+
 #else
 
 #if defined(__FreeBSD__) || defined(__NetBSD__)
