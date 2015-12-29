@@ -137,7 +137,7 @@ static char *sanitize_utf8(const char *buf)
 		// This is temporary debug code.
 		if (safe_ptr == NULL) {
 			log_warn("fieldset", "UTF8 Sanitization issue. %u errors, fell through iter %u. Orig: %s new: %s",
-				i, j, buf, safe_buf);
+					i, j, buf, safe_buf);
 			i = j;
 			break;
 		}
