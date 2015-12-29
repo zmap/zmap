@@ -134,7 +134,16 @@ static char *sanitize_utf8(const char *buf)
 		safe_ptr = (char*)u8_check((uint8_t*)safe_buf, strlen(safe_buf));
 
 		// This implies we had less errors than we should.
-		assert(safe_ptr != NULL);
+		// This is temporary debug code.
+		if (safe_ptr == NULL) {
+			log_warn("fieldset", "UTF8 Sanitization issue. %u errors, fell through iter %u. Orig: %s new: %s",
+					i, j, buf, safe_buf);
+			i = j;
+			break;
+		}
+
+		// XXX Uncomment when we remove above log_warn.
+		//assert(safe_ptr != NULL);
 		assert(safe_ptr >= safe_buf);
 		assert(safe_ptr < safe_buf + strlen(safe_buf));
 
