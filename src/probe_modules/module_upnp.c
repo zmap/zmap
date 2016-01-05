@@ -284,7 +284,6 @@ probe_module_t module_upnp = {
 		"port. Possible classifications are: synack and rst. A "
 		"SYN-ACK packet is considered a success and a reset packet "
 		"is considered a failed response.",
-	.output_type = OUTPUT_TYPE_STATIC,
 	.fields = fields,
 	.numfields = 18
 };
