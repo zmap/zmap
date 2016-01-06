@@ -303,6 +303,7 @@ int send_run(sock_t st, shard_t *s)
 			} else {
 				int length = zconf.probe_module->packet_length;
 				void *contents = buf + zconf.send_ip_pkts*sizeof(struct ether_header);
+				int any_sends_successful = 0;
 				for (int i = 0; i < attempts; ++i) {
 					int rc = send_packet(st, contents, length, idx);
 					if (rc < 0) {
@@ -314,10 +315,13 @@ int send_run(sock_t st, shard_t *s)
 							log_debug("send", "send_packet failed for %s. %s",
 								addr_str, strerror(errno));
 						}
-						s->state.failures++;
 					} else {
+						any_sends_successful = 1;
 						break;
 					}
+				}
+				if (!any_sends_successful) {
+					s->state.failures++;
 				}
 				idx++;
 				idx &= 0xFF;
