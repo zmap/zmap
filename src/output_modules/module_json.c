@@ -11,6 +11,7 @@
 #include <string.h>
 #include <time.h>
 #include <assert.h>
+#include <errno.h>
 
 #include "../../lib/includes.h"
 #include "../../lib/xalloc.h"
@@ -32,7 +33,7 @@
 
 static FILE *file = NULL;
 
-int json_output_file_init(struct state_conf *conf, UNUSED char **fields, 
+int json_output_file_init(struct state_conf *conf, UNUSED char **fields,
 		UNUSED int fieldlens)
 {
 	assert(conf);
@@ -42,10 +43,10 @@ int json_output_file_init(struct state_conf *conf, UNUSED char **fields,
 		file = stdout;
 	} else {
 		if (!(file = fopen(conf->output_filename, "w"))) {
-			log_fatal("output-json", "could not open JSON output file %s",
-					conf->output_filename);
+			log_fatal("output-json", "could not open JSON output file (%s): %s",
+					conf->output_filename, strerror(errno));
 		}
-	} 
+	}
 	check_and_log_file_error(file, "json");
 	return EXIT_SUCCESS;
 }
@@ -90,7 +91,7 @@ json_object *repeated_to_jsonobj(fieldset_t *fs)
 	json_object *obj = json_object_new_array();
 	for (int i=0; i < fs->len; i++) {
 		field_t *f = &(fs->fields[i]);
-		json_object_array_add(obj, field_to_jsonobj(f));   
+		json_object_array_add(obj, field_to_jsonobj(f));
 	}
 	return obj;
 }
@@ -100,7 +101,7 @@ json_object *fs_to_jsonobj(fieldset_t *fs)
 	json_object *obj = json_object_new_object();
 	for (int i=0; i < fs->len; i++) {
 		field_t *f = &(fs->fields[i]);
-		json_object_object_add(obj, f->name, field_to_jsonobj(f));   
+		json_object_object_add(obj, f->name, field_to_jsonobj(f));
 	}
 	return obj;
 }
@@ -131,8 +132,8 @@ int json_output_file_close(UNUSED struct state_conf* c,
 int print_json_fieldset(fieldset_t *fs)
 {
 	json_object *record = fs_to_jsonobj(fs);
-	fprintf(stdout, "%s\n", json_object_to_json_string(record)); 
-	json_object_put(record); 
+	fprintf(stdout, "%s\n", json_object_to_json_string(record));
+	json_object_put(record);
 	return EXIT_SUCCESS;
 }
 

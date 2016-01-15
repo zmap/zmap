@@ -10,7 +10,9 @@
 
 #include "monitor.h"
 
+#include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <math.h>
@@ -352,8 +354,8 @@ static FILE* init_status_update_file(char *path)
 {
 		FILE *f = fopen(path, "wb");
 		if (!f) {
-			log_fatal("csv", "could not open output file (%s)",
-					zconf.status_updates_file);
+			log_fatal("csv", "could not open status updates file (%s): %s",
+					zconf.status_updates_file, strerror(errno));
 		}
 		log_debug("monitor", "status updates CSV will be saved to %s",
 				zconf.status_updates_file);
