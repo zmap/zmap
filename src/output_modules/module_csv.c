@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -31,8 +32,8 @@ int csv_init(struct state_conf *conf, char **fields, int fieldlens)
 			file = stdout;
 		} else {
 			if (!(file = fopen(conf->output_filename, "w"))) {
-				log_fatal("csv", "could not open CSV output file %s",
-					conf->output_filename);
+				log_fatal("csv", "could not open CSV output file (%s): %s",
+					conf->output_filename, strerror(errno));
 			}
 		}
 	} else {
@@ -66,7 +67,7 @@ int csv_close(__attribute__((unused)) struct state_conf* c,
 
 static void hex_encode(FILE *f, unsigned char* readbuf, size_t len)
 {
-	for(size_t i=0; i < len; i++) {	
+	for(size_t i=0; i < len; i++) {
 		fprintf(f, "%02x", readbuf[i]);
 	}
 	check_and_log_file_error(f, "csv");

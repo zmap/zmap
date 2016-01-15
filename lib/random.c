@@ -11,14 +11,17 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include <assert.h>
+#include <errno.h>
+#include "logger.h"
 
 #define RANDSRC "/dev/urandom"
 
 int random_bytes(void *dst, size_t n)
 {
 	FILE *f = fopen(RANDSRC, "rb");
-	assert(f);
+	if (!f) {
+		log_fatal("random", "unable to read /dev/urandom: %s", strerror(errno));
+	}
 	size_t r = fread(dst, n, 1, f);
 	fclose(f);
 	if (r < 1) {
