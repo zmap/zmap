@@ -229,6 +229,8 @@ static void start_zmap(void)
 		}
 	}
 	log_debug("zmap", "%d sender threads spawned", zconf.senders);
+
+	monitor_init();
 	mon_start_arg_t *mon_arg = xmalloc(sizeof(mon_start_arg_t));
 	mon_arg->it = it;
 	mon_arg->recv_ready_mutex = &recv_ready_mutex;
