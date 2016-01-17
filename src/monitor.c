@@ -97,6 +97,8 @@ typedef struct export_scan_status {
 
 } export_status_t;
 
+static FILE *f = NULL;
+
 // find minimum of an array of doubles
 static double min_d(double array[], int n)
 {
@@ -416,15 +418,18 @@ static inline void check_max_sendto_failures(export_status_t *exp)
 	}
 }
 
+
+void monitor_init(void)
+{
+	if (zconf.status_updates_file) {
+		f = init_status_update_file(zconf.status_updates_file);
+	}
+}
+
 void monitor_run(iterator_t *it, pthread_mutex_t *lock)
 {
 	int_status_t *internal_status = xmalloc(sizeof(int_status_t));
 	export_status_t *export_status = xmalloc(sizeof(export_status_t));
-
-	FILE *f = NULL;
-	if (zconf.status_updates_file) {
-		f = init_status_update_file(zconf.status_updates_file);
-	}
 
 	while (!(zsend.complete && zrecv.complete)) {
 		update_pcap_stats(lock);
