@@ -48,7 +48,7 @@ In addition, you can get following packages to get further functionalities:
 
 * On RHEL- and Fedora-based systems by running:
    ```sh
-   sudo yum install cmake gmp-devel gengetopt libpcap-devel flex byacc json-c-devel libunistring
+   sudo yum install cmake gmp-devel gengetopt libpcap-devel flex byacc json-c-devel libunistring libunistring-devel
    ```
 
 * On Mac OS systems [Homebrew](http://brew.sh/):
