@@ -144,9 +144,6 @@ fields, and write filters over the output fields.
    * `-q`, `--quiet`:
      Do not print status updates once per second
 
-   * `-g`, `--summary`:
-     Print configuration and summary of results at the end of the scan
-
    * `-v`, `--verbosity=n`:
      Level of log detail (0-5, default=3)
 
