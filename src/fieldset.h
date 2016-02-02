@@ -103,6 +103,8 @@ void fs_add_unsafe_string(fieldset_t *fs, const char *name, char *value, int fre
 
 void fs_chkadd_string(fieldset_t *fs, const char *name, char *value, int free_);
 
+void fs_chkadd_unsafe_string(fieldset_t *fs, const char *name, char *value, int free_);
+
 void fs_add_constchar(fieldset_t *fs, const char *name, const char *value);
 
 void fs_add_binary(fieldset_t *fs, const char *name, size_t len,
