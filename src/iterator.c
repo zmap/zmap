@@ -98,6 +98,17 @@ uint32_t iterator_get_sent(iterator_t *it)
 	return sent;
 }
 
+uint32_t iterator_get_fail(iterator_t *it)
+{
+	uint32_t fails = 0;
+	for (uint8_t i = 0; i < it->num_threads; ++i) {
+		fails += it->thread_shards[i].state.failures;
+	}
+	return fails;
+}
+
+
+
 shard_t* get_shard(iterator_t *it, uint8_t thread_id)
 {
 	assert(thread_id < it->num_threads);

@@ -10,7 +10,9 @@
 
 #include "monitor.h"
 
+#include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <math.h>
@@ -95,6 +97,8 @@ typedef struct export_scan_status {
 
 } export_status_t;
 
+static FILE *f = NULL;
+
 // find minimum of an array of doubles
 static double min_d(double array[], int n)
 {
@@ -140,6 +144,7 @@ static void update_pcap_stats(pthread_mutex_t *recv_ready_mutex)
 static void export_stats(int_status_t *intrnl, export_status_t *exp, iterator_t *it)
 {
 	uint32_t total_sent = iterator_get_sent(it);
+	uint32_t total_fail = iterator_get_fail(it);
 	uint32_t total_recv = zrecv.pcap_recv;
 	uint32_t recv_success = zrecv.success_unique;
 	uint32_t app_success = zrecv.app_success_unique;
@@ -223,6 +228,7 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp, iterator_t 
 	number_string(exp->pcap_drop_last, exp->pcap_drop_last_str, NUMBER_STR_LEN);
 	number_string(exp->pcap_drop_avg, exp->pcap_drop_avg_str, NUMBER_STR_LEN);
 
+	zsend.sendto_failures = total_fail;
 	exp->fail_total = zsend.sendto_failures;
 	exp->fail_last = (exp->fail_total - intrnl->last_send_failures) / delta;
 	exp->fail_avg = exp->fail_total/age;
@@ -350,8 +356,8 @@ static FILE* init_status_update_file(char *path)
 {
 		FILE *f = fopen(path, "wb");
 		if (!f) {
-			log_fatal("csv", "could not open output file (%s)",
-					zconf.status_updates_file);
+			log_fatal("csv", "could not open status updates file (%s): %s",
+					zconf.status_updates_file, strerror(errno));
 		}
 		log_debug("monitor", "status updates CSV will be saved to %s",
 				zconf.status_updates_file);
@@ -409,18 +415,21 @@ static inline void check_max_sendto_failures(export_status_t *exp)
 	if (zconf.max_sendto_failures >= 0 && exp->fail_total > (uint32_t) zconf.max_sendto_failures) {
 		log_fatal("monitor", "maxiumum number of sendto failures (%i) exceeded",
 				zconf.max_sendto_failures);
-	} 
+	}
+}
+
+
+void monitor_init(void)
+{
+	if (zconf.status_updates_file) {
+		f = init_status_update_file(zconf.status_updates_file);
+	}
 }
 
 void monitor_run(iterator_t *it, pthread_mutex_t *lock)
 {
 	int_status_t *internal_status = xmalloc(sizeof(int_status_t));
 	export_status_t *export_status = xmalloc(sizeof(export_status_t));
-
-	FILE *f = NULL;
-	if (zconf.status_updates_file) {
-		f = init_status_update_file(zconf.status_updates_file);
-	}
 
 	while (!(zsend.complete && zrecv.complete)) {
 		update_pcap_stats(lock);

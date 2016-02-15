@@ -229,6 +229,8 @@ static void start_zmap(void)
 		}
 	}
 	log_debug("zmap", "%d sender threads spawned", zconf.senders);
+
+	monitor_init();
 	mon_start_arg_t *mon_arg = xmalloc(sizeof(mon_start_arg_t));
 	mon_arg->it = it;
 	mon_arg->recv_ready_mutex = &recv_ready_mutex;
@@ -559,7 +561,8 @@ int main(int argc, char *argv[])
 			zconf.metadata_file = fopen(zconf.metadata_filename, "w");
 		}
 		if (!zconf.metadata_file) {
-			log_fatal("metadata", "unable to open metadata file");
+			log_fatal("metadata", "unable to open metadata file (%s): %s",
+					zconf.metadata_filename, strerror(errno));
 		}
 		log_debug("metadata", "metdata will be saved to %s",
 				zconf.metadata_filename);

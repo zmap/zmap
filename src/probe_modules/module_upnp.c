@@ -166,15 +166,15 @@ void upnp_process_packet(const u_char *packet,
 cleanup:
 		fs_add_string(fs, "classification", (char *) classification, 0);
 		fs_add_uint64(fs, "success", is_success);
-		fs_chkadd_string(fs, "server", server, 1);
-		fs_chkadd_string(fs, "location", location, 1);
-		fs_chkadd_string(fs, "usn", usn, 1);
-		fs_chkadd_string(fs, "st", st, 1);
-		fs_chkadd_string(fs, "ext", ext, 1);
-		fs_chkadd_string(fs, "cache_control", cachecontrol, 1);
-		fs_chkadd_string(fs, "x_user_agent", xusragent, 1);
-		fs_chkadd_string(fs, "agent", agent, 1);
-		fs_chkadd_string(fs, "date", date, 1);
+		fs_chkadd_unsafe_string(fs, "server", server, 1);
+		fs_chkadd_unsafe_string(fs, "location", location, 1);
+		fs_chkadd_unsafe_string(fs, "usn", usn, 1);
+		fs_chkadd_unsafe_string(fs, "st", st, 1);
+		fs_chkadd_unsafe_string(fs, "ext", ext, 1);
+		fs_chkadd_unsafe_string(fs, "cache_control", cachecontrol, 1);
+		fs_chkadd_unsafe_string(fs, "x_user_agent", xusragent, 1);
+		fs_chkadd_unsafe_string(fs, "agent", agent, 1);
+		fs_chkadd_unsafe_string(fs, "date", date, 1);
 		fs_add_uint64(fs, "sport", ntohs(udp->uh_sport));
 		fs_add_uint64(fs, "dport", ntohs(udp->uh_dport));
 		fs_add_null(fs, "icmp_responder");
@@ -284,7 +284,6 @@ probe_module_t module_upnp = {
 		"port. Possible classifications are: synack and rst. A "
 		"SYN-ACK packet is considered a success and a reset packet "
 		"is considered a failed response.",
-	.output_type = OUTPUT_TYPE_STATIC,
 	.fields = fields,
 	.numfields = 18
 };
