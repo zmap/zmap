@@ -106,6 +106,18 @@ set(ZBLSOURCES
     "${CMAKE_CURRENT_BINARY_DIR}/zbopt.h"
 )
 
+set(ZITSOURCES
+    aesrand.c
+    cyclic.c
+    iterator.c
+    shard.c
+    state.c
+    validate.c
+    zitopt_compat.c
+    ziterate.c
+    "${CMAKE_CURRENT_BINARY_DIR}/zitopt.h"
+)
+
 set(ZTEESOURCES
     ztee.c
     topt_compat.c
@@ -135,6 +147,7 @@ endif()
 
 configure_file(topt.ggo.in ${CMAKE_BINARY_DIR}/src/topt.ggo @ONLY)
 configure_file(zbopt.ggo.in ${CMAKE_BINARY_DIR}/src/zbopt.ggo @ONLY)
+configure_file(zitopt.ggo.in ${CMAKE_BINARY_DIR}/src/zitopt.ggo @ONLY)
 configure_file(zopt.ggo.in ${CMAKE_BINARY_DIR}/src/zopt.ggo @ONLY)
 
 add_custom_command(OUTPUT zopt.h
@@ -152,6 +165,11 @@ add_custom_command(OUTPUT zbopt.h
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/zbopt.ggo"
 )
 
+add_custom_command(OUTPUT zitopt.h
+    COMMAND gengetopt -C --no-help --no-version -i "${CMAKE_CURRENT_SOURCE_DIR}/zitopt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/zitopt"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/zitopt.ggo"
+)
+
 add_custom_command(OUTPUT lexer.c
     COMMAND flex -o "${CMAKE_CURRENT_BINARY_DIR}/lexer.c" --header-file="${CMAKE_CURRENT_BINARY_DIR}/lexer.h" "${CMAKE_CURRENT_SOURCE_DIR}/lexer.l"
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/lexer.l"
@@ -164,6 +182,7 @@ add_custom_command(OUTPUT parser.c
 
 add_executable(zmap ${SOURCES})
 add_executable(zblacklist ${ZBLSOURCES})
+add_executable(ziterate ${ZITSOURCES})
 add_executable(ztee ${ZTEESOURCES})
 add_executable(ztests ${ZTESTSOURCES})
 
@@ -191,6 +210,18 @@ target_link_libraries(
 )
 
 target_link_libraries(
+    ziterate
+    zmaplib
+    gmp
+)
+
+target_link_libraries(
+    ziterate
+    zmaplib
+    m
+)
+
+target_link_libraries(
     ztee
     zmaplib
     m
@@ -212,6 +243,7 @@ install(
     TARGETS
     zmap
     zblacklist
+    ziterate
     ztee
     RUNTIME DESTINATION sbin
 )
@@ -221,6 +253,7 @@ install(
     FILES
     zmap.1
     zblacklist.1
+    ziterate.1
     ztee.1
     DESTINATION share/man/man1
 )

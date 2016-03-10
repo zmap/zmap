@@ -15,6 +15,7 @@ src/topt.h
 src/*.ggo
 src/zblacklist
 src/ztee
+src/ziterate
 lexer.c
 lexer.h
 parser.c

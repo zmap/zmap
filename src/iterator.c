@@ -59,6 +59,7 @@ void shard_complete(uint8_t thread_id, void *arg)
 iterator_t* iterator_init(uint8_t num_threads, uint8_t shard,
 			  uint8_t num_shards)
 {
+  printf("0\n");
 	uint64_t num_addrs = blacklist_count_allowed();
 	iterator_t *it = xmalloc(sizeof(struct iterator));
 	const cyclic_group_t *group = get_group(num_addrs);
@@ -67,7 +68,9 @@ iterator_t* iterator_init(uint8_t num_threads, uint8_t shard,
 	} else {
 		zsend.max_index = (uint32_t) num_addrs;
 	}
+  printf("1\n");
 	it->cycle = make_cycle(group, zconf.aes);
+  printf("2\n");
 	it->num_threads = num_threads;
 	it->curr_threads = num_threads;
 	it->thread_shards = xcalloc(num_threads, sizeof(shard_t));
@@ -85,7 +88,9 @@ iterator_t* iterator_init(uint8_t num_threads, uint8_t shard,
 			   );
 
 	}
+  printf("3\n");
 	zconf.generator = it->cycle.generator;
+  printf("4\n");
 	return it;
 }
 
