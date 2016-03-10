@@ -44,10 +44,8 @@ struct zit_conf {
 	aesrand_t *aes;
 };
 
-#define SET_IF_GIVEN(DST,ARG) \
-	{ if (args.ARG##_given) { (DST) = args.ARG##_arg; }; }
 #define SET_BOOL(DST,ARG) \
-	{ if (args.ARG##_given) { (DST) = 1; }; }
+   { if (args.ARG##_given) { (DST) = 1; }; }
 
 int main(int argc, char **argv)
 {
@@ -145,41 +143,49 @@ int main(int argc, char **argv)
 		log_fatal("ziterate", "unable to initialize blacklist / whitelist");
 	}
 
-  log_debug("ziterate", "0");
-  conf.aes = aesrand_init_from_seed(conf.seed);
-  log_debug("ziterate", "1");
 	// Set up sharding
-	//zconf.shard_num = 0;
-	//zconf.total_shards = 1;
+  conf.aes = aesrand_init_from_seed(conf.seed);
+	conf.shard_num = 0;
+	conf.total_shards = 1;
 	if ((args.shard_given || args.shards_given) && !args.seed_given) {
-		log_fatal("zmap", "Need to specify seed if sharding a scan");
+		log_fatal("ziterate", "Need to specify seed if sharding a scan");
 	}
 	if (args.shard_given ^ args.shards_given) {
-		log_fatal("zmap",
+		log_fatal("ziterate",
 			  "Need to specify both shard number and total number of shards");
 	}
 	if (args.shard_given) {
   //XXX		enforce_range("shard", args.shard_arg, 0, 254);
+    conf.shard_num = args.shard_arg;
 	}
 	if (args.shards_given) {
  //XXX		enforce_range("shards", args.shards_arg, 1, 254);
+    conf.total_shards = args.shards_arg;
 	}
-	//SET_IF_GIVEN(zconf.shard_num, shard);
-	//SET_IF_GIVEN(zconf.total_shards, shards);
-	//if (zconf.shard_num >= zconf.total_shards) {
-//		log_fatal("zmap", "With %hhu total shards, shard number (%hhu)"
-//			  " must be in range [0, %hhu)", zconf.total_shards,
-//			  zconf.shard_num, zconf.total_shards);
-//	}
-  log_debug("ziterate", "2");
-	iterator_t *it = iterator_init(1, conf.shard_num, conf.total_shards);
-  log_debug("ziterate", "3");
-  //shard_t *shard = get_shard(it, 1);
-	//uint32_t curr = shard_get_cur_ip(shard);
-	//printf("%d", curr);
+	// Check for a random seed
+	if (args.seed_given) {
+		conf.seed = args.seed_arg;
+	} else {
+		// generate a seed randomly
+		if (!random_bytes(&conf.seed, sizeof(uint64_t))) {
+			log_fatal("ziterate", "unable to generate random bytes "
+ 					"needed for seed");
+		}
+  }
+	if (conf.shard_num >= conf.total_shards) {
+		log_fatal("ziterate", "With %hhu total shards, shard number (%hhu)"
+			  " must be in range [0, %hhu)", conf.total_shards,
+			  conf.shard_num, conf.total_shards);
+	}
+  log_debug("ziterate", "Initializing sharding (%d shards, shard number %d, seed %d)", conf.total_shards, conf.shard_num, conf.seed);
+	iterator_t *it = iterator_init(conf.seed, conf.shard_num, conf.total_shards);
+  /* TODO
+   * shard_t *shard = get_shard(it, 1);
+	uint32_t curr = shard_get_cur_ip(shard);
+	printf("%d", curr);
 
   // check if in blacklist
-  /*if (blacklist_is_allowed(addr.s_addr)) {
+  if (blacklist_is_allowed(addr.s_addr)) {
       printf("%s", original);
   }*/
 	return EXIT_SUCCESS;
