@@ -11,7 +11,7 @@
  * space in a pseudo-random fashion, utilizing the sharding capabilities
  * of zmap to enable this iteration to be split among multiple instances of
  * ziterate.
-*/
+ */
 
 #define _GNU_SOURCE
 
@@ -44,7 +44,7 @@ struct zit_conf {
 };
 
 #define SET_BOOL(DST,ARG) \
-   { if (args.ARG##_given) { (DST) = 1; }; }
+{ if (args.ARG##_given) { (DST) = 1; }; }
 
 int main(int argc, char **argv)
 {
@@ -53,50 +53,50 @@ int main(int argc, char **argv)
 	memset(&conf, 0, sizeof(struct zit_conf));
 	conf.verbosity = 3;
 	int no_dupchk_pres = 0;
-  conf.ignore_errors = 0;
+	conf.ignore_errors = 0;
 
-  struct gengetopt_args_info args;
-  struct cmdline_parser_params *params;
-  params = cmdline_parser_params_create();
-  assert(params);
-  params->initialize = 1;
-  params->override = 0;
-  params->check_required = 0;
+	struct gengetopt_args_info args;
+	struct cmdline_parser_params *params;
+	params = cmdline_parser_params_create();
+	assert(params);
+	params->initialize = 1;
+	params->override = 0;
+	params->check_required = 0;
 
-  if (cmdline_parser_ext(argc, argv, &args, params) != 0) {
-    exit(EXIT_SUCCESS);
-  }
+	if (cmdline_parser_ext(argc, argv, &args, params) != 0) {
+		exit(EXIT_SUCCESS);
+	}
 
-  // Handle help text and version
-  if (args.help_given) {
-    cmdline_parser_print_help();
-    exit(EXIT_SUCCESS);
-  }
-  if (args.version_given) {
-    cmdline_parser_print_version();
-    exit(EXIT_SUCCESS);
-  }
+	// Handle help text and version
+	if (args.help_given) {
+		cmdline_parser_print_help();
+		exit(EXIT_SUCCESS);
+	}
+	if (args.version_given) {
+		cmdline_parser_print_version();
+		exit(EXIT_SUCCESS);
+	}
 
-  // Set the log file and metadata file
-  if (args.log_file_given) {
-    conf.log_filename = strdup(args.log_file_arg);
-  }
-  if (args.verbosity_given) {
-    conf.verbosity = args.verbosity_arg;
-  }
+	// Set the log file and metadata file
+	if (args.log_file_given) {
+		conf.log_filename = strdup(args.log_file_arg);
+	}
+	if (args.verbosity_given) {
+		conf.verbosity = args.verbosity_arg;
+	}
 
-  // Blacklist and whitelist
-  if (args.blacklist_file_given) {
-    conf.blacklist_filename = strdup(args.blacklist_file_arg);
-  }
-  if (args.whitelist_file_given) {
-    conf.whitelist_filename = strdup(args.whitelist_file_arg);
-  }
+	// Blacklist and whitelist
+	if (args.blacklist_file_given) {
+		conf.blacklist_filename = strdup(args.blacklist_file_arg);
+	}
+	if (args.whitelist_file_given) {
+		conf.whitelist_filename = strdup(args.whitelist_file_arg);
+	}
 
-  // Read the boolean flags
-  SET_BOOL(no_dupchk_pres, no_duplicate_checking);
-  conf.check_duplicates = !no_dupchk_pres;
-  SET_BOOL(conf.ignore_errors, ignore_blacklist_errors);
+	// Read the boolean flags
+	SET_BOOL(no_dupchk_pres, no_duplicate_checking);
+	conf.check_duplicates = !no_dupchk_pres;
+	SET_BOOL(conf.ignore_errors, ignore_blacklist_errors);
 
 	// initialize logging
 	FILE *logfile = stderr;
@@ -138,7 +138,7 @@ int main(int argc, char **argv)
 	}
 
 	if (blacklist_init(conf.whitelist_filename, conf.blacklist_filename,
-			NULL, 0, NULL, 0, conf.ignore_errors)) {
+				NULL, 0, NULL, 0, conf.ignore_errors)) {
 		log_fatal("ziterate", "unable to initialize blacklist / whitelist");
 	}
 
@@ -150,15 +150,15 @@ int main(int argc, char **argv)
 	}
 	if (args.shard_given ^ args.shards_given) {
 		log_fatal("ziterate",
-			  "Need to specify both shard number and total number of shards");
+				"Need to specify both shard number and total number of shards");
 	}
 	if (args.shard_given) {
-  //XXX		enforce_range("shard", args.shard_arg, 0, 254);
-    conf.shard_num = args.shard_arg;
+		//XXX		enforce_range("shard", args.shard_arg, 0, 254);
+		conf.shard_num = args.shard_arg;
 	}
 	if (args.shards_given) {
- //XXX		enforce_range("shards", args.shards_arg, 1, 254);
-    conf.total_shards = args.shards_arg;
+		//XXX		enforce_range("shards", args.shards_arg, 1, 254);
+		conf.total_shards = args.shards_arg;
 	}
 	// Check for a random seed
 	if (args.seed_given) {
@@ -167,34 +167,34 @@ int main(int argc, char **argv)
 		// generate a seed randomly
 		if (!random_bytes(&conf.seed, sizeof(uint64_t))) {
 			log_fatal("ziterate", "unable to generate random bytes "
- 					"needed for seed");
+					"needed for seed");
 		}
-  }
+	}
 	if (conf.shard_num >= conf.total_shards) {
 		log_fatal("ziterate", "With %hhu total shards, shard number (%hhu)"
-			  " must be in range [0, %hhu)", conf.total_shards,
-			  conf.shard_num, conf.total_shards);
+				" must be in range [0, %hhu)", conf.total_shards,
+				conf.shard_num, conf.total_shards);
 	}
 	validate_init();
 	conf.aes = aesrand_init_from_seed(conf.seed);
 	log_debug("ziterate", "Initializing sharding (%d shards, shard number %d, seed %d)", conf.total_shards, conf.shard_num, conf.seed);
 	/*
-		* XXX: this currently segfaults.  iterator.c's iterator_init calls cylic.c's make_cycle:
-		*
-		*   it->cycle = make_cycle(group, zconf.aes);
-		*
-		* cyclic.c's make_cycle calls find_primroot:
-		*
-		*   cycle.generator = find_primroot(group, aes);
-		*
-		* which calls cyclic.c's find_primroot:
-		*
-		*   uint32_t candidate = (uint32_t) ((aesrand_getword(aes) & 0xFFFFFFFF) % group->prime);
-		*
-		* which calls aesrand.c's aesrand_getword call, which segfaults here
-		*
-		*   memcpy(aes->input, aes->output, sizeof(aes->input));
-		*/
+	 * XXX: this currently segfaults.  iterator.c's iterator_init calls cylic.c's make_cycle:
+	 *
+	 *   it->cycle = make_cycle(group, zconf.aes);
+	 *
+	 * cyclic.c's make_cycle calls find_primroot:
+	 *
+	 *   cycle.generator = find_primroot(group, aes);
+	 *
+	 * which calls cyclic.c's find_primroot:
+	 *
+	 *   uint32_t candidate = (uint32_t) ((aesrand_getword(aes) & 0xFFFFFFFF) % group->prime);
+	 *
+	 * which calls aesrand.c's aesrand_getword call, which segfaults here
+	 *
+	 *   memcpy(aes->input, aes->output, sizeof(aes->input));
+	 */
 	iterator_t *it = iterator_init(conf.seed, conf.shard_num, conf.total_shards);
 	shard_t *shard = get_shard(it, 1);
 	uint32_t next_ip = shard_get_cur_ip(shard);
@@ -205,7 +205,7 @@ int main(int argc, char **argv)
 		/* TODO
 		// check if in blacklist
 		if (blacklist_is_allowed(addr.s_addr)) {
-				printf("%s", original);
+		printf("%s", original);
 		}
 		*/
 	}
