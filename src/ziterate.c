@@ -198,14 +198,19 @@ int main(int argc, char **argv)
 		*   memcpy(aes->input, aes->output, sizeof(aes->input));
 		*/
 	iterator_t *it = iterator_init(conf.seed, conf.shard_num, conf.total_shards);
-	/* TODO
-		* shard_t *shard = get_shard(it, 1);
-	uint32_t curr = shard_get_cur_ip(shard);
-	printf("%d", curr);
+	shard_t *shard = get_shard(it, 1);
+	uint32_t next_ip = shard_get_cur_ip(shard);
 
-	// check if in blacklist
-	if (blacklist_is_allowed(addr.s_addr)) {
-			printf("%s", original);
-	}*/
+	while (next_ip != 0) {
+		next_ip = shard_get_cur_ip(shard);
+
+		/* TODO
+		// check if in blacklist
+		if (blacklist_is_allowed(addr.s_addr)) {
+				printf("%s", original);
+		}
+		*/
+	}
+
 	return EXIT_SUCCESS;
 }
