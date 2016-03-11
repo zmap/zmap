@@ -26,6 +26,7 @@
 #include "../lib/blacklist.h"
 #include "../lib/logger.h"
 #include "../lib/random.h"
+#include "state.h"
 #include "validate.h"
 #include "zitopt.h"
 
@@ -117,7 +118,7 @@ int main(int argc, char **argv)
 		log_fatal("ziterate", "must specify either a whitelist or blacklist file");
 	}
 
-	// parse blacklist
+	// sanity check blacklist file
 	if (conf.blacklist_filename) {
 		log_debug("ziterate", "blacklist file at %s to be used", conf.blacklist_filename);
 	} else {
@@ -127,6 +128,8 @@ int main(int argc, char **argv)
 		log_fatal("ziterate", "unable to read specified blacklist file (%s)",
 				conf.blacklist_filename);
 	}
+
+	// sanity check whitelist file
 	if (conf.whitelist_filename) {
 		log_debug("ziterate", "whitelist file at %s to be used", conf.whitelist_filename);
 	} else {
@@ -137,6 +140,7 @@ int main(int argc, char **argv)
 				conf.whitelist_filename);
 	}
 
+	// parse blacklist and whitelist
 	if (blacklist_init(conf.whitelist_filename, conf.blacklist_filename,
 				NULL, 0, NULL, 0, conf.ignore_errors)) {
 		log_fatal("ziterate", "unable to initialize blacklist / whitelist");
@@ -160,6 +164,7 @@ int main(int argc, char **argv)
 		//XXX		enforce_range("shards", args.shards_arg, 1, 254);
 		conf.total_shards = args.shards_arg;
 	}
+
 	// Check for a random seed
 	if (args.seed_given) {
 		conf.seed = args.seed_arg;
@@ -175,34 +180,19 @@ int main(int argc, char **argv)
 				" must be in range [0, %hhu)", conf.total_shards,
 				conf.shard_num, conf.total_shards);
 	}
-	validate_init();
-	conf.aes = aesrand_init_from_seed(conf.seed);
+
+	zconf.aes = aesrand_init_from_seed(conf.seed);
 	log_debug("ziterate", "Initializing sharding (%d shards, shard number %d, seed %d)", conf.total_shards, conf.shard_num, conf.seed);
-	/*
-	 * XXX: this currently segfaults.  iterator.c's iterator_init calls cylic.c's make_cycle:
-	 *
-	 *   it->cycle = make_cycle(group, zconf.aes);
-	 *
-	 * cyclic.c's make_cycle calls find_primroot:
-	 *
-	 *   cycle.generator = find_primroot(group, aes);
-	 *
-	 * which calls cyclic.c's find_primroot:
-	 *
-	 *   uint32_t candidate = (uint32_t) ((aesrand_getword(aes) & 0xFFFFFFFF) % group->prime);
-	 *
-	 * which calls aesrand.c's aesrand_getword call, which segfaults here
-	 *
-	 *   memcpy(aes->input, aes->output, sizeof(aes->input));
-	 */
 	iterator_t *it = iterator_init(conf.seed, conf.shard_num, conf.total_shards);
+	validate_init();
 	shard_t *shard = get_shard(it, 1);
 	uint32_t next_ip = shard_get_cur_ip(shard);
 
 	while (next_ip != 0) {
-		next_ip = shard_get_cur_ip(shard);
+		printf("%d\n", next_ip);
+		next_ip = shard_get_next_ip(shard);
 
-		/* TODO
+		/* TODO?
 		// check if in blacklist
 		if (blacklist_is_allowed(addr.s_addr)) {
 		printf("%s", original);
