@@ -27,7 +27,8 @@
 #include "../lib/includes.h"
 #include "../lib/blacklist.h"
 #include "../lib/logger.h"
-
+#include "../lib/random.h"
+#include "validate.h"
 #include "zitopt.h"
 
 struct zit_conf {
@@ -51,8 +52,8 @@ int main(int argc, char **argv)
 {
 	struct zit_conf conf;
 
-	conf.verbosity = 3;
 	memset(&conf, 0, sizeof(struct zit_conf));
+	conf.verbosity = 3;
 	int no_dupchk_pres = 0;
   conf.ignore_errors = 0;
 
@@ -144,7 +145,6 @@ int main(int argc, char **argv)
 	}
 
 	// Set up sharding
-  conf.aes = aesrand_init_from_seed(conf.seed);
 	conf.shard_num = 0;
 	conf.total_shards = 1;
 	if ((args.shard_given || args.shards_given) && !args.seed_given) {
@@ -177,16 +177,35 @@ int main(int argc, char **argv)
 			  " must be in range [0, %hhu)", conf.total_shards,
 			  conf.shard_num, conf.total_shards);
 	}
-  log_debug("ziterate", "Initializing sharding (%d shards, shard number %d, seed %d)", conf.total_shards, conf.shard_num, conf.seed);
+	validate_init();
+	conf.aes = aesrand_init_from_seed(conf.seed);
+	log_debug("ziterate", "Initializing sharding (%d shards, shard number %d, seed %d)", conf.total_shards, conf.shard_num, conf.seed);
+	/*
+		* XXX: this currently segfaults.  iterator.c's iterator_init calls cylic.c's make_cycle:
+		*
+		*   it->cycle = make_cycle(group, zconf.aes);
+		*
+		* cyclic.c's make_cycle calls find_primroot:
+		*
+		*   cycle.generator = find_primroot(group, aes);
+		*
+		* which calls cyclic.c's find_primroot:
+		*
+		*   uint32_t candidate = (uint32_t) ((aesrand_getword(aes) & 0xFFFFFFFF) % group->prime);
+		*
+		* which calls aesrand.c's aesrand_getword call, which segfaults here
+		*
+		*   memcpy(aes->input, aes->output, sizeof(aes->input));
+		*/
 	iterator_t *it = iterator_init(conf.seed, conf.shard_num, conf.total_shards);
-  /* TODO
-   * shard_t *shard = get_shard(it, 1);
+	/* TODO
+		* shard_t *shard = get_shard(it, 1);
 	uint32_t curr = shard_get_cur_ip(shard);
 	printf("%d", curr);
 
-  // check if in blacklist
-  if (blacklist_is_allowed(addr.s_addr)) {
-      printf("%s", original);
-  }*/
+	// check if in blacklist
+	if (blacklist_is_allowed(addr.s_addr)) {
+			printf("%s", original);
+	}*/
 	return EXIT_SUCCESS;
 }
