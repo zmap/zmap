@@ -7,13 +7,11 @@
  */
 
 /*
- * ZBlacklist is a simple utility that (1) excludes IP addresses on a specified
- * blacklist from being scanned, and (2) ensures the uniqueness of output
- * addresses such that no host is scanned twice. ZBlacklist takes in a list
- * of addresses on stdin and outputs addresses that are acceptable to scan
- * on stdout. The utility uses the blacklist data structures from ZMap for
- * checking scan eligibility and a paged bitmap for duplicate prevention.
- */
+ * ZIterate is a simple utility that will iteratate over the IPv4
+ * space in a pseudo-random fashion, utilizing the sharding capabilities
+ * of zmap to enable this iteration to be split among multiple instances of
+ * ziterate.
+*/
 
 #define _GNU_SOURCE
 
