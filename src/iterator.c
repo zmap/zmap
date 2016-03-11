@@ -85,9 +85,7 @@ iterator_t* iterator_init(uint8_t num_threads, uint8_t shard,
 			   );
 
 	}
-  printf("3\n");
 	zconf.generator = it->cycle.generator;
-  printf("4\n");
 	return it;
 }
 

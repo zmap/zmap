@@ -216,12 +216,6 @@ target_link_libraries(
 )
 
 target_link_libraries(
-    ziterate
-    zmaplib
-    m
-)
-
-target_link_libraries(
     ztee
     zmaplib
     m
