@@ -1,4 +1,6 @@
-from zschema import *
+from zschema.leaves import *
+from zschema.compounds import *
+import zschema.registry
 
 zmap_base = Record({
     "saddr":IPv4Address(),
@@ -39,7 +41,7 @@ zmap_upnp = Record({
     "date":String(),
 }, extends=zmap_base)
 
-register_schema("zmap-upnp", zmap_upnp)
+zschema.registry.register_schema("zmap-upnp", zmap_upnp)
 
 
 dns_question = SubRecord({
@@ -88,4 +90,4 @@ zmap_dns = Record({
     "udp_len":Integer(),
 }, extends=zmap_base)
 
-register_schema("zmap-dns", zmap_dns)
+zschema.registry.register_schema("zmap-dns", zmap_dns)
