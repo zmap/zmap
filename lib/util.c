@@ -252,6 +252,7 @@ int set_cpu(uint32_t core)
 #if defined(__FreeBSD__) || defined(__NetBSD__)
 #include <sys/param.h>
 #include <sys/cpuset.h>
+#include <pthread_np.h>
 #define cpu_set_t cpuset_t
 #endif
 

@@ -6,7 +6,10 @@
 * of the License at http://www.apache.org/licenses/LICENSE-2.0
 */
 
+// without defining this, FreeBSD throws a warning.
+#define _WITH_GETLINE
 #include <stdio.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -486,7 +489,7 @@ void *monitor_ztee(void* arg)
 	stats_t *stats = xmalloc(sizeof(stats_t));
 
 	if (tconf.status_updates_file) {
-		fprintf(tconf.status_updates_file, 
+		fprintf(tconf.status_updates_file,
 				"time_past,total_read_in,read_in_last_sec,read_per_sec_avg,"
 				"buffer_current_size,buffer_avg_size\n");
 		fflush(tconf.status_updates_file);

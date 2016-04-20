@@ -18,6 +18,13 @@
 #include <net/if_dl.h>
 
 #if !defined(__APPLE__)
+
+#if __GNUC__ < 4
+#error "gcc version >= 4 is required"
+#elif __GNUC_MINOR_ >= 6
+#pragma GCC diagnostic ignored "-Wflexible-array-extensions"
+#endif
+
 #include <dnet/os.h>
 #include <dnet/eth.h>
 #include <dnet/ip.h>
@@ -142,7 +149,7 @@ int _get_default_gw(struct in_addr *gw, char **iface)
 			if ((1<<i) == RTA_IFP) {
 				struct sockaddr_dl *sdl = (struct sockaddr_dl *) sa;
 				if (!sdl) {
-					log_fatal("get-gateway", "fuck");
+					log_fatal("get-gateway", "unable to retrieve gateway");
 				}
 				char *_iface = xmalloc(sdl->sdl_nlen+1);
 				memcpy(_iface, sdl->sdl_data, sdl->sdl_nlen);
