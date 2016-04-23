@@ -346,13 +346,12 @@ int send_run(sock_t st, shard_t *s)
 		// number of hosts we actually scanned
 		s->state.sent++;
 
-		if (zconf.list_of_ips_filename) {
+		curr = shard_get_next_ip(s);
+		if (curr && zconf.list_of_ips_filename) {
 			while (!pbm_check(zsend.list_of_ips_pbm, curr)) {
 				curr = shard_get_next_ip(s);
 				s->state.list_of_ips_tried_sent++;
 			}
-		} else {
-			curr = shard_get_next_ip(s);
 		}
 	}
 	if (zconf.dryrun) {
