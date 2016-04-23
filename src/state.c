@@ -18,6 +18,7 @@ struct state_conf zconf = {
 	.output_filename = NULL,
 	.blacklist_filename = NULL,
 	.whitelist_filename = NULL,
+	.list_of_ips_filename = NULL,
 	.target_port = 0,
 	.max_targets = 0xFFFFFFFF,
 	.max_runtime = 0,
@@ -76,6 +77,7 @@ struct state_send zsend = {
 	.complete = 0,
 	.sendto_failures = 0,
 	.targets = 0,
+	.list_of_ips_pbm = NULL
 };
 
 // global receiver stats and defaults
