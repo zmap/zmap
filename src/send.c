@@ -23,6 +23,7 @@
 #include "../lib/random.h"
 #include "../lib/blacklist.h"
 #include "../lib/lockfd.h"
+#include "../lib/pbm.h"
 
 #include "aesrand.h"
 #include "get_gateway.h"
@@ -239,6 +240,15 @@ int send_run(sock_t st, shard_t *s)
         }
 	}
 	uint32_t curr = shard_get_cur_ip(s);
+	// if list of IPs provided to scan, then the first generated address
+	// might not be on that list. iterate until we find one and can start
+	// the true scanning process
+	if (zconf.list_of_ips_filename) {
+		while (!pbm_check(zsend.list_of_ips_pbm, curr)) {
+			curr = shard_get_next_ip(s);
+			s->state.list_of_ips_tried_sent++;
+		}
+	}
 	int attempts = zconf.num_retries + 1;
 	uint32_t idx = 0;
 	while (1) {
@@ -279,6 +289,13 @@ int send_run(sock_t st, shard_t *s)
 			log_debug("send", "send thread %hhu finished (max targets of %u reached)", s->id, max_targets);
 			break;
 		}
+		// estimate a random sample for a provided list of IPs to scan
+		if (zconf.list_of_ips_filename && s->state.list_of_ips_tried_sent >= max_targets) {
+			s->cb(s->id, s->arg);
+			log_debug("send", "send thread %hhu finished (max targets of %u reached)", s->id, max_targets);
+			break;
+		}
+
 		if (zconf.max_runtime && zconf.max_runtime <= now() - zsend.start) {
 			s->cb(s->id, s->arg);
 			break;
@@ -288,7 +305,6 @@ int send_run(sock_t st, shard_t *s)
 			log_debug("send", "send thread %hhu finished, shard depleted", s->id);
 			break;
 		}
-		s->state.sent++;
 		for (int i=0; i < zconf.packet_streams; i++) {
 			uint32_t src_ip = get_src_ip(curr, i);
 
@@ -327,8 +343,17 @@ int send_run(sock_t st, shard_t *s)
 				idx &= 0xFF;
 			}
 		}
+		// number of hosts we actually scanned
+		s->state.sent++;
 
-		curr = shard_get_next_ip(s);
+		if (zconf.list_of_ips_filename) {
+			while (!pbm_check(zsend.list_of_ips_pbm, curr)) {
+				curr = shard_get_next_ip(s);
+				s->state.list_of_ips_tried_sent++;
+			}
+		} else {
+			curr = shard_get_next_ip(s);
+		}
 	}
 	if (zconf.dryrun) {
 		lock_file(stdout);

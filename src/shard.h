@@ -23,6 +23,7 @@ typedef struct shard {
 		uint32_t failures;
 		uint32_t first_scanned;
 		uint32_t max_targets;
+		uint32_t list_of_ips_tried_sent;
 	} state;
 	struct shard_params {
 		uint64_t first;
