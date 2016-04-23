@@ -19,6 +19,7 @@ struct state_conf zconf = {
 	.blacklist_filename = NULL,
 	.whitelist_filename = NULL,
 	.list_of_ips_filename = NULL,
+	.list_of_ips_count = 0,
 	.target_port = 0,
 	.max_targets = 0xFFFFFFFF,
 	.max_runtime = 0,

@@ -32,6 +32,7 @@
 #include "../lib/random.h"
 #include "../lib/util.h"
 #include "../lib/xalloc.h"
+#include "../lib/pbm.h"
 
 #include "aesrand.h"
 #include "zopt.h"
@@ -528,6 +529,7 @@ int main(int argc, char *argv[])
 	zconf.cooldown_secs = args.cooldown_time_arg;
 	SET_IF_GIVEN(zconf.output_filename, output_file);
 	SET_IF_GIVEN(zconf.blacklist_filename, blacklist_file);
+	SET_IF_GIVEN(zconf.list_of_ips_filename, list_of_ips_file);
 	SET_IF_GIVEN(zconf.probe_args, probe_args);
 	SET_IF_GIVEN(zconf.output_args, output_args);
 	SET_IF_GIVEN(zconf.iface, interface);
@@ -767,6 +769,13 @@ int main(int argc, char *argv[])
 			zconf.ignore_invalid_hosts)) {
 		log_fatal("zmap", "unable to initialize blacklist / whitelist");
 	}
+	// if there's a list of ips to scan, then initialize PBM and populate
+	// it based on the provided file
+	if (zconf.list_of_ips_filename) {
+		zsend.list_of_ips_pbm = pbm_init();
+		zconf.list_of_ips_count = pbm_load_from_file(zsend.list_of_ips_pbm,
+				zconf.list_of_ips_filename);
+	}
 
 	// compute number of targets
 	uint64_t allowed = blacklist_count_allowed();
@@ -781,8 +790,7 @@ int main(int argc, char *argv[])
 	if (zsend.targets > zconf.max_targets) {
 		zsend.targets = zconf.max_targets;
 	}
-
-	if (zsend.targets == 0) {
+	if (!zsend.targets) {
 		log_fatal("zmap", "zero eligible addresses to scan");
 	}
 
@@ -798,7 +806,6 @@ int main(int argc, char *argv[])
 			zconf.senders = max_int(zconf.senders - 1, 1);
 		}
 	}
-
 	if (2*zconf.senders >= zsend.targets) {
 		log_warn("zmap", "too few targets relative to senders, dropping to one sender");
 		zconf.senders = 1;

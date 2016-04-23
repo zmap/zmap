@@ -93,6 +93,7 @@ struct state_conf {
 	char *blacklist_filename;
 	char *whitelist_filename;
 	char *list_of_ips_filename;
+	uint32_t list_of_ips_count;
 #ifdef JSON
 	char *metadata_filename;
 	FILE *metadata_file;

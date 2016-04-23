@@ -59,7 +59,7 @@ void pbm_set(uint8_t **b, uint32_t v)
 	bm_set(b[top], bottom);
 }
 
-int pbm_load_from_file(uint8_t **b, char *file)
+uint32_t pbm_load_from_file(uint8_t **b, char *file)
 {
 	if (!b) {
 		log_fatal("pbm", "load_from_file called with NULL PBM");
@@ -73,6 +73,7 @@ int pbm_load_from_file(uint8_t **b, char *file)
 				file, strerror(errno));
 	}
 	char line[1000];
+	uint32_t count = 0;
 	while (fgets(line, sizeof(line), fp)) {
 		char *comment = strchr(line, '#');
 		if (comment) {
@@ -84,7 +85,8 @@ int pbm_load_from_file(uint8_t **b, char *file)
 					line);
 		}
 		pbm_set(b, addr.s_addr);
+		++count;
 	}
 	fclose(fp);
-	return 0;
+	return count;
 }
