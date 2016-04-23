@@ -61,7 +61,7 @@
 
   <ol class='man-decor man-head man head'>
     <li class='tl'>zmap(1)</li>
-    <li class='tc'>zmap</li>
+    <li class='tc'></li>
     <li class='tr'>zmap(1)</li>
   </ol>
 
@@ -76,9 +76,9 @@
 
 <h2 id="DESCRIPTION">DESCRIPTION</h2>
 
-<p><em>ZMap</em> is a network tool for scanning the entire Internet (or large samples).
-ZMap is capable of scanning the entire Internet in around 45 minutes on a
-gigabit network connection, reaching ~98% theoretical line speed.</p>
+<p><em>ZMap</em> is a network tool for scanning the entire IPv4 address space (or large
+samples).  ZMap is capable of scanning the entire Internet in around 45 minutes
+on a gigabit network connection, reaching ~98% theoretical line speed.</p>
 
 <h2 id="OPTIONS">OPTIONS</h2>
 
@@ -94,20 +94,32 @@ gigabit network connection, reaching ~98% theoretical line speed.</p>
  recommended you use this to exclude RFC 1918 addresses, multicast, IANA
  reserved space, and other IANA special-purpose addresses. An example
  blacklist file <strong>blacklist.conf</strong> for this purpose.</p></dd>
+<dt> <code>-w</code>, <code>--whitelist-file=path</code></dt><dd><p>File of subnets to scan, in CIDR notation, one-per line. Specifying a
+whitelist file is equivalent to specifying to ranges directly on the command
+line interface, but allows specifying a large number of subnets. Note:
+if you are specifying a large nubmer of individual IP addresses (more than
+10 million), you should instead use <code>--list-of-ips-file</code>.</p></dd>
+<dt> <code>-I</code>, <code>--list-of-ips-file=path</code></dt><dd><p>File of individual IP addresses to scan, one-per line. This feature allows you
+to scan a large number of unrelated addresses. If you have a small number of IPs,
+it is faster to specify these on the command
+line or by using <code>--whitelist-file</code>. This should only be used when scanning more than
+10 million addresses. When used in with --whitelist-path, only hosts in the intersection
+of both sets will be scanned. Hosts specified here, but included in the blacklist will
+be excluded.</p></dd>
 </dl>
 
 
 <h3 id="SCAN-OPTIONS">SCAN OPTIONS</h3>
 
 <dl>
+<dt> <code>-r</code>, <code>--rate=pps</code></dt><dd><p> Set the send rate in packets/sec</p></dd>
+<dt> <code>-B</code>, <code>--bandwidth=bps</code></dt><dd><p> Set the send rate in bits/second (supports suffixes G, M, and K (e.g. -B
+ 10M for 10 mbps). Thi   s overrides the --rate flag.</p></dd>
 <dt> <code>-n</code>, <code>--max-targets=n</code></dt><dd><p> Cap the number of targets to probe. This can either be a number (e.g. -n
  1000) or a percentage (e.g. -n 0.1%) of the scannable address space
  (after excluding blacklist)</p></dd>
 <dt> <code>-N</code>, <code>--max-results=n</code></dt><dd><p> Exit after receiving this many results</p></dd>
 <dt> <code>-t</code>, <code>--max-runtime=secs</code></dt><dd><p> Cap the length of time for sending packets</p></dd>
-<dt> <code>-r</code>, <code>--rate=pps</code></dt><dd><p> Set the send rate in packets/sec</p></dd>
-<dt> <code>-B</code>, <code>--bandwidth=bps</code></dt><dd><p> Set the send rate in bits/second (supports suffixes G, M, and K (e.g. -B
- 10M for 10 mbps). Thi   s overrides the --rate flag.</p></dd>
 <dt> <code>-c</code>, <code>--cooldown-time=secs</code></dt><dd><p> How long to continue receiving after sending has completed (default=8)</p></dd>
 <dt> <code>-e</code>, <code>--seed=n</code></dt><dd><p> Seed used to select address permutation. Use this if you want to scan
  addresses in the same order for multiple ZMap runs.</p></dd>
@@ -116,11 +128,8 @@ gigabit network connection, reaching ~98% theoretical line speed.</p>
 <dt> <code>--shard=n</code></dt><dd><p> Set which shard to scan (default=0). Shards are 0-indexed in the range
  [0, N), where N is the    total number of shards. When sharding
  <strong>--seed</strong> is required.</p></dd>
-<dt> <code>-T</code>, <code>--sender-threads=n</code></dt><dd><p> Threads used to send packets. ZMap will attempt to detect the optimal
- number of send threads based on the number of processor cores.</p></dd>
 <dt> <code>-P</code>, <code>--probes=n</code></dt><dd><p> Number of probes to send to each IP (default=1)</p></dd>
-<dt> <code>-d</code>, <code>--dryrun</code></dt><dd><p> Print out each packet to stdout instead of sending it (useful for
- debugging)</p></dd>
+<dt> <code>--retries=n</code></dt><dd><p> Number of times to try resending a packet if the sendto call fails (default=10)</p></dd>
 </dl>
 
 
@@ -130,9 +139,10 @@ gigabit network connection, reaching ~98% theoretical line speed.</p>
 <dt> <code>-s</code>, <code>--source-port=port|range</code></dt><dd><p> Source port(s) to send packets from</p></dd>
 <dt> <code>-S</code>, <code>--source-ip=ip|range</code></dt><dd><p> Source address(es) to send packets from. Either single IP or range (e.g.
  10.0.0.1-10.0.0.9)</p></dd>
-<dt> <code>-G</code>, <code>--gateway-mac=addr</code></dt><dd><p> Gateway MAC address to send packets to (in case auto-detection does not
- work)</p></dd>
+<dt> <code>-G</code>, <code>--gateway-mac=addr</code></dt><dd><p> Gateway MAC address to send packets to (in case auto-detection fails)</p></dd>
+<dt> <code>--source-mac=addr</code></dt><dd><p> Source MAC address to send packets from (in case auto-detection fails)</p></dd>
 <dt> <code>-i</code>, <code>--interface=name</code></dt><dd><p> Network interface to use</p></dd>
+<dt> <code>-X</code>, <code>--vpn</code></dt><dd><p> Send IP layer packets instead of ethernet packets (for non-Ethernet VPNs)</p></dd>
 </dl>
 
 
@@ -167,30 +177,44 @@ fields, and write filters over the output fields.</p>
 </dl>
 
 
+<h3 id="LOGGING-AND-METADATA-OPTIONS">LOGGING AND METADATA OPTIONS</h3>
+
+<ul>
+<li><p> <code>-q</code>, <code>--quiet</code>:
+ Do not print status updates once per second</p></li>
+<li><p> <code>-v</code>, <code>--verbosity=n</code>:
+ Level of log detail (0-5, default=3)</p></li>
+<li><p> <code>-l</code>, <code>--log-file=filename</code>:
+ Output file for log messages. By default, stderr.</p></li>
+<li><p> <code>-m</code>, <code>--metadata-file=filename</code>:
+ Output file for scan metadata (JSON)</p></li>
+<li><p> <code>-L</code>, <code>--log-directory</code>:
+ Write log entries to a timestamped file in this directory</p></li>
+<li><p> <code>-u</code>, <code>--status-updates-file</code>:
+ Write scan progress updates to CSV file"</p></li>
+<li><p> <code>--disable-syslog</code>:
+ Disables logging messages to syslog</p></li>
+<li><p> <code>--notes</code>:
+ Inject user-specified notes into scan metadata</p></li>
+<li><p> <code>--user-metadata</code>
+ Inject user-specified JSON metadata into scan metadata</p></li>
+</ul>
+
+
 <h3 id="ADDITIONAL-OPTIONS">ADDITIONAL OPTIONS</h3>
 
 <dl>
+<dt> <code>-T</code>, <code>--sender-threads=n</code></dt><dd><p> Threads used to send packets. ZMap will attempt to detect the optimal
+ number of send threads based on the number of processor cores.</p></dd>
 <dt> <code>-C</code>, <code>--config=filename</code></dt><dd><p> Read a configuration file, which can specify any other options.</p></dd>
-<dt> <code>-q</code>, <code>--quiet</code></dt><dd><p> Do not print status updates once per second</p></dd>
-<dt> <code>-g</code>, <code>--summary</code></dt><dd><p> Print configuration and summary of results at the end of the scan</p></dd>
-<dt> <code>-v</code>, <code>--verbosity=n</code></dt><dd><p> Level of log detail (0-5, default=3)</p></dd>
+<dt> <code>-d</code>, <code>--dryrun</code></dt><dd><p> Print out each packet to stdout instead of sending it (useful for
+ debugging)</p></dd>
+<dt> <code>--max-sendto-failures</code></dt><dd><p> Maximum NIC sendto failures before scan is aborted</p></dd>
+<dt> <code>--min-hitrate</code></dt><dd><p> Minimum hitrate that scan can hit before scan is aborted</p></dd>
+<dt> <code>--cores</code></dt><dd><p> Comma-separated list of cores to pin to</p></dd>
+<dt> <code>--ignore-invalid-hosts</code></dt><dd><p>  Ignore invalid hosts in whitelist/blacklist file</p></dd>
 <dt> <code>-h</code>, <code>--help</code></dt><dd><p> Print help and exit</p></dd>
 <dt> <code>-V</code>, <code>--version</code></dt><dd><p> Print version and exit</p></dd>
-</dl>
-
-
-<h3 id="UDP-PROBE-MODULE-OPTIONS">UDP PROBE MODULE OPTIONS</h3>
-
-<p>These arguments are all passed using the <code>--probe-args=args</code> option. Only one
-argument may be passed at a time.</p>
-
-<dl>
-<dt> <code>file:/path/to/file</code></dt><dd><p> Path to payload file to send to each host over UDP.</p></dd>
-<dt> <code>template:/path/to/template</code></dt><dd><p> Path to template file. For each destination host, the template file is
- populated, set as the UDP payload, and sent.</p></dd>
-<dt> <code>text:&lt;text></code></dt><dd><p> ASCII text to send to each destination host</p></dd>
-<dt> <code>hex:&lt;hex></code></dt><dd><p>Hex-encoded binary to send to each destination host</p></dd>
-<dt> <code>template-fields</code></dt><dd><p> Print information about the allowed template fields and exit.</p></dd>
 </dl>
 
 
@@ -217,10 +241,25 @@ using parenthesis to specify order of operations, the &amp;&amp; (logical AND) a
 <p>For example, a filter for only successful, non-duplicate responses would be
 written as: <code>--output-filter="success = 1 &amp;&amp; repeat = 0"</code></p>
 
+<h3 id="UDP-PROBE-MODULE-OPTIONS">UDP PROBE MODULE OPTIONS</h3>
+
+<p>These arguments are all passed using the <code>--probe-args=args</code> option. Only one
+argument may be passed at a time.</p>
+
+<dl>
+<dt> <code>file:/path/to/file</code></dt><dd><p> Path to payload file to send to each host over UDP.</p></dd>
+<dt> <code>template:/path/to/template</code></dt><dd><p> Path to template file. For each destination host, the template file is
+ populated, set as the UDP payload, and sent.</p></dd>
+<dt> <code>text:&lt;text></code></dt><dd><p> ASCII text to send to each destination host</p></dd>
+<dt> <code>hex:&lt;hex></code></dt><dd><p>Hex-encoded binary to send to each destination host</p></dd>
+<dt> <code>template-fields</code></dt><dd><p> Print information about the allowed template fields and exit.</p></dd>
+</dl>
+
+
 
   <ol class='man-decor man-foot man foot'>
-    <li class='tl'>zmap v2.1.1</li>
-    <li class='tc'>September 2015</li>
+    <li class='tl'></li>
+    <li class='tc'>April 2016</li>
     <li class='tr'>zmap(1)</li>
   </ol>
 

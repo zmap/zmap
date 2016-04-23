@@ -167,11 +167,20 @@ fields, and write filters over the output fields.
    * `-m`, `--metadata-file=filename`:
      Output file for scan metadata (JSON)
 
-option "log-directory"          L "Write log entries to a timestamped file in this directory"
-option "status-updates-file"    u "Write scan progress updates to CSV file"
-option "disable-syslog"         - "Disables logging messages to syslog"
-option "notes"                  - "Inject user-specified notes into scan metadata"
-option "user-metadata"          - "Inject user-specified JSON metadata into scan metadata"
+   * `-L`, `--log-directory`:
+     Write log entries to a timestamped file in this directory
+
+   * `-u`, `--status-updates-file`:
+     Write scan progress updates to CSV file"
+
+   * `--disable-syslog`:
+     Disables logging messages to syslog
+
+   * `--notes`:
+     Inject user-specified notes into scan metadata
+
+   * `--user-metadata`
+     Inject user-specified JSON metadata into scan metadata
 
 ### ADDITIONAL OPTIONS ###
 
@@ -186,11 +195,17 @@ option "user-metadata"          - "Inject user-specified JSON metadata into scan
      Print out each packet to stdout instead of sending it (useful for
      debugging)
 
-
-option "max-sendto-failures"    - "Maximum NIC sendto failures before scan is aborted"
-option "min-hitrate"            - "Minimum hitrate that scan can hit before scan is aborted"
-option "cores"                  - "Comma-separated list of cores to pin to"
-option "ignore-invalid-hosts"   - "Ignore invalid hosts in whitelist/blacklist file"
+   * `--max-sendto-failures`:
+     Maximum NIC sendto failures before scan is aborted
+   
+   * `--min-hitrate`:
+     Minimum hitrate that scan can hit before scan is aborted
+   
+   * `--cores`:
+     Comma-separated list of cores to pin to
+   
+   * `--ignore-invalid-hosts`:
+      Ignore invalid hosts in whitelist/blacklist file
 
    * `-h`, `--help`:
      Print help and exit
