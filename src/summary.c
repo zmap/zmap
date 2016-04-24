@@ -253,6 +253,10 @@ void json_metadata(FILE *file)
 		json_object_object_add(obj,
 			"list_of_ips_count",
 			json_object_new_int(zconf.list_of_ips_count));
+		json_object_object_add(obj,
+			"list_of_ips_tried_sent",
+			json_object_new_int(zsend.tried_sent));
+
 	}
 	json_object_object_add(obj, "dryrun",
             json_object_new_int(zconf.dryrun));

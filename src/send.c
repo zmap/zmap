@@ -247,6 +247,8 @@ int send_run(sock_t st, shard_t *s)
 			curr = shard_get_next_ip(s);
 			s->state.tried_sent++;
 			if (!curr) {
+				log_debug("send", "never made it to send loop in send thread %i", s->id);
+				s->cb(s->id, s->arg);
 				goto cleanup;
 			}
 		}

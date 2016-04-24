@@ -436,8 +436,6 @@ void monitor_run(iterator_t *it, pthread_mutex_t *lock)
 	export_status_t *export_status = xmalloc(sizeof(export_status_t));
 
 	while (!(zsend.complete && zrecv.complete)) {
-		printf("zsend complete: %i\n", zsend.complete);
-		printf("zrecv complete: %i\n", zrecv.complete);
 		update_pcap_stats(lock);
 		export_stats(internal_status, export_status, it);
 		log_drop_warnings(export_status);

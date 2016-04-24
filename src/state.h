@@ -143,7 +143,6 @@ struct state_send {
 	double finish;
 	uint32_t sent;
 	uint32_t tried_sent;
-	uint32_t list_of_ips_tried_sent;
 	uint32_t blacklisted;
 	uint32_t whitelisted;
 	int warmup;
