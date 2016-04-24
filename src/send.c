@@ -247,6 +247,9 @@ int send_run(sock_t st, shard_t *s)
 		while (!pbm_check(zsend.list_of_ips_pbm, curr)) {
 			curr = shard_get_next_ip(s);
 			s->state.list_of_ips_tried_sent++;
+			if (!curr) {
+				goto cleanup;
+			}
 		}
 	}
 	int attempts = zconf.num_retries + 1;
@@ -344,16 +347,20 @@ int send_run(sock_t st, shard_t *s)
 			}
 		}
 		// number of hosts we actually scanned
-		s->state.sent++;
-
 		curr = shard_get_next_ip(s);
+		s->state.sent++;
+		s->state.list_of_ips_tried_sent++;
 		if (curr && zconf.list_of_ips_filename) {
 			while (!pbm_check(zsend.list_of_ips_pbm, curr)) {
 				curr = shard_get_next_ip(s);
 				s->state.list_of_ips_tried_sent++;
+				if (!curr) {
+					goto cleanup;
+				}
 			}
 		}
 	}
+cleanup:
 	if (zconf.dryrun) {
 		lock_file(stdout);
 		fflush(stdout);
