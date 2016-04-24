@@ -225,7 +225,6 @@ int send_run(sock_t st, shard_t *s)
     long long sleep_time = nsec_per_sec;
 	if (zconf.rate > 0) {
 		delay = 10000;
-
         if (send_rate < slow_rate) {
             // set the inital time difference
             sleep_time = nsec_per_sec / send_rate;
@@ -246,7 +245,7 @@ int send_run(sock_t st, shard_t *s)
 	if (zconf.list_of_ips_filename) {
 		while (!pbm_check(zsend.list_of_ips_pbm, curr)) {
 			curr = shard_get_next_ip(s);
-			s->state.list_of_ips_tried_sent++;
+			s->state.tried_sent++;
 			if (!curr) {
 				goto cleanup;
 			}
@@ -293,7 +292,7 @@ int send_run(sock_t st, shard_t *s)
 			break;
 		}
 		// estimate a random sample for a provided list of IPs to scan
-		if (zconf.list_of_ips_filename && s->state.list_of_ips_tried_sent >= max_targets) {
+		if (zconf.list_of_ips_filename && s->state.tried_sent >= max_targets) {
 			s->cb(s->id, s->arg);
 			log_debug("send", "send thread %hhu finished (max targets of %u reached)", s->id, max_targets);
 			break;
@@ -349,13 +348,16 @@ int send_run(sock_t st, shard_t *s)
 		// number of hosts we actually scanned
 		curr = shard_get_next_ip(s);
 		s->state.sent++;
-		s->state.list_of_ips_tried_sent++;
+		s->state.tried_sent++;
 		if (curr && zconf.list_of_ips_filename) {
 			while (!pbm_check(zsend.list_of_ips_pbm, curr)) {
 				curr = shard_get_next_ip(s);
-				s->state.list_of_ips_tried_sent++;
+				s->state.tried_sent++;
 				if (!curr) {
+					s->cb(s->id, s->arg);
+					log_debug("send", "send thread %hhu shard finished in get_next_ip_loop depleted", s->id);
 					goto cleanup;
+
 				}
 			}
 		}
@@ -366,6 +368,6 @@ cleanup:
 		fflush(stdout);
 		unlock_file(stdout);
 	}
-	log_debug("send", "thread %hu finished", s->id);
+	log_debug("send", "thread %hu cleanly finished", s->id);
 	return EXIT_SUCCESS;
 }
