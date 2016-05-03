@@ -6,12 +6,31 @@
 
 #define MAX_PACKET_SIZE 4096
 
+struct options_mss
+{
+#ifdef BIG_ENDIAN
+	unsigned short op_kind:8;
+	unsigned short op_len:8;
+#else
+	unsigned short op_len:8;
+	unsigned short op_kind:8;
+#endif
+	unsigned short mss_val;
+};
+
+struct tcphdr_with_options
+{
+	struct tcphdr tcphdr;
+	struct options_mss mss;
+};
+
 typedef unsigned short __attribute__((__may_alias__)) alias_unsigned_short;
 
 void make_eth_header(struct ether_header *ethh, macaddr_t *src, macaddr_t *dst);
 
 void make_ip_header(struct ip *iph, uint8_t, uint16_t);
 void make_tcp_header(struct tcphdr*, port_h_t);
+void make_tcp_syn_header(struct tcphdr_with_options*, port_h_t);
 void make_icmp_header(struct icmp *);
 void make_udp_header(struct udphdr *udp_header, port_h_t dest_port,
 				uint16_t len);
@@ -42,7 +61,7 @@ __attribute__((unused)) static inline unsigned short icmp_checksum(
 }
 
 static __attribute__((unused)) uint16_t tcp_checksum(unsigned short len_tcp,
-		uint32_t saddr, uint32_t daddr, struct tcphdr *tcp_pkt)
+		uint32_t saddr, uint32_t daddr, void* tcp_pkt)
 {
 	alias_unsigned_short *src_addr = (alias_unsigned_short *) &saddr;
 	alias_unsigned_short *dest_addr = (alias_unsigned_short *) &daddr;
@@ -61,7 +80,7 @@ static __attribute__((unused)) uint16_t tcp_checksum(unsigned short len_tcp,
 	// if nleft is 1 there ist still on byte left.
 	// We add a padding byte (0xFF) to build a 16bit word
 	if (nleft > 0) {
-		sum += *w & ntohs(0xFF00);
+		sum += ((*w) & ntohs(0xFF00));
 	}
 	// add the pseudo header
 	sum += src_addr[0];
