@@ -173,6 +173,7 @@ int udp_global_initialize(struct state_conf *conf) {
 		if (strcmp(args, "template") == 0) {
 			udp_send_substitutions = 1;
 			udp_template = udp_template_load(udp_send_msg, udp_send_msg_len);
+			udp_send_msg_len = udp_template->length;
 		}
 
 	} else if (strcmp(args, "hex") == 0) {
@@ -461,6 +462,7 @@ void udp_template_add_field(udp_payload_template_t *t,
 	c->ftype	= ftype;
 	c->length = length;
 	c->data	 = data;
+	t->length += length;
 }
 
 // Free all buffers held by the payload template, including its own
@@ -675,6 +677,7 @@ int udp_template_field_lookup(char *vname, udp_payload_field_t *c)
 udp_payload_template_t * udp_template_load(char *buf, unsigned int len)
 {
 	udp_payload_template_t *t = xmalloc(sizeof(udp_payload_template_t));
+	t->length = 0;
 
 	// The last $ we encountered outside of a field specifier
 	char *dollar = NULL;
