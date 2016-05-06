@@ -45,7 +45,6 @@ typedef struct udp_payload_field
 typedef struct udp_payload_template
 {
 	unsigned int fcount;
-	unsigned int length;
 	struct udp_payload_field **fields;
 } udp_payload_template_t;
 
