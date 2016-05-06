@@ -633,7 +633,7 @@ int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len,
 		}
 	}
 
-	return p - out - 1;
+	return p - out;
 }
 
 // Convert a string field name to a field type, parsing any specified length value
