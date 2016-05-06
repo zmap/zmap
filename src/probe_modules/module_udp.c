@@ -278,6 +278,9 @@ int udp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 		// The buf is a stack var of our caller of size MAX_PACKET_SIZE
 		// Recalculate the payload using the loaded template
 		payload_len = udp_template_build(udp_template, payload, MAX_UDP_PAYLOAD_LEN, ip_header, udp_header, aes);
+		// Recalculate the total length of the packet
+		module_udp.packet_length = sizeof(struct ether_header) + sizeof(struct ip)
+			+ sizeof(struct udphdr) + payload_len;
 
 		// If success is zero, the template output was truncated
 		if (payload_len <= 0) {
