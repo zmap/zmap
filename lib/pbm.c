@@ -1,8 +1,13 @@
 #include <assert.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "logger.h"
 #include "xalloc.h"
@@ -18,6 +23,8 @@ uint8_t** pbm_init(void)
 	uint8_t** retv = xcalloc(NUM_PAGES, sizeof(void*));
 	return retv;
 }
+
+
 
 static inline int bm_check(uint8_t *bm, uint16_t v)
 {
@@ -52,3 +59,34 @@ void pbm_set(uint8_t **b, uint32_t v)
 	bm_set(b[top], bottom);
 }
 
+uint32_t pbm_load_from_file(uint8_t **b, char *file)
+{
+	if (!b) {
+		log_fatal("pbm", "load_from_file called with NULL PBM");
+	}
+	if (!file) {
+		log_fatal("pbm", "load_from_file called with NULL filename");
+	}
+	FILE *fp = fopen(file, "r");
+	if (fp == NULL) {
+		log_fatal("pbm", "unable to open file: %s: %s",
+				file, strerror(errno));
+	}
+	char line[1000];
+	uint32_t count = 0;
+	while (fgets(line, sizeof(line), fp)) {
+		char *comment = strchr(line, '#');
+		if (comment) {
+			*comment = '\0';
+		}
+		struct in_addr addr;
+		if (inet_aton(line, &addr) != 1) {
+			log_fatal("pbm", "unable to parse IP address: %s",
+					line);
+		}
+		pbm_set(b, addr.s_addr);
+		++count;
+	}
+	fclose(fp);
+	return count;
+}

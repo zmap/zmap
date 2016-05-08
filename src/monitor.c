@@ -38,6 +38,7 @@
 typedef struct internal_scan_status {
 	double   last_now;
 	uint32_t last_sent;
+	uint32_t last_tried_sent;
 	uint32_t last_send_failures;
 	uint32_t last_recv_net_success;
 	uint32_t last_recv_app_success;
@@ -49,6 +50,7 @@ typedef struct internal_scan_status {
 // exportable status information that can be printed to screen
 typedef struct export_scan_status {
 	uint32_t total_sent;
+	uint32_t total_tried_sent;
 	uint32_t recv_success_unique;
 	uint32_t app_recv_success_unique;
 	uint32_t total_recv;
@@ -112,12 +114,12 @@ static double min_d(double array[], int n)
 }
 
 // estimate time remaining time based on config and state
-double compute_remaining_time(double age, uint64_t sent)
+double compute_remaining_time(double age, uint64_t tried_sent)
 {
 	if (!zsend.complete) {
 		double remaining[] = {INFINITY, INFINITY, INFINITY};
 		if (zsend.targets) {
-			double done = (double) sent/zsend.targets;
+			double done = (double) tried_sent/zsend.targets;
 			remaining[0] = (1. - done)*(age/done) + zconf.cooldown_secs;
 		}
 		if (zconf.max_runtime) {
@@ -144,6 +146,7 @@ static void update_pcap_stats(pthread_mutex_t *recv_ready_mutex)
 static void export_stats(int_status_t *intrnl, export_status_t *exp, iterator_t *it)
 {
 	uint32_t total_sent = iterator_get_sent(it);
+	uint32_t total_tried_sent = iterator_get_tried_sent(it);
 	uint32_t total_fail = iterator_get_fail(it);
 	uint32_t total_recv = zrecv.pcap_recv;
 	uint32_t recv_success = zrecv.success_unique;
@@ -151,7 +154,7 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp, iterator_t 
 	double cur_time = now();
 	double age = cur_time - zsend.start; // time of entire scan
 	double delta = cur_time - intrnl->last_now; // time since the last time we updated
-	double remaining_secs = compute_remaining_time(age, total_sent);
+	double remaining_secs = compute_remaining_time(age, total_tried_sent);
 
 	// export amount of time the scan has been running
 	if (age < WARMUP_PERIOD) {
@@ -212,6 +215,7 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp, iterator_t 
 	}
 	// export other pre-calculated values
 	exp->total_sent = total_sent;
+	exp->total_tried_sent = total_tried_sent;
 	exp->percent_complete = 100.*age/(age + remaining_secs);
 	exp->recv_success_unique = recv_success;
 	exp->app_recv_success_unique = app_success;

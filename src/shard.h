@@ -18,11 +18,13 @@ typedef void (*shard_complete_cb)(uint8_t id, void *arg);
 typedef struct shard {
 	struct shard_state {
 		uint32_t sent;
+		uint32_t tried_sent;
 		uint32_t blacklisted;
 		uint32_t whitelisted;
 		uint32_t failures;
 		uint32_t first_scanned;
 		uint32_t max_targets;
+		uint32_t list_of_ips_tried_sent;
 	} state;
 	struct shard_params {
 		uint64_t first;

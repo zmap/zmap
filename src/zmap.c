@@ -32,6 +32,7 @@
 #include "../lib/random.h"
 #include "../lib/util.h"
 #include "../lib/xalloc.h"
+#include "../lib/pbm.h"
 
 #include "aesrand.h"
 #include "zopt.h"
@@ -179,20 +180,23 @@ static void start_zmap(void)
 	// start threads
 	uint32_t cpu = 0;
 	pthread_t *tsend, trecv, tmon;
-	recv_arg_t *recv_arg = xmalloc(sizeof(recv_arg_t));
-	recv_arg->cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
-	cpu += 1;
-	int r = pthread_create(&trecv, NULL, start_recv, recv_arg);
-	if (r != 0) {
-		log_fatal("zmap", "unable to create recv thread");
-	}
-	for (;;) {
-		pthread_mutex_lock(&recv_ready_mutex);
-		if (zconf.recv_ready) {
-			pthread_mutex_unlock(&recv_ready_mutex);
-			break;
+	int r;
+	if (!zconf.dryrun) {
+		recv_arg_t *recv_arg = xmalloc(sizeof(recv_arg_t));
+		recv_arg->cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
+		cpu += 1;
+		r = pthread_create(&trecv, NULL, start_recv, recv_arg);
+		if (r != 0) {
+			log_fatal("zmap", "unable to create recv thread");
 		}
-		pthread_mutex_unlock(&recv_ready_mutex);
+		for (;;) {
+			pthread_mutex_lock(&recv_ready_mutex);
+			if (zconf.recv_ready) {
+				pthread_mutex_unlock(&recv_ready_mutex);
+				break;
+			}
+			pthread_mutex_unlock(&recv_ready_mutex);
+		}
 	}
 #ifdef PFRING
 	pfring_zc_worker *zw = pfring_zc_run_balancer(zconf.pf.queues,
@@ -230,12 +234,12 @@ static void start_zmap(void)
 	}
 	log_debug("zmap", "%d sender threads spawned", zconf.senders);
 
-	monitor_init();
-	mon_start_arg_t *mon_arg = xmalloc(sizeof(mon_start_arg_t));
-	mon_arg->it = it;
-	mon_arg->recv_ready_mutex = &recv_ready_mutex;
-	mon_arg->cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
-	{
+	if (!zconf.dryrun) {
+		monitor_init();
+		mon_start_arg_t *mon_arg = xmalloc(sizeof(mon_start_arg_t));
+		mon_arg->it = it;
+		mon_arg->recv_ready_mutex = &recv_ready_mutex;
+		mon_arg->cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
 		int r = pthread_create(&tmon, NULL, start_mon, mon_arg);
 		if (r != 0) {
 			log_fatal("zmap", "unable to create monitor thread");
@@ -261,16 +265,19 @@ static void start_zmap(void)
 	pfring_zc_sync_queue(zconf.pf.send, tx_only);
 	log_debug("zmap", "send queue flushed");
 #endif
-	r = pthread_join(trecv, NULL);
-	if (r != 0) {
-		log_fatal("zmap", "unable to join recv thread");
-		exit(EXIT_FAILURE);
-	}
-	if (!zconf.quiet || zconf.status_updates_file) {
-		pthread_join(tmon, NULL);
+	// no receiving or monitoring thread is started in dry run mode
+	if (!zconf.dryrun) {
+		r = pthread_join(trecv, NULL);
 		if (r != 0) {
-			log_fatal("zmap", "unable to join monitor thread");
+			log_fatal("zmap", "unable to join recv thread");
 			exit(EXIT_FAILURE);
+		}
+		if (!zconf.quiet || zconf.status_updates_file) {
+			pthread_join(tmon, NULL);
+			if (r != 0) {
+				log_fatal("zmap", "unable to join monitor thread");
+				exit(EXIT_FAILURE);
+			}
 		}
 	}
 
@@ -528,6 +535,7 @@ int main(int argc, char *argv[])
 	zconf.cooldown_secs = args.cooldown_time_arg;
 	SET_IF_GIVEN(zconf.output_filename, output_file);
 	SET_IF_GIVEN(zconf.blacklist_filename, blacklist_file);
+	SET_IF_GIVEN(zconf.list_of_ips_filename, list_of_ips_file);
 	SET_IF_GIVEN(zconf.probe_args, probe_args);
 	SET_IF_GIVEN(zconf.output_args, output_args);
 	SET_IF_GIVEN(zconf.iface, interface);
@@ -767,6 +775,13 @@ int main(int argc, char *argv[])
 			zconf.ignore_invalid_hosts)) {
 		log_fatal("zmap", "unable to initialize blacklist / whitelist");
 	}
+	// if there's a list of ips to scan, then initialize PBM and populate
+	// it based on the provided file
+	if (zconf.list_of_ips_filename) {
+		zsend.list_of_ips_pbm = pbm_init();
+		zconf.list_of_ips_count = pbm_load_from_file(zsend.list_of_ips_pbm,
+				zconf.list_of_ips_filename);
+	}
 
 	// compute number of targets
 	uint64_t allowed = blacklist_count_allowed();
@@ -781,8 +796,7 @@ int main(int argc, char *argv[])
 	if (zsend.targets > zconf.max_targets) {
 		zsend.targets = zconf.max_targets;
 	}
-
-	if (zsend.targets == 0) {
+	if (!zsend.targets) {
 		log_fatal("zmap", "zero eligible addresses to scan");
 	}
 
@@ -798,7 +812,6 @@ int main(int argc, char *argv[])
 			zconf.senders = max_int(zconf.senders - 1, 1);
 		}
 	}
-
 	if (2*zconf.senders >= zsend.targets) {
 		log_warn("zmap", "too few targets relative to senders, dropping to one sender");
 		zconf.senders = 1;

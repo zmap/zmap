@@ -41,6 +41,7 @@ void shard_complete(uint8_t thread_id, void *arg)
 	it->curr_threads--;
 	shard_t *s = &it->thread_shards[thread_id];
 	zsend.sent += s->state.sent;
+	zsend.tried_sent += s->state.tried_sent;
 	zsend.blacklisted += s->state.blacklisted;
 	zsend.whitelisted += s->state.whitelisted;
 	zsend.sendto_failures += s->state.failures;
@@ -94,6 +95,15 @@ uint32_t iterator_get_sent(iterator_t *it)
 	uint32_t sent = 0;
 	for (uint8_t i = 0; i < it->num_threads; ++i) {
 		sent += it->thread_shards[i].state.sent;
+	}
+	return sent;
+}
+
+uint32_t iterator_get_tried_sent(iterator_t *it)
+{
+	uint32_t sent = 0;
+	for (uint8_t i = 0; i < it->num_threads; ++i) {
+		sent += it->thread_shards[i].state.tried_sent;
 	}
 	return sent;
 }

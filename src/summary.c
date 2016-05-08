@@ -132,7 +132,6 @@ void json_metadata(FILE *file)
             json_object_new_int64(zsend.sendto_failures));
 	json_object_object_add(obj, "total_sent",
             json_object_new_int64(zsend.sent));
-
 	json_object_object_add(obj, "success_total",
             json_object_new_int64(zrecv.success_total));
 	json_object_object_add(obj, "success_unique",
@@ -246,6 +245,18 @@ void json_metadata(FILE *file)
 		json_object_object_add(obj,
 			"whitelist_filename",
 			json_object_new_string(zconf.whitelist_filename));
+	}
+	if (zconf.list_of_ips_filename) {
+		json_object_object_add(obj,
+			"list_of_ips_filename",
+			json_object_new_string(zconf.list_of_ips_filename));
+		json_object_object_add(obj,
+			"list_of_ips_count",
+			json_object_new_int(zconf.list_of_ips_count));
+		json_object_object_add(obj,
+			"list_of_ips_tried_sent",
+			json_object_new_int(zsend.tried_sent));
+
 	}
 	json_object_object_add(obj, "dryrun",
             json_object_new_int(zconf.dryrun));

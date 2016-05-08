@@ -24,6 +24,9 @@ option "blacklist-file"         b "File of subnets to exclude, in CIDR notation,
 option "whitelist-file"         w "File of subnets to constrain scan to, in CIDR notation, e.g. 192.168.0.0/16"
     typestr="path"
     optional string
+option "list-of-ips-file"		I "List of individual addresses to scan in random order. Use --white-list file unless >1 million IPs"
+    typestr="path"
+    optional string
 
 section "Scan options"
 option "rate"                   r "Set send rate in packets/sec"
@@ -168,8 +171,6 @@ option "sender-threads"         T "Threads used to send packets"
     default="1"
     optional int
 
-option "resume-scan-from"	- "Resumes a previous scan given a known scanned address"
-    optional string
 option "cores"                  - "Comma-separated list of cores to pin to"
     optional string
 option "ignore-invalid-hosts"   - "Ignore invalid hosts in whitelist/blacklist file"

@@ -23,6 +23,7 @@
 #include "../lib/random.h"
 #include "../lib/blacklist.h"
 #include "../lib/lockfd.h"
+#include "../lib/pbm.h"
 
 #include "aesrand.h"
 #include "get_gateway.h"
@@ -224,7 +225,6 @@ int send_run(sock_t st, shard_t *s)
     long long sleep_time = nsec_per_sec;
 	if (zconf.rate > 0) {
 		delay = 10000;
-
         if (send_rate < slow_rate) {
             // set the inital time difference
             sleep_time = nsec_per_sec / send_rate;
@@ -239,6 +239,20 @@ int send_run(sock_t st, shard_t *s)
         }
 	}
 	uint32_t curr = shard_get_cur_ip(s);
+	// if list of IPs provided to scan, then the first generated address
+	// might not be on that list. iterate until we find one and can start
+	// the true scanning process
+	if (zconf.list_of_ips_filename) {
+		while (!pbm_check(zsend.list_of_ips_pbm, curr)) {
+			curr = shard_get_next_ip(s);
+			s->state.tried_sent++;
+			if (!curr) {
+				log_debug("send", "never made it to send loop in send thread %i", s->id);
+				s->cb(s->id, s->arg);
+				goto cleanup;
+			}
+		}
+	}
 	int attempts = zconf.num_retries + 1;
 	uint32_t idx = 0;
 	while (1) {
@@ -279,6 +293,13 @@ int send_run(sock_t st, shard_t *s)
 			log_debug("send", "send thread %hhu finished (max targets of %u reached)", s->id, max_targets);
 			break;
 		}
+		// estimate a random sample for a provided list of IPs to scan
+		if (zconf.list_of_ips_filename && s->state.tried_sent >= max_targets) {
+			s->cb(s->id, s->arg);
+			log_debug("send", "send thread %hhu finished (max targets of %u reached)", s->id, max_targets);
+			break;
+		}
+
 		if (zconf.max_runtime && zconf.max_runtime <= now() - zsend.start) {
 			s->cb(s->id, s->arg);
 			break;
@@ -288,7 +309,6 @@ int send_run(sock_t st, shard_t *s)
 			log_debug("send", "send thread %hhu finished, shard depleted", s->id);
 			break;
 		}
-		s->state.sent++;
 		for (int i=0; i < zconf.packet_streams; i++) {
 			uint32_t src_ip = get_src_ip(curr, i);
 
@@ -327,14 +347,29 @@ int send_run(sock_t st, shard_t *s)
 				idx &= 0xFF;
 			}
 		}
-
+		// number of hosts we actually scanned
 		curr = shard_get_next_ip(s);
+		s->state.sent++;
+		s->state.tried_sent++;
+		if (curr && zconf.list_of_ips_filename) {
+			while (!pbm_check(zsend.list_of_ips_pbm, curr)) {
+				curr = shard_get_next_ip(s);
+				s->state.tried_sent++;
+				if (!curr) {
+					s->cb(s->id, s->arg);
+					log_debug("send", "send thread %hhu shard finished in get_next_ip_loop depleted", s->id);
+					goto cleanup;
+
+				}
+			}
+		}
 	}
+cleanup:
 	if (zconf.dryrun) {
 		lock_file(stdout);
 		fflush(stdout);
 		unlock_file(stdout);
 	}
-	log_debug("send", "thread %hu finished", s->id);
+	log_debug("send", "thread %hu cleanly finished", s->id);
 	return EXIT_SUCCESS;
 }

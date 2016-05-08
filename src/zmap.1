@@ -1,7 +1,7 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "ZMAP" "1" "September 2015" "zmap v2.1.1" "zmap"
+.TH "ZMAP" "1" "April 2016" "" ""
 .
 .SH "NAME"
 \fBzmap\fR \- The Fast Internet Scanner
@@ -10,7 +10,7 @@
 zmap [ \-p <port> ] [ \-o <outfile> ] [ OPTIONS\.\.\. ] [ ip/hostname/range ]
 .
 .SH "DESCRIPTION"
-\fIZMap\fR is a network tool for scanning the entire Internet (or large samples)\. ZMap is capable of scanning the entire Internet in around 45 minutes on a gigabit network connection, reaching ~98% theoretical line speed\.
+\fIZMap\fR is a network tool for scanning the entire IPv4 address space (or large samples)\. ZMap is capable of scanning the entire Internet in around 45 minutes on a gigabit network connection, reaching ~98% theoretical line speed\.
 .
 .SH "OPTIONS"
 .
@@ -32,7 +32,23 @@ When using an output module that uses a file, write results to this file\. Use \
 \fB\-b\fR, \fB\-\-blacklist\-file=path\fR
 File of subnets to exclude, in CIDR notation, one\-per line\. It is recommended you use this to exclude RFC 1918 addresses, multicast, IANA reserved space, and other IANA special\-purpose addresses\. An example blacklist file \fBblacklist\.conf\fR for this purpose\.
 .
+.TP
+\fB\-w\fR, \fB\-\-whitelist\-file=path\fR
+File of subnets to scan, in CIDR notation, one\-per line\. Specifying a whitelist file is equivalent to specifying to ranges directly on the command line interface, but allows specifying a large number of subnets\. Note: if you are specifying a large nubmer of individual IP addresses (more than 10 million), you should instead use \fB\-\-list\-of\-ips\-file\fR\.
+.
+.TP
+\fB\-I\fR, \fB\-\-list\-of\-ips\-file=path\fR
+File of individual IP addresses to scan, one\-per line\. This feature allows you to scan a large number of unrelated addresses\. If you have a small number of IPs, it is faster to specify these on the command line or by using \fB\-\-whitelist\-file\fR\. This should only be used when scanning more than 10 million addresses\. When used in with \-\-whitelist\-path, only hosts in the intersection of both sets will be scanned\. Hosts specified here, but included in the blacklist will be excluded\.
+.
 .SS "SCAN OPTIONS"
+.
+.TP
+\fB\-r\fR, \fB\-\-rate=pps\fR
+Set the send rate in packets/sec
+.
+.TP
+\fB\-B\fR, \fB\-\-bandwidth=bps\fR
+Set the send rate in bits/second (supports suffixes G, M, and K (e\.g\. \-B 10M for 10 mbps)\. Thi s overrides the \-\-rate flag\.
 .
 .TP
 \fB\-n\fR, \fB\-\-max\-targets=n\fR
@@ -45,14 +61,6 @@ Exit after receiving this many results
 .TP
 \fB\-t\fR, \fB\-\-max\-runtime=secs\fR
 Cap the length of time for sending packets
-.
-.TP
-\fB\-r\fR, \fB\-\-rate=pps\fR
-Set the send rate in packets/sec
-.
-.TP
-\fB\-B\fR, \fB\-\-bandwidth=bps\fR
-Set the send rate in bits/second (supports suffixes G, M, and K (e\.g\. \-B 10M for 10 mbps)\. Thi s overrides the \-\-rate flag\.
 .
 .TP
 \fB\-c\fR, \fB\-\-cooldown\-time=secs\fR
@@ -71,16 +79,12 @@ Split the scan up into N shards/partitions among different instances of zmap (de
 Set which shard to scan (default=0)\. Shards are 0\-indexed in the range [0, N), where N is the total number of shards\. When sharding \fB\-\-seed\fR is required\.
 .
 .TP
-\fB\-T\fR, \fB\-\-sender\-threads=n\fR
-Threads used to send packets\. ZMap will attempt to detect the optimal number of send threads based on the number of processor cores\.
-.
-.TP
 \fB\-P\fR, \fB\-\-probes=n\fR
 Number of probes to send to each IP (default=1)
 .
 .TP
-\fB\-d\fR, \fB\-\-dryrun\fR
-Print out each packet to stdout instead of sending it (useful for debugging)
+\fB\-\-retries=n\fR
+Number of times to try resending a packet if the sendto call fails (default=10)
 .
 .SS "NETWORK OPTIONS"
 .
@@ -94,11 +98,19 @@ Source address(es) to send packets from\. Either single IP or range (e\.g\. 10\.
 .
 .TP
 \fB\-G\fR, \fB\-\-gateway\-mac=addr\fR
-Gateway MAC address to send packets to (in case auto\-detection does not work)
+Gateway MAC address to send packets to (in case auto\-detection fails)
+.
+.TP
+\fB\-\-source\-mac=addr\fR
+Source MAC address to send packets from (in case auto\-detection fails)
 .
 .TP
 \fB\-i\fR, \fB\-\-interface=name\fR
 Network interface to use
+.
+.TP
+\fB\-X\fR, \fB\-\-vpn\fR
+Send IP layer packets instead of ethernet packets (for non\-Ethernet VPNs)
 .
 .SS "PROBE OPTIONS"
 ZMap allows users to specify and write their own probe modules\. Probe modules are responsible for generating probe packets to send, and processing responses from hosts\.
@@ -142,23 +154,66 @@ Comma\-separated list of fields to output
 \fB\-\-output\-filter\fR
 Specify an output filter over the fields defined by the probe module\. See the output filter section for more details\.
 .
+.SS "LOGGING AND METADATA OPTIONS"
+.
+.IP "\(bu" 4
+\fB\-q\fR, \fB\-\-quiet\fR: Do not print status updates once per second
+.
+.IP "\(bu" 4
+\fB\-v\fR, \fB\-\-verbosity=n\fR: Level of log detail (0\-5, default=3)
+.
+.IP "\(bu" 4
+\fB\-l\fR, \fB\-\-log\-file=filename\fR: Output file for log messages\. By default, stderr\.
+.
+.IP "\(bu" 4
+\fB\-m\fR, \fB\-\-metadata\-file=filename\fR: Output file for scan metadata (JSON)
+.
+.IP "\(bu" 4
+\fB\-L\fR, \fB\-\-log\-directory\fR: Write log entries to a timestamped file in this directory
+.
+.IP "\(bu" 4
+\fB\-u\fR, \fB\-\-status\-updates\-file\fR: Write scan progress updates to CSV file"
+.
+.IP "\(bu" 4
+\fB\-\-disable\-syslog\fR: Disables logging messages to syslog
+.
+.IP "\(bu" 4
+\fB\-\-notes\fR: Inject user\-specified notes into scan metadata
+.
+.IP "\(bu" 4
+\fB\-\-user\-metadata\fR Inject user\-specified JSON metadata into scan metadata
+.
+.IP "" 0
+.
 .SS "ADDITIONAL OPTIONS"
+.
+.TP
+\fB\-T\fR, \fB\-\-sender\-threads=n\fR
+Threads used to send packets\. ZMap will attempt to detect the optimal number of send threads based on the number of processor cores\.
 .
 .TP
 \fB\-C\fR, \fB\-\-config=filename\fR
 Read a configuration file, which can specify any other options\.
 .
 .TP
-\fB\-q\fR, \fB\-\-quiet\fR
-Do not print status updates once per second
+\fB\-d\fR, \fB\-\-dryrun\fR
+Print out each packet to stdout instead of sending it (useful for debugging)
 .
 .TP
-\fB\-g\fR, \fB\-\-summary\fR
-Print configuration and summary of results at the end of the scan
+\fB\-\-max\-sendto\-failures\fR
+Maximum NIC sendto failures before scan is aborted
 .
 .TP
-\fB\-v\fR, \fB\-\-verbosity=n\fR
-Level of log detail (0\-5, default=3)
+\fB\-\-min\-hitrate\fR
+Minimum hitrate that scan can hit before scan is aborted
+.
+.TP
+\fB\-\-cores\fR
+Comma\-separated list of cores to pin to
+.
+.TP
+\fB\-\-ignore\-invalid\-hosts\fR
+Ignore invalid hosts in whitelist/blacklist file
 .
 .TP
 \fB\-h\fR, \fB\-\-help\fR
@@ -167,6 +222,18 @@ Print help and exit
 .TP
 \fB\-V\fR, \fB\-\-version\fR
 Print version and exit
+.
+.SS "OUPUT FILTERS"
+Results generated by a probe module can be filtered before being passed to the output module\. Filters are defined over the output fields of a probe module\. Filters are written in a simple filtering language, similar to SQL, and are passed to ZMap using the \fB\-\-output\-filter\fR option\. Output filters are commonly used to filter out duplicate results, or to only pass only sucessful responses to the output module\.
+.
+.P
+Filter expressions are of the form \fB<fieldname> <operation> <value>\fR\. The type of \fB<value>\fR must be either a string or unsigned integer literal, and match the type of \fB<fieldname>\fR\. The valid operations for integer comparisons are = !=, \fI,\fR, \fI=,\fR=\. The operations for string comparisons are =, !=\. The \fB\-\-list\-output\-fields\fR flag will print what fields and types are available for the selected probe module, and then exit\.
+.
+.P
+Compound filter expressions may be constructed by combining filter expressions using parenthesis to specify order of operations, the && (logical AND) and || (logical OR) operators\.
+.
+.P
+For example, a filter for only successful, non\-duplicate responses would be written as: \fB\-\-output\-filter="success = 1 && repeat = 0"\fR
 .
 .SS "UDP PROBE MODULE OPTIONS"
 These arguments are all passed using the \fB\-\-probe\-args=args\fR option\. Only one argument may be passed at a time\.
@@ -190,15 +257,4 @@ Hex\-encoded binary to send to each destination host
 .TP
 \fBtemplate\-fields\fR
 Print information about the allowed template fields and exit\.
-.
-.SS "OUPUT FILTERS"
-Results generated by a probe module can be filtered before being passed to the output module\. Filters are defined over the output fields of a probe module\. Filters are written in a simple filtering language, similar to SQL, and are passed to ZMap using the \fB\-\-output\-filter\fR option\. Output filters are commonly used to filter out duplicate results, or to only pass only sucessful responses to the output module\.
-.
-.P
-Filter expressions are of the form \fB<fieldname> <operation> <value>\fR\. The type of \fB<value>\fR must be either a string or unsigned integer literal, and match the type of \fB<fieldname>\fR\. The valid operations for integer comparisons are = !=, \fI,\fR, \fI=,\fR=\. The operations for string comparisons are =, !=\. The \fB\-\-list\-output\-fields\fR flag will print what fields and types are available for the selected probe module, and then exit\.
-.
-.P
-Compound filter expressions may be constructed by combining filter expressions using parenthesis to specify order of operations, the && (logical AND) and || (logical OR) operators\.
-.
-.P
-For example, a filter for only successful, non\-duplicate responses would be written as: \fB\-\-output\-filter="success = 1 && repeat = 0"\fR
+

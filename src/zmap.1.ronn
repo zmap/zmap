@@ -7,9 +7,9 @@ zmap [ -p &lt;port> ] [ -o &lt;outfile&gt; ] [ OPTIONS... ] [ ip/hostname/range 
 
 ## DESCRIPTION
 
-*ZMap* is a network tool for scanning the entire Internet (or large samples).
-ZMap is capable of scanning the entire Internet in around 45 minutes on a
-gigabit network connection, reaching ~98% theoretical line speed.
+*ZMap* is a network tool for scanning the entire IPv4 address space (or large
+samples).  ZMap is capable of scanning the entire Internet in around 45 minutes
+on a gigabit network connection, reaching ~98% theoretical line speed.
 
 ## OPTIONS
 
@@ -32,7 +32,30 @@ gigabit network connection, reaching ~98% theoretical line speed.
      reserved space, and other IANA special-purpose addresses. An example
      blacklist file **blacklist.conf** for this purpose.
 
+   * `-w`, `--whitelist-file=path`:
+	File of subnets to scan, in CIDR notation, one-per line. Specifying a 
+	whitelist file is equivalent to specifying to ranges directly on the command
+    line interface, but allows specifying a large number of subnets. Note:
+	if you are specifying a large nubmer of individual IP addresses (more than 
+	10 million), you should instead use `--list-of-ips-file`.
+
+   * `-I`, `--list-of-ips-file=path`:
+	File of individual IP addresses to scan, one-per line. This feature allows you
+	to scan a large number of unrelated addresses. If you have a small number of IPs, 
+	it is faster to specify these on the command 
+	line or by using `--whitelist-file`. This should only be used when scanning more than
+	10 million addresses. When used in with --whitelist-path, only hosts in the intersection
+	of both sets will be scanned. Hosts specified here, but included in the blacklist will 
+	be excluded.	
+
 ### SCAN OPTIONS ###
+
+   * `-r`, `--rate=pps`:
+     Set the send rate in packets/sec
+
+   * `-B`, `--bandwidth=bps`:
+     Set the send rate in bits/second (supports suffixes G, M, and K (e.g. -B
+     10M for 10 mbps). Thi   s overrides the --rate flag.
 
    * `-n`, `--max-targets=n`:
      Cap the number of targets to probe. This can either be a number (e.g. -n
@@ -44,13 +67,6 @@ gigabit network connection, reaching ~98% theoretical line speed.
 
    * `-t`, `--max-runtime=secs`:
      Cap the length of time for sending packets
-
-   * `-r`, `--rate=pps`:
-     Set the send rate in packets/sec
-
-   * `-B`, `--bandwidth=bps`:
-     Set the send rate in bits/second (supports suffixes G, M, and K (e.g. -B
-     10M for 10 mbps). Thi   s overrides the --rate flag.
 
    * `-c`, `--cooldown-time=secs`:
      How long to continue receiving after sending has completed (default=8)
@@ -68,16 +84,12 @@ gigabit network connection, reaching ~98% theoretical line speed.
      [0, N), where N is the    total number of shards. When sharding
      **--seed** is required.
 
-   * `-T`, `--sender-threads=n`:
-     Threads used to send packets. ZMap will attempt to detect the optimal
-     number of send threads based on the number of processor cores.
-
    * `-P`, `--probes=n`:
      Number of probes to send to each IP (default=1)
 
-   * `-d`, `--dryrun`:
-     Print out each packet to stdout instead of sending it (useful for
-     debugging)
+   * `--retries=n`:
+     Number of times to try resending a packet if the sendto call fails (default=10)
+
 
 ### NETWORK OPTIONS ###
 
@@ -89,11 +101,16 @@ gigabit network connection, reaching ~98% theoretical line speed.
      10.0.0.1-10.0.0.9)
 
    * `-G`, `--gateway-mac=addr`:
-     Gateway MAC address to send packets to (in case auto-detection does not
-     work)
+     Gateway MAC address to send packets to (in case auto-detection fails)
+
+   * `--source-mac=addr`:
+     Source MAC address to send packets from (in case auto-detection fails)
 
    * `-i`, `--interface=name`:
      Network interface to use
+
+   * `-X`, `--vpn`:
+     Send IP layer packets instead of ethernet packets (for non-Ethernet VPNs)
 
 ### PROBE OPTIONS ###
 
@@ -136,10 +153,7 @@ fields, and write filters over the output fields.
      Specify an output filter over the fields defined by the probe module. See
      the output filter section for more details.
 
-### ADDITIONAL OPTIONS ###
-
-   * `-C`, `--config=filename`:
-     Read a configuration file, which can specify any other options.
+### LOGGING AND METADATA OPTIONS ###
 
    * `-q`, `--quiet`:
      Do not print status updates once per second
@@ -147,8 +161,51 @@ fields, and write filters over the output fields.
    * `-v`, `--verbosity=n`:
      Level of log detail (0-5, default=3)
 
+   * `-l`, `--log-file=filename`:
+	 Output file for log messages. By default, stderr.
+
    * `-m`, `--metadata-file=filename`:
      Output file for scan metadata (JSON)
+
+   * `-L`, `--log-directory`:
+     Write log entries to a timestamped file in this directory
+
+   * `-u`, `--status-updates-file`:
+     Write scan progress updates to CSV file"
+
+   * `--disable-syslog`:
+     Disables logging messages to syslog
+
+   * `--notes`:
+     Inject user-specified notes into scan metadata
+
+   * `--user-metadata`
+     Inject user-specified JSON metadata into scan metadata
+
+### ADDITIONAL OPTIONS ###
+
+   * `-T`, `--sender-threads=n`:
+     Threads used to send packets. ZMap will attempt to detect the optimal
+     number of send threads based on the number of processor cores.
+
+   * `-C`, `--config=filename`:
+     Read a configuration file, which can specify any other options.
+
+   * `-d`, `--dryrun`:
+     Print out each packet to stdout instead of sending it (useful for
+     debugging)
+
+   * `--max-sendto-failures`:
+     Maximum NIC sendto failures before scan is aborted
+   
+   * `--min-hitrate`:
+     Minimum hitrate that scan can hit before scan is aborted
+   
+   * `--cores`:
+     Comma-separated list of cores to pin to
+   
+   * `--ignore-invalid-hosts`:
+      Ignore invalid hosts in whitelist/blacklist file
 
    * `-h`, `--help`:
      Print help and exit
@@ -156,32 +213,6 @@ fields, and write filters over the output fields.
    * `-V`, `--version`:
      Print version and exit
 
-   * `--resume-scan`:
-     Resume a scan from a given IP address. Warning: this feature is
-     only safe when scanning with a single thread, with a known seed,
-     and if the blacklist and whitelist have not changed.
-
-
-### UDP PROBE MODULE OPTIONS ###
-
-These arguments are all passed using the `--probe-args=args` option. Only one
-argument may be passed at a time.
-
-   * `file:/path/to/file`:
-     Path to payload file to send to each host over UDP.
-
-   * `template:/path/to/template`:
-     Path to template file. For each destination host, the template file is
-     populated, set as the UDP payload, and sent.
-
-   * `text:<text>`:
-     ASCII text to send to each destination host
-
-   * `hex:<hex>`:
-    Hex-encoded binary to send to each destination host
-
-   * `template-fields`:
-     Print information about the allowed template fields and exit.
 
 ### OUPUT FILTERS ###
 
@@ -205,3 +236,25 @@ using parenthesis to specify order of operations, the && (logical AND) and ||
 
 For example, a filter for only successful, non-duplicate responses would be
 written as: `--output-filter="success = 1 && repeat = 0"`
+
+### UDP PROBE MODULE OPTIONS ###
+
+These arguments are all passed using the `--probe-args=args` option. Only one
+argument may be passed at a time.
+
+   * `file:/path/to/file`:
+     Path to payload file to send to each host over UDP.
+
+   * `template:/path/to/template`:
+     Path to template file. For each destination host, the template file is
+     populated, set as the UDP payload, and sent.
+
+   * `text:<text>`:
+     ASCII text to send to each destination host
+
+   * `hex:<hex>`:
+    Hex-encoded binary to send to each destination host
+
+   * `template-fields`:
+     Print information about the allowed template fields and exit.
+

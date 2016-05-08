@@ -92,6 +92,8 @@ struct state_conf {
 	char *output_filename;
 	char *blacklist_filename;
 	char *whitelist_filename;
+	char *list_of_ips_filename;
+	uint32_t list_of_ips_count;
 #ifdef JSON
 	char *metadata_filename;
 	FILE *metadata_file;
@@ -140,6 +142,7 @@ struct state_send {
 	double start;
 	double finish;
 	uint32_t sent;
+	uint32_t tried_sent;
 	uint32_t blacklisted;
 	uint32_t whitelisted;
 	int warmup;
@@ -148,6 +151,7 @@ struct state_send {
 	uint32_t targets;
 	uint32_t sendto_failures;
 	uint32_t max_index;
+	uint8_t **list_of_ips_pbm;
 };
 extern struct state_send zsend;
 
