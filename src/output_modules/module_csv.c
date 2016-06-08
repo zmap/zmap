@@ -73,6 +73,41 @@ static void hex_encode(FILE *f, unsigned char* readbuf, size_t len)
 	check_and_log_file_error(f, "csv");
 }
 
+int repeated_csv_process(fieldset_t *fs) //Recursive processing for FS_REPEATED/FS_FIELDSET
+{
+	if (!file) {
+		return EXIT_SUCCESS;
+	}
+	for (int i=0; i < fs->len; i++) {
+		field_t *f = &(fs->fields[i]);
+		if (i) {
+			fprintf(file, ",");
+		}
+		if (f->type == FS_STRING) {
+			if (strchr((char*) f->value.ptr, ',')) {
+				fprintf(file, "\"%s\"", (char*) f->value.ptr);
+			} else {
+				fprintf(file, "%s", (char*) f->value.ptr);
+			}
+		} else if (f->type == FS_UINT64) {
+			fprintf(file, "%" PRIu64, (uint64_t) f->value.num);
+		} else if (f->type == FS_BINARY) {
+			hex_encode(file, (unsigned char*) f->value.ptr, f->len);
+		} else if (f->type == FS_FIELDSET) {
+		        fieldset_t *fs = (fieldset_t*) f->value.ptr;
+			repeated_csv_process(fs);        
+		} else if (f->type == FS_REPEATED) {
+		        fieldset_t *fs = (fieldset_t*) f->value.ptr;
+			repeated_csv_process(fs);        
+		} else if (f->type == FS_NULL) {
+			// do nothing
+		} else {
+			log_fatal("csv", "received unknown output type");
+		}
+	}
+	return EXIT_SUCCESS;
+}
+
 int csv_process(fieldset_t *fs)
 {
 	if (!file) {
@@ -93,6 +128,12 @@ int csv_process(fieldset_t *fs)
 			fprintf(file, "%" PRIu64, (uint64_t) f->value.num);
 		} else if (f->type == FS_BINARY) {
 			hex_encode(file, (unsigned char*) f->value.ptr, f->len);
+		} else if (f->type == FS_FIELDSET) {
+		        fieldset_t *fs = (fieldset_t*) f->value.ptr;
+			repeated_csv_process(fs);        
+		} else if (f->type == FS_REPEATED) {
+		        fieldset_t *fs = (fieldset_t*) f->value.ptr;
+			repeated_csv_process(fs);        
 		} else if (f->type == FS_NULL) {
 			// do nothing
 		} else {
