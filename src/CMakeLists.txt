@@ -138,18 +138,18 @@ configure_file(zbopt.ggo.in ${CMAKE_BINARY_DIR}/src/zbopt.ggo @ONLY)
 configure_file(zopt.ggo.in ${CMAKE_BINARY_DIR}/src/zopt.ggo @ONLY)
 
 add_custom_command(OUTPUT zopt.h
-    COMMAND gengetopt -C --no-help --no-version --unamed-opts=SUBNETS -i "${CMAKE_CURRENT_SOURCE_DIR}/zopt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/zopt"
-    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/zopt.ggo"
+    COMMAND gengetopt -C --no-help --no-version --unamed-opts=SUBNETS -i "${CMAKE_CURRENT_BINARY_DIR}/zopt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/zopt"
+    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/zopt.ggo"
 )
 
 add_custom_command(OUTPUT topt.h
-    COMMAND gengetopt -S --no-help --no-version --unamed-opts=FILE -i "${CMAKE_CURRENT_SOURCE_DIR}/topt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/topt"
-    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/topt.ggo"
+    COMMAND gengetopt -S --no-help --no-version --unamed-opts=FILE -i "${CMAKE_CURRENT_BINARY_DIR}/topt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/topt"
+    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/topt.ggo"
 )
 
 add_custom_command(OUTPUT zbopt.h
-    COMMAND gengetopt -C --no-help --no-version -i "${CMAKE_CURRENT_SOURCE_DIR}/zbopt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/zbopt"
-    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/zbopt.ggo"
+    COMMAND gengetopt -C --no-help --no-version -i "${CMAKE_CURRENT_BINARY_DIR}/zbopt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/zbopt"
+    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/zbopt.ggo"
 )
 
 add_custom_command(OUTPUT lexer.c
