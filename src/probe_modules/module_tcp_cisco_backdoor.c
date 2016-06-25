@@ -51,7 +51,7 @@ static int synscan_init_perthread(void* buf, macaddr_t *src,
 // is going to act in this.
 //uint32_t tcp_seq = validation[0];
 // From Mandiant
-// 1. To initiate the process, a uniquely crafted TCP SYN packet is sent 
+// 1. To initiate the process, a uniquely crafted TCP SYN packet is sent
 //	to port 80 of the “implanted” router. It is important to note that
 //	the difference between the sequence and acknowledgment numbers must
 //	be set to 0xC123D. Also the ACK number doesn’t need to be zero.
@@ -59,7 +59,7 @@ static int synscan_init_perthread(void* buf, macaddr_t *src,
 
 #define BACKDOOR_SEQ 0x3D120C00
 //#define BACKDOOR_SEQ 0x000C123D // wrong byte order
-#define BACKDOOR_ACK 0x0 
+#define BACKDOOR_ACK 0x0
 #define EXPECTED_RESPONSE_SEQ 0
 //#define EXPECTED_RESPONSE_ACK 0x000C123E // wrong byte order
 #define EXPECTED_RESPONSE_ACK 0x3E120C00
@@ -152,13 +152,13 @@ static void synscan_process_packet(const u_char *packet,
 
 	if (tcp->th_flags & TH_RST) { // RST packet
 		fs_add_string(fs, "classification", (char*) "rst", 0);
-		fs_add_uint64(fs, "success", 0);
+		fs_add_bool(fs, "success", 0);
 	} else if (tcp->th_seq == EXPECTED_RESPONSE_SEQ && tcp->th_urp) {
 		fs_add_string(fs, "classification", (char*) "backdoor", 0);
-		fs_add_uint64(fs, "success", 1);
+		fs_add_bool(fs, "success", 1);
 	} else { // SYNACK packet
 		fs_add_string(fs, "classification", (char*) "synack", 0);
-		fs_add_uint64(fs, "success", 1);
+		fs_add_bool(fs, "success", 1);
 	}
 }
 
@@ -172,7 +172,7 @@ static fielddef_t fields[] = {
 	{.name = "flags", .type = "int", .desc = "tcp flags"},
 	{.name = "raw", .type = "binary", .desc = "raw packet"},
 	{.name = "classification", .type="string", .desc = "packet classification"},
-	{.name = "success", .type="int", .desc = "is response considered success"}
+	{.name = "success", .type="bool", .desc = "is response considered success"}
 };
 
 probe_module_t module_tcp_cisco_backdoor = {

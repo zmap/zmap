@@ -128,10 +128,10 @@ void synscan_process_packet(const u_char *packet,
 
 	if (tcp->th_flags & TH_RST) { // RST packet
 		fs_add_string(fs, "classification", (char*) "rst", 0);
-		fs_add_uint64(fs, "success", 0);
+		fs_add_bool(fs, "success", 0);
 	} else { // SYNACK packet
 		fs_add_string(fs, "classification", (char*) "synack", 0);
-		fs_add_uint64(fs, "success", 1);
+		fs_add_bool(fs, "success", 1);
 	}
 }
 
@@ -142,7 +142,7 @@ static fielddef_t fields[] = {
 	{.name = "acknum", .type = "int", .desc = "TCP acknowledgement number"},
 	{.name = "window", .type = "int", .desc = "TCP window"},
 	{.name = "classification", .type="string", .desc = "packet classification"},
-	{.name = "success", .type="int", .desc = "is response considered success"}
+	{.name = "success", .type="bool", .desc = "is response considered success"}
 };
 
 probe_module_t module_tcp_synscan = {

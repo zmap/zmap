@@ -80,8 +80,8 @@ void fs_add_ip_fields(fieldset_t *fs, struct ip *ip)
 
 void fs_add_system_fields(fieldset_t *fs, int is_repeat, int in_cooldown)
 {
-	fs_add_uint64(fs, "repeat", is_repeat);
-	fs_add_uint64(fs, "cooldown", in_cooldown);
+	fs_add_bool(fs, "repeat", is_repeat);
+	fs_add_bool(fs, "cooldown", in_cooldown);
 
 	char *timestr = xmalloc(TIMESTR_LEN+1);
 	char *timestr_ms = xmalloc(TIMESTR_LEN+1);
@@ -108,8 +108,8 @@ fielddef_t ip_fields[] = {
 
 int sys_fields_len = 5;
 fielddef_t sys_fields[] = {
-	{.name="repeat", .type="int", .desc="Is response a repeat response from host"},
-	{.name="cooldown", .type="int", .desc="Was response received during the cooldown period"},
+	{.name="repeat", .type="bool", .desc="Is response a repeat response from host"},
+	{.name="cooldown", .type="bool", .desc="Was response received during the cooldown period"},
 	{.name="timestamp_str", .type="string", .desc="timestamp of when response arrived in ISO8601 format."},
 	{.name="timestamp_ts", .type="int", .desc="timestamp of when response arrived in seconds since Epoch"},
 	{.name="timestamp_us", .type="int", .desc="microsecond part of timestamp (e.g. microseconds since 'timestamp-ts')"}

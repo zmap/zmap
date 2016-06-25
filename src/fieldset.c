@@ -50,6 +50,12 @@ fieldset_t *fs_new_repeated_uint64(void)
 	return fs_new_repeated_field(FS_UINT64, 0);
 }
 
+
+fieldset_t *fs_new_repeated_bool(void)
+{
+	return fs_new_repeated_field(FS_BOOL, 0);
+}
+
 fieldset_t *fs_new_repeated_string(int free_)
 {
 	return fs_new_repeated_field(FS_STRING, free_);
@@ -228,6 +234,12 @@ void fs_add_uint64(fieldset_t *fs, const char *name, uint64_t value)
 	fs_add_word(fs, name, FS_UINT64, 0, sizeof(uint64_t), val);
 }
 
+void fs_add_bool(fieldset_t *fs, const char *name, int value)
+{
+	field_val_t val = { .num = value };
+	fs_add_word(fs, name, FS_BOOL, 0, sizeof(int), val);
+}
+
 void fs_add_binary(fieldset_t *fs, const char *name, size_t len,
 		void *value, int free_)
 {
@@ -265,6 +277,12 @@ void fs_modify_uint64(fieldset_t *fs, const char *name, uint64_t value)
 {
 	field_val_t val = { .num = value };
 	fs_modify_word(fs, name, FS_UINT64, 0, sizeof(uint64_t), val);
+}
+
+void fs_modify_bool(fieldset_t *fs, const char *name, int value)
+{
+	field_val_t val = { .num = value };
+	fs_modify_word(fs, name, FS_BOOL, 0, sizeof(int), val);
 }
 
 void fs_modify_binary(fieldset_t *fs, const char *name, size_t len,

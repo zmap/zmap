@@ -23,6 +23,7 @@
 #define FS_UINT64 2
 #define FS_BINARY 3
 #define FS_NULL 4
+#define FS_BOOL 7
 // recursive support
 #define FS_FIELDSET 5
 #define FS_REPEATED 6
@@ -63,7 +64,7 @@ typedef struct fieldset {
 	field_t fields[MAX_FIELDS];
     // only used for repeated.
     int inner_type; // type of repeated element. e.g., FS_STRING
-    int type; // REPEATED or FIELDSET 
+    int type; // REPEATED or FIELDSET
     int free_; // should elements be freed
 } fieldset_t;
 
@@ -83,6 +84,7 @@ fieldset_t *fs_new_fieldset(void);
 
 fieldset_t *fs_new_repeated_field(int type, int free_);
 fieldset_t *fs_new_repeated_uint64(void);
+fieldset_t *fs_new_repeated_bool(void);
 fieldset_t *fs_new_repeated_string(int free_);
 fieldset_t *fs_new_repeated_binary(int free_);
 fieldset_t *fs_new_repeated_fieldset();
@@ -96,6 +98,8 @@ void gen_fielddef_set(fielddefset_t *fds, fielddef_t fs[], int len);
 void fs_add_null(fieldset_t *fs, const char *name);
 
 void fs_add_uint64(fieldset_t *fs, const char *name, uint64_t value);
+
+void fs_add_bool(fieldset_t *fs, const char *name, int value);
 
 void fs_add_string(fieldset_t *fs, const char *name, char *value, int free_);
 
@@ -117,6 +121,8 @@ void fs_add_repeated(fieldset_t *fs, const char *name, fieldset_t *child);
 void fs_modify_null(fieldset_t *fs, const char *name);
 
 void fs_modify_uint64(fieldset_t *fs, const char *name, uint64_t value);
+
+void fs_modify_bool(fieldset_t *fs, const char *name, int value);
 
 void fs_modify_string(fieldset_t *fs, const char *name, char *value, int free_);
 

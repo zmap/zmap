@@ -174,7 +174,7 @@ void upnp_process_packet(const u_char *packet,
 
 cleanup:
 		fs_add_string(fs, "classification", (char *) classification, 0);
-		fs_add_uint64(fs, "success", is_success);
+		fs_add_bool(fs, "success", is_success);
 		fs_chkadd_unsafe_string(fs, "server", server, 1);
 		fs_chkadd_unsafe_string(fs, "location", location, 1);
 		fs_chkadd_unsafe_string(fs, "usn", usn, 1);
@@ -229,7 +229,7 @@ cleanup:
 #endif
 	} else {
 		fs_add_string(fs, "classification", (char *) "other", 0);
-		fs_add_uint64(fs, "success", 0);
+		fs_add_bool(fs, "success", 0);
 		fs_add_null(fs, "server");
 		fs_add_null(fs, "location");
 		fs_add_null(fs, "usn");
@@ -251,7 +251,7 @@ cleanup:
 
 static fielddef_t fields[] = {
 	{.name = "classification", .type="string", .desc = "packet classification"},
-	{.name = "success", .type="int", .desc = "is response considered success"},
+	{.name = "success", .type="bool", .desc = "is response considered success"},
 
 	{.name = "server", .type="string", .desc = "UPnP server"},
 	{.name = "location", .type="string", .desc = "UPnP location"},

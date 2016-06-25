@@ -152,23 +152,23 @@ static void icmp_echo_process_packet(const u_char *packet,
 			break;
 		case ICMP_UNREACH:
 			fs_add_string(fs, "classification", (char*) "unreach", 0);
-			fs_add_uint64(fs, "success", 0);
+			fs_add_bool(fs, "success", 0);
 			break;
 		case ICMP_SOURCEQUENCH:
 			fs_add_string(fs, "classification", (char*) "sourcequench", 0);
-			fs_add_uint64(fs, "success", 0);
+			fs_add_bool(fs, "success", 0);
 			break;
 		case ICMP_REDIRECT:
 			fs_add_string(fs, "classification", (char*) "redirect", 0);
-			fs_add_uint64(fs, "success", 0);
+			fs_add_bool(fs, "success", 0);
 			break;
 		case ICMP_TIMXCEED:
 			fs_add_string(fs, "classification", (char*) "timxceed", 0);
-			fs_add_uint64(fs, "success", 0);
+			fs_add_bool(fs, "success", 0);
 			break;
 		default:
 			fs_add_string(fs, "classification", (char*) "other", 0);
-			fs_add_uint64(fs, "success", 0);
+			fs_add_bool(fs, "success", 0);
 			break;
 	}
 }
@@ -179,7 +179,7 @@ static fielddef_t fields[] = {
 	{.name="icmp-id", .type="int", .desc="icmp id number"},
 	{.name="seq", .type="int", .desc="icmp sequence number"},
 	{.name="classification", .type="string", .desc="probe module classification"},
-	{.name="success", .type="int", .desc="did probe module classify response as success"}
+	{.name="success", .type="bool", .desc="did probe module classify response as success"}
 };
 
 

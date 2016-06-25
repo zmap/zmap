@@ -65,7 +65,7 @@ int ntp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	return 1;
 }
 
-void ntp_process_packet(const u_char *packet, 
+void ntp_process_packet(const u_char *packet,
 		__attribute__((unused)) uint32_t len, fieldset_t *fs,
         __attribute__((unused)) uint32_t *validation)
 {
@@ -79,7 +79,7 @@ void ntp_process_packet(const u_char *packet,
                 uint8_t *ptr = (uint8_t*) &udp[1];
 
                 fs_add_string(fs, "classification", (char*) "ntp", 0);
-                fs_add_uint64(fs, "success", 1);
+                fs_add_bool(fs, "success", 1);
                 fs_add_uint64(fs, "sport", ntohs(udp->uh_sport));
                 fs_add_uint64(fs, "dport", ntohs(udp->uh_dport));
                 fs_add_null(fs, "icmp_responder");
@@ -103,7 +103,7 @@ void ntp_process_packet(const u_char *packet,
 			fs_add_uint64(fs, "root_dispersion", temp32);
 			temp32 = *((uint32_t *)ptr + 12);
 			fs_add_uint64(fs, "reference_clock_identifier", temp32);
-			
+
 			temp64 = *((uint64_t *)ptr + 16);
 			fs_add_uint64(fs, "reference_timestamp", temp64);
 			temp64 = *((uint64_t *)ptr + 24);
@@ -131,7 +131,7 @@ void ntp_process_packet(const u_char *packet,
 
                 fs_modify_string(fs, "saddr", make_ip_str(ip_inner->ip_dst.s_addr), 1);
                 fs_add_string(fs, "classification", (char*) "icmp-unreach", 0);
-                fs_add_uint64(fs, "success", 0);
+                fs_add_bool(fs, "success", 0);
                 fs_add_null(fs, "sport");
                 fs_add_null(fs, "dport");
                 fs_add_string(fs, "icmp_responder", make_ip_str(ip_hdr->ip_src.s_addr), 1);
@@ -154,7 +154,7 @@ void ntp_process_packet(const u_char *packet,
 
         } else {
                 fs_add_string(fs, "classification", (char *) "other", 0);
-                fs_add_uint64(fs, "success", 0);
+                fs_add_bool(fs, "success", 0);
                 fs_add_null(fs, "sport");
                 fs_add_null(fs, "dport");
                 fs_add_null(fs, "icmp_responder");
@@ -176,8 +176,8 @@ void ntp_process_packet(const u_char *packet,
 }
 
 int ntp_init_perthread(void *buf, macaddr_t *src,
-		macaddr_t *gw, __attribute__((unused)) port_h_t dst_port, 
-		void **arg) 
+		macaddr_t *gw, __attribute__((unused)) port_h_t dst_port,
+		void **arg)
 {
         memset(buf, 0, MAX_PACKET_SIZE);
         struct ether_header *eth_header = (struct ether_header *) buf;
@@ -228,7 +228,7 @@ void ntp_print_packet(FILE *fp, void *packet){
 
 static fielddef_t fields[] = {
         {.name = "classification", .type = "string", .desc = "packet classification"},
-        {.name = "success", .type = "int", .desc = "is  response considered success"},
+        {.name = "success", .type = "bool", .desc = "is  response considered success"},
         {.name = "sport", .type = "int", .desc = "UDP source port"},
         {.name = "dport", .type = "int", .desc = "UDP destination port"},
         {.name = "icmp_responder", .type = "string", .desc = "Source IP of ICMP_UNREACH messages"},

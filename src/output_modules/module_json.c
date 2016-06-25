@@ -70,6 +70,8 @@ json_object *field_to_jsonobj(field_t *f)
 		return json_object_new_string((char *) f->value.ptr);
 	} else if (f->type == FS_UINT64) {
 		return json_object_new_int64(f->value.num);
+	} else if (f->type == FS_BOOL) {
+		return json_object_new_boolean(f->value.num);
 	} else if (f->type == FS_BINARY) {
 		char *encoded = hex_encode(f->value.ptr, f->len);
 		json_object *t = json_object_new_string(encoded);

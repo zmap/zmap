@@ -133,7 +133,7 @@ void bacnet_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		assert(udp_offset + sizeof(struct udphdr) < len);
 		struct udphdr *udp = (struct udphdr*) &packet[udp_offset];
 		fs_add_string(fs, "classification", (char*) "ntp", 0);
-		fs_add_uint64(fs, "success", 1);
+		fs_add_bool(fs, "success", 1);
 		fs_add_uint64(fs, "sport", ntohs(udp->uh_sport));
 		fs_add_uint64(fs, "dport", ntohs(udp->uh_dport));
 		fs_add_null(fs, "icmp_responder");
@@ -152,7 +152,7 @@ void bacnet_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 
 		fs_modify_string(fs, "saddr", make_ip_str(ip_inner->ip_dst.s_addr), 1);
 		fs_add_string(fs, "classification", (char*) "icmp-unreach", 0);
-		fs_add_uint64(fs, "success", 0);
+		fs_add_bool(fs, "success", 0);
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");
 		fs_add_string(fs, "icmp_responder", make_ip_str(ip_hdr->ip_src.s_addr), 1);
@@ -162,7 +162,7 @@ void bacnet_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		fs_add_null(fs, "udp_payload");
 	} else {
 		fs_add_string(fs, "classification", (char *) "other", 0);
-		fs_add_uint64(fs, "success", 0);
+		fs_add_bool(fs, "success", 0);
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");
 		fs_add_null(fs, "icmp_responder");
@@ -180,7 +180,7 @@ int bacnet_global_initialize(struct state_conf *conf) {
 
 static fielddef_t fields[] = {
 	{.name = "classification", .type = "string", .desc = "packet classification"},
-	{.name = "success", .type = "int", .desc = "is  response considered success"},
+	{.name = "success", .type = "bool", .desc = "is  response considered success"},
 	{.name = "sport", .type = "int", .desc = "UDP source port"},
 	{.name = "dport", .type = "int", .desc = "UDP destination port"},
 	{.name = "icmp_responder", .type = "string", .desc = "Source IP of ICMP_UNREACH messages"},
