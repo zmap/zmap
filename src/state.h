@@ -94,12 +94,10 @@ struct state_conf {
 	char *whitelist_filename;
 	char *list_of_ips_filename;
 	uint32_t list_of_ips_count;
-#ifdef JSON
 	char *metadata_filename;
 	FILE *metadata_file;
 	char *notes;
 	char *custom_metadata_str;
-#endif
 	char **destination_cidrs;
 	int destination_cidrs_len;
 	char *raw_output_fields;

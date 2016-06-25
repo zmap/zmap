@@ -16,14 +16,11 @@ set(EXTRA_OUTPUT_MODULES
 
 set(OUTPUT_MODULE_SOURCES
     output_modules/module_csv.c
+    output_modules/module_json.c
     output_modules/output_modules.c
 )
 
 # Handle optional output modules
-if(WITH_JSON)
-    set(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_json.c)
-endif()
-
 if(WITH_REDIS)
     set(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_redis_packed.c output_modules/module_redis_csv.c)
 endif()

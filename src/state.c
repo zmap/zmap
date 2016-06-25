@@ -58,12 +58,10 @@ struct state_conf zconf = {
 	.filter_unsuccessful = 0,
 	.max_sendto_failures = -1,
 	.min_hitrate = 0.0,
-#ifdef JSON
 	.metadata_file = NULL,
 	.metadata_filename = NULL,
 	.notes = NULL,
 	.custom_metadata_str = NULL,
-#endif
 	.recv_ready = 0
 };
 

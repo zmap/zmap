@@ -19,11 +19,7 @@
 #include <time.h>
 
 #include <pcap/pcap.h>
-
-#ifdef JSON
 #include <json.h>
-#endif
-
 #include <pthread.h>
 
 #include "../lib/includes.h"
@@ -73,7 +69,7 @@ int test_recursive_fieldsets(void)
 
 int main(UNUSED int argc, UNUSED char **argv)
 {
-    for (int i=0; i< 100000000; i++) 
+    for (int i=0; i< 100000000; i++)
         test_recursive_fieldsets();
     return EXIT_SUCCESS;
 }

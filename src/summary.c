@@ -25,7 +25,6 @@
 
 #define STRTIME_LEN 1024
 
-#ifdef JSON
 #include <json.h>
 
 void json_metadata(FILE *file)
@@ -312,10 +311,4 @@ void json_metadata(FILE *file)
 	fprintf(file, "%s\n", json_object_to_json_string(obj));
 	json_object_put(obj);
 }
-#else
-void json_metadata(FILE *file)
-{
-	(void) file;
-	log_error("metadata", "JSON support not compiled in");
-}
-#endif
+

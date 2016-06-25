@@ -19,10 +19,7 @@
 #include <time.h>
 
 #include <pcap/pcap.h>
-
-#ifdef JSON
 #include <json.h>
-#endif
 
 #include <pthread.h>
 
@@ -282,11 +279,9 @@ static void start_zmap(void)
 	}
 
 	// finished
-#ifdef JSON
 	if (zconf.metadata_filename) {
 		json_metadata(zconf.metadata_file);
 	}
-#endif
 	if (zconf.output_module && zconf.output_module->close) {
 		zconf.output_module->close(&zconf, &zsend, &zrecv);
 	}
@@ -561,7 +556,6 @@ int main(int argc, char *argv[])
 				zconf.min_hitrate);
 	}
 	if (args.metadata_file_arg) {
-#ifdef JSON
 		zconf.metadata_filename = args.metadata_file_arg;
 		if (!strcmp(zconf.metadata_filename, "-")) {
 			zconf.metadata_file = stdout;
@@ -574,34 +568,19 @@ int main(int argc, char *argv[])
 		}
 		log_debug("metadata", "metdata will be saved to %s",
 				zconf.metadata_filename);
-#else
-		log_fatal("zmap", "JSON support not compiled into ZMap. "
-				"Metadata output not supported.");
-#endif
 	}
 
 	if (args.user_metadata_given) {
-#ifdef JSON
 		zconf.custom_metadata_str = args.user_metadata_arg;
 		if (!json_tokener_parse(zconf.custom_metadata_str)) {
 			log_fatal("metadata", "unable to parse custom user metadata");
 		} else {
 			log_debug("metadata", "user metadata validated successfully");
 		}
-#else
-		log_fatal("zmap", "JSON support not compiled into ZMap. "
-				"Metadata output not supported.");
-#endif
 	}
 	if (args.notes_given) {
-#ifdef JSON
 		zconf.notes = args.notes_arg;
-#else
-		log_fatal("zmap", "JSON support not compiled into ZMap. "
-				"Metadata output and note injection are not supported.");
-#endif
 	}
-
 
 	// find if zmap wants any specific cidrs scanned instead
 	// of the entire Internet
