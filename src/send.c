@@ -17,6 +17,7 @@
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
+#include <signal.h>
 
 #include "../lib/includes.h"
 #include "../lib/logger.h"
@@ -61,13 +62,30 @@ static uint32_t num_src_addrs;
 // Source ports for outgoing packets
 static uint16_t num_src_ports;
 
+
+void sig_handler_increase_speed(UNUSED int signal)
+{
+	int old_rate = zconf.rate;
+	zconf.rate += (zconf.rate * 0.05);
+	log_info("send", "send rate increased from %i to %i pps.",
+			old_rate, zconf.rate);
+}
+
+void sig_handler_decrease_speed(UNUSED int signal)
+{
+	int old_rate = zconf.rate;
+	zconf.rate -= (zconf.rate * 0.05);
+	log_info("send", "send rate decreased from %i to %i pps.",
+			old_rate, zconf.rate);
+}
+
+
 // global sender initialize (not thread specific)
 iterator_t* send_init(void)
 {
 	// generate a new primitive root and starting position
 	iterator_t *it;
 	it = iterator_init(zconf.senders, zconf.shard_num, zconf.total_shards);
-
 	// process the dotted-notation addresses passed to ZMAP and determine
 	// the source addresses from which we'll send packets;
 	srcip_first = inet_addr(zconf.source_ip_first);
@@ -101,7 +119,6 @@ iterator_t* send_init(void)
 	log_debug("send", "will send from %i address%s on %u source ports",
 		  num_src_addrs, ((num_src_addrs ==1 ) ? "":"es"),
 		  num_src_ports);
-
 	// global initialization for send module
 	assert(zconf.probe_module);
 	if (zconf.probe_module->global_initialize) {
@@ -109,7 +126,6 @@ iterator_t* send_init(void)
         		log_fatal("send", "global initialization for probe module failed.");
 	        }
 	}
-
 	// concert specified bandwidth to packet rate
 	if (zconf.bandwidth > 0) {
 		size_t pkt_len = zconf.probe_module->packet_length;
@@ -133,7 +149,6 @@ iterator_t* send_init(void)
 		log_debug("send", "using bandwidth %lu bits/s, rate set to %d pkt/s",
 						zconf.bandwidth, zconf.rate);
 	}
-
 	// Get the source hardware address, and give it to the probe
 	// module
     if (!zconf.hw_mac_set) {
@@ -156,13 +171,16 @@ iterator_t* send_init(void)
 	if (zconf.dryrun) {
 		log_info("send", "dryrun mode -- won't actually send packets");
 	}
-
 	// initialize random validation key
 	validate_init();
+	// setup signal handlers for changing scan speed
+	signal(SIGUSR1, sig_handler_increase_speed);
+	signal(SIGUSR2, sig_handler_decrease_speed);
 
 	zsend.start = now();
 	return it;
 }
+
 
 static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
 {
@@ -219,8 +237,8 @@ int send_run(sock_t st, shard_t *s)
 	volatile int vi;
     struct timespec ts, rem;
     double send_rate = (double) zconf.rate / zconf.senders;
-    double slow_rate = 50; // packets per seconds per thread
-			   // at which it uses the slow methos
+    const double slow_rate = 50; // packets per seconds per thread
+ 			   					// at which it uses the slow methods
     long nsec_per_sec = 1000 * 1000 * 1000;
     long long sleep_time = nsec_per_sec;
 	if (zconf.rate > 0) {
@@ -257,6 +275,7 @@ int send_run(sock_t st, shard_t *s)
 	uint32_t idx = 0;
 	while (1) {
 		// adaptive timing delay
+		send_rate = (double) zconf.rate / zconf.senders;
 		if (delay > 0) {
 			count++;
             if (send_rate < slow_rate) {
@@ -299,7 +318,6 @@ int send_run(sock_t st, shard_t *s)
 			log_debug("send", "send thread %hhu finished (max targets of %u reached)", s->id, max_targets);
 			break;
 		}
-
 		if (zconf.max_runtime && zconf.max_runtime <= now() - zsend.start) {
 			s->cb(s->id, s->arg);
 			break;
