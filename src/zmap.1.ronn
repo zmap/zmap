@@ -258,3 +258,8 @@ argument may be passed at a time.
    * `template-fields`:
      Print information about the allowed template fields and exit.
 
+### MID-SCAN CHANGES ###
+
+You can change the rate at which ZMap is scanning mid-scan by sending SIGUSR1 (increase)
+and SIGUSR2 (decrease) signals to ZMap. These will result in the scan rate increasing or
+decreasing by 5%.
