@@ -18,7 +18,7 @@ matrix:
         - brew install gengetopt byacc libdnet libunistring
           mongo-c hiredis
 script: 
-  - cmake -DENABLE_DEVELOPMENT=ON -DWITH_JSON=ON -DWITH_REDIS=ON -DWITH_MONGO=ON
+  - cmake -DENABLE_DEVELOPMENT=ON -DWITH_REDIS=ON -DWITH_MONGO=ON
   - make
   - python ./scripts/check_manfile.py
 compiler: clang
