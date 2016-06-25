@@ -24,7 +24,7 @@
 
 ## FEATURE
 * Updated probe and output module interface that allows arbitrary data to be passed from the probe module (e.g. additional TCP fields) that can then be output as requested.
-* Replaced simple_file, and redis_file output modules with csv module that allows user controlled output of what fields shoudl be output to a csv file. As well, implemented `--list-output-fields` that allows users to find what fields are available.
+* Replaced simple_file, and redis_file output modules with csv module that allows user controlled output of what fields should be output to a csv file. As well, implemented `--list-output-fields` that allows users to find what fields are available.
 * Added output-filters that allow users to control what types of packets that want output (e.g. classification = "SYNACK" && is_repeat = 0).
 * Drop root privileges after opening necessary sockets if run as privileged user.
 * Added paged bitmap for removing duplicate responses so that if small subnets are scanned, large amount of memory is no longer required.
@@ -77,7 +77,7 @@
 # 2.1.0	2015-09-02
 ## BUGFIX
 * ZMap now filters out packets that are from the local MAC instead of only capturing packets from the local gateway. The prior approach caused valid responses to be dropped for a fair number of users.
-* ZMap would somtimes segfault if the number of threads was greater than the number of destination hosts.
+* ZMap would sometimes segfault if the number of threads was greater than the number of destination hosts.
 * ZMap did not crash when it was unable to write to the output file. This would cause ZMap to continue running when it was piped into another application and that application died. We not log_fatal if the output is no longer accessible per ferror.
 * Pcap filter captures outgoing packets.
 * Install overwrites blacklist file.

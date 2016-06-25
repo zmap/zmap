@@ -329,7 +329,7 @@ uint64_t constraint_count_ips(constraint_t *con, value_t value)
 }
 
 // Initialize the tree.
-// All addresses will initally have the given value.
+// All addresses will initially have the given value.
 constraint_t* constraint_init(value_t value)
 {
 	constraint_t* con = xmalloc(sizeof(constraint_t));

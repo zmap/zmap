@@ -54,7 +54,7 @@ typedef struct ztee_conf {
 	// Monitor config
 	int monitor;
 
-	// Field indicies
+	// Field indices
 	size_t ip_field;
 	size_t success_field;
 

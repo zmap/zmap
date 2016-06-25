@@ -15,7 +15,7 @@ zmap_std_args = [ "-b",
 zmap = sh.Command("../src/zmap").bake(*zmap_std_args)
 
 def shard_file_name(shards, threads):
-    # Use naming convertion <shards>-t<threads>
+    # Use naming conversion <shards>-t<threads>
     return ''.join([str(shards), '-t', str(threads)])
 
 def output_file_name(shards, shard, threads):

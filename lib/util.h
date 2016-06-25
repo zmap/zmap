@@ -30,7 +30,7 @@ int check_range(int v, int min, int max);
 
 int file_exists(char *name);
 
-// If running as root, drops priviledges to that of user "nobody".
+// If running as root, drops privileges to that of user "nobody".
 // Otherwise, does nothing.
 int drop_privs();
 

@@ -68,7 +68,7 @@ static int LogLogVA(enum LogLevel level, const char *loggerName,
 			log_output_stream = stderr;
 		}
 		// if logging to a shared output channel, then use a global
-		// lock accross ZMap. Otherwise, if we're logging to a file,
+		// lock across ZMap. Otherwise, if we're logging to a file,
 		// only lockin with the module, in order to avoid having
 		// corrupt log entries.
 		if (log_output_stream == stdout || log_output_stream == stderr) {
