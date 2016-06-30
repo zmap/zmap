@@ -27,9 +27,9 @@
 #define ADDR_ALLOWED 1
 
 typedef struct bl_linked_list {
-        bl_cidr_node_t *first;
-        bl_cidr_node_t *last;
-        uint32_t len;
+		bl_cidr_node_t *first;
+		bl_cidr_node_t *last;
+		uint32_t len;
 } bl_ll_t;
 
 static constraint_t *constraint = NULL;
@@ -42,17 +42,17 @@ static bl_ll_t *whitelisted_cidrs = NULL;
 void bl_ll_add(bl_ll_t *l, struct in_addr addr, uint16_t p)
 {
 	assert(l);
-        bl_cidr_node_t *new = xmalloc(sizeof(bl_cidr_node_t));
-        new->next = NULL;
-        new->ip_address = addr.s_addr;
-    	new->prefix_len = p;
-        if (!l->first) {
-                l->first = new;
-        } else {
-                l->last->next = new;
-        }
-        l->last = new;
-        l->len++;
+		bl_cidr_node_t *new = xmalloc(sizeof(bl_cidr_node_t));
+		new->next = NULL;
+		new->ip_address = addr.s_addr;
+		new->prefix_len = p;
+		if (!l->first) {
+				l->first = new;
+		} else {
+				l->last->next = new;
+		}
+		l->last = new;
+		l->len++;
 }
 
 bl_cidr_node_t *get_blacklisted_cidrs(void)
@@ -189,10 +189,10 @@ static void init_from_array(char **cidrs, size_t len, int value, int ignore_inva
 {
 	for (int i=0; i < (int) len; i++) {
 		int ret = init_from_string(cidrs[i], value);
-                if (ret && !ignore_invalid_hosts) {
-        			log_fatal("constraint",
-		        			"Unable to init from CIDR list");
-                }
+				if (ret && !ignore_invalid_hosts) {
+					log_fatal("constraint",
+							"Unable to init from CIDR list");
+				}
 	}
 }
 
@@ -222,7 +222,7 @@ uint32_t blacklist_ip_to_index(uint32_t ip)
 int blacklist_init(char *whitelist_filename, char *blacklist_filename,
 		char **whitelist_entries, size_t whitelist_entries_len,
 		char **blacklist_entries, size_t blacklist_entries_len,
-        int ignore_invalid_hosts)
+		int ignore_invalid_hosts)
 {
 	assert(!constraint);
 
@@ -241,12 +241,12 @@ int blacklist_init(char *whitelist_filename, char *blacklist_filename,
 		log_debug("constraint", "blacklisting 0.0.0.0/0");
 		if (whitelist_filename) {
 			init_from_file(whitelist_filename, "whitelist", ADDR_ALLOWED,
-                    ignore_invalid_hosts);
+					ignore_invalid_hosts);
 		}
 		if (whitelist_entries) {
 			init_from_array(whitelist_entries,
 					whitelist_entries_len, ADDR_ALLOWED,
-                    ignore_invalid_hosts);
+					ignore_invalid_hosts);
 		}
 	} else {
 		// no whitelist, so default to allowing everything
@@ -254,12 +254,12 @@ int blacklist_init(char *whitelist_filename, char *blacklist_filename,
 	}
 	if (blacklist_filename) {
 		init_from_file(blacklist_filename, "blacklist",
-                ADDR_DISALLOWED, ignore_invalid_hosts);
+				ADDR_DISALLOWED, ignore_invalid_hosts);
 	}
 	if (blacklist_entries) {
 		init_from_array(blacklist_entries,
 				blacklist_entries_len, ADDR_DISALLOWED,
-                ignore_invalid_hosts);
+				ignore_invalid_hosts);
 	}
 	init_from_string(strdup("0.0.0.0"), ADDR_DISALLOWED);
 	constraint_paint_value(constraint, ADDR_ALLOWED);
