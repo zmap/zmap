@@ -42,17 +42,17 @@ static bl_ll_t *whitelisted_cidrs = NULL;
 void bl_ll_add(bl_ll_t *l, struct in_addr addr, uint16_t p)
 {
 	assert(l);
-		bl_cidr_node_t *new = xmalloc(sizeof(bl_cidr_node_t));
-		new->next = NULL;
-		new->ip_address = addr.s_addr;
-		new->prefix_len = p;
-		if (!l->first) {
-				l->first = new;
-		} else {
-				l->last->next = new;
-		}
-		l->last = new;
-		l->len++;
+	bl_cidr_node_t *new = xmalloc(sizeof(bl_cidr_node_t));
+	new->next = NULL;
+	new->ip_address = addr.s_addr;
+	new->prefix_len = p;
+	if (!l->first) {
+			l->first = new;
+	} else {
+			l->last->next = new;
+	}
+	l->last = new;
+	l->len++;
 }
 
 bl_cidr_node_t *get_blacklisted_cidrs(void)
