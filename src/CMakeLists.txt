@@ -213,6 +213,7 @@ target_link_libraries(
     ziterate
     zmaplib
     gmp
+    m
 )
 
 target_link_libraries(
