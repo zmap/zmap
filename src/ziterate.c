@@ -177,7 +177,7 @@ int main(int argc, char **argv)
 	}
 	if (conf.shard_num >= conf.total_shards) {
 		log_fatal("ziterate", "With %hhu total shards, shard number (%hhu)"
-				" must be in range [0, %hhu)", conf.total_shards,
+				" must be in range [0, %hhu]", conf.total_shards,
 				conf.shard_num, conf.total_shards);
 	}
 
