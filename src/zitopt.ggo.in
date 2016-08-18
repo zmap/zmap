@@ -8,7 +8,7 @@
 
 package "ziterate"
 version "@ZMAP_VERSION@"
-purpose "A tool iterating the IPv4 space"
+purpose "A tool for iterating over the IPv4 space"
 
 section "Basic arguments"
 
