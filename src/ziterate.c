@@ -186,11 +186,13 @@ int main(int argc, char **argv)
 	iterator_t *it = iterator_init(conf.seed, conf.shard_num, conf.total_shards);
 	validate_init();
 	shard_t *shard = get_shard(it, 1);
-	uint32_t next_ip = shard_get_cur_ip(shard);
+	uint32_t next_int = shard_get_cur_ip(shard);
+	struct in_addr next_ip;
 
-	while (next_ip != 0) {
-		printf("%d\n", next_ip);
-		next_ip = shard_get_next_ip(shard);
+	while (next_int != 0) {
+		next_ip.s_addr = next_int;
+		printf("%s\n", inet_ntoa(next_ip));
+		next_int = shard_get_next_ip(shard);
 
 		/* TODO?
 		// check if in blacklist
