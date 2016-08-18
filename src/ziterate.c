@@ -182,7 +182,7 @@ int main(int argc, char **argv)
 	}
 
 	zconf.aes = aesrand_init_from_seed(conf.seed);
-	log_debug("ziterate", "Initializing sharding (%d shards, shard number %d, seed %d)", conf.total_shards, conf.shard_num, conf.seed);
+	log_debug("ziterate", "Initializing sharding (%d shards, shard number %d, seed %llu)", conf.total_shards, conf.shard_num, conf.seed);
 	iterator_t *it = iterator_init(1, conf.shard_num, conf.total_shards);
 	validate_init();
 	shard_t *shard = get_shard(it, conf.shard_num);
