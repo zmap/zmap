@@ -8,6 +8,9 @@
 
 int max_int(int a, int b);
 
+
+void enforce_range(const char *name, int v, int min, int max);
+
 // Splits comma delimited string into char*[]. Does not handle
 // escaping or complicated setups - designed to process a set
 // of fields that the user wants output

@@ -21,18 +21,19 @@ option "log-file"                 l "File to log to"
 option "verbosity"                v "Set log level verbosity (0-5, default 3)"
     default="3"
     optional int
-option "no-duplicate-checking"    - "Don't deduplicate IP addresses (default false)"
-    optional
 option "ignore-blacklist-errors"  - "Ignore invalid entires in the blacklist/whitelist (default false)"
     optional
 option "seed"                   e "Seed used to select address permutation"
     typestr="n"
     optional longlong
-option "shards"                 - "Set the total number of shards"
+
+section "Sharding"
+
+option "shards"                 - "total number of shards"
     typestr="N"
     optional int
     default="1"
-option "shard"                  - "Set which shard this scan is (0 indexed)"
+option "shard"                  - "shard this scan is targeting (0 indexed)"
     typestr="n"
     optional int
     default="0"
@@ -44,7 +45,6 @@ option "help"                   h "Print help and exit"
 option "version"                V "Print version and exit"
     optional
 
-section "Notes"
-
-text
-    "At least one of --whitelist-file or --blacklist-file must be specified. Blacklist files take precedence over whitelist files when both are specified."
+text "\nExamples:\n\
+    ziterate (iterate over all public IPv4 addresses)\n\
+    ziterate -b exclusions 10.0.0.0/8 (iterate all IPs in 10./8 except those in blacklist)\n"

@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <pwd.h>
 
+#include "../lib/logger.h"
 
 #define MAX_SPLITS 128
 
@@ -24,6 +25,15 @@ int max_int(int a, int b) {
 	}
 	return b;
 }
+
+void enforce_range(const char *name, int v, int min, int max)
+{
+	if (check_range(v, min, max) == EXIT_FAILURE) {
+		log_fatal("zmap", "argument `%s' must be between %d and %d\n",
+			name, min, max);
+	}
+}
+
 
 void split_string(char* in, int *len, char***results)
 {

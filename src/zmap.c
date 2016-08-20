@@ -78,14 +78,6 @@ const char *default_help_text = "By default, ZMap prints out unique, successful"
 	"equivalent to running zmap --output-module=csv --output-fields=saddr "
 	"--output-filter=\"success = 1 && repeat = 0\".";
 
-static void enforce_range(const char *name, int v, int min, int max)
-{
-	if (check_range(v, min, max) == EXIT_FAILURE) {
-		log_fatal("zmap", "argument `%s' must be between %d and %d\n",
-			name, min, max);
-	}
-}
-
 static void* start_send(void *arg)
 {
 	send_arg_t *s = (send_arg_t *) arg;
