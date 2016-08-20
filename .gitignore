@@ -10,11 +10,14 @@ src/zopt.h
 src/zopt.c
 src/zbopt.h
 src/zbopt.c
+src/zitopt.c
+src/zitopt.h
 src/topt.c
 src/topt.h
 src/*.ggo
 src/zblacklist
 src/ztee
+src/ziterate
 lexer.c
 lexer.h
 parser.c
