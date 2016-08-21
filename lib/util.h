@@ -9,6 +9,7 @@
 int max_int(int a, int b);
 
 
+uint32_t parse_max_hosts(char *max_targets);
 void enforce_range(const char *name, int v, int min, int max);
 
 // Splits comma delimited string into char*[]. Does not handle

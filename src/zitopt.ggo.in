@@ -26,6 +26,9 @@ option "ignore-blacklist-errors"  - "Ignore invalid entires in the blacklist/whi
 option "seed"                   e "Seed used to select address permutation"
     typestr="n"
     optional longlong
+option "max-targets"			n "Cap number of IPs to generate (as a number or a percentage of the address space)"
+    typestr="n"
+    optional string
 
 section "Sharding"
 

@@ -227,7 +227,6 @@ int blacklist_init(char *whitelist_filename, char *blacklist_filename,
 	assert(!constraint);
 
 	blacklisted_cidrs = xcalloc(1, sizeof(bl_ll_t));
-
 	whitelisted_cidrs = xcalloc(1, sizeof(bl_ll_t));
 
 	if (whitelist_filename && whitelist_entries) {
@@ -235,7 +234,7 @@ int blacklist_init(char *whitelist_filename, char *blacklist_filename,
 					"were specified. The union of these two sources "
 					"will be utilized.");
 	}
-	if (whitelist_filename || whitelist_entries) {
+	if (whitelist_filename || whitelist_entries_len > 0) {
 		// using a whitelist, so default to allowing nothing
 		constraint = constraint_init(ADDR_DISALLOWED);
 		log_debug("constraint", "blacklisting 0.0.0.0/0");
@@ -250,6 +249,7 @@ int blacklist_init(char *whitelist_filename, char *blacklist_filename,
 		}
 	} else {
 		// no whitelist, so default to allowing everything
+		log_debug("blacklist", "no whitelist file or whitelist entries provided");
 		constraint = constraint_init(ADDR_ALLOWED);
 	}
 	if (blacklist_filename) {

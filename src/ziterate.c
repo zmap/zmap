@@ -46,6 +46,7 @@ struct zit_conf {
 	uint8_t total_shards;
 	uint64_t seed;
 	aesrand_t *aes;
+	uint32_t max_hosts;
 };
 
 #define SET_BOOL(DST,ARG) \
@@ -88,17 +89,6 @@ int main(int argc, char **argv)
 	if (args.verbosity_given) {
 		conf.verbosity = args.verbosity_arg;
 	}
-
-	// Blacklist and whitelist
-	if (args.blacklist_file_given) {
-		conf.blacklist_filename = strdup(args.blacklist_file_arg);
-	}
-	if (args.whitelist_file_given) {
-		conf.whitelist_filename = strdup(args.whitelist_file_arg);
-	}
-	zconf.destination_cidrs = args.inputs;
-	zconf.destination_cidrs_len = args.inputs_num;
-
 	// Read the boolean flags
 	SET_BOOL(conf.ignore_errors, ignore_blacklist_errors);
 
@@ -115,6 +105,21 @@ int main(int argc, char **argv)
 	if (log_init(logfile, conf.verbosity, 1, "ziterate")) {
 		fprintf(stderr, "FATAL: unable able to initialize logging\n");
 		exit(1);
+	}
+
+	log_debug("ffffuuucckk", "ffffuuccckk");
+	// Blacklist and whitelist
+	if (args.blacklist_file_given) {
+		conf.blacklist_filename = strdup(args.blacklist_file_arg);
+	}
+	if (args.whitelist_file_given) {
+		conf.whitelist_filename = strdup(args.whitelist_file_arg);
+	}
+	conf.destination_cidrs = args.inputs;
+	conf.destination_cidrs_len = args.inputs_num;
+	// max targets
+	if (args.max_targets_given) {
+		conf.max_hosts = parse_max_hosts(args.max_targets_arg);
 	}
 
 	// sanity check blacklist file
@@ -142,7 +147,8 @@ int main(int argc, char **argv)
 	// parse blacklist and whitelist
 	if (blacklist_init(conf.whitelist_filename, conf.blacklist_filename,
 				conf.destination_cidrs, conf.destination_cidrs_len,
-				NULL, 0, conf.ignore_errors)) {
+				NULL, 0,
+				conf.ignore_errors)) {
 		log_fatal("ziterate", "unable to initialize blacklist / whitelist");
 	}
 
@@ -188,10 +194,14 @@ int main(int argc, char **argv)
 	shard_t *shard = get_shard(it, conf.shard_num);
 	uint32_t next_int = shard_get_cur_ip(shard);
 	struct in_addr next_ip;
+	uint32_t count = 0;
 
 	while (next_int) {
 		next_ip.s_addr = next_int;
 		printf("%s\n", inet_ntoa(next_ip));
+		if (conf.max_hosts && ++count >= conf.max_hosts) {
+			break;
+		}
 		next_int = shard_get_next_ip(shard);
 	}
 

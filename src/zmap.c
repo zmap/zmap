@@ -713,30 +713,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	if (args.max_targets_given) {
-		errno = 0;
-		char *end;
-	  	double v = strtod(args.max_targets_arg, &end);
-		if (end == args.max_targets_arg || errno != 0) {
-			fprintf(stderr, "%s: can't convert max-targets to a number\n",
-					CMDLINE_PARSER_PACKAGE);
-			exit(EXIT_FAILURE);
-		}
-		if (end[0] == '%' && end[1] == '\0') {
-			// treat as percentage
-			v = v * ((unsigned long long int)1 << 32) / 100.;
-		} else if (end[0] != '\0') {
-			fprintf(stderr, "%s: extra characters after max-targets\n",
-				  CMDLINE_PARSER_PACKAGE);
-			exit(EXIT_FAILURE);
-		}
-		if (v <= 0) {
-			zconf.max_targets = 0;
-		}
-		else if (v >= ((unsigned long long int)1 << 32)) {
-			zconf.max_targets = 0xFFFFFFFF;
-		} else {
-			zconf.max_targets = v;
-		}
+		zconf.max_targets = parse_max_hosts(args.max_targets_arg);
 	}
 
 	// blacklist
