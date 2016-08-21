@@ -116,6 +116,25 @@ void make_tcp_header(struct tcphdr *tcp_header, port_h_t dest_port)
     tcp_header->th_dport = htons(dest_port);
 }
 
+void make_tcp_syn_header(struct tcphdr_with_options *tcp_header_with_options, port_h_t dest_port)
+{
+    /* init tcp header */
+    tcp_header_with_options->tcphdr.th_seq = 0; // modified in module_tcp_synscan.c:synscan_make_packet
+    tcp_header_with_options->tcphdr.th_ack = 0,
+    tcp_header_with_options->tcphdr.th_x2 = 0;
+    tcp_header_with_options->tcphdr.th_off = 6;
+    tcp_header_with_options->tcphdr.th_flags = 0;
+    tcp_header_with_options->tcphdr.th_flags |= TH_SYN;
+    tcp_header_with_options->tcphdr.th_win = htons(65535);
+    tcp_header_with_options->tcphdr.th_sum = 0;
+    tcp_header_with_options->tcphdr.th_urp = 0;
+    tcp_header_with_options->tcphdr.th_dport = htons(dest_port);
+    /* init tcp options */
+    tcp_header_with_options->mss.op_kind = 2;
+    tcp_header_with_options->mss.op_len = 4;
+    tcp_header_with_options->mss.mss_val = htons(1460);
+}
+
 void make_udp_header(struct udphdr *udp_header, port_h_t dest_port,
 				uint16_t len)
 {

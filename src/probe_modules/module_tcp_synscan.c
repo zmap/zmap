@@ -37,10 +37,10 @@ int synscan_init_perthread(void* buf, macaddr_t *src,
 	struct ether_header *eth_header = (struct ether_header *) buf;
 	make_eth_header(eth_header, src, gw);
 	struct ip *ip_header = (struct ip*)(&eth_header[1]);
-	uint16_t len = htons(sizeof(struct ip) + sizeof(struct tcphdr));
+	uint16_t len = htons(sizeof(struct ip) + sizeof(struct tcphdr_with_options));
 	make_ip_header(ip_header, IPPROTO_TCP, len);
-	struct tcphdr *tcp_header = (struct tcphdr*)(&ip_header[1]);
-	make_tcp_header(tcp_header, dst_port);
+	struct tcphdr_with_options *tcp_header = (struct tcphdr_with_options*)(&ip_header[1]);
+	make_tcp_syn_header(tcp_header, dst_port);
 	return EXIT_SUCCESS;
 }
 
@@ -49,17 +49,17 @@ int synscan_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip*)(&eth_header[1]);
-	struct tcphdr *tcp_header = (struct tcphdr*)(&ip_header[1]);
+	struct tcphdr_with_options *tcp_header = (struct tcphdr_with_options*)(&ip_header[1]);
 	uint32_t tcp_seq = validation[0];
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
 
-	tcp_header->th_sport = htons(get_src_port(num_ports,
+	tcp_header->tcphdr.th_sport = htons(get_src_port(num_ports,
 				probe_num, validation));
-	tcp_header->th_seq = tcp_seq;
-	tcp_header->th_sum = 0;
-	tcp_header->th_sum = tcp_checksum(sizeof(struct tcphdr),
+	tcp_header->tcphdr.th_seq = tcp_seq;
+	tcp_header->tcphdr.th_sum = 0;
+	tcp_header->tcphdr.th_sum = tcp_checksum(sizeof(struct tcphdr_with_options),
 			ip_header->ip_src.s_addr, ip_header->ip_dst.s_addr, tcp_header);
 
 	ip_header->ip_sum = 0;
@@ -147,7 +147,7 @@ static fielddef_t fields[] = {
 
 probe_module_t module_tcp_synscan = {
 	.name = "tcp_synscan",
-	.packet_length = 54,
+	.packet_length = 58,
 	.pcap_filter = "tcp && tcp[13] & 4 != 0 || tcp[13] == 18",
 	.pcap_snaplen = 96,
 	.port_args = 1,
