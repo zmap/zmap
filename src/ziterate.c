@@ -107,7 +107,6 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	log_debug("ffffuuucckk", "ffffuuccckk");
 	// Blacklist and whitelist
 	if (args.blacklist_file_given) {
 		conf.blacklist_filename = strdup(args.blacklist_file_arg);
@@ -182,7 +181,6 @@ int main(int argc, char **argv)
 	if (args.seed_given) {
 		conf.seed = args.seed_arg;
 	} else {
-		// generate a seed randomly
 		if (!random_bytes(&conf.seed, sizeof(uint64_t))) {
 			log_fatal("ziterate", "unable to generate random bytes "
 					"needed for seed");
@@ -204,6 +202,5 @@ int main(int argc, char **argv)
 		}
 		next_int = shard_get_next_ip(shard);
 	}
-
 	return EXIT_SUCCESS;
 }
