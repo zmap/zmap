@@ -7,8 +7,8 @@ ziterate [ -b &lt;blacklist&gt; ] [ -w &lt;whitelist&gt; ] [ OPTIONS... ]
 
 ## DESCRIPTION
 
-*ZIterate* is a network tool for limiting and deduplicating a list of
-IP addresses using a blacklist or whitelist.
+*ZIterate* is a network tool that will produce IPv4 addresses in a psuedorandom
+order similar to how ZMap generates random addresses to be scanned.
 
 ## OPTIONS
 
