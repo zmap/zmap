@@ -367,7 +367,7 @@ static FILE* init_status_update_file(char *path)
 				zconf.status_updates_file);
 		fprintf(f,
 				"real-time,time-elapsed,time-remaining,"
-				"percent-complete,active-send-threads,"
+				"percent-complete,hit-rate,active-send-threads,"
 				"sent-total,sent-last-one-sec,sent-avg-per-sec,"
 				"recv-success-total,recv-success-last-one-sec,recv-success-avg-per-sec,"
 				"recv-total,recv-total-last-one-sec,recv-total-avg-per-sec,"
@@ -389,14 +389,14 @@ static void update_status_updates_file(export_status_t *exp, FILE *f)
 
 	fprintf(f,
 			"%s,%u,%u,"
-			"%f,%u,"
+			"%f,%f,%u,"
 			"%u,%.0f,%.0f,"
 			"%u,%.0f,%.0f,"
 			"%u,%.0f,%.0f,"
 			"%u,%.0f,%.0f,"
 			"%u,%.0f,%.0f\n",
 			timestamp, exp->time_past, exp->time_remaining,
-			exp->percent_complete, exp->send_threads,
+			exp->percent_complete, exp->hitrate, exp->send_threads,
 			exp->total_sent, exp->send_rate, exp->send_rate_avg,
 			exp->recv_success_unique, exp->recv_rate, exp->recv_avg,
 			exp->total_recv, exp->recv_total_rate, exp->recv_total_avg,
