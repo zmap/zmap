@@ -76,8 +76,8 @@
 
 <h2 id="DESCRIPTION">DESCRIPTION</h2>
 
-<p><em>ZIterate</em> is a network tool for limiting and deduplicating a list of
-IP addresses using a blacklist or whitelist.</p>
+<p><em>ZIterate</em> is a network tool that will produce IPv4 addresses in a psuedorandom
+order similar to how ZMap generates random addresses to be scanned.</p>
 
 <h2 id="OPTIONS">OPTIONS</h2>
 
@@ -93,7 +93,7 @@ subnets will be excluded.</p></dd>
 <dt><code>-l</code>, <code>--log-file=name</code></dt><dd><p>File to log to.</p></dd>
 <dt><code>-v</code>, <code>--verbosity</code></dt><dd><p>Level of log detail (0-5, default=3)</p></dd>
 <dt><code>--ignore-blacklist-errors</code></dt><dd><p>Ignore invalid entries in the blacklist. Default is false.</p></dd>
-<dt><code>--seed=n</code></dt><dd><p>Seed used to select address permutation.</p></dd>
+<dt><code>--seed=n</code></dt><dd><p>Seed used to select address permutation. Zero indexed.</p></dd>
 </dl>
 
 

@@ -10,7 +10,7 @@
 ziterate [ \-b <blacklist> ] [ \-w <whitelist> ] [ OPTIONS\.\.\. ]
 .
 .SH "DESCRIPTION"
-\fIZIterate\fR is a network tool for limiting and deduplicating a list of IP addresses using a blacklist or whitelist\.
+\fIZIterate\fR is a network tool that will produce IPv4 addresses in a psuedorandom order similar to how ZMap generates random addresses to be scanned\.
 .
 .SH "OPTIONS"
 .
@@ -38,7 +38,7 @@ Ignore invalid entries in the blacklist\. Default is false\.
 .
 .TP
 \fB\-\-seed=n\fR
-Seed used to select address permutation\.
+Seed used to select address permutation\. Zero indexed\.
 .
 .SS "SHARDING"
 .

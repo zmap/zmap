@@ -34,7 +34,7 @@ order similar to how ZMap generates random addresses to be scanned.
     Ignore invalid entries in the blacklist. Default is false.
 
   * `--seed=n`:
-    Seed used to select address permutation.
+    Seed used to select address permutation. Zero indexed.
 
 
 ### SHARDING ###
