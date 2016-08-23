@@ -55,7 +55,8 @@ static int validate_node(node_t *node, fielddefset_t *fields)
 				return 0;
 			}
 		case INT:
-			if (strcmp(fields->fielddefs[index].type, "int") == 0) {
+			if (strcmp(fields->fielddefs[index].type, "int") == 0 ||
+					strcmp(fields->fielddefs[index].type, "bool") == 0) {
 				return 1;
 			} else {
 				fprintf(stderr, "Field '%s' is not of type 'int'\n",
