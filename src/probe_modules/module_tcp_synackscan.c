@@ -55,11 +55,11 @@ void synackscan_process_packet(const u_char *packet,
 
 	if (tcp->th_flags & TH_RST) { // RST packet
 		fs_add_string(fs, "classification", (char*) "rst", 0);
-		fs_add_bool(fs, "success", 1);
 	} else { // SYNACK packet
 		fs_add_string(fs, "classification", (char*) "synack", 0);
-		fs_add_bool(fs, "success", 0);
 	}
+
+    fs_add_bool(fs, "success", 1);
 }
 
 static fielddef_t fields[] = {
