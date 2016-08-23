@@ -1,0 +1,62 @@
+.\" generated with Ronn/v0.7.3
+.\" http://github.com/rtomayko/ronn/tree/0.7.3
+.
+.TH "ZITERATE" "1" "August 2016" "" ""
+.
+.SH "NAME"
+\fBziterate\fR \- ZMap IP permutation generation file
+.
+.SH "SYNOPSIS"
+ziterate [ \-b <blacklist> ] [ \-w <whitelist> ] [ OPTIONS\.\.\. ]
+.
+.SH "DESCRIPTION"
+\fIZIterate\fR is a network tool that will produce IPv4 addresses in a psuedorandom order similar to how ZMap generates random addresses to be scanned\.
+.
+.SH "OPTIONS"
+.
+.SS "BASIC OPTIONS"
+.
+.TP
+\fB\-b\fR, \fB\-\-blacklist\-file=path\fR
+File of subnets to exclude, in CIDR notation, one\-per line\. It is recommended you use this to exclude RFC 1918 addresses, multicast, IANA reserved space, and other IANA special\-purpose addresses\. An example blacklist file \fBblacklist\.conf\fR for this purpose\.
+.
+.TP
+\fB\-w\fR, \fB\-\-whitelist\-file=name\fR
+File of subnets to include, in CIDR notation, one\-per line\. All other subnets will be excluded\.
+.
+.TP
+\fB\-l\fR, \fB\-\-log\-file=name\fR
+File to log to\.
+.
+.TP
+\fB\-v\fR, \fB\-\-verbosity\fR
+Level of log detail (0\-5, default=3)
+.
+.TP
+\fB\-\-ignore\-blacklist\-errors\fR
+Ignore invalid entries in the blacklist\. Default is false\.
+.
+.TP
+\fB\-\-seed=n\fR
+Seed used to select address permutation\.
+.
+.SS "SHARDING"
+.
+.TP
+\fB\-\-shards=n\fR
+Total number of shards\.
+.
+.TP
+\fB\-\-shard=n\fR
+Shard this scan is targeting\. Zero indexed\.
+.
+.SS "ADDITIONAL OPTIONS"
+.
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help text and exit\.
+.
+.TP
+\fB\-v\fR, \fB\-\-version\fR
+Print version and exit\.
+
