@@ -23,7 +23,7 @@
 
 probe_module_t module_tcp_synackscan;
 
-int synackscan_init_perthread(void* buf, macaddr_t *src,
+static int synackscan_init_perthread(void* buf, macaddr_t *src,
 		macaddr_t *gw, port_h_t dst_port,
 		__attribute__((unused)) void **arg_ptr)
 {
@@ -38,7 +38,7 @@ int synackscan_init_perthread(void* buf, macaddr_t *src,
 	return EXIT_SUCCESS;
 }
 
-void synackscan_process_packet(const u_char *packet,
+static void synackscan_process_packet(const u_char *packet,
 		__attribute__((unused)) uint32_t len, fieldset_t *fs,
         __attribute__((unused)) uint32_t *validation)
 {
