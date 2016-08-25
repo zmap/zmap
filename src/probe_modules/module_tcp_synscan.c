@@ -107,14 +107,22 @@ int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	}
 	// validate tcp acknowledgement number
 	if (htonl(tcp->th_ack) != htonl(validation[0])+1) {
-		return 0;
+
+		// RSTs do not need to +1 the ack
+		if (tcp->th_flags & TH_RST) {
+			if (htonl(tcp->th_ack) != htonl(validation[0]) + 0) {
+				return 0;
+			}
+		} else {
+			return 0;
+		}
 	}
 	return 1;
 }
 
 void synscan_process_packet(const u_char *packet,
 		__attribute__((unused)) uint32_t len, fieldset_t *fs,
-        __attribute__((unused)) uint32_t *validation)
+		__attribute__((unused)) uint32_t *validation)
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
 	struct tcphdr *tcp = (struct tcphdr*)((char *)ip_hdr
