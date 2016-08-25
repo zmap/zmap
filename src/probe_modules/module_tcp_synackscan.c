@@ -52,7 +52,7 @@ static int synackscan_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_i
 	struct ip *ip_header = (struct ip*)(&eth_header[1]);
 	struct tcphdr *tcp_header = (struct tcphdr*)(&ip_header[1]);
 	uint32_t tcp_seq = validation[0];
-	uint32_t tcp_ack = validation[2];
+	uint32_t tcp_ack = validation[2]; //get_src_port() below uses validation 1 internally.
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
@@ -93,23 +93,40 @@ static int synackscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	if (!check_dst_port(ntohs(dport), num_ports, validation)) {
 		return 0;
 	}
-	// RST and SYNACK have different behavior 
-    if (tcp->th_flags & TH_RST) {
-	    if (htonl(tcp->th_seq) != htonl(validation[2])) {
-		    return 0;
-        }
-	} else {
-	    if (htonl(tcp->th_ack) != htonl(validation[0]) + 1) {
-		    return 0;
-        }
-    }
 
-	return 1;
+	// Note: The traditional flow of returning 0 on wrong and then returning 1
+	// at the end made this code an unreadable mess. So we're going a bit
+	// against the grain
+
+	if (htonl(tcp->th_ack) == htonl(validation[0]) + 1) {
+		// ACK = SEQ + 1 is OK
+		return 1;
+	} else if (tcp->th_flags & TH_RST) {
+		// If we have a reset flag, we can have a few cases.
+		if (htonl(tcp->th_seq) == htonl(validation[2]) + 0) {
+			// If SEQ = ACK RST is valid
+			return 1;
+		} else if (htonl(tcp->th_seq) == htonl(validation[2]) + 1) {
+			// If SEQ = ACK + 1 RST is also valid
+			return 1;
+		} else {
+			// All other cases the RST is invalid.
+			return 0;
+		}
+	} else {
+		// All other options are invalid.
+		return 0;
+	}
+
+	// DO NOT ADD ANY CHECKS HERE.
+	assert(NULL);
+
+	return 0;
 }
 
 static void synackscan_process_packet(const u_char *packet,
 		__attribute__((unused)) uint32_t len, fieldset_t *fs,
-        __attribute__((unused)) uint32_t *validation)
+		__attribute__((unused)) uint32_t *validation)
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
 	struct tcphdr *tcp = (struct tcphdr*)((char *)ip_hdr
@@ -128,7 +145,7 @@ static void synackscan_process_packet(const u_char *packet,
 		fs_add_string(fs, "classification", (char*) "synack", 0);
 	}
 
-    fs_add_bool(fs, "success", 1);
+	fs_add_bool(fs, "success", 1);
 }
 
 static fielddef_t fields[] = {
