@@ -164,8 +164,8 @@ add_custom_command(OUTPUT zbopt.h
 )
 
 add_custom_command(OUTPUT zitopt.h
-	COMMAND gengetopt -C --no-help --no-version --unamed-opts=SUBNETS -i "${CMAKE_CURRENT_SOURCE_DIR}/zitopt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/zitopt"
-    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/zitopt.ggo"
+	COMMAND gengetopt -C --no-help --no-version --unamed-opts=SUBNETS -i "${CMAKE_CURRENT_BINARY_DIR}/zitopt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/zitopt"
+    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/zitopt.ggo"
 )
 
 add_custom_command(OUTPUT lexer.c
