@@ -121,6 +121,8 @@ struct state_conf {
 	uint64_t total_disallowed;
 	int max_sendto_failures;
 	float min_hitrate;
+	char *ipv6_source_ip;
+	char *ipv6_target_filename;
 #ifdef PFRING
 	struct {
 		pfring_zc_cluster *cluster;

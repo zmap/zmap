@@ -1,12 +1,13 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan
+ * ZMapv6 Copyright 2016 Chair of Network Architectures and Services
+ * Technical University of Munich
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-/* send module for performing arbitrary UDP scans */
+// probe module for performing arbitrary UDP scans over IPv6
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -36,6 +37,7 @@ static udp_payload_template_t *udp_template = NULL;
 
 static const char *udp_send_msg_default = "GET / HTTP/1.1\r\nHost: www\r\n\r\n";
 
+/*
 const char *udp_unreach_strings[] = {
 	"network unreachable",
 	"host unreachable",
@@ -53,15 +55,15 @@ const char *udp_unreach_strings[] = {
 	"communication admin. prohibited",
 	"host presdence violation",
 	"precedence cutoff"
-};
+};*/
 
-const char *udp_usage_error =
+const char *ipv6_udp_usage_error =
 	"unknown UDP probe specification (expected file:/path or text:STRING or hex:01020304 or template:/path or template-fields)";
 
-const unsigned char *charset_alphanum = (unsigned char *)"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-const unsigned char *charset_alpha    = (unsigned char *)"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const unsigned char *charset_digit    = (unsigned char *)"0123456789";
-const unsigned char charset_all[257]  = {
+const unsigned char *ipv6_charset_alphanum = (unsigned char *)"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+const unsigned char *ipv6_charset_alpha    = (unsigned char *)"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const unsigned char *ipv6_charset_digit    = (unsigned char *)"0123456789";
+const unsigned char ipv6_charset_all[257]  = {
 	0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
 	0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e,
 	0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d,
@@ -86,7 +88,7 @@ const unsigned char charset_all[257]  = {
 
 static int num_ports;
 
-probe_module_t module_udp;
+probe_module_t module_ipv6_udp;
 
 // Field definitions for template parsing and displaying usage
 static uint32_t udp_num_template_field_types = 12;
@@ -105,12 +107,7 @@ static udp_payload_field_type_def_t udp_payload_template_fields[] = {
 	{.name = "RAND_ALPHANUM", .ftype=UDP_RAND_ALPHANUM, .desc = "Random mixed-case letters (a-z) and numbers"}
 };
 
-void udp_set_num_ports(int x)
-{
-	num_ports = x;
-}
-
-int udp_global_initialize(struct state_conf *conf) {
+int ipv6_udp_global_initialize(struct state_conf *conf) {
 	char *args, *c;
 	int i;
 	unsigned int n;
@@ -118,6 +115,7 @@ int udp_global_initialize(struct state_conf *conf) {
 	FILE *inp;
 
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
+	udp_set_num_ports(num_ports);
 
 	udp_send_msg = strdup(udp_send_msg_default);
 	udp_send_msg_len = strlen(udp_send_msg);
@@ -146,7 +144,7 @@ int udp_global_initialize(struct state_conf *conf) {
 	if (! c) {
 		free(args);
 		free(udp_send_msg);
-		log_fatal("udp", udp_usage_error);
+		log_fatal("udp", ipv6_udp_usage_error);
 		exit(1);
 	}
 
@@ -171,8 +169,11 @@ int udp_global_initialize(struct state_conf *conf) {
 		fclose(inp);
 
 		if (strcmp(args, "template") == 0) {
-			udp_send_substitutions = 1;
+			// TODO FIXME: Templates in IPv6 are not yet supported
+			log_fatal("udp", "templates not yet supported in IPv6!");
+/*			udp_send_substitutions = 1;
 			udp_template = udp_template_load(udp_send_msg, udp_send_msg_len);
+			*/
 		}
 
 	} else if (strcmp(args, "hex") == 0) {
@@ -190,7 +191,7 @@ int udp_global_initialize(struct state_conf *conf) {
 			udp_send_msg[i] = (n & 0xff);
 		}
 	} else {
-		log_fatal("udp", udp_usage_error);
+		log_fatal("udp", ipv6_udp_usage_error);
 		free(udp_send_msg);
 		free(args);
 		exit(1);
@@ -206,7 +207,7 @@ int udp_global_initialize(struct state_conf *conf) {
 	return EXIT_SUCCESS;
 }
 
-int udp_global_cleanup(__attribute__((unused)) struct state_conf *zconf,
+int ipv6_udp_global_cleanup(__attribute__((unused)) struct state_conf *zconf,
 		__attribute__((unused)) struct state_send *zsend,
 		__attribute__((unused)) struct state_recv *zrecv)
 {
@@ -223,26 +224,26 @@ int udp_global_cleanup(__attribute__((unused)) struct state_conf *zconf,
 	return EXIT_SUCCESS;
 }
 
-int udp_init_perthread(void* buf, macaddr_t *src,
+int ipv6_udp_init_perthread(void* buf, macaddr_t *src,
 		macaddr_t *gw, __attribute__((unused)) port_h_t dst_port,\
 		void **arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 	struct ether_header *eth_header = (struct ether_header *) buf;
-	make_eth_header(eth_header, src, gw);
-	struct ip *ip_header = (struct ip*)(&eth_header[1]);
-	uint16_t len = htons(sizeof(struct ip) + sizeof(struct udphdr) + udp_send_msg_len);
-	make_ip_header(ip_header, IPPROTO_UDP, len);
+	make_eth_header_ethertype(eth_header, src, gw, ETHERTYPE_IPV6);
+	struct ip6_hdr *ipv6_header = (struct ip6_hdr*)(&eth_header[1]);
+	uint16_t payload_len = sizeof(struct udphdr) + udp_send_msg_len;
+	make_ip6_header(ipv6_header, IPPROTO_UDP, payload_len);
 
-	struct udphdr *udp_header = (struct udphdr*)(&ip_header[1]);
-	len = sizeof(struct udphdr) + udp_send_msg_len;
-	make_udp_header(udp_header, zconf.target_port, len);
+	struct udphdr *udp_header = (struct udphdr*)(&ipv6_header[1]);
+	make_udp_header(udp_header, zconf.target_port, payload_len);
 
 	char* payload = (char*)(&udp_header[1]);
 
-	module_udp.packet_length = sizeof(struct ether_header) + sizeof(struct ip)
+	module_ipv6_udp.packet_length = sizeof(struct ether_header) + sizeof(struct ip6_hdr)
 				+ sizeof(struct udphdr) + udp_send_msg_len;
-	assert(module_udp.packet_length <= MAX_PACKET_SIZE);
+	assert(module_ipv6_udp.packet_length <= MAX_PACKET_SIZE);
+
 	memcpy(payload, udp_send_msg, udp_send_msg_len);
 
 	// Seed our random number generator with the global generator
@@ -253,19 +254,21 @@ int udp_init_perthread(void* buf, macaddr_t *src,
 	return EXIT_SUCCESS;
 }
 
-int udp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
-		uint32_t *validation, int probe_num, void *arg)
+int ipv6_udp_make_packet(void *buf, __attribute__((unused)) ipaddr_n_t src_ip,
+		__attribute__((unused)) ipaddr_n_t dst_ip, uint32_t *validation, int probe_num, void *arg)
 {
+	// From module_ipv6_udp_dns
 	struct ether_header *eth_header = (struct ether_header *) buf;
-	struct ip *ip_header = (struct ip*) (&eth_header[1]);
-	struct udphdr *udp_header= (struct udphdr *) &ip_header[1];
-	//struct = (struct udphdr*) (&ip_header[1]);
+	struct ip6_hdr *ip6_header = (struct ip6_hdr*) (&eth_header[1]);
+	struct udphdr *udp_header= (struct udphdr *) &ip6_header[1];
 
-	ip_header->ip_src.s_addr = src_ip;
-	ip_header->ip_dst.s_addr = dst_ip;
+	ip6_header->ip6_src = ((struct in6_addr *) arg)[0];
+	ip6_header->ip6_dst = ((struct in6_addr *) arg)[1];
 	udp_header->uh_sport = htons(get_src_port(num_ports, probe_num,
-	                             validation));
+				     validation));
 
+	// TODO FIXME
+/*
 	if (udp_send_substitutions) {
 		char *payload = (char *) &udp_header[1];
 		int payload_len = 0;
@@ -277,10 +280,7 @@ int udp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 
 		// The buf is a stack var of our caller of size MAX_PACKET_SIZE
 		// Recalculate the payload using the loaded template
-		payload_len = udp_template_build(udp_template, payload, MAX_UDP_PAYLOAD_LEN, ip_header, udp_header, aes);
-		// Recalculate the total length of the packet
-		module_udp.packet_length = sizeof(struct ether_header) + sizeof(struct ip)
-			+ sizeof(struct udphdr) + payload_len;
+		payload_len = ipv6_udp_template_build(udp_template, payload, MAX_UDP_PAYLOAD_LEN, ip6_header, udp_header, aes);
 
 		// If success is zero, the template output was truncated
 		if (payload_len <= 0) {
@@ -288,39 +288,38 @@ int udp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 			exit(1);
 		}
 
-		// Update the IP and UDP headers to match the new payload length
-		ip_header->ip_len   = htons(sizeof(struct ip) + sizeof(struct udphdr) + payload_len);
+		// Update the IPv6 and UDP headers to match the new payload length
+		ip6_header->ip6_ctlun.ip6_un1.ip6_un1_plen = htons(sizeof(struct udphdr) + payload_len);
 		udp_header->uh_ulen = ntohs(sizeof(struct udphdr) + payload_len);
 	}
-
-	ip_header->ip_sum = 0;
-	ip_header->ip_sum = zmap_ip_checksum((unsigned short *) ip_header);
+*/
+	udp_header->uh_sum = ipv6_udp_checksum(&ip6_header->ip6_src, &ip6_header->ip6_dst, udp_header);
 
 	return EXIT_SUCCESS;
 }
 
-void udp_print_packet(FILE *fp, void* packet)
+void ipv6_udp_print_packet(FILE *fp, void* packet)
 {
 	struct ether_header *ethh = (struct ether_header *) packet;
-	struct ip *iph = (struct ip *) &ethh[1];
-    struct udphdr *udph = (struct udphdr*)(&iph[1]);
+	struct ip6_hdr *iph = (struct ip6_hdr *) &ethh[1];
+	struct udphdr *udph  = (struct udphdr*) &iph[1];
 	fprintf(fp, "udp { source: %u | dest: %u | checksum: %#04X }\n",
 		ntohs(udph->uh_sport),
 		ntohs(udph->uh_dport),
 		ntohs(udph->uh_sum));
-	fprintf_ip_header(fp, iph);
+	fprintf_ipv6_header(fp, iph);
 	fprintf_eth_header(fp, ethh);
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
-void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *fs,
-       __attribute__((unused)) uint32_t *validation)
+void ipv6_udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *fs,
+		__attribute__((unused)) uint32_t *validation)
 {
-	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
-	if (ip_hdr->ip_p == IPPROTO_UDP) {
-		struct udphdr *udp = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
-		fs_add_constchar(fs, "classification", "udp");
-		fs_add_bool(fs, "success", 1);
+	struct ip6_hdr *ipv6_hdr = (struct ip6_hdr *) &packet[sizeof(struct ether_header)];
+	if (ipv6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_UDP) {
+		struct udphdr *udp  = (struct udphdr*) &ipv6_hdr[1];
+		fs_add_string(fs, "classification", (char*) "udp", 0);
+		fs_add_uint64(fs, "success", 1);
 		fs_add_uint64(fs, "sport", ntohs(udp->uh_sport));
 		fs_add_uint64(fs, "dport", ntohs(udp->uh_dport));
 		fs_add_null(fs, "icmp_responder");
@@ -331,9 +330,9 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 		// Verify that the UDP length is big enough for the header and at least one byte
 		uint16_t data_len = ntohs(udp->uh_ulen);
 		if (data_len > sizeof(struct udphdr)) {
-			uint32_t overhead = (sizeof(struct udphdr) + (ip_hdr->ip_hl * 4));
+			uint32_t overhead = sizeof(struct udphdr);
 			uint32_t max_rlen = len - overhead;
-			uint32_t max_ilen = ntohs(ip_hdr->ip_len) - overhead;
+			uint32_t max_ilen = ntohs(ipv6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen) - overhead;
 
 			// Verify that the UDP length is inside of our received buffer
 			if (data_len > max_rlen) {
@@ -348,30 +347,32 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 		} else {
 			fs_add_null(fs, "data");
 		}
-	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
-		struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
-		struct ip *ip_inner = (struct ip *) ((char *) icmp + ICMP_UNREACH_HEADER_SIZE);
+	} else if (ipv6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_ICMPV6) {
+		struct icmp6_hdr *icmp6 = (struct icmp6_hdr *) (&ipv6_hdr[1]);
+		struct ip6_hdr *ipv6_inner = (struct ip6_hdr *) &icmp6[1];
 		// ICMP unreach comes from another server (not the one we sent a probe to);
 		// But we will fix up saddr to be who we sent the probe to, in case you care.
-		fs_modify_string(fs, "saddr", make_ip_str(ip_inner->ip_dst.s_addr), 1);
+		fs_modify_string(fs, "saddr", make_ipv6_str(&ipv6_inner->ip6_dst), 1);
 		fs_add_string(fs, "classification", (char*) "icmp-unreach", 0);
-		fs_add_bool(fs, "success", 0);
+		fs_add_uint64(fs, "success", 0);
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");
-		fs_add_string(fs, "icmp_responder", make_ip_str(ip_hdr->ip_src.s_addr), 1);
-		fs_add_uint64(fs, "icmp_type", icmp->icmp_type);
-		fs_add_uint64(fs, "icmp_code", icmp->icmp_code);
+		fs_add_string(fs, "icmp_responder", make_ipv6_str(&ipv6_hdr->ip6_src), 1);
+		fs_add_uint64(fs, "icmp_type", icmp6->icmp6_type);
+		fs_add_uint64(fs, "icmp_code", icmp6->icmp6_code);
+/*
 		if (icmp->icmp_code <= ICMP_UNREACH_PRECEDENCE_CUTOFF) {
 			fs_add_string(fs, "icmp_unreach_str",
 					(char*) udp_unreach_strings[icmp->icmp_code], 0);
 		} else {
 			fs_add_string(fs, "icmp_unreach_str", (char *) "unknown", 0);
 		}
+*/
 		fs_add_null(fs, "udp_pkt_size");
 		fs_add_null(fs, "data");
 	} else {
 		fs_add_string(fs, "classification", (char *) "other", 0);
-		fs_add_bool(fs, "success", 0);
+		fs_add_uint64(fs, "success", 0);
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");
 		fs_add_null(fs, "icmp_responder");
@@ -383,122 +384,28 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 	}
 }
 
-int udp_validate_packet(const struct ip *ip_hdr, uint32_t len,
-		uint32_t *src_ip, uint32_t *validation)
 
+int _ipv6_udp_validate_packet(const struct ip *ip_hdr, uint32_t len,
+		UNUSED uint32_t *src_ip, uint32_t *validation)
 {
-	return udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports);
-}
-
-
-int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
-		__attribute__((unused))uint32_t *src_ip, uint32_t *validation,
-		int num_ports)
-{
-	uint16_t dport, sport;
-	if (ip_hdr->ip_p == IPPROTO_UDP) {
-		if ((4*ip_hdr->ip_hl + sizeof(struct udphdr)) > len) {
-			// buffer not large enough to contain expected udp header
-			return 0;
-		}
-		struct udphdr *udp = (struct udphdr*) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
-
-		sport = ntohs(udp->uh_dport);
-		dport = ntohs(udp->uh_sport);
-	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
-		// UDP can return ICMP Destination unreach
-		// IP( ICMP( IP( UDP ) ) ) for a destination unreach
-		uint32_t min_len = 4*ip_hdr->ip_hl + ICMP_UNREACH_HEADER_SIZE
-				+ sizeof(struct ip) + sizeof(struct udphdr);
-		if (len < min_len) {
-			// Not enough information for us to validate
-			return 0;
-		}
-
-		struct icmp *icmp = (struct icmp*) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
-		if (icmp->icmp_type != ICMP_UNREACH) {
-			return 0;
-		}
-
-		struct ip *ip_inner = (struct ip*) ((char *) icmp + ICMP_UNREACH_HEADER_SIZE);
-		// Now we know the actual inner ip length, we should recheck the buffer
-		if (len < 4*ip_inner->ip_hl - sizeof(struct ip) + min_len) {
-			return 0;
-		}
-		// This is the packet we sent
-		struct udphdr *udp = (struct udphdr *) ((char*) ip_inner + 4*ip_inner->ip_hl);
-
-		sport = ntohs(udp->uh_sport);
-		dport = ntohs(udp->uh_dport);
-		if (dport != zconf.target_port) {
-			return 0;
-		}
-	} else {
+	struct ip6_hdr *ipv6_hdr = (struct ip6_hdr *) ip_hdr;
+/*
+	if (ipv6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_UDP) {
 		return 0;
 	}
-	if (!check_dst_port(sport, num_ports, validation)) {
+*/
+	if ((ntohs(ipv6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen)) > len) {
+		// buffer not large enough to contain expected UDP header, i.e. IPv6 payload
 		return 0;
 	}
-	return 1;
-}
-
-int ipv6_udp_validate_packet(const struct ip6_hdr *ipv6_hdr, uint32_t len,
-		__attribute__((unused))uint32_t *src_ip, uint32_t *validation)
-{
-	uint16_t dport, sport;
-	struct udphdr *udp;
-
-	if (ipv6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_UDP) {
-		if (ntohs(ipv6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen) > len) {
-			// buffer not large enough to contain expected UDP header, i.e. IPv6 payload
-			return 0;
-		}
-		udp = (struct udphdr *) &ipv6_hdr[1];
-		sport = ntohs(udp->uh_dport);
-		dport = ntohs(udp->uh_sport);
-
-	} else if (ipv6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_ICMPV6) {
-		// UDP can return ICMP6 Destination unreach
-		// IP6( ICMP6( IP6( UDP ) ) ) for a destination unreach
-		uint32_t min_len = sizeof(struct ip6_hdr) + ICMP_UNREACH_HEADER_SIZE +
-			+ sizeof(struct ip6_hdr) + sizeof(struct udphdr);
-		if (len < min_len) {
-			// Not enough information for us to validate
-			return 0;
-		}
-
-		struct icmp6_hdr *icmp6_h = (struct icmp6_hdr *) (&ipv6_hdr[1]);
-
-		if (icmp6_h->icmp6_type == ICMP6_TIME_EXCEEDED || icmp6_h->icmp6_type == ICMP6_DST_UNREACH
-			|| icmp6_h->icmp6_type == ICMP6_PACKET_TOO_BIG || icmp6_h->icmp6_type == ICMP6_PARAM_PROB) {
-
-
-			// Use inner headers for validation
-			ipv6_hdr = (struct ip6_hdr *) &icmp6_h[1];
-			udp = (struct udphdr *) &ipv6_hdr[1];
-			sport = ntohs(udp->uh_sport);
-			dport = ntohs(udp->uh_dport);
-		} else {
-			return 0;
-		}
-
-	} else {
+	if (!ipv6_udp_validate_packet(ipv6_hdr, len, NULL, validation)) {
 		return 0;
 	}
-
-	if (dport != zconf.target_port) {
-		return 0;
-	}
-
-	if (!check_dst_port(sport, num_ports, validation)) {
-		return 0;
-	}
-
 	return 1;
 }
 
 // Add a new field to the template
-void udp_template_add_field(udp_payload_template_t *t,
+void ipv6_udp_template_add_field(udp_payload_template_t *t,
 	udp_payload_field_type_t ftype, unsigned int length, char *data)
 {
 	udp_payload_field_t *c;
@@ -522,7 +429,7 @@ void udp_template_add_field(udp_payload_template_t *t,
 }
 
 // Free all buffers held by the payload template, including its own
-void udp_template_free(udp_payload_template_t *t)
+void ipv6_udp_template_free(udp_payload_template_t *t)
 {
 	unsigned int x;
 	for (x=0; x < t->fcount; x++) {
@@ -539,16 +446,16 @@ void udp_template_free(udp_payload_template_t *t)
 	free(t);
 }
 
-int udp_random_bytes(char *dst, int len, const unsigned char *charset,
+int ipv6_udp_random_bytes(char *dst, int len, const unsigned char *charset,
 		int charset_len, aesrand_t *aes) {
 	int i;
 	for(i=0; i<len; i++)
 		*dst++ = charset[ (aesrand_getword(aes) & 0xFFFFFFFF) % charset_len ];
 	return i;
 }
-
-int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len,
-	struct ip *ip_hdr, struct udphdr *udp_hdr, aesrand_t *aes)
+/*
+int ipv6_udp_template_build(udp_payload_template_t *t, char *out, unsigned int len,
+	struct ip6_hdr *ip6_header, struct udphdr *udp_hdr, aesrand_t *aes)
 {
 	udp_payload_field_t *c;
 	char *p;
@@ -583,19 +490,19 @@ int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len,
 				break;
 
 			case UDP_RAND_DIGIT:
-				p += udp_random_bytes(p, c->length, charset_digit, 10, aes);
+				p += ipv6_udp_random_bytes(p, c->length, ipv6_charset_digit, 10, aes);
 				break;
 
 			case UDP_RAND_ALPHA:
-				p += udp_random_bytes(p, c->length, charset_alpha, 52, aes);
+				p += ipv6_udp_random_bytes(p, c->length, ipv6_charset_alpha, 52, aes);
 				break;
 
 			case UDP_RAND_ALPHANUM:
-				p += udp_random_bytes(p, c->length, charset_alphanum, 62, aes);
+				p += ipv6_udp_random_bytes(p, c->length, ipv6_charset_alphanum, 62, aes);
 				break;
 
 			case UDP_RAND_BYTE:
-				p += udp_random_bytes(p, c->length, charset_all, 256, aes);
+				p += ipv6_udp_random_bytes(p, c->length, ipv6_charset_all, 256, aes);
 				break;
 
 			// These fields need to calculate size on their own
@@ -691,11 +598,11 @@ int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len,
 		}
 	}
 
-	return p - out;
+	return p - out - 1;
 }
 
 // Convert a string field name to a field type, parsing any specified length value
-int udp_template_field_lookup(char *vname, udp_payload_field_t *c)
+int ipv6_udp_template_field_lookup(char *vname, udp_payload_field_t *c)
 {
 	char *param;
 	unsigned int f;
@@ -730,7 +637,7 @@ int udp_template_field_lookup(char *vname, udp_payload_field_t *c)
 }
 
 // Allocate a payload template and populate it by parsing a template file as a binary buffer
-udp_payload_template_t * udp_template_load(char *buf, unsigned int len)
+udp_payload_template_t * ipv6_udp_template_load(char *buf, unsigned int len)
 {
 	udp_payload_template_t *t = xmalloc(sizeof(udp_payload_template_t));
 
@@ -827,10 +734,10 @@ udp_payload_template_t * udp_template_load(char *buf, unsigned int len)
 
 	return t;
 }
-
+*/
 static fielddef_t fields[] = {
 	{.name = "classification", .type="string", .desc = "packet classification"},
-	{.name = "success", .type="bool", .desc = "is response considered success"},
+	{.name = "success", .type="int", .desc = "is response considered success"},
 	{.name = "sport", .type = "int", .desc = "UDP source port"},
 	{.name = "dport", .type = "int", .desc = "UDP destination port"},
 	{.name = "icmp_responder", .type = "string", .desc = "Source IP of ICMP_UNREACH message"},
@@ -841,20 +748,20 @@ static fielddef_t fields[] = {
 	{.name = "data", .type="binary", .desc = "UDP payload"}
 };
 
-probe_module_t module_udp = {
-	.name = "udp",
+probe_module_t module_ipv6_udp = {
+	.name = "ipv6_udp",
 	.packet_length = 1,
-	.pcap_filter = "udp || icmp",
+	.pcap_filter = "ip6 proto 17 || icmp6",
 	.pcap_snaplen = 1500,
 	.port_args = 1,
-	.thread_initialize = &udp_init_perthread,
-	.global_initialize = &udp_global_initialize,
-	.make_packet = &udp_make_packet,
-	.print_packet = &udp_print_packet,
-	.validate_packet = &udp_validate_packet,
-	.process_packet = &udp_process_packet,
-	.close = &udp_global_cleanup,
-	.helptext = "Probe module that sends UDP packets to hosts. Packets can "
+	.thread_initialize = &ipv6_udp_init_perthread,
+	.global_initialize = &ipv6_udp_global_initialize,
+	.make_packet = &ipv6_udp_make_packet,
+	.print_packet = &ipv6_udp_print_packet,
+	.validate_packet = &_ipv6_udp_validate_packet,
+	.process_packet = &ipv6_udp_process_packet,
+	.close = &ipv6_udp_global_cleanup,
+	.helptext = "Probe module that sends IPv6+UDP packets to hosts. Packets can "
 	            "optionally be templated based on destination host. Specify"
 	            " packet file with --probe-args=file:/path_to_packet_file "
 	            "and templates with template:/path_to_template_file.",

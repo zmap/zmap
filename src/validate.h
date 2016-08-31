@@ -9,9 +9,12 @@
 #ifndef VALIDATE_H
 #define VALIDATE_H
 
+#include <netinet/in.h>
+
 #define VALIDATE_BYTES 16
 
 void validate_init();
 void validate_gen(const uint32_t src, const uint32_t dst, uint8_t output[VALIDATE_BYTES]);
+void validate_gen_ipv6(const struct in6_addr *src, const struct in6_addr *dst, uint8_t output[VALIDATE_BYTES]);
 
 #endif//_VALIDATE_H

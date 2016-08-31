@@ -34,6 +34,7 @@
 #include "shard.h"
 #include "state.h"
 #include "validate.h"
+#include "ipv6_target_file.h"
 
 // OS specific functions called by send_run
 static inline int send_packet(sock_t sock, void *buf, int len, uint32_t idx);
@@ -62,6 +63,10 @@ static uint32_t num_src_addrs;
 // Source ports for outgoing packets
 static uint16_t num_src_ports;
 
+// IPv6
+static int ipv6 = 0;
+static struct in6_addr ipv6_src;
+
 
 void sig_handler_increase_speed(UNUSED int signal)
 {
@@ -83,6 +88,16 @@ void sig_handler_decrease_speed(UNUSED int signal)
 // global sender initialize (not thread specific)
 iterator_t* send_init(void)
 {
+	// IPv6
+	if (zconf.ipv6_target_filename) {
+		ipv6 = 1;
+		int ret = inet_pton(AF_INET6, (char *) zconf.ipv6_source_ip, &ipv6_src);
+		if (ret != 1) {
+			log_fatal("send", "could not read valid IPv6 src address, inet_pton returned `%d'", ret);
+		}
+		ipv6_target_file_init(zconf.ipv6_target_filename);
+	}
+
 	// generate a new primitive root and starting position
 	iterator_t *it;
 	it = iterator_init(zconf.senders, zconf.shard_num, zconf.total_shards);
@@ -256,18 +271,27 @@ int send_run(sock_t st, shard_t *s)
 		    last_time = now();
         }
 	}
-	uint32_t curr = shard_get_cur_ip(s);
-	// if list of IPs provided to scan, then the first generated address
-	// might not be on that list. iterate until we find one and can start
-	// the true scanning process
-	if (zconf.list_of_ips_filename) {
-		while (!pbm_check(zsend.list_of_ips_pbm, curr)) {
-			curr = shard_get_next_ip(s);
-			s->state.tried_sent++;
-			if (!curr) {
-				log_debug("send", "never made it to send loop in send thread %i", s->id);
-				s->cb(s->id, s->arg);
-				goto cleanup;
+
+	uint32_t curr;
+	struct in6_addr ipv6_dst;
+	// IPv6
+	if (ipv6) {
+		ipv6_target_file_get_ipv6(&ipv6_dst);
+		probe_data = malloc(2*sizeof(struct in6_addr));
+	} else {
+		curr = shard_get_cur_ip(s);
+		// if list of IPs provided to scan, then the first generated address
+		// might not be on that list. iterate until we find one and can start
+		// the true scanning process
+		if (zconf.list_of_ips_filename) {
+			while (!pbm_check(zsend.list_of_ips_pbm, curr)) {
+				curr = shard_get_next_ip(s);
+				s->state.tried_sent++;
+				if (!curr) {
+					log_debug("send", "never made it to send loop in send thread %i", s->id);
+					s->cb(s->id, s->arg);
+					goto cleanup;
+				}
 			}
 		}
 	}
@@ -322,16 +346,24 @@ int send_run(sock_t st, shard_t *s)
 			s->cb(s->id, s->arg);
 			break;
 		}
-		if (curr == 0) {
+		if (!ipv6 && curr == 0) {
 			s->cb(s->id, s->arg);
 			log_debug("send", "send thread %hhu finished, shard depleted", s->id);
 			break;
 		}
 		for (int i=0; i < zconf.packet_streams; i++) {
-			uint32_t src_ip = get_src_ip(curr, i);
+			uint32_t src_ip;
 
 		  	uint32_t validation[VALIDATE_BYTES/sizeof(uint32_t)];
-			validate_gen(src_ip, curr, (uint8_t *)validation);
+			// IPv6
+			if (ipv6) {
+				((struct in6_addr *) probe_data)[0] = ipv6_src;
+				((struct in6_addr *) probe_data)[1] = ipv6_dst;
+				validate_gen_ipv6(&ipv6_src, &ipv6_dst, (uint8_t *)validation);
+			} else {
+				src_ip = get_src_ip(curr, i);
+				validate_gen(src_ip, curr, (uint8_t *)validation);
+			}
 			zconf.probe_module->make_packet(buf, src_ip, curr,
 					validation, i, probe_data);
 			if (zconf.dryrun) {
@@ -345,13 +377,21 @@ int send_run(sock_t st, shard_t *s)
 				for (int i = 0; i < attempts; ++i) {
 					int rc = send_packet(st, contents, length, idx);
 					if (rc < 0) {
-						struct in_addr addr;
-						addr.s_addr = curr;
-						char addr_str_buf[INET_ADDRSTRLEN];
-						const char *addr_str = inet_ntop(AF_INET, &addr, addr_str_buf, INET_ADDRSTRLEN);
-						if (addr_str != NULL) {
+						// IPv6
+						if (ipv6) {
+							char ipv6_str[100];
+							inet_ntop(AF_INET6, &ipv6_dst, ipv6_str, 100-1);
 							log_debug("send", "send_packet failed for %s. %s",
-								addr_str, strerror(errno));
+									  ipv6_str, strerror(errno));
+						} else {
+							struct in_addr addr;
+							addr.s_addr = curr;
+							char addr_str_buf[INET_ADDRSTRLEN];
+							const char *addr_str = inet_ntop(AF_INET, &addr, addr_str_buf, INET_ADDRSTRLEN);
+							if (addr_str != NULL) {
+								log_debug("send", "send_packet failed for %s. %s",
+									addr_str, strerror(errno));
+							}
 						}
 					} else {
 						any_sends_successful = 1;
@@ -365,19 +405,31 @@ int send_run(sock_t st, shard_t *s)
 				idx &= 0xFF;
 			}
 		}
-		// number of hosts we actually scanned
-		curr = shard_get_next_ip(s);
-		s->state.sent++;
-		s->state.tried_sent++;
-		if (curr && zconf.list_of_ips_filename) {
-			while (!pbm_check(zsend.list_of_ips_pbm, curr)) {
-				curr = shard_get_next_ip(s);
-				s->state.tried_sent++;
-				if (!curr) {
-					s->cb(s->id, s->arg);
-					log_debug("send", "send thread %hhu shard finished in get_next_ip_loop depleted", s->id);
-					goto cleanup;
 
+		// IPv6
+		if (ipv6) {
+			int ret = ipv6_target_file_get_ipv6(&ipv6_dst);
+			s->state.sent++;
+			s->state.tried_sent++;
+			if (ret != 0) {
+				s->cb(s->id, s->arg);
+				log_debug("send", "send thread %hhu finished, no more target IPv6 addresses", s->id);
+				goto cleanup;
+			}
+		} else {
+			// number of hosts we actually scanned
+			curr = shard_get_next_ip(s);
+			s->state.sent++;
+			s->state.tried_sent++;
+			if (curr && zconf.list_of_ips_filename) {
+				while (!pbm_check(zsend.list_of_ips_pbm, curr)) {
+					curr = shard_get_next_ip(s);
+					s->state.tried_sent++;
+					if (!curr) {
+						s->cb(s->id, s->arg);
+						log_debug("send", "send thread %hhu shard finished in get_next_ip_loop depleted", s->id);
+						goto cleanup;
+					}
 				}
 			}
 		}

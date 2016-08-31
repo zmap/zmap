@@ -42,6 +42,10 @@ set(PROBE_MODULE_SOURCES
     probe_modules/module_upnp.c
     probe_modules/module_dns.c
     probe_modules/module_bacnet.c
+    probe_modules/module_ipv6_tcp_synscan.c
+    probe_modules/module_ipv6_udp.c
+    probe_modules/module_ipv6_udp_dns.c
+    probe_modules/module_icmp6_echoscan.c
 )
 
 set(SOURCES
@@ -52,6 +56,7 @@ set(SOURCES
     filter.c
     get_gateway.c
     iterator.c
+    ipv6_target_file.c
     monitor.c
     recv.c
     send.c
@@ -79,6 +84,7 @@ set(ZTESTSOURCES
     filter.c
     get_gateway.c
     iterator.c
+    ipv6_target_file.c
     monitor.c
     recv.c
     send.c
