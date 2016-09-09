@@ -94,34 +94,26 @@ static int synackscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		return 0;
 	}
 
-	// Note: The traditional flow of returning 0 on wrong and then returning 1
-	// at the end made this code an unreadable mess. So we're going a bit
-	// against the grain
-
-	if (htonl(tcp->th_ack) == htonl(validation[0]) + 1) {
-		// ACK = SEQ + 1 is OK
-		return 1;
-	} else if (tcp->th_flags & TH_RST) {
-		// If we have a reset flag, we can have a few cases.
-		if (htonl(tcp->th_seq) == htonl(validation[2]) + 0) {
-			// If SEQ = ACK RST is valid
-			return 1;
-		} else if (htonl(tcp->th_seq) == htonl(validation[2]) + 1) {
-			// If SEQ = ACK + 1 RST is also valid
-			return 1;
-		} else {
-			// All other cases the RST is invalid.
+	// We handle RST packets different than all other packets
+	if (tcp->th_flags & TH_RST) {
+		// A RST packet must have either:
+		//	1) resp(ack) == sent(seq) + 1, or
+		//	2) resp(seq) == sent(ack), or
+		//	3) resp(seq) == sent(ack) + 1
+		// All other cases are a failure.
+		if (htonl(tcp->th_ack) != htonl(validation[0]) + 1
+				&& htonl(tcp->th_seq) != htonl(validation[2])
+				&& htonl(tcp->th_seq) != (htonl(validation[2]) + 1)) {
 			return 0;
 		}
 	} else {
-		// All other options are invalid.
-		return 0;
+		// For non RST packets, we must have resp(ack) == sent(seq) + 1
+		if (htonl(tcp->th_ack) != htonl(validation[0]) + 1) {
+			return 0;
+		}
 	}
 
-	// DO NOT ADD ANY CHECKS HERE.
-	assert(NULL);
-
-	return 0;
+	return 1;
 }
 
 static void synackscan_process_packet(const u_char *packet,
