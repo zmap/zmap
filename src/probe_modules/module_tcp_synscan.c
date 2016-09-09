@@ -105,18 +105,21 @@ int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	if (!check_dst_port(ntohs(dport), num_ports, validation)) {
 		return 0;
 	}
-	// validate tcp acknowledgement number
-	if (htonl(tcp->th_ack) != htonl(validation[0])+1) {
 
-		// RSTs do not need to +1 the ack
-		if (tcp->th_flags & TH_RST) {
-			if (htonl(tcp->th_ack) != htonl(validation[0]) + 0) {
-				return 0;
-			}
-		} else {
+	// We treat RST packets different from non RST packets
+	if (tcp->th_flags & TH_RST) {
+		// For RST packets, recv(ack) == sent(seq) + 0 or + 1
+		if (htonl(tcp->th_ack) != htonl(validation[0])
+				&& htonl(tcp->th_ack) != htonl(validation[0]) + 1) {
+			return 0;
+		}
+	} else {
+		// For non RST packets, recv(ack) == sent(seq) + 1
+		if (htonl(tcp->th_ack) != htonl(validation[0]) + 1) {
 			return 0;
 		}
 	}
+
 	return 1;
 }
 
