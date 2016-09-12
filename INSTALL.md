@@ -73,7 +73,7 @@ and installed by running:
 Release builds should be built with `-DENABLE_DEVELOPMENT=OFF`.**
 
 - **Enabling log_trace can have a major performance impact and should not be used
-except during early development. Release builds shoudl be built with `-DENABLE_LOG_TRACE=OFF`.**
+except during early development. Release builds should be built with `-DENABLE_LOG_TRACE=OFF`.**
 
 - Redis support is not enabled by default. If you want to use ZMap with Redis, you will first need to install hiredis. Then run cmake with `-DWITH_REDIS=ON`. Debian has packaged it as `libhiredis-dev`, Fedora and RHEL have packaged it as `hiredis-devel`.
 
