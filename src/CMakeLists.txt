@@ -178,6 +178,16 @@ add_custom_command(OUTPUT parser.c
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/parser.y"
 )
 
+add_custom_target(
+    format
+    COMMAND python "${PROJECT_SOURCE_DIR}/scripts/style.py" --format --zmap-source-root="${PROJECT_SOURCE_DIR}"
+)
+
+add_custom_target(
+    format-check
+    COMMAND python "${PROJECT_SOURCE_DIR}/scripts/style.py" --zmap-source-root="${PROJECT_SOURCE_DIR}"
+)
+
 add_executable(zmap ${SOURCES})
 add_executable(zblacklist ${ZBLSOURCES})
 add_executable(ziterate ${ZITSOURCES})

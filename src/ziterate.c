@@ -14,15 +14,15 @@
 
 #define _GNU_SOURCE
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <getopt.h>
 #include <assert.h>
+#include <getopt.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
-#include "../lib/includes.h"
 #include "../lib/blacklist.h"
+#include "../lib/includes.h"
 #include "../lib/logger.h"
 #include "../lib/random.h"
 #include "../lib/util.h"
@@ -49,8 +49,12 @@ struct zit_conf {
 	uint32_t max_hosts;
 };
 
-#define SET_BOOL(DST,ARG) \
-{ if (args.ARG##_given) { (DST) = 1; }; }
+#define SET_BOOL(DST, ARG)                                                     \
+	{                                                                      \
+		if (args.ARG##_given) {                                        \
+			(DST) = 1;                                             \
+		};                                                             \
+	}
 
 int main(int argc, char **argv)
 {
@@ -97,8 +101,10 @@ int main(int argc, char **argv)
 	if (conf.log_filename) {
 		logfile = fopen(conf.log_filename, "w");
 		if (!logfile) {
-			fprintf(stderr, "FATAL: unable to open specified logfile (%s)\n",
-					conf.log_filename);
+			fprintf(
+			    stderr,
+			    "FATAL: unable to open specified logfile (%s)\n",
+			    conf.log_filename);
 			exit(1);
 		}
 	}
@@ -123,43 +129,51 @@ int main(int argc, char **argv)
 
 	// sanity check blacklist file
 	if (conf.blacklist_filename) {
-		log_debug("ziterate", "blacklist file at %s to be used", conf.blacklist_filename);
+		log_debug("ziterate", "blacklist file at %s to be used",
+			  conf.blacklist_filename);
 	} else {
 		log_debug("ziterate", "no blacklist file specified");
 	}
-	if (conf.blacklist_filename && access(conf.blacklist_filename, R_OK) == -1) {
-		log_fatal("ziterate", "unable to read specified blacklist file (%s)",
-				conf.blacklist_filename);
+	if (conf.blacklist_filename &&
+	    access(conf.blacklist_filename, R_OK) == -1) {
+		log_fatal("ziterate",
+			  "unable to read specified blacklist file (%s)",
+			  conf.blacklist_filename);
 	}
 
 	// sanity check whitelist file
 	if (conf.whitelist_filename) {
-		log_debug("ziterate", "whitelist file at %s to be used", conf.whitelist_filename);
+		log_debug("ziterate", "whitelist file at %s to be used",
+			  conf.whitelist_filename);
 	} else {
 		log_debug("ziterate", "no whitelist file specified");
 	}
-	if (conf.whitelist_filename && access(conf.whitelist_filename, R_OK) == -1) {
-		log_fatal("ziterate", "unable to read specified whitelist file (%s)",
-				conf.whitelist_filename);
+	if (conf.whitelist_filename &&
+	    access(conf.whitelist_filename, R_OK) == -1) {
+		log_fatal("ziterate",
+			  "unable to read specified whitelist file (%s)",
+			  conf.whitelist_filename);
 	}
 
 	// parse blacklist and whitelist
 	if (blacklist_init(conf.whitelist_filename, conf.blacklist_filename,
-				conf.destination_cidrs, conf.destination_cidrs_len,
-				NULL, 0,
-				conf.ignore_errors)) {
-		log_fatal("ziterate", "unable to initialize blacklist / whitelist");
+			   conf.destination_cidrs, conf.destination_cidrs_len,
+			   NULL, 0, conf.ignore_errors)) {
+		log_fatal("ziterate",
+			  "unable to initialize blacklist / whitelist");
 	}
 
 	// Set up sharding
 	conf.shard_num = 0;
 	conf.total_shards = 1;
 	if ((args.shard_given || args.shards_given) && !args.seed_given) {
-		log_fatal("ziterate", "Need to specify seed if sharding a scan");
+		log_fatal("ziterate",
+			  "Need to specify seed if sharding a scan");
 	}
 	if (args.shard_given ^ args.shards_given) {
-		log_fatal("ziterate",
-				"Need to specify both shard number and total number of shards");
+		log_fatal(
+		    "ziterate",
+		    "Need to specify both shard number and total number of shards");
 	}
 	if (args.shard_given) {
 		enforce_range("shard", args.shard_arg, 0, 254);
@@ -170,12 +184,15 @@ int main(int argc, char **argv)
 		conf.total_shards = args.shards_arg;
 	}
 	if (conf.shard_num >= conf.total_shards) {
-		log_fatal("ziterate", "With %hhu total shards, shard number (%hhu)"
-				" must be in range [0, %hhu]", conf.total_shards,
-				conf.shard_num, conf.total_shards);
+		log_fatal("ziterate",
+			  "With %hhu total shards, shard number (%hhu)"
+			  " must be in range [0, %hhu]",
+			  conf.total_shards, conf.shard_num, conf.total_shards);
 	}
-	log_debug("ziterate", "Initializing sharding (%d shards, shard number %d, seed %llu)",
-			conf.total_shards, conf.shard_num, conf.seed);
+	log_debug(
+	    "ziterate",
+	    "Initializing sharding (%d shards, shard number %d, seed %llu)",
+	    conf.total_shards, conf.shard_num, conf.seed);
 
 	// Check for a random seed
 	if (args.seed_given) {
@@ -183,12 +200,13 @@ int main(int argc, char **argv)
 	} else {
 		if (!random_bytes(&conf.seed, sizeof(uint64_t))) {
 			log_fatal("ziterate", "unable to generate random bytes "
-					"needed for seed");
+					      "needed for seed");
 		}
 	}
 	zconf.aes = aesrand_init_from_seed(conf.seed);
 
-	iterator_t *it = iterator_init(conf.total_shards, conf.shard_num, conf.total_shards);
+	iterator_t *it =
+	    iterator_init(conf.total_shards, conf.shard_num, conf.total_shards);
 	shard_t *shard = get_shard(it, conf.shard_num);
 	uint32_t next_int = shard_get_cur_ip(shard);
 	struct in_addr next_ip;

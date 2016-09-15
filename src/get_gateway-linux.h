@@ -13,11 +13,11 @@
 #error "Don't include both get_gateway-bsd.h and get_gateway-linux.h"
 #endif
 
-#include <sys/ioctl.h>
+#include <arpa/inet.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
-#include <arpa/inet.h>
 #include <pcap/pcap.h>
+#include <sys/ioctl.h>
 
 char *get_default_iface(void)
 {
@@ -25,8 +25,8 @@ char *get_default_iface(void)
 	char *iface = pcap_lookupdev(errbuf);
 	if (iface == NULL) {
 		log_fatal("zmap", "could not detect default network interface "
-				"(e.g. eth0). Try running as root or setting"
-				" interface using -i flag.");
+				  "(e.g. eth0). Try running as root or setting"
+				  " interface using -i flag.");
 	}
 	return iface;
 }
@@ -43,7 +43,7 @@ int read_nl_sock(int sock, char *buf, int buf_len)
 		}
 		struct nlmsghdr *nlhdr = (struct nlmsghdr *)pbuf;
 		if (NLMSG_OK(nlhdr, ((unsigned int)len)) == 0 ||
-						nlhdr->nlmsg_type == NLMSG_ERROR) {
+		    nlhdr->nlmsg_type == NLMSG_ERROR) {
 			log_debug("get-gw", "recv failed: %s", strerror(errno));
 			return -1;
 		}
@@ -60,12 +60,13 @@ int read_nl_sock(int sock, char *buf, int buf_len)
 	return msg_len;
 }
 
-int send_nl_req(uint16_t msg_type, uint32_t seq,
-				void *payload, uint32_t payload_len)
+int send_nl_req(uint16_t msg_type, uint32_t seq, void *payload,
+		uint32_t payload_len)
 {
 	int sock = socket(PF_NETLINK, SOCK_DGRAM, NETLINK_ROUTE);
 	if (sock < 0) {
-		log_error("get-gw", "unable to get socket: %s", strerror(errno));
+		log_error("get-gw", "unable to get socket: %s",
+			  strerror(errno));
 		return -1;
 	}
 	if (NLMSG_SPACE(payload_len) < payload_len) {
@@ -126,23 +127,26 @@ int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
 		struct in_addr dst_ip;
 		int correct_ip = 0;
 
-		rt_msg = (struct rtmsg *) NLMSG_DATA(nlhdr);
+		rt_msg = (struct rtmsg *)NLMSG_DATA(nlhdr);
 
 		if ((rt_msg->rtm_family != AF_INET)) {
 			return -1;
 		}
 
-		rt_attr = (struct rtattr *) RTM_RTA(rt_msg);
+		rt_attr = (struct rtattr *)RTM_RTA(rt_msg);
 		rt_len = RTM_PAYLOAD(nlhdr);
 		while (RTA_OK(rt_attr, rt_len)) {
 			switch (rt_attr->rta_type) {
 			case NDA_LLADDR:
 				if (RTA_PAYLOAD(rt_attr) != IFHWADDRLEN) {
 					// could be using a VPN
-					log_fatal("get_gateway", "Unexpected hardware address length (%d).\n\n"
-						"    If you are using a VPN, supply the --vpn flag (and provide an"
-                        " interface via -i)",
-						RTA_PAYLOAD(rt_attr));
+					log_fatal(
+					    "get_gateway",
+					    "Unexpected hardware address length (%d).\n\n"
+					    "    If you are using a VPN, supply the --vpn "
+					    "flag (and provide an"
+					    " interface via -i)",
+					    RTA_PAYLOAD(rt_attr));
 					exit(1);
 				}
 				memcpy(mac, RTA_DATA(rt_attr), IFHWADDRLEN);
@@ -150,14 +154,18 @@ int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
 			case NDA_DST:
 				if (RTA_PAYLOAD(rt_attr) != sizeof(dst_ip)) {
 					// could be using a VPN
-					log_fatal("get_gateway", "Unexpected IP address length (%d).\n"
-						"    If you are using a VPN, supply the --vpn flag"
-                        " (and provide an interface via -i)",
-						RTA_PAYLOAD(rt_attr));
+					log_fatal(
+					    "get_gateway",
+					    "Unexpected IP address length (%d).\n"
+					    "    If you are using a VPN, supply the --vpn flag"
+					    " (and provide an interface via -i)",
+					    RTA_PAYLOAD(rt_attr));
 					exit(1);
 				}
-				memcpy(&dst_ip, RTA_DATA(rt_attr), sizeof(dst_ip));
-				if (memcmp(&dst_ip, gw_ip, sizeof(dst_ip)) == 0) {
+				memcpy(&dst_ip, RTA_DATA(rt_attr),
+				       sizeof(dst_ip));
+				if (memcmp(&dst_ip, gw_ip, sizeof(dst_ip)) ==
+				    0) {
 					correct_ip = 1;
 				}
 				break;
@@ -203,21 +211,23 @@ int _get_default_gw(struct in_addr *gw, char *iface)
 		int rt_len;
 		int has_gw = 0;
 
-		rt_msg = (struct rtmsg *) NLMSG_DATA(nlhdr);
+		rt_msg = (struct rtmsg *)NLMSG_DATA(nlhdr);
 
-		if ((rt_msg->rtm_family != AF_INET) || (rt_msg->rtm_table != RT_TABLE_MAIN)) {
+		if ((rt_msg->rtm_family != AF_INET) ||
+		    (rt_msg->rtm_table != RT_TABLE_MAIN)) {
 			return -1;
 		}
 
-		rt_attr = (struct rtattr *) RTM_RTA(rt_msg);
+		rt_attr = (struct rtattr *)RTM_RTA(rt_msg);
 		rt_len = RTM_PAYLOAD(nlhdr);
 		while (RTA_OK(rt_attr, rt_len)) {
 			switch (rt_attr->rta_type) {
 			case RTA_OIF:
-				if_indextoname(*(int *) RTA_DATA(rt_attr), iface);
+				if_indextoname(*(int *)RTA_DATA(rt_attr),
+					       iface);
 				break;
 			case RTA_GATEWAY:
-				gw->s_addr = *(unsigned int *) RTA_DATA(rt_attr);
+				gw->s_addr = *(unsigned int *)RTA_DATA(rt_attr);
 				has_gw = 1;
 				break;
 			}
@@ -239,10 +249,12 @@ int get_default_gw(struct in_addr *gw, char *iface)
 
 	_get_default_gw(gw, _iface);
 	if (strcmp(iface, _iface) != 0) {
-		log_fatal("get-gateway", "interface specified (%s) does not match "
-				"the interface of the default gateway (%s). You will need "
-				"to manually specify the MAC address of your gateway.",
-				iface, _iface);
+		log_fatal(
+		    "get-gateway",
+		    "interface specified (%s) does not match "
+		    "the interface of the default gateway (%s). You will need "
+		    "to manually specify the MAC address of your gateway.",
+		    iface, _iface);
 	}
 	return EXIT_SUCCESS;
 }
@@ -254,16 +266,17 @@ int get_iface_ip(char *iface, struct in_addr *ip)
 	memset(&ifr, 0, sizeof(struct ifreq));
 	sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock < 0) {
-		log_fatal("get-iface-ip", "failure opening socket: %s", strerror(errno));
+		log_fatal("get-iface-ip", "failure opening socket: %s",
+			  strerror(errno));
 	}
 	ifr.ifr_addr.sa_family = AF_INET;
-	strncpy(ifr.ifr_name, iface, IFNAMSIZ-1);
+	strncpy(ifr.ifr_name, iface, IFNAMSIZ - 1);
 
 	if (ioctl(sock, SIOCGIFADDR, &ifr) < 0) {
 		close(sock);
 		log_fatal("get-iface-ip", "ioctl failure: %s", strerror(errno));
 	}
-	ip->s_addr =  ((struct sockaddr_in*) &ifr.ifr_addr)->sin_addr.s_addr;
+	ip->s_addr = ((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr;
 	close(sock);
 	return EXIT_SUCCESS;
 }

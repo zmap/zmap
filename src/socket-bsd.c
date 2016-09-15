@@ -13,11 +13,11 @@
 #include "../lib/includes.h"
 #include "../lib/logger.h"
 
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/ioctl.h>
 #include <fcntl.h>
 #include <net/bpf.h>
+#include <sys/ioctl.h>
+#include <sys/time.h>
+#include <sys/types.h>
 
 #include "state.h"
 
@@ -48,7 +48,7 @@ sock_t get_socket(UNUSED uint32_t id)
 	strlcpy(ifr.ifr_name, zconf.iface, sizeof(ifr.ifr_name));
 
 	// Bind the bpf to the interface
-	if (ioctl(bpf, BIOCSETIF, (char *) &ifr) < 0) {
+	if (ioctl(bpf, BIOCSETIF, (char *)&ifr) < 0) {
 		return ret;
 	}
 

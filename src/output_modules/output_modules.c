@@ -24,23 +24,22 @@ extern output_module_t module_csv_redis;
 extern output_module_t module_mongodb;
 #endif
 
-output_module_t* output_modules[] = {
-	&module_csv_file,
-	&module_json_file,
+output_module_t *output_modules[] = {
+    &module_csv_file, &module_json_file,
 #ifdef REDIS
-	&module_redis,
-	&module_redis_csv,
+    &module_redis,    &module_redis_csv,
 #endif
 #ifdef MONGODB
-	&module_mongodb,
+    &module_mongodb,
 #endif
-	// ADD YOUR MODULE HERE
+    // ADD YOUR MODULE HERE
 };
 
-output_module_t* get_output_module_by_name(const char* name)
+output_module_t *get_output_module_by_name(const char *name)
 {
-    int num_modules = (int) (sizeof(output_modules)/sizeof(output_modules[0]));
-	for (int i=0; i < num_modules; i++) {
+	int num_modules =
+	    (int)(sizeof(output_modules) / sizeof(output_modules[0]));
+	for (int i = 0; i < num_modules; i++) {
 		if (!strcmp(output_modules[i]->name, name)) {
 			return output_modules[i];
 		}
@@ -50,9 +49,9 @@ output_module_t* get_output_module_by_name(const char* name)
 
 void print_output_modules(void)
 {
-    int num_modules = (int) (sizeof(output_modules)/sizeof(output_modules[0]));
-	for (int i=0; i < num_modules; i++) {
+	int num_modules =
+	    (int)(sizeof(output_modules) / sizeof(output_modules[0]));
+	for (int i = 0; i < num_modules; i++) {
 		printf("%s\n", output_modules[i]->name);
 	}
 }
-

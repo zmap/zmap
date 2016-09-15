@@ -9,8 +9,8 @@
 #ifndef STATE_H
 #define STATE_H
 
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "../lib/includes.h"
 
@@ -44,21 +44,23 @@ struct state_conf {
 	port_h_t target_port;
 	port_h_t source_port_first;
 	port_h_t source_port_last;
-	// maximum number of packets that the scanner will send before terminating
+	// maximum number of packets that the scanner will send before
+	// terminating
 	uint32_t max_targets;
 	// maximum number of seconds that scanner will run before terminating
 	uint32_t max_runtime;
 	// maximum number of results before terminating
 	uint32_t max_results;
 	// name of network interface that
-   	// will be utilized for sending/receiving
+	// will be utilized for sending/receiving
 	char *iface;
 	// rate in packets per second
 	// that the sender will maintain
 	int rate;
 	// rate in bits per second
 	uint64_t bandwidth;
-	// how many seconds after the termination of the sender will the receiver
+	// how many seconds after the termination of the sender will the
+	// receiver
 	// continue to process responses
 	int cooldown_secs;
 	// number of sending threads
@@ -134,7 +136,6 @@ struct state_conf {
 };
 extern struct state_conf zconf;
 
-
 // global sender stats
 struct state_send {
 	double start;
@@ -185,7 +186,6 @@ struct state_recv {
 	uint32_t pcap_drop;
 	// number of packets dropped by the network interface or its driver.
 	uint32_t pcap_ifdrop;
-
 };
 extern struct state_recv zrecv;
 

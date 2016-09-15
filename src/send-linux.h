@@ -30,29 +30,32 @@ int send_run_init(sock_t s)
 	memset(&if_idx, 0, sizeof(struct ifreq));
 	if (strlen(zconf.iface) >= IFNAMSIZ) {
 		log_error("send", "device interface name (%s) too long\n",
-				zconf.iface);
+			  zconf.iface);
 		return EXIT_FAILURE;
 	}
-	strncpy(if_idx.ifr_name, zconf.iface, IFNAMSIZ-1);
+	strncpy(if_idx.ifr_name, zconf.iface, IFNAMSIZ - 1);
 	if (ioctl(sock, SIOCGIFINDEX, &if_idx) < 0) {
 		perror("SIOCGIFINDEX");
 		return EXIT_FAILURE;
 	}
 	int ifindex = if_idx.ifr_ifindex;
 
-	// find source IP address associated with the dev from which we're sending.
-	// while we won't use this address for sending packets, we need the address
-	// to set certain socket options and it's easiest to just use the primary
+	// find source IP address associated with the dev from which we're
+	// sending.
+	// while we won't use this address for sending packets, we need the
+	// address
+	// to set certain socket options and it's easiest to just use the
+	// primary
 	// address the OS believes is associated.
 	struct ifreq if_ip;
 	memset(&if_ip, 0, sizeof(struct ifreq));
-	strncpy(if_ip.ifr_name, zconf.iface, IFNAMSIZ-1);
+	strncpy(if_ip.ifr_name, zconf.iface, IFNAMSIZ - 1);
 	if (ioctl(sock, SIOCGIFADDR, &if_ip) < 0) {
 		perror("SIOCGIFADDR");
 		return EXIT_FAILURE;
 	}
 	// destination address for the socket
-	memset((void*) &sockaddr, 0, sizeof(struct sockaddr_ll));
+	memset((void *)&sockaddr, 0, sizeof(struct sockaddr_ll));
 	sockaddr.sll_ifindex = ifindex;
 	sockaddr.sll_halen = ETH_ALEN;
 	memcpy(sockaddr.sll_addr, zconf.gw_mac, ETH_ALEN);
@@ -61,8 +64,7 @@ int send_run_init(sock_t s)
 
 int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 {
-	return sendto(sock.sock, buf, len, 0,
-		      (struct sockaddr *) &sockaddr,
+	return sendto(sock.sock, buf, len, 0, (struct sockaddr *)&sockaddr,
 		      sizeof(struct sockaddr_ll));
 }
 

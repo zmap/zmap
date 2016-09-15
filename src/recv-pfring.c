@@ -6,8 +6,8 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#include "recv.h"
 #include "recv-internal.h"
+#include "recv.h"
 
 #include "../lib/includes.h"
 #include "../lib/logger.h"
@@ -29,7 +29,7 @@ void recv_init()
 	pf_buffer = pfring_zc_get_packet_handle(zconf.pf.cluster);
 	if (pf_buffer == NULL) {
 		log_fatal("recv", "Could not get packet handle: %s",
-				strerror(errno));
+			  strerror(errno));
 	}
 }
 
@@ -75,4 +75,3 @@ int recv_update_stats(void)
 	}
 	return EXIT_SUCCESS;
 }
-

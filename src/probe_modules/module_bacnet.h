@@ -9,41 +9,41 @@
 #ifndef ZMAP_MODULE_BACNET_H
 #define ZMAP_MODULE_BACNET_H
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <stdint.h>
-#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "probe_modules.h"
 
 extern probe_module_t module_bacnet;
 
 struct __attribute__((__packed__)) bacnet_vlc {
-        uint8_t type;
-        uint8_t function;
-        uint16_t length;
+	uint8_t type;
+	uint8_t function;
+	uint16_t length;
 };
 typedef struct bacnet_vlc bacnet_vlc_t;
 
 struct __attribute__((__packed__)) bacnet_npdu {
-        uint8_t version;
-        uint8_t control;
+	uint8_t version;
+	uint8_t control;
 };
 typedef struct bacnet_npdu bacnet_npdu_t;
 
 struct __attribute__((__packed__)) bacnet_apdu {
-        uint8_t type_flags;
-        uint8_t max_segments_apdu;
-        uint8_t invoke_id;
-        uint8_t server_choice;
+	uint8_t type_flags;
+	uint8_t max_segments_apdu;
+	uint8_t invoke_id;
+	uint8_t server_choice;
 };
 typedef struct bacnet_apdu bacnet_apdu_t;
 
 struct __attribute__((__packed__)) bacnet_probe {
-        struct bacnet_vlc vlc;
-        struct bacnet_npdu npdu;
-        struct bacnet_apdu apdu;
+	struct bacnet_vlc vlc;
+	struct bacnet_npdu npdu;
+	struct bacnet_apdu apdu;
 };
 typedef struct bacnet_probe bacnet_probe_t;
 

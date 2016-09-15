@@ -11,18 +11,18 @@
 #define __USE_BSD
 #endif
 
-#include <sys/types.h>
+#include <net/ethernet.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
-#include <netinet/udp.h>
 #include <netinet/tcp.h>
-#include <net/ethernet.h>
+#include <netinet/udp.h>
+#include <sys/types.h>
 
-#include <netdb.h>
-#include <net/if.h>
-#include <ifaddrs.h>        // NOTE: net/if.h MUST be included BEFORE ifaddrs.h
 #include <arpa/inet.h>
+#include <ifaddrs.h> // NOTE: net/if.h MUST be included BEFORE ifaddrs.h
+#include <net/if.h>
+#include <netdb.h>
 
 #define MAC_ADDR_LEN ETHER_ADDR_LEN
 #define UNUSED __attribute__((unused))

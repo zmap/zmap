@@ -7,12 +7,12 @@
  */
 
 #include "random.h"
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
-#include <errno.h>
 #include "logger.h"
+#include <errno.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define RANDSRC "/dev/urandom"
 
@@ -20,7 +20,8 @@ int random_bytes(void *dst, size_t n)
 {
 	FILE *f = fopen(RANDSRC, "rb");
 	if (!f) {
-		log_fatal("random", "unable to read /dev/urandom: %s", strerror(errno));
+		log_fatal("random", "unable to read /dev/urandom: %s",
+			  strerror(errno));
 	}
 	size_t r = fread(dst, n, 1, f);
 	fclose(f);
