@@ -33,32 +33,32 @@
  */
 
 #include "module_dns.h"
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <string.h>
 #include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "../../lib/includes.h"
 #include "../../lib/random.h"
 #include "../../lib/xalloc.h"
-#include "probe_modules.h"
-#include "packet.h"
+#include "../fieldset.h"
 #include "logger.h"
 #include "module_udp.h"
-#include "../fieldset.h"
+#include "packet.h"
+#include "probe_modules.h"
 
-#define DNS_SEND_LEN 512	// This is arbitrary
+#define DNS_SEND_LEN 512 // This is arbitrary
 #define UDP_HEADER_LEN 8
-#define PCAP_SNAPLEN 1500	// This is even more arbitrary
+#define PCAP_SNAPLEN 1500 // This is even more arbitrary
 #define UNUSED __attribute__((unused))
 #define MAX_QTYPE 255
 #define ICMP_UNREACH_HEADER_SIZE 8
 #define BAD_QTYPE_STR "BAD QTYPE"
 #define BAD_QTYPE_VAL -1
 #define MAX_LABEL_RECURSION 10
-#define DNS_QR_ANSWER	1
+#define DNS_QR_ANSWER 1
 
 // Note: each label has a max length of 63 bytes. So someone has to be doing
 // something really annoying. Will raise a warning.
@@ -77,35 +77,26 @@ const uint16_t default_qtype = DNS_QTYPE_A;
 static char *dns_packet = NULL;
 static uint16_t dns_packet_len = 0; // Not including udp header
 static uint16_t qname_len = 0;
-static char* qname = NULL;
+static char *qname = NULL;
 static uint16_t qtype = 0;
 
 /* Array of qtypes we support. Jumping through some hoops (1 level of
- * indirection) so the per-packet processing time is fast. Keep this in sync with:
+ * indirection) so the per-packet processing time is fast. Keep this in sync
+ * with:
  * dns_qtype (.h)
  * qtype_strid_to_qtype (below)
  * qtype_qtype_to_strid (below, and setup_qtype_str_map())
  */
-const char *qtype_strs[] = {
-		"A",
-		"NS",
-		"CNAME",
-		"SOA",
-		"PTR",
-		"MX",
-		"TXT",
-		"AAAA",
-		"RRSIG",
-		"ALL"
-};
+const char *qtype_strs[] = {"A",  "NS",  "CNAME", "SOA",   "PTR",
+			    "MX", "TXT", "AAAA",  "RRSIG", "ALL"};
 const int qtype_strs_len = 10;
 
-const dns_qtype qtype_strid_to_qtype[] = { DNS_QTYPE_A, DNS_QTYPE_NS,
-		DNS_QTYPE_CNAME, DNS_QTYPE_SOA, DNS_QTYPE_PTR, DNS_QTYPE_MX,
-		DNS_QTYPE_TXT, DNS_QTYPE_AAAA, DNS_QTYPE_RRSIG, DNS_QTYPE_ALL
-};
+const dns_qtype qtype_strid_to_qtype[] = {
+    DNS_QTYPE_A,     DNS_QTYPE_NS, DNS_QTYPE_CNAME, DNS_QTYPE_SOA,
+    DNS_QTYPE_PTR,   DNS_QTYPE_MX, DNS_QTYPE_TXT,   DNS_QTYPE_AAAA,
+    DNS_QTYPE_RRSIG, DNS_QTYPE_ALL};
 
-int8_t qtype_qtype_to_strid[256] = { BAD_QTYPE_VAL };
+int8_t qtype_qtype_to_strid[256] = {BAD_QTYPE_VAL};
 
 void setup_qtype_str_map()
 {
@@ -121,7 +112,7 @@ void setup_qtype_str_map()
 	qtype_qtype_to_strid[DNS_QTYPE_ALL] = 9;
 }
 
-static uint16_t qtype_str_to_code(const char* str)
+static uint16_t qtype_str_to_code(const char *str)
 {
 	for (int i = 0; i < qtype_strs_len; i++) {
 		if (strcmp(qtype_strs[i], str) == 0)
@@ -130,12 +121,11 @@ static uint16_t qtype_str_to_code(const char* str)
 	return 0;
 }
 
-
-static uint16_t domain_to_qname(char** qname_handle, const char* domain)
+static uint16_t domain_to_qname(char **qname_handle, const char *domain)
 {
 	// String + 1byte header + null byte
 	uint16_t len = strlen(domain) + 1 + 1;
-	char* qname = xmalloc(len);
+	char *qname = xmalloc(len);
 	// Add a . before the domain. This will make the following simpler.
 	qname[0] = '.';
 	// Move the domain into the qname buffer.
@@ -143,7 +133,7 @@ static uint16_t domain_to_qname(char** qname_handle, const char* domain)
 	for (int i = 0; i < len; i++) {
 		if (qname[i] == '.') {
 			int j;
-			for (j = i+1; j < (len-1); j++) {
+			for (j = i + 1; j < (len - 1); j++) {
 				if (qname[j] == '.') {
 					break;
 				}
@@ -152,29 +142,31 @@ static uint16_t domain_to_qname(char** qname_handle, const char* domain)
 		}
 	}
 	*qname_handle = qname;
-	assert((*qname_handle)[len-1] == '\0');
+	assert((*qname_handle)[len - 1] == '\0');
 	return len;
 }
 
-static int build_global_dns_packet(const char* domain)
+static int build_global_dns_packet(const char *domain)
 {
 	qname_len = domain_to_qname(&qname, domain);
-	dns_packet_len = sizeof(dns_header) + qname_len + sizeof(dns_question_tail);
+	dns_packet_len =
+	    sizeof(dns_header) + qname_len + sizeof(dns_question_tail);
 
 	if (dns_packet_len > DNS_SEND_LEN) {
-			log_fatal("dns", "DNS packet bigger (%d) than our limit (%d)",
-					dns_packet_len, DNS_SEND_LEN);
-			return EXIT_FAILURE;
+		log_fatal("dns", "DNS packet bigger (%d) than our limit (%d)",
+			  dns_packet_len, DNS_SEND_LEN);
+		return EXIT_FAILURE;
 	}
 
 	dns_packet = xmalloc(dns_packet_len);
 
-	dns_header* dns_header_p = (dns_header*)dns_packet;
-	char* qname_p = dns_packet + sizeof(dns_header);
-	dns_question_tail* tail_p = (dns_question_tail*)(dns_packet +
-			sizeof(dns_header) + qname_len);
+	dns_header *dns_header_p = (dns_header *)dns_packet;
+	char *qname_p = dns_packet + sizeof(dns_header);
+	dns_question_tail *tail_p =
+	    (dns_question_tail *)(dns_packet + sizeof(dns_header) + qname_len);
 
-	// All other header fields should be 0. Except id, which we set per thread.
+	// All other header fields should be 0. Except id, which we set per
+	// thread.
 	// Please recurse as needed.
 	dns_header_p->rd = 1; // Is one bit. Don't need htons
 	// We have 1 question
@@ -182,20 +174,26 @@ static int build_global_dns_packet(const char* domain)
 	memcpy(qname_p, qname, qname_len);
 	// Set the qtype to what we passed from args
 	tail_p->qtype = htons(qtype);
-	// Set the qclass to The Internet (TM) (R) (I hope you're happy now Zakir)
-	tail_p->qclass = htons(0x01); // MAGIC NUMBER. Let's be honest. This is only ever 1
+	// Set the qclass to The Internet (TM) (R) (I hope you're happy now
+	// Zakir)
+	tail_p->qclass =
+	    htons(0x01); // MAGIC NUMBER. Let's be honest. This is only ever 1
 	return EXIT_SUCCESS;
 }
 
-static uint16_t get_name_helper(const char* data, uint16_t data_len,
-		const char* payload, uint16_t payload_len, char* name,
-		uint16_t name_len, uint16_t recursion_level)
+static uint16_t get_name_helper(const char *data, uint16_t data_len,
+				const char *payload, uint16_t payload_len,
+				char *name, uint16_t name_len,
+				uint16_t recursion_level)
 {
-	log_trace("dns", "_get_name_helper IN, datalen: %d namelen: %d recusion: %d",
-			data_len, name_len, recursion_level);
+	log_trace("dns",
+		  "_get_name_helper IN, datalen: %d namelen: %d recusion: %d",
+		  data_len, name_len, recursion_level);
 	if (data_len == 0 || name_len == 0 || payload_len == 0) {
-		log_trace("dns", "_get_name_helper OUT, err. 0 length field. datalen %d namelen %d payloadlen %d",
-				data_len, name_len, payload_len);
+		log_trace("dns",
+			  "_get_name_helper OUT, err. 0 length field. datalen "
+			  "%d namelen %d payloadlen %d",
+			  data_len, name_len, payload_len);
 		return 0;
 	}
 	if (recursion_level > MAX_LABEL_RECURSION) {
@@ -204,23 +202,30 @@ static uint16_t get_name_helper(const char* data, uint16_t data_len,
 	}
 	uint16_t bytes_consumed = 0;
 	// The start of data is either a sequence of labels or a ptr.
-	while(data_len > 0) {
+	while (data_len > 0) {
 		uint8_t byte = data[0];
 		// Is this a pointer?
 		if (byte >= 0xc0) {
 			log_trace("dns", "_get_name_helper, ptr encountered");
 			// Do we have enough bytes to check ahead?
 			if (data_len < 2) {
-				log_trace("dns", "_get_name_helper OUT. ptr byte encountered. No offset. ERR.");
+				log_trace(
+				    "dns",
+				    "_get_name_helper OUT. ptr byte encountered. "
+				    "No offset. ERR.");
 				return 0;
 			}
 			// No. ntohs isn't needed here. It's because of
 			// the upper 2 bits indicating a pointer.
-			uint16_t offset = ((byte & 0x03) << 8) | (uint8_t)data[1];
-			log_trace("dns", "_get_name_helper. ptr offset 0x%x", offset);
+			uint16_t offset =
+			    ((byte & 0x03) << 8) | (uint8_t)data[1];
+			log_trace("dns", "_get_name_helper. ptr offset 0x%x",
+				  offset);
 			if (offset >= payload_len) {
-				log_trace("dns", "_get_name_helper OUT. offset exceeded payload len %d ERR",
-						payload_len);
+				log_trace(
+				    "dns",
+				    "_get_name_helper OUT. offset exceeded payload len %d ERR",
+				    payload_len);
 				return 0;
 			}
 
@@ -230,7 +235,9 @@ static uint16_t get_name_helper(const char* data, uint16_t data_len,
 			if (recursion_level > 0 || bytes_consumed > 0) {
 
 				if (name_len < 1) {
-					log_warn("dns", "Exceeded static name field allocation.");
+					log_warn(
+					    "dns",
+					    "Exceeded static name field allocation.");
 					return 0;
 				}
 
@@ -238,44 +245,63 @@ static uint16_t get_name_helper(const char* data, uint16_t data_len,
 				name++;
 				name_len--;
 			}
-			uint16_t rec_bytes_consumed = get_name_helper(payload + offset,
-					payload_len - offset, payload, payload_len, name, name_len,
-					recursion_level + 1);
-			// We are done so don't bother to increment the pointers.
+			uint16_t rec_bytes_consumed = get_name_helper(
+			    payload + offset, payload_len - offset, payload,
+			    payload_len, name, name_len, recursion_level + 1);
+			// We are done so don't bother to increment the
+			// pointers.
 			if (rec_bytes_consumed == 0) {
-				log_trace("dns", "_get_name_helper OUT. rec level %d failed",
-						recursion_level);
+				log_trace(
+				    "dns",
+				    "_get_name_helper OUT. rec level %d failed",
+				    recursion_level);
 				return 0;
 			} else {
 				bytes_consumed += 2;
-				log_trace("dns", "_get_name_helper OUT. rec level %d success. %d rec bytes consumed. %d bytes consumed.",
-						recursion_level, rec_bytes_consumed, bytes_consumed);
+				log_trace(
+				    "dns",
+				    "_get_name_helper OUT. rec level %d success. "
+				    "%d rec bytes consumed. %d bytes consumed.",
+				    recursion_level, rec_bytes_consumed,
+				    bytes_consumed);
 				return bytes_consumed;
 			}
 		} else if (byte == '\0') {
 			// don't bother with pointer incrementation. We're done.
 			bytes_consumed += 1;
-			log_trace("dns", "_get_name_helper OUT. rec level %d success. %d bytes consumed.",
-					recursion_level, bytes_consumed);
+			log_trace(
+			    "dns",
+			    "_get_name_helper OUT. rec level %d success. %d "
+			    "bytes consumed.",
+			    recursion_level, bytes_consumed);
 			return bytes_consumed;
 		} else {
-			log_trace("dns", "_get_name_helper, segment 0x%hx encountered",
-					byte);
+			log_trace("dns",
+				  "_get_name_helper, segment 0x%hx encountered",
+				  byte);
 			// We've now consumed a byte.
 			++data;
 			--data_len;
-			// Mark byte consumed after we check for first iteration.
-			// Do we have enough data left (must have null byte too)?
-			if ((byte+1) > data_len) {
-				log_trace("dns", "_get_name_helper OUT. ERR. Not enough data for segment %hd");
+			// Mark byte consumed after we check for first
+			// iteration.
+			// Do we have enough data left (must have null byte
+			// too)?
+			if ((byte + 1) > data_len) {
+				log_trace(
+				    "dns",
+				    "_get_name_helper OUT. ERR. Not enough data "
+				    "for segment %hd");
 				return 0;
 			}
-			// If we've consumed any bytes and are in a label, we're in a
+			// If we've consumed any bytes and are in a label, we're
+			// in a
 			// label chain. We need to add a dot.
 			if (bytes_consumed > 0) {
 
 				if (name_len < 1) {
-					log_warn("dns", "Exceeded static name field allocation.");
+					log_warn(
+					    "dns",
+					    "Exceeded static name field allocation.");
 					return 0;
 				}
 
@@ -287,7 +313,9 @@ static uint16_t get_name_helper(const char* data, uint16_t data_len,
 			++bytes_consumed;
 			// Did we run out of our arbitrary buffer?
 			if (byte > name_len) {
-				log_warn("dns", "Exceeded static name field allocation.");
+				log_warn(
+				    "dns",
+				    "Exceeded static name field allocation.");
 				return 0;
 			}
 
@@ -306,51 +334,56 @@ static uint16_t get_name_helper(const char* data, uint16_t data_len,
 	// For each byte we either have:
 	// -- a ptr, which terminates
 	// -- a null byte, which terminates
-	// -- a segment length which either terminates or ensures we keep looping
+	// -- a segment length which either terminates or ensures we keep
+	// looping
 	assert(0);
 	return 0;
 }
 
 // data: Where we are in the dns payload
 // payload: the entire udp payload
-static char* get_name(const char* data, uint16_t data_len, const char* payload,
-		uint16_t payload_len, uint16_t* bytes_consumed)
+static char *get_name(const char *data, uint16_t data_len, const char *payload,
+		      uint16_t payload_len, uint16_t *bytes_consumed)
 {
 	log_trace("dns", "call to get_name, data_len: %d", data_len);
-	char* name = xmalloc(MAX_NAME_LENGTH);
-	*bytes_consumed = get_name_helper(data, data_len, payload,
-			payload_len, name, MAX_NAME_LENGTH - 1, 0);
+	char *name = xmalloc(MAX_NAME_LENGTH);
+	*bytes_consumed = get_name_helper(data, data_len, payload, payload_len,
+					  name, MAX_NAME_LENGTH - 1, 0);
 	if (*bytes_consumed == 0) {
 		free(name);
 		return NULL;
 	}
 	// Our memset ensured null byte.
 	assert(name[MAX_NAME_LENGTH - 1] == '\0');
-	log_trace("dns", "return success from get_name, bytes_consumed: %d, string: %s",
-			*bytes_consumed, name);
+	log_trace(
+	    "dns",
+	    "return success from get_name, bytes_consumed: %d, string: %s",
+	    *bytes_consumed, name);
 	return name;
 }
 
-static bool process_response_question(char **data, uint16_t* data_len,
-		const char* payload, uint16_t payload_len, fieldset_t* list)
+static bool process_response_question(char **data, uint16_t *data_len,
+				      const char *payload, uint16_t payload_len,
+				      fieldset_t *list)
 {
 	// Payload is the start of the DNS packet, including header
 	// data is handle to the start of this RR
-	// data_len is a pointer to the how much total data we have to work with.
+	// data_len is a pointer to the how much total data we have to work
+	// with.
 	// This is awful. I'm bad and should feel bad.
 	uint16_t bytes_consumed = 0;
-	char* question_name = get_name(*data, *data_len, payload, payload_len,
-			&bytes_consumed);
+	char *question_name =
+	    get_name(*data, *data_len, payload, payload_len, &bytes_consumed);
 	// Error.
 	if (question_name == NULL) {
 		return 1;
 	}
 	assert(bytes_consumed > 0);
-	if ( (bytes_consumed + sizeof(dns_question_tail)) > *data_len) {
+	if ((bytes_consumed + sizeof(dns_question_tail)) > *data_len) {
 		free(question_name);
 		return 1;
 	}
-	dns_question_tail* tail = (dns_question_tail*)(*data + bytes_consumed);
+	dns_question_tail *tail = (dns_question_tail *)(*data + bytes_consumed);
 	uint16_t qtype = ntohs(tail->qtype);
 	uint16_t qclass = ntohs(tail->qclass);
 	// Build our new question fieldset
@@ -358,11 +391,13 @@ static bool process_response_question(char **data, uint16_t* data_len,
 	fs_add_unsafe_string(qfs, "name", question_name, 1);
 	fs_add_uint64(qfs, "qtype", qtype);
 	if (qtype > MAX_QTYPE || qtype_qtype_to_strid[qtype] == BAD_QTYPE_VAL) {
-		fs_add_string(qfs, "qtype_str", (char*) BAD_QTYPE_STR, 0);
+		fs_add_string(qfs, "qtype_str", (char *)BAD_QTYPE_STR, 0);
 	} else {
-		// I've written worse things than this 3rd arg. But I want to be fast.
+		// I've written worse things than this 3rd arg. But I want to be
+		// fast.
 		fs_add_string(qfs, "qtype_str",
-				(char*)qtype_strs[qtype_qtype_to_strid[qtype]], 0);
+			      (char *)qtype_strs[qtype_qtype_to_strid[qtype]],
+			      0);
 	}
 	fs_add_uint64(qfs, "qclass", qclass);
 	// Now we're adding the new fs to the list.
@@ -373,32 +408,35 @@ static bool process_response_question(char **data, uint16_t* data_len,
 	return 0;
 }
 
-static bool process_response_answer(char **data, uint16_t* data_len,
-		const char* payload, uint16_t payload_len, fieldset_t* list)
+static bool process_response_answer(char **data, uint16_t *data_len,
+				    const char *payload, uint16_t payload_len,
+				    fieldset_t *list)
 {
-	log_trace("dns", "call to process_response_answer, data_len: %d", *data_len);
+	log_trace("dns", "call to process_response_answer, data_len: %d",
+		  *data_len);
 	// Payload is the start of the DNS packet, including header
 	// data is handle to the start of this RR
-	// data_len is a pointer to the how much total data we have to work with.
+	// data_len is a pointer to the how much total data we have to work
+	// with.
 	// This is awful. I'm bad and should feel bad.
 	uint16_t bytes_consumed = 0;
-	char* answer_name = get_name(*data, *data_len, payload, payload_len,
-			&bytes_consumed);
+	char *answer_name =
+	    get_name(*data, *data_len, payload, payload_len, &bytes_consumed);
 	// Error.
 	if (answer_name == NULL) {
 		return 1;
 	}
 	assert(bytes_consumed > 0);
-	if ( (bytes_consumed + sizeof(dns_answer_tail)) > *data_len) {
+	if ((bytes_consumed + sizeof(dns_answer_tail)) > *data_len) {
 		free(answer_name);
 		return 1;
 	}
-	dns_answer_tail* tail = (dns_answer_tail*)(*data + bytes_consumed);
+	dns_answer_tail *tail = (dns_answer_tail *)(*data + bytes_consumed);
 	uint16_t type = ntohs(tail->type);
 	uint16_t class = ntohs(tail->class);
 	uint32_t ttl = ntohl(tail->ttl);
 	uint16_t rdlength = ntohs(tail->rdlength);
-	char* rdata = tail->rdata;
+	char *rdata = tail->rdata;
 
 	if ((rdlength + bytes_consumed + sizeof(dns_answer_tail)) > *data_len) {
 		free(answer_name);
@@ -409,11 +447,13 @@ static bool process_response_answer(char **data, uint16_t* data_len,
 	fs_add_unsafe_string(afs, "name", answer_name, 1);
 	fs_add_uint64(afs, "type", type);
 	if (type > MAX_QTYPE || qtype_qtype_to_strid[type] == BAD_QTYPE_VAL) {
-		fs_add_string(afs, "type_str", (char*) BAD_QTYPE_STR, 0);
+		fs_add_string(afs, "type_str", (char *)BAD_QTYPE_STR, 0);
 	} else {
-		// I've written worse things than this 3rd arg. But I want to be fast.
+		// I've written worse things than this 3rd arg. But I want to be
+		// fast.
 		fs_add_string(afs, "type_str",
-				(char*)qtype_strs[qtype_qtype_to_strid[type]], 0);
+			      (char *)qtype_strs[qtype_qtype_to_strid[type]],
+			      0);
 	}
 	fs_add_uint64(afs, "class", class);
 	fs_add_uint64(afs, "ttl", ttl);
@@ -422,8 +462,8 @@ static bool process_response_answer(char **data, uint16_t* data_len,
 	// XXX Fill this out for the other types we care about.
 	if (type == DNS_QTYPE_NS || type == DNS_QTYPE_CNAME) {
 		uint16_t rdata_bytes_consumed = 0;
-		char* rdata_name = get_name(rdata, rdlength, payload, payload_len,
-				&rdata_bytes_consumed);
+		char *rdata_name = get_name(rdata, rdlength, payload,
+					    payload_len, &rdata_bytes_consumed);
 		if (rdata_name == NULL) {
 			fs_add_uint64(afs, "rdata_is_parsed", 0);
 			fs_add_binary(afs, "rdata", rdlength, rdata, 0);
@@ -431,63 +471,74 @@ static bool process_response_answer(char **data, uint16_t* data_len,
 			fs_add_uint64(afs, "rdata_is_parsed", 1);
 			fs_add_unsafe_string(afs, "rdata", rdata_name, 1);
 		}
-	 } else if (type == DNS_QTYPE_MX) {
+	} else if (type == DNS_QTYPE_MX) {
 		uint16_t rdata_bytes_consumed = 0;
 		if (rdlength <= 4) {
 			fs_add_uint64(afs, "rdata_is_parsed", 0);
 			fs_add_binary(afs, "rdata", rdlength, rdata, 0);
 		} else {
-			char* rdata_name = get_name(rdata + 2, rdlength-2, payload,
-					payload_len, &rdata_bytes_consumed);
+			char *rdata_name =
+			    get_name(rdata + 2, rdlength - 2, payload,
+				     payload_len, &rdata_bytes_consumed);
 			if (rdata_name == NULL) {
 				fs_add_uint64(afs, "rdata_is_parsed", 0);
 				fs_add_binary(afs, "rdata", rdlength, rdata, 0);
 			} else {
 				// (largest value 16bit) + " " + answer + null
-				char* rdata_with_pref = xmalloc(5 + 1 + strlen(rdata_name) + 1);
+				char *rdata_with_pref =
+				    xmalloc(5 + 1 + strlen(rdata_name) + 1);
 
-				uint8_t num_printed = snprintf(rdata_with_pref, 6, "%hu ",
-						ntohs( *(uint16_t*)rdata));
-				memcpy(rdata_with_pref + num_printed, rdata_name,
-						strlen(rdata_name));
+				uint8_t num_printed =
+				    snprintf(rdata_with_pref, 6, "%hu ",
+					     ntohs(*(uint16_t *)rdata));
+				memcpy(rdata_with_pref + num_printed,
+				       rdata_name, strlen(rdata_name));
 				fs_add_uint64(afs, "rdata_is_parsed", 1);
-				fs_add_unsafe_string(afs, "rdata", rdata_with_pref, 1);
+				fs_add_unsafe_string(afs, "rdata",
+						     rdata_with_pref, 1);
 			}
 		}
 	} else if (type == DNS_QTYPE_TXT) {
-		if (rdlength >= 1 && (rdlength - 1) != *(uint8_t*)rdata ) {
-			log_warn("dns", "TXT record with wrong TXT len. Not processing.");
+		if (rdlength >= 1 && (rdlength - 1) != *(uint8_t *)rdata) {
+			log_warn(
+			    "dns",
+			    "TXT record with wrong TXT len. Not processing.");
 			fs_add_uint64(afs, "rdata_is_parsed", 0);
 			fs_add_binary(afs, "rdata", rdlength, rdata, 0);
 		} else {
 			fs_add_uint64(afs, "rdata_is_parsed", 1);
-			char* txt = xmalloc(rdlength);
-			memcpy(txt, rdata + 1, rdlength-1);
+			char *txt = xmalloc(rdlength);
+			memcpy(txt, rdata + 1, rdlength - 1);
 			fs_add_unsafe_string(afs, "rdata", txt, 1);
 		}
 	} else if (type == DNS_QTYPE_A) {
 		if (rdlength != 4) {
-			log_warn("dns", "A record with IP of length %d. Not processing.",
-					rdlength);
+			log_warn(
+			    "dns",
+			    "A record with IP of length %d. Not processing.",
+			    rdlength);
 			fs_add_uint64(afs, "rdata_is_parsed", 0);
 			fs_add_binary(afs, "rdata", rdlength, rdata, 0);
 		} else {
 			fs_add_uint64(afs, "rdata_is_parsed", 1);
-			char* addr = strdup(inet_ntoa( *(struct in_addr*)rdata ));
+			char *addr =
+			    strdup(inet_ntoa(*(struct in_addr *)rdata));
 			fs_add_unsafe_string(afs, "rdata", addr, 1);
 		}
 	} else if (type == DNS_QTYPE_AAAA) {
 		if (rdlength != 16) {
-			log_warn("dns", "AAAA record with IP of length %d. Not processing.",
-					rdlength);
+			log_warn(
+			    "dns",
+			    "AAAA record with IP of length %d. Not processing.",
+			    rdlength);
 			fs_add_uint64(afs, "rdata_is_parsed", 0);
 			fs_add_binary(afs, "rdata", rdlength, rdata, 0);
 		} else {
 			fs_add_uint64(afs, "rdata_is_parsed", 1);
-			char* ipv6_str = xmalloc(INET6_ADDRSTRLEN);
+			char *ipv6_str = xmalloc(INET6_ADDRSTRLEN);
 
-			inet_ntop(AF_INET6, (struct sockaddr_in6*)rdata,
-					ipv6_str,INET6_ADDRSTRLEN);
+			inet_ntop(AF_INET6, (struct sockaddr_in6 *)rdata,
+				  ipv6_str, INET6_ADDRSTRLEN);
 
 			fs_add_unsafe_string(afs, "rdata", ipv6_str, 1);
 		}
@@ -499,9 +550,11 @@ static bool process_response_answer(char **data, uint16_t* data_len,
 	fs_add_fieldset(list, NULL, afs);
 	// Now update the pointers.
 	*data = *data + bytes_consumed + sizeof(dns_answer_tail) + rdlength;
-	*data_len = *data_len - bytes_consumed - sizeof(dns_answer_tail) - rdlength;
-	log_trace("dns", "return success from process_response_answer, data_len: %d",
-			*data_len);
+	*data_len =
+	    *data_len - bytes_consumed - sizeof(dns_answer_tail) - rdlength;
+	log_trace("dns",
+		  "return success from process_response_answer, data_len: %d",
+		  *data_len);
 	return 0;
 }
 
@@ -519,23 +572,28 @@ static int dns_global_initialize(struct state_conf *conf)
 	setup_qtype_str_map();
 	// Want to add support for multiple questions? Start here.
 	if (!conf->probe_args) { // no parameters passed in. Use defaults
-		domain = (char*) default_domain;
+		domain = (char *)default_domain;
 		qtype = default_qtype;
 	} else {
 		char *probe_arg_delimiter_p = strchr(conf->probe_args, ',');
 		if (probe_arg_delimiter_p == NULL ||
-				probe_arg_delimiter_p == conf->probe_args ||
-				conf->probe_args + strlen(conf->probe_args) == probe_arg_delimiter_p + 1) {
-			log_fatal("dns", "Invalid probe args. Format: \"A,google.com\"");
+		    probe_arg_delimiter_p == conf->probe_args ||
+		    conf->probe_args + strlen(conf->probe_args) ==
+			probe_arg_delimiter_p + 1) {
+			log_fatal(
+			    "dns",
+			    "Invalid probe args. Format: \"A,google.com\"");
 		}
 		domain = probe_arg_delimiter_p + 1;
-		qtype_str = xmalloc(probe_arg_delimiter_p - conf->probe_args + 1);
+		qtype_str =
+		    xmalloc(probe_arg_delimiter_p - conf->probe_args + 1);
 		strncpy(qtype_str, conf->probe_args,
-				probe_arg_delimiter_p - conf->probe_args);
+			probe_arg_delimiter_p - conf->probe_args);
 		qtype_str[probe_arg_delimiter_p - conf->probe_args] = '\0';
 		qtype = qtype_str_to_code(qtype_str);
 		if (!qtype) {
-			log_fatal("dns", "Incorrect qtype supplied. %s", qtype_str);
+			log_fatal("dns", "Incorrect qtype supplied. %s",
+				  qtype_str);
 			return EXIT_FAILURE;
 		}
 	}
@@ -544,7 +602,8 @@ static int dns_global_initialize(struct state_conf *conf)
 }
 
 static int dns_global_cleanup(UNUSED struct state_conf *zconf,
-		UNUSED struct state_send *zsend, UNUSED struct state_recv *zrecv)
+			      UNUSED struct state_send *zsend,
+			      UNUSED struct state_recv *zrecv)
 {
 	if (dns_packet) {
 		free(dns_packet);
@@ -557,26 +616,26 @@ static int dns_global_cleanup(UNUSED struct state_conf *zconf,
 	return EXIT_SUCCESS;
 }
 
-int dns_init_perthread(void* buf, macaddr_t *src,
-		macaddr_t *gw, UNUSED port_h_t dst_port,
-		UNUSED void **arg_ptr)
+int dns_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
+		       UNUSED port_h_t dst_port, UNUSED void **arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
-	struct ether_header *eth_header = (struct ether_header *) buf;
+	struct ether_header *eth_header = (struct ether_header *)buf;
 	make_eth_header(eth_header, src, gw);
 
-	struct ip *ip_header = (struct ip*)(&eth_header[1]);
-	uint16_t len = htons(sizeof(struct ip) + sizeof(struct udphdr) +
-		dns_packet_len);
+	struct ip *ip_header = (struct ip *)(&eth_header[1]);
+	uint16_t len =
+	    htons(sizeof(struct ip) + sizeof(struct udphdr) + dns_packet_len);
 	make_ip_header(ip_header, IPPROTO_UDP, len);
 
-	struct udphdr *udp_header = (struct udphdr*)(&ip_header[1]);
+	struct udphdr *udp_header = (struct udphdr *)(&ip_header[1]);
 	len = sizeof(struct udphdr) + dns_packet_len;
 	make_udp_header(udp_header, zconf.target_port, len);
 
-	char* payload = (char*)(&udp_header[1]);
-	module_dns.packet_length = sizeof(struct ether_header) + sizeof(struct ip)
-				+ sizeof(struct udphdr) + dns_packet_len;
+	char *payload = (char *)(&udp_header[1]);
+	module_dns.packet_length = sizeof(struct ether_header) +
+				   sizeof(struct ip) + sizeof(struct udphdr) +
+				   dns_packet_len;
 	assert(module_dns.packet_length <= MAX_PACKET_SIZE);
 
 	memcpy(payload, dns_packet, dns_packet_len);
@@ -585,43 +644,42 @@ int dns_init_perthread(void* buf, macaddr_t *src,
 }
 
 int dns_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
-		uint32_t *validation, int probe_num, UNUSED void *arg)
+		    uint32_t *validation, int probe_num, UNUSED void *arg)
 {
-	struct ether_header *eth_header = (struct ether_header *) buf;
-	struct ip *ip_header = (struct ip*) (&eth_header[1]);
-	struct udphdr *udp_header= (struct udphdr *) &ip_header[1];
+	struct ether_header *eth_header = (struct ether_header *)buf;
+	struct ip *ip_header = (struct ip *)(&eth_header[1]);
+	struct udphdr *udp_header = (struct udphdr *)&ip_header[1];
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
-	udp_header->uh_sport = htons(get_src_port(num_ports, probe_num,
-					 validation));
+	udp_header->uh_sport =
+	    htons(get_src_port(num_ports, probe_num, validation));
 
-	dns_header* dns_header_p = (dns_header*) &udp_header[1];
+	dns_header *dns_header_p = (dns_header *)&udp_header[1];
 	dns_header_p->id = validation[2] & 0xFFFF;
 
 	ip_header->ip_sum = 0;
-	ip_header->ip_sum = zmap_ip_checksum((unsigned short *) ip_header);
+	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
 
 	return EXIT_SUCCESS;
 }
 
-void dns_print_packet(FILE *fp, void* packet)
+void dns_print_packet(FILE *fp, void *packet)
 {
-	struct ether_header *ethh = (struct ether_header *) packet;
-	struct ip *iph = (struct ip *) &ethh[1];
-	struct udphdr *udph  = (struct udphdr*) (iph + 4*iph->ip_hl);
+	struct ether_header *ethh = (struct ether_header *)packet;
+	struct ip *iph = (struct ip *)&ethh[1];
+	struct udphdr *udph = (struct udphdr *)(iph + 4 * iph->ip_hl);
 	fprintf(fp, "------------------------------------------------------\n");
 	fprintf(fp, "dns { source: %u | dest: %u | checksum: %#04X }\n",
-		ntohs(udph->uh_sport),
-		ntohs(udph->uh_dport),
+		ntohs(udph->uh_sport), ntohs(udph->uh_dport),
 		ntohs(udph->uh_sum));
 	fprintf_ip_header(fp, iph);
 	fprintf_eth_header(fp, ethh);
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
-int dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
-		uint32_t *src_ip, uint32_t *validation)
+int dns_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
+			uint32_t *validation)
 {
 	// This does the heavy lifting.
 	if (!udp_validate_packet(ip_hdr, len, src_ip, validation)) {
@@ -633,29 +691,33 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	// This entire if..elif..else block is getting at the udp body
 	struct udphdr *udp = NULL;
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
-		udp = (struct udphdr *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
+		udp = (struct udphdr *)((char *)ip_hdr + ip_hdr->ip_hl * 4);
 		sport = ntohs(udp->uh_sport);
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		// UDP can return ICMP Destination unreach
 		// IP( ICMP( IP( UDP ) ) ) for a destination unreach
-		uint32_t min_len = 4*ip_hdr->ip_hl + ICMP_UNREACH_HEADER_SIZE
-				+ sizeof(struct ip) + sizeof(struct udphdr);
+		uint32_t min_len = 4 * ip_hdr->ip_hl +
+				   ICMP_UNREACH_HEADER_SIZE +
+				   sizeof(struct ip) + sizeof(struct udphdr);
 		if (len < min_len) {
 			// Not enough information for us to validate
 			return 0;
 		}
-		struct icmp *icmp = (struct icmp*) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
-		struct ip *ip_inner = (struct ip*) ((char *) icmp +
-				ICMP_UNREACH_HEADER_SIZE);
-		// Now we know the actual inner ip length, we should recheck the buffer
-		if (len < 4*ip_inner->ip_hl - sizeof(struct ip) + min_len) {
+		struct icmp *icmp =
+		    (struct icmp *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
+		struct ip *ip_inner =
+		    (struct ip *)((char *)icmp + ICMP_UNREACH_HEADER_SIZE);
+		// Now we know the actual inner ip length, we should recheck the
+		// buffer
+		if (len < 4 * ip_inner->ip_hl - sizeof(struct ip) + min_len) {
 			return 0;
 		}
 		// This is the packet we sent
-		udp = (struct udphdr *) ((char*) ip_inner + 4*ip_inner->ip_hl);
+		udp = (struct udphdr *)((char *)ip_inner + 4 * ip_inner->ip_hl);
 		sport = ntohs(udp->uh_dport);
 	} else {
-		// We should never get here unless udp_validate_packet() has changed.
+		// We should never get here unless udp_validate_packet() has
+		// changed.
 		assert(0);
 		return 0;
 	}
@@ -677,34 +739,35 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
 }
 
 void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
-		uint32_t *validation)
+			uint32_t *validation)
 {
-	struct ip *ip_hdr = (struct ip *) &packet[sizeof(struct ether_header)];
+	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
-		struct udphdr *udp_hdr = (struct udphdr *) ((char *) ip_hdr +
-				ip_hdr->ip_hl * 4);
+		struct udphdr *udp_hdr =
+		    (struct udphdr *)((char *)ip_hdr + ip_hdr->ip_hl * 4);
 		uint16_t udp_len = ntohs(udp_hdr->uh_ulen);
 		assert(udp_len >= dns_packet_len);
-		char* qname_p = NULL;
-		dns_question_tail* tail_p = NULL;
+		char *qname_p = NULL;
+		dns_question_tail *tail_p = NULL;
 		bool is_valid = 0;
-		dns_header* dns_header_p = (dns_header*) &udp_hdr[1];
+		dns_header *dns_header_p = (dns_header *)&udp_hdr[1];
 		// verify our dns transaction id
 		if (dns_header_p->id == (validation[2] & 0xFFFF)) {
 			// Verify our question
-			qname_p = (char*) dns_header_p + sizeof(dns_header);
-			tail_p = (dns_question_tail*)(dns_packet + sizeof(dns_header) +
-					qname_len);
+			qname_p = (char *)dns_header_p + sizeof(dns_header);
+			tail_p = (dns_question_tail *)(dns_packet +
+						       sizeof(dns_header) +
+						       qname_len);
 			// Verify our qname
 			if (strcmp(qname, qname_p) == 0) {
 				// Verify the qtype and qclass.
-				if (tail_p->qtype == htons(qtype) && tail_p->qclass \
-						== htons(0x01)) {
+				if (tail_p->qtype == htons(qtype) &&
+				    tail_p->qclass == htons(0x01)) {
 					is_valid = 1;
 				}
 			}
 		}
-		dns_header* dns_hdr = (dns_header*) &udp_hdr[1];
+		dns_header *dns_hdr = (dns_header *)&udp_hdr[1];
 		uint16_t qr = dns_hdr->qr;
 		uint16_t rcode = dns_hdr->rcode;
 		// Success: Has the right validation bits and the right Q
@@ -712,10 +775,11 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		// Any app level parsing issues: dns_parse_err
 
 		// High level info
-		fs_add_string(fs, "classification", (char*) "dns", 0);
+		fs_add_string(fs, "classification", (char *)"dns", 0);
 		fs_add_bool(fs, "success", is_valid);
-		fs_add_bool(fs, "app_success",
-				is_valid && (qr == DNS_QR_ANSWER) && (rcode == DNS_RCODE_NOERR));
+		fs_add_bool(fs, "app_success", is_valid &&
+						   (qr == DNS_QR_ANSWER) &&
+						   (rcode == DNS_RCODE_NOERR));
 		// UDP info
 		fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
 		fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
@@ -725,7 +789,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
-	        // DNS data
+		// DNS data
 		if (!is_valid) {
 			// DNS header
 			fs_add_null(fs, "dns_id");
@@ -744,10 +808,14 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 			fs_add_null(fs, "dns_nscount");
 			fs_add_null(fs, "dns_arcount");
 
-			fs_add_repeated(fs, "dns_questions", fs_new_repeated_fieldset());
-			fs_add_repeated(fs, "dns_answers", fs_new_repeated_fieldset());
-			fs_add_repeated(fs, "dns_authorities", fs_new_repeated_fieldset());
-			fs_add_repeated(fs, "dns_additionals", fs_new_repeated_fieldset());
+			fs_add_repeated(fs, "dns_questions",
+					fs_new_repeated_fieldset());
+			fs_add_repeated(fs, "dns_answers",
+					fs_new_repeated_fieldset());
+			fs_add_repeated(fs, "dns_authorities",
+					fs_new_repeated_fieldset());
+			fs_add_repeated(fs, "dns_additionals",
+					fs_new_repeated_fieldset());
 
 			fs_add_uint64(fs, "dns_unconsumed_bytes", 0);
 			fs_add_uint64(fs, "dns_parse_err", 1);
@@ -764,40 +832,53 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 			fs_add_uint64(fs, "dns_ad", dns_hdr->ad);
 			fs_add_uint64(fs, "dns_z", dns_hdr->z);
 			fs_add_uint64(fs, "dns_ra", dns_hdr->ra);
-			fs_add_uint64(fs, "dns_qdcount", ntohs(dns_hdr->qdcount));
-			fs_add_uint64(fs, "dns_ancount", ntohs(dns_hdr->ancount));
-			fs_add_uint64(fs, "dns_nscount", ntohs(dns_hdr->nscount));
-			fs_add_uint64(fs, "dns_arcount", ntohs(dns_hdr->arcount));
+			fs_add_uint64(fs, "dns_qdcount",
+				      ntohs(dns_hdr->qdcount));
+			fs_add_uint64(fs, "dns_ancount",
+				      ntohs(dns_hdr->ancount));
+			fs_add_uint64(fs, "dns_nscount",
+				      ntohs(dns_hdr->nscount));
+			fs_add_uint64(fs, "dns_arcount",
+				      ntohs(dns_hdr->arcount));
 			// And now for the complicated part. Hierarchical data.
-			char* data = ((char*)dns_hdr) + sizeof(dns_header);
-			uint16_t data_len = udp_len - sizeof(udp_hdr) - sizeof(dns_header);
+			char *data = ((char *)dns_hdr) + sizeof(dns_header);
+			uint16_t data_len =
+			    udp_len - sizeof(udp_hdr) - sizeof(dns_header);
 			bool err = 0;
 			// Questions
 			fieldset_t *list = fs_new_repeated_fieldset();
-			for (int i = 0; i < ntohs(dns_hdr->qdcount) && !err; i++) {
-				err = process_response_question(&data, &data_len, (char*)dns_hdr,
-							udp_len, list);
+			for (int i = 0; i < ntohs(dns_hdr->qdcount) && !err;
+			     i++) {
+				err = process_response_question(
+				    &data, &data_len, (char *)dns_hdr, udp_len,
+				    list);
 			}
 			fs_add_repeated(fs, "dns_questions", list);
 			// Answers
 			list = fs_new_repeated_fieldset();
-			for (int i = 0; i < ntohs(dns_hdr->ancount) && !err; i++) {
-				err = process_response_answer(&data, &data_len, (char*)dns_hdr,
-						 udp_len, list);
+			for (int i = 0; i < ntohs(dns_hdr->ancount) && !err;
+			     i++) {
+				err = process_response_answer(&data, &data_len,
+							      (char *)dns_hdr,
+							      udp_len, list);
 			}
 			fs_add_repeated(fs, "dns_answers", list);
 			// Authorities
 			list = fs_new_repeated_fieldset();
-			for (int i = 0; i < ntohs(dns_hdr->nscount) && !err; i++) {
-				err = process_response_answer(&data, &data_len, (char*)dns_hdr,
-						udp_len, list);
+			for (int i = 0; i < ntohs(dns_hdr->nscount) && !err;
+			     i++) {
+				err = process_response_answer(&data, &data_len,
+							      (char *)dns_hdr,
+							      udp_len, list);
 			}
 			fs_add_repeated(fs, "dns_authorities", list);
 			// Additionals
 			list = fs_new_repeated_fieldset();
-			for (int i = 0; i < ntohs(dns_hdr->arcount) && !err; i++) {
-				err = process_response_answer(&data, &data_len, (char*)dns_hdr,
-						udp_len, list);
+			for (int i = 0; i < ntohs(dns_hdr->arcount) && !err;
+			     i++) {
+				err = process_response_answer(&data, &data_len,
+							      (char *)dns_hdr,
+							      udp_len, list);
 			}
 			fs_add_repeated(fs, "dns_additionals", list);
 			// Do we have unconsumed data?
@@ -810,19 +891,20 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		}
 		// Now the raw stuff.
 		fs_add_binary(fs, "raw_data", (udp_len - sizeof(struct udphdr)),
-				(void*) &udp_hdr[1], 0);
+			      (void *)&udp_hdr[1], 0);
 		return;
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
-		struct icmp *icmp = (struct icmp*) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
-		struct ip *ip_inner = (struct ip*) ((char *) icmp +
-				ICMP_UNREACH_HEADER_SIZE);
+		struct icmp *icmp =
+		    (struct icmp *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
+		struct ip *ip_inner =
+		    (struct ip *)((char *)icmp + ICMP_UNREACH_HEADER_SIZE);
 
 		// This is the packet we sent
-		struct udphdr *udp_hdr = (struct udphdr *) ((char*) ip_inner +
-				4*ip_inner->ip_hl);
+		struct udphdr *udp_hdr =
+		    (struct udphdr *)((char *)ip_inner + 4 * ip_inner->ip_hl);
 		uint16_t udp_len = ntohs(udp_hdr->uh_ulen);
 		// High level info
-		fs_add_string(fs, "classification", (char*) "icmp-unreach", 0);
+		fs_add_string(fs, "classification", (char *)"icmp-unreach", 0);
 		fs_add_bool(fs, "success", 0);
 		fs_add_bool(fs, "app_success", 0);
 		// UDP info
@@ -831,14 +913,17 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		fs_add_uint64(fs, "udp_len", udp_len);
 		// ICMP info
 		// XXX This is legacy. not well tested.
-		fs_add_string(fs, "icmp_responder", make_ip_str(ip_hdr->ip_src.s_addr), 1);
+		fs_add_string(fs, "icmp_responder",
+			      make_ip_str(ip_hdr->ip_src.s_addr), 1);
 		fs_add_uint64(fs, "icmp_type", icmp->icmp_type);
 		fs_add_uint64(fs, "icmp_code", icmp->icmp_code);
 		if (icmp->icmp_code <= ICMP_UNREACH_PRECEDENCE_CUTOFF) {
-			fs_add_string(fs, "icmp_unreach_str",
-				(char *) udp_unreach_strings[icmp->icmp_code], 0);
+			fs_add_string(
+			    fs, "icmp_unreach_str",
+			    (char *)udp_unreach_strings[icmp->icmp_code], 0);
 		} else {
-			fs_add_string(fs, "icmp_unreach_str", (char *) "unknown", 0);
+			fs_add_string(fs, "icmp_unreach_str", (char *)"unknown",
+				      0);
 		}
 		// DNS header
 		fs_add_null(fs, "dns_id");
@@ -857,14 +942,17 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		fs_add_null(fs, "dns_nscount");
 		fs_add_null(fs, "dns_arcount");
 
-		fs_add_repeated(fs, "dns_questions", fs_new_repeated_fieldset());
+		fs_add_repeated(fs, "dns_questions",
+				fs_new_repeated_fieldset());
 		fs_add_repeated(fs, "dns_answers", fs_new_repeated_fieldset());
-		fs_add_repeated(fs, "dns_authorities", fs_new_repeated_fieldset());
-		fs_add_repeated(fs, "dns_additionals", fs_new_repeated_fieldset());
+		fs_add_repeated(fs, "dns_authorities",
+				fs_new_repeated_fieldset());
+		fs_add_repeated(fs, "dns_additionals",
+				fs_new_repeated_fieldset());
 
 		fs_add_uint64(fs, "dns_unconsumed_bytes", 0);
 		fs_add_uint64(fs, "dns_parse_err", 1);
-		fs_add_binary(fs, "raw_data", len, (char*)packet, 0);
+		fs_add_binary(fs, "raw_data", len, (char *)packet, 0);
 
 		return;
 
@@ -872,73 +960,98 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		// This should not happen. Both the pcap filter and validate
 		// packet prevent this.
 		log_fatal("dns", "Die. This can only happen if you "
-				"change the pcap filter and don't update the "
-				"process function.");
+				 "change the pcap filter and don't update the "
+				 "process function.");
 		return;
 	}
 }
 
 static fielddef_t fields[] = {
-	{.name = "classification", .type="string", .desc = "packet protocol"},
-	{.name = "success", .type="bool", .desc = "Are the validation bits and question correct"},
-	{.name = "app_success", .type="bool", .desc = "Is the RA bit set with no error code?"},
-	{.name = "sport",  .type = "int", .desc = "UDP source port"},
-	{.name = "dport",  .type = "int", .desc = "UDP destination port"},
-	{.name = "udp_len", .type="int", .desc = "UDP packet lenght"},
-	{.name = "icmp_responder", .type = "string", .desc = "Source IP of ICMP_UNREACH message"},
-	{.name = "icmp_type", .type = "int", .desc = "icmp message type"},
-	{.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
-	{.name = "icmp_unreach_str", .type = "string", .desc = "for icmp_unreach responses, "
-			"the string version of icmp_code (e.g. network-unreach)"},
-	{.name = "dns_id", .type = "int", .desc = "DNS transaction ID"},
-	{.name = "dns_rd", .type = "int", .desc = "DNS recursion desired"},
-	{.name = "dns_tc", .type = "int", .desc = "DNS packet truncated"},
-	{.name = "dns_aa", .type = "int", .desc = "DNS authoritative answer"},
-	{.name = "dns_opcode", .type = "int", .desc = "DNS opcode (query type)"},
-	{.name = "dns_qr", .type = "int", .desc = "DNS query(0) or response (1)"},
-	{.name = "dns_rcode", .type = "int", .desc = "DNS response code"},
-	{.name = "dns_cd", .type = "int", .desc = "DNS checking disabled"},
-	{.name = "dns_ad", .type = "int", .desc = "DNS authenticated data"},
-	{.name = "dns_z", .type = "int", .desc = "DNS reserved"},
-	{.name = "dns_ra", .type = "int", .desc = "DNS recursion available"},
-	{.name = "dns_qdcount", .type = "int", .desc = "DNS number questions"},
-	{.name = "dns_ancount", .type = "int", .desc = "DNS number answer RR's"},
-	{.name = "dns_nscount", .type = "int", .desc = "DNS number NS RR's in authority section"},
-	{.name = "dns_arcount", .type = "int", .desc = "DNS number additional RR's"},
-	{.name = "dns_questions", .type = "repeated", .desc = "DNS question list"},
-	{.name = "dns_answers", .type = "repeated", .desc = "DNS answer list"},
-	{.name = "dns_authorities", .type = "repeated", .desc = "DNS authority list"},
-	{.name = "dns_additionals", .type = "repeated", .desc = "DNS additional list"},
-	{.name = "dns_parse_err", .type = "int", .desc = "Problem parsing the DNS response"},
-	{.name = "dns_unconsumed_bytes", .type = "int", .desc = "Bytes left over when parsing"
-			" the DNS response"},
-	{.name = "raw_data", .type="binary", .desc = "UDP payload"},
+    {.name = "classification", .type = "string", .desc = "packet protocol"},
+    {.name = "success",
+     .type = "bool",
+     .desc = "Are the validation bits and question correct"},
+    {.name = "app_success",
+     .type = "bool",
+     .desc = "Is the RA bit set with no error code?"},
+    {.name = "sport", .type = "int", .desc = "UDP source port"},
+    {.name = "dport", .type = "int", .desc = "UDP destination port"},
+    {.name = "udp_len", .type = "int", .desc = "UDP packet lenght"},
+    {.name = "icmp_responder",
+     .type = "string",
+     .desc = "Source IP of ICMP_UNREACH message"},
+    {.name = "icmp_type", .type = "int", .desc = "icmp message type"},
+    {.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
+    {.name = "icmp_unreach_str",
+     .type = "string",
+     .desc = "for icmp_unreach responses, "
+	     "the string version of icmp_code (e.g. network-unreach)"},
+    {.name = "dns_id", .type = "int", .desc = "DNS transaction ID"},
+    {.name = "dns_rd", .type = "int", .desc = "DNS recursion desired"},
+    {.name = "dns_tc", .type = "int", .desc = "DNS packet truncated"},
+    {.name = "dns_aa", .type = "int", .desc = "DNS authoritative answer"},
+    {.name = "dns_opcode", .type = "int", .desc = "DNS opcode (query type)"},
+    {.name = "dns_qr", .type = "int", .desc = "DNS query(0) or response (1)"},
+    {.name = "dns_rcode", .type = "int", .desc = "DNS response code"},
+    {.name = "dns_cd", .type = "int", .desc = "DNS checking disabled"},
+    {.name = "dns_ad", .type = "int", .desc = "DNS authenticated data"},
+    {.name = "dns_z", .type = "int", .desc = "DNS reserved"},
+    {.name = "dns_ra", .type = "int", .desc = "DNS recursion available"},
+    {.name = "dns_qdcount", .type = "int", .desc = "DNS number questions"},
+    {.name = "dns_ancount", .type = "int", .desc = "DNS number answer RR's"},
+    {.name = "dns_nscount",
+     .type = "int",
+     .desc = "DNS number NS RR's in authority section"},
+    {.name = "dns_arcount",
+     .type = "int",
+     .desc = "DNS number additional RR's"},
+    {.name = "dns_questions", .type = "repeated", .desc = "DNS question list"},
+    {.name = "dns_answers", .type = "repeated", .desc = "DNS answer list"},
+    {.name = "dns_authorities",
+     .type = "repeated",
+     .desc = "DNS authority list"},
+    {.name = "dns_additionals",
+     .type = "repeated",
+     .desc = "DNS additional list"},
+    {.name = "dns_parse_err",
+     .type = "int",
+     .desc = "Problem parsing the DNS response"},
+    {.name = "dns_unconsumed_bytes",
+     .type = "int",
+     .desc = "Bytes left over when parsing"
+	     " the DNS response"},
+    {.name = "raw_data", .type = "binary", .desc = "UDP payload"},
 };
 
 probe_module_t module_dns = {
-	.name = "dns",
-	.packet_length = DNS_SEND_LEN + UDP_HEADER_LEN,
-	.pcap_filter = "udp || icmp",
-	.pcap_snaplen = PCAP_SNAPLEN,
-	.port_args = 1,
-	.thread_initialize = &dns_init_perthread,
-	.global_initialize = &dns_global_initialize,
-	.make_packet = &dns_make_packet,
-	.print_packet = &dns_print_packet,
-	.validate_packet = &dns_validate_packet,
-	.process_packet = &dns_process_packet,
-	.close = &dns_global_cleanup,
-	.output_type = OUTPUT_TYPE_DYNAMIC,
-	.fields = fields,
-	.numfields = sizeof(fields)/sizeof(fields[0]),
-	.helptext = "This module sends out DNS queries and parses basic responses. "
-				"By default, the module will perform an A record lookup for "
-				"google.com. You can specify other queries using the --probe-args "
-				"argument in the form: 'type,query', e.g. 'A,google.com'. The module "
-				"supports sending the the following types: of queries: A, NS, CNAME, SOA, "
-				"PTR, MX, TXT, AAAA, RRSIG, and ALL. The module will accept and attempt "
-				"to parse all DNS responses. There is currently support for parsing out "
-				"full data from A, NS, CNAME, MX, TXT, and AAAA. Any other types will be "
-				"output in raw form."
+    .name = "dns",
+    .packet_length = DNS_SEND_LEN + UDP_HEADER_LEN,
+    .pcap_filter = "udp || icmp",
+    .pcap_snaplen = PCAP_SNAPLEN,
+    .port_args = 1,
+    .thread_initialize = &dns_init_perthread,
+    .global_initialize = &dns_global_initialize,
+    .make_packet = &dns_make_packet,
+    .print_packet = &dns_print_packet,
+    .validate_packet = &dns_validate_packet,
+    .process_packet = &dns_process_packet,
+    .close = &dns_global_cleanup,
+    .output_type = OUTPUT_TYPE_DYNAMIC,
+    .fields = fields,
+    .numfields = sizeof(fields) / sizeof(fields[0]),
+    .helptext =
+	"This module sends out DNS queries and parses basic responses. "
+	"By default, the module will perform an A record lookup for "
+	"google.com. You can specify other queries using the --probe-args "
+	"argument in the form: 'type,query', e.g. 'A,google.com'. The module "
+	"supports sending the the following types: of queries: A, NS, CNAME, "
+	"SOA, "
+	"PTR, MX, TXT, AAAA, RRSIG, and ALL. The module will accept and "
+	"attempt "
+	"to parse all DNS responses. There is currently support for parsing "
+	"out "
+	"full data from A, NS, CNAME, MX, TXT, and AAAA. Any other types will "
+	"be "
+	"output in raw form."
 
 };

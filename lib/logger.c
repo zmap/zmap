@@ -6,20 +6,20 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#include <stdlib.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <string.h>
 #include <assert.h>
-#include <sys/time.h>
-#include <time.h>
-#include <syslog.h>
 #include <math.h>
 #include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/time.h>
+#include <syslog.h>
+#include <time.h>
+#include <unistd.h>
 
+#include "lockfd.h"
 #include "logger.h"
 #include "xalloc.h"
-#include "lockfd.h"
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static enum LogLevel log_output_level = ZLOG_INFO;
@@ -27,22 +27,26 @@ static enum LogLevel log_output_level = ZLOG_INFO;
 static FILE *log_output_stream = NULL;
 static int color = 0;
 
-static const char *log_level_name[] = {
-	"FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE" };
+static const char *log_level_name[] = {"FATAL", "ERROR", "WARN",
+				       "INFO",  "DEBUG", "TRACE"};
 
-#define RED     "\x1b[31m"
-#define GREEN   "\x1b[32m"
-#define YELLOW  "\x1b[33m"
-#define BLUE    "\x1b[34m"
+#define RED "\x1b[31m"
+#define GREEN "\x1b[32m"
+#define YELLOW "\x1b[33m"
+#define BLUE "\x1b[34m"
 #define MAGENTA "\x1b[35m"
-#define CYAN    "\x1b[36m"
-#define RESET   "\033[0m"
+#define CYAN "\x1b[36m"
+#define RESET "\033[0m"
 
-#define COLOR(x) do { if(color) fprintf(log_output_stream, "%s", x); } while (0)
+#define COLOR(x)                                                               \
+	do {                                                                   \
+		if (color)                                                     \
+			fprintf(log_output_stream, "%s", x);                   \
+	} while (0)
 
-static const char* color_for_level(enum LogLevel level)
+static const char *color_for_level(enum LogLevel level)
 {
-	switch(level) {
+	switch (level) {
 	case ZLOG_FATAL:
 		return RED;
 	case ZLOG_ERROR:
@@ -61,7 +65,7 @@ static const char* color_for_level(enum LogLevel level)
 }
 
 static int LogLogVA(enum LogLevel level, const char *loggerName,
-		const char *logMessage, va_list args)
+		    const char *logMessage, va_list args)
 {
 	if (level <= log_output_level) {
 		if (!log_output_stream) {
@@ -71,7 +75,8 @@ static int LogLogVA(enum LogLevel level, const char *loggerName,
 		// lock across ZMap. Otherwise, if we're logging to a file,
 		// only lockin with the module, in order to avoid having
 		// corrupt log entries.
-		if (log_output_stream == stdout || log_output_stream == stderr) {
+		if (log_output_stream == stdout ||
+		    log_output_stream == stderr) {
 			lock_file(log_output_stream);
 		} else {
 			pthread_mutex_lock(&mutex);
@@ -85,10 +90,10 @@ static int LogLogVA(enum LogLevel level, const char *loggerName,
 		char timestamp[256];
 		gettimeofday(&now, NULL);
 		time_t sec = now.tv_sec;
-		struct tm* ptm = localtime(&sec);
+		struct tm *ptm = localtime(&sec);
 		strftime(timestamp, 20, "%b %d %H:%M:%S", ptm);
-		fprintf(log_output_stream, "%s.%03ld [%s] ",
-				timestamp, (long) now.tv_usec/1000, levelName);
+		fprintf(log_output_stream, "%s.%03ld [%s] ", timestamp,
+			(long)now.tv_usec / 1000, levelName);
 		if (loggerName) {
 			fprintf(log_output_stream, "%s: ", loggerName);
 		}
@@ -102,7 +107,8 @@ static int LogLogVA(enum LogLevel level, const char *loggerName,
 			COLOR(RESET);
 		}
 		fflush(log_output_stream);
-		if (log_output_stream == stdout || log_output_stream == stderr) {
+		if (log_output_stream == stdout ||
+		    log_output_stream == stderr) {
 			unlock_file(log_output_stream);
 		} else {
 			pthread_mutex_unlock(&mutex);
@@ -111,7 +117,8 @@ static int LogLogVA(enum LogLevel level, const char *loggerName,
 	return EXIT_SUCCESS;
 }
 
-int log_fatal(const char *name, const char *message, ...) {
+int log_fatal(const char *name, const char *message, ...)
+{
 	va_list va;
 	va_start(va, message);
 	LogLogVA(ZLOG_FATAL, name, message, va);
@@ -123,7 +130,8 @@ int log_fatal(const char *name, const char *message, ...) {
 	exit(EXIT_FAILURE);
 }
 
-int log_error(const char *name, const char *message, ...) {
+int log_error(const char *name, const char *message, ...)
+{
 	va_list va;
 	va_start(va, message);
 	int ret = LogLogVA(ZLOG_ERROR, name, message, va);
@@ -136,7 +144,8 @@ int log_error(const char *name, const char *message, ...) {
 	return ret;
 }
 
-int log_warn(const char *name, const char *message, ...) {
+int log_warn(const char *name, const char *message, ...)
+{
 	va_list va;
 	va_start(va, message);
 	int ret = LogLogVA(ZLOG_WARN, name, message, va);
@@ -148,7 +157,8 @@ int log_warn(const char *name, const char *message, ...) {
 	return ret;
 }
 
-int log_info(const char *name, const char *message, ...) {
+int log_info(const char *name, const char *message, ...)
+{
 	va_list va;
 	va_start(va, message);
 	int ret = LogLogVA(ZLOG_INFO, name, message, va);
@@ -168,7 +178,8 @@ int log_info(const char *name, const char *message, ...) {
 	return ret;
 }
 
-int log_debug(const char *name, const char *message, ...) {
+int log_debug(const char *name, const char *message, ...)
+{
 	va_list va;
 	va_start(va, message);
 	int ret = LogLogVA(ZLOG_DEBUG, name, message, va);
@@ -189,7 +200,8 @@ int log_debug(const char *name, const char *message, ...) {
 }
 
 #ifdef DEBUG
-extern int log_trace(const char *name, const char *message, ...) {
+extern int log_trace(const char *name, const char *message, ...)
+{
 	va_list va;
 	va_start(va, message);
 	int ret = LogLogVA(ZLOG_TRACE, name, message, va);
@@ -210,13 +222,13 @@ extern int log_trace(const char *name, const char *message, ...) {
 }
 #endif
 
-int log_init(FILE *stream, enum LogLevel level,
-		int syslog_enabled, const char *appname)
+int log_init(FILE *stream, enum LogLevel level, int syslog_enabled,
+	     const char *appname)
 {
 	log_output_stream = stream;
 	log_output_level = level;
 	if (syslog_enabled) {
-		openlog(appname, 0, LOG_USER); //no options
+		openlog(appname, 0, LOG_USER); // no options
 	}
 	if (isatty(fileno(log_output_stream))) {
 		color = 1;
@@ -224,7 +236,7 @@ int log_init(FILE *stream, enum LogLevel level,
 	return 0;
 }
 
-void check_and_log_file_error(FILE *file, const char*name)
+void check_and_log_file_error(FILE *file, const char *name)
 {
 	if (ferror(file)) {
 		log_fatal(name, "unable to write to file");
@@ -235,7 +247,7 @@ double now(void)
 {
 	struct timeval now;
 	gettimeofday(&now, NULL);
-	return (double)now.tv_sec + (double)now.tv_usec/1000000.;
+	return (double)now.tv_sec + (double)now.tv_usec / 1000000.;
 }
 
 size_t dstrftime(char *buf, size_t maxsize, const char *format, double tm)
@@ -243,7 +255,7 @@ size_t dstrftime(char *buf, size_t maxsize, const char *format, double tm)
 	struct timeval tv;
 	double tm_floor;
 	tm_floor = floor(tm);
-	tv.tv_sec = (long) tm_floor;
-	tv.tv_usec = (long) (tm - floor(tm)) * 1000000;
-	return strftime(buf, maxsize, format, localtime((const time_t*) &tv));
+	tv.tv_sec = (long)tm_floor;
+	tv.tv_usec = (long)(tm - floor(tm)) * 1000000;
+	return strftime(buf, maxsize, format, localtime((const time_t *)&tv));
 }

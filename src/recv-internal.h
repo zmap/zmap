@@ -6,7 +6,6 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-
 #ifndef ZMAP_RECV_INTERNAL_H
 #define ZMAP_RECV_INTERNAL_H
 

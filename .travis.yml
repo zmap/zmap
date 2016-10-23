@@ -16,9 +16,12 @@ matrix:
       before_install:
         - brew update
         - brew install gengetopt byacc libdnet libunistring
-          mongo-c hiredis
-script: 
+          mongo-c hiredis clang-format
+      before_script:
+        - make format-check
+install:
   - cmake -DENABLE_DEVELOPMENT=ON -DWITH_REDIS=ON -DWITH_MONGO=ON
+script: 
   - make
   - python ./scripts/check_manfile.py
 compiler: clang

@@ -8,16 +8,16 @@
 
 #include "blacklist.h"
 
-#include <errno.h>
-#include <stdio.h>
+#include <arpa/inet.h>
 #include <assert.h>
+#include <errno.h>
+#include <netdb.h>
+#include <netinet/in.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
 
 #include "constraint.h"
 #include "logger.h"
@@ -27,9 +27,9 @@
 #define ADDR_ALLOWED 1
 
 typedef struct bl_linked_list {
-		bl_cidr_node_t *first;
-		bl_cidr_node_t *last;
-		uint32_t len;
+	bl_cidr_node_t *first;
+	bl_cidr_node_t *last;
+	uint32_t len;
 } bl_ll_t;
 
 static constraint_t *constraint = NULL;
@@ -47,9 +47,9 @@ void bl_ll_add(bl_ll_t *l, struct in_addr addr, uint16_t p)
 	new->ip_address = addr.s_addr;
 	new->prefix_len = p;
 	if (!l->first) {
-			l->first = new;
+		l->first = new;
 	} else {
-			l->last->next = new;
+		l->last->next = new;
 	}
 	l->last = new;
 	l->len++;
@@ -65,15 +65,16 @@ bl_cidr_node_t *get_whitelisted_cidrs(void)
 	return whitelisted_cidrs->first;
 }
 
-
-uint32_t blacklist_lookup_index(uint64_t index) {
+uint32_t blacklist_lookup_index(uint64_t index)
+{
 	return ntohl(constraint_lookup_index(constraint, index, ADDR_ALLOWED));
 }
 
 // check whether a single IP address is allowed to be scanned.
 //		1 => is allowed
 //		0 => is not allowed
-int blacklist_is_allowed(uint32_t s_addr) {
+int blacklist_is_allowed(uint32_t s_addr)
+{
 	return constraint_lookup_ip(constraint, ntohl(s_addr)) == ADDR_ALLOWED;
 }
 
@@ -85,7 +86,8 @@ static void _add_constraint(struct in_addr addr, int prefix_len, int value)
 	} else if (value == ADDR_DISALLOWED) {
 		bl_ll_add(blacklisted_cidrs, addr, prefix_len);
 	} else {
-		log_fatal("blacklist", "unknown type of blacklist operation specified");
+		log_fatal("blacklist",
+			  "unknown type of blacklist operation specified");
 	}
 }
 
@@ -110,14 +112,16 @@ static int init_from_string(char *ip, int value)
 {
 	int prefix_len = 32;
 	char *slash = strchr(ip, '/');
-	if (slash) {  // split apart network and prefix length
+	if (slash) { // split apart network and prefix length
 		*slash = '\0';
 		char *end;
-		char *len = slash+1;
+		char *len = slash + 1;
 		errno = 0;
 		prefix_len = strtol(len, &end, 10);
-		if (end == len || errno != 0 || prefix_len < 0 || prefix_len > 32) {
-			log_fatal("constraint", "'%s' is not a valid prefix length", len);
+		if (end == len || errno != 0 || prefix_len < 0 ||
+		    prefix_len > 32) {
+			log_fatal("constraint",
+				  "'%s' is not a valid prefix length", len);
 			return -1;
 		}
 	}
@@ -131,7 +135,8 @@ static int init_from_string(char *ip, int value)
 		int r = getaddrinfo(ip, NULL, &hint, &res);
 		if (r) {
 			log_error("constraint", "'%s' is not a valid IP "
-				  "address or hostname", ip);
+						"address or hostname",
+				  ip);
 			return -1;
 		}
 		// Got some addrinfo, let's see what happens
@@ -139,7 +144,8 @@ static int init_from_string(char *ip, int value)
 			if (aip->ai_family != AF_INET) {
 				continue;
 			}
-			struct sockaddr_in *sa = (struct sockaddr_in *) aip->ai_addr;
+			struct sockaddr_in *sa =
+			    (struct sockaddr_in *)aip->ai_addr;
 			memcpy(&addr, &sa->sin_addr, sizeof(addr));
 			log_debug("constraint", "%s retrieved by hostname",
 				  inet_ntoa(addr));
@@ -153,15 +159,16 @@ static int init_from_string(char *ip, int value)
 	return ret;
 }
 
-static int init_from_file(char *file, const char *name, int value, int ignore_invalid_hosts)
+static int init_from_file(char *file, const char *name, int value,
+			  int ignore_invalid_hosts)
 {
 	FILE *fp;
 	char line[1000];
 
 	fp = fopen(file, "r");
 	if (fp == NULL) {
-		log_fatal(name, "unable to open %s file: %s: %s",
-				name, file, strerror(errno));
+		log_fatal(name, "unable to open %s file: %s: %s", name, file,
+			  strerror(errno));
 	}
 
 	while (fgets(line, sizeof(line), fp) != NULL) {
@@ -176,7 +183,7 @@ static int init_from_file(char *file, const char *name, int value, int ignore_in
 		if (init_from_string(ip, value)) {
 			if (!ignore_invalid_hosts) {
 				log_fatal(name, "unable to parse %s file: %s",
-						name, file);
+					  name, file);
 			}
 		}
 	}
@@ -185,14 +192,15 @@ static int init_from_file(char *file, const char *name, int value, int ignore_in
 	return 0;
 }
 
-static void init_from_array(char **cidrs, size_t len, int value, int ignore_invalid_hosts)
+static void init_from_array(char **cidrs, size_t len, int value,
+			    int ignore_invalid_hosts)
 {
-	for (int i=0; i < (int) len; i++) {
+	for (int i = 0; i < (int)len; i++) {
 		int ret = init_from_string(cidrs[i], value);
-				if (ret && !ignore_invalid_hosts) {
-					log_fatal("constraint",
-							"Unable to init from CIDR list");
-				}
+		if (ret && !ignore_invalid_hosts) {
+			log_fatal("constraint",
+				  "Unable to init from CIDR list");
+		}
 	}
 }
 
@@ -216,13 +224,12 @@ uint32_t blacklist_ip_to_index(uint32_t ip)
 	return constraint_lookup_ip(constraint, ip_hostorder);
 }
 
-
 // Initialize address constraints from whitelist and blacklist files.
 // Either can be set to NULL to omit.
 int blacklist_init(char *whitelist_filename, char *blacklist_filename,
-		char **whitelist_entries, size_t whitelist_entries_len,
-		char **blacklist_entries, size_t blacklist_entries_len,
-		int ignore_invalid_hosts)
+		   char **whitelist_entries, size_t whitelist_entries_len,
+		   char **blacklist_entries, size_t blacklist_entries_len,
+		   int ignore_invalid_hosts)
 {
 	assert(!constraint);
 
@@ -230,17 +237,18 @@ int blacklist_init(char *whitelist_filename, char *blacklist_filename,
 	whitelisted_cidrs = xcalloc(1, sizeof(bl_ll_t));
 
 	if (whitelist_filename && whitelist_entries) {
-		log_warn("whitelist", "both a whitelist file and destination addresses "
-					"were specified. The union of these two sources "
-					"will be utilized.");
+		log_warn("whitelist",
+			 "both a whitelist file and destination addresses "
+			 "were specified. The union of these two sources "
+			 "will be utilized.");
 	}
 	if (whitelist_filename || whitelist_entries_len > 0) {
 		// using a whitelist, so default to allowing nothing
 		constraint = constraint_init(ADDR_DISALLOWED);
 		log_debug("constraint", "blacklisting 0.0.0.0/0");
 		if (whitelist_filename) {
-			init_from_file(whitelist_filename, "whitelist", ADDR_ALLOWED,
-					ignore_invalid_hosts);
+			init_from_file(whitelist_filename, "whitelist",
+				       ADDR_ALLOWED, ignore_invalid_hosts);
 		}
 		if (whitelist_entries) {
 			init_from_array(whitelist_entries,
@@ -249,33 +257,32 @@ int blacklist_init(char *whitelist_filename, char *blacklist_filename,
 		}
 	} else {
 		// no whitelist, so default to allowing everything
-		log_debug("blacklist", "no whitelist file or whitelist entries provided");
+		log_debug("blacklist",
+			  "no whitelist file or whitelist entries provided");
 		constraint = constraint_init(ADDR_ALLOWED);
 	}
 	if (blacklist_filename) {
-		init_from_file(blacklist_filename, "blacklist",
-				ADDR_DISALLOWED, ignore_invalid_hosts);
+		init_from_file(blacklist_filename, "blacklist", ADDR_DISALLOWED,
+			       ignore_invalid_hosts);
 	}
 	if (blacklist_entries) {
-		init_from_array(blacklist_entries,
-				blacklist_entries_len, ADDR_DISALLOWED,
-				ignore_invalid_hosts);
+		init_from_array(blacklist_entries, blacklist_entries_len,
+				ADDR_DISALLOWED, ignore_invalid_hosts);
 	}
 	init_from_string(strdup("0.0.0.0"), ADDR_DISALLOWED);
 	constraint_paint_value(constraint, ADDR_ALLOWED);
 	uint64_t allowed = blacklist_count_allowed();
 	log_debug("constraint", "%lu addresses (%0.0f%% of address "
-			"space) can be scanned",
-			allowed, allowed*100./((long long int)1 << 32));
+				"space) can be scanned",
+		  allowed, allowed * 100. / ((long long int)1 << 32));
 	if (!allowed) {
-		log_error("blacklist", "no addresses are eligible to be scanned in the "
+		log_error("blacklist",
+			  "no addresses are eligible to be scanned in the "
 			  "current configuration. This may be because the "
 			  "blacklist being used by ZMap (%s) prevents "
 			  "any addresses from receiving probe packets.",
-			  blacklist_filename
-			);
+			  blacklist_filename);
 		return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;
 }
-

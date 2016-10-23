@@ -1,13 +1,12 @@
 #ifndef ZMAP_UTIL_H
 #define ZMAP_UTIL_H
 
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include "types.h"
 
 int max_int(int a, int b);
-
 
 uint32_t parse_max_hosts(char *max_targets);
 void enforce_range(const char *name, int v, int min, int max);
@@ -40,8 +39,5 @@ int drop_privs();
 
 // Set CPU affinity to a single core
 int set_cpu(uint32_t core);
-
-
-
 
 #endif /* ZMAP_UTIL_H */

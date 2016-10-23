@@ -36,13 +36,13 @@
 
 #include "cyclic.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <time.h>
 #include <assert.h>
-#include <string.h>
 #include <math.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
 #include <gmp.h>
 
@@ -54,38 +54,31 @@
 // entire Internet scan, this would be cyclic32
 // Note: this list should remain ordered by size (primes) ascending.
 
-static cyclic_group_t groups[] = {
-{ // 2^8 + 1
-	.prime = 257,
-	.known_primroot = 3,
-	.prime_factors = {2},
-	.num_prime_factors = 1
-},
-{ // 2^16 + 1
-	.prime = 65537,
-	.known_primroot = 3,
-	.prime_factors = {2},
-	.num_prime_factors = 1
-},
-{ // 2^24 + 43
-	.prime = 16777259,
-	.known_primroot = 2,
-	.prime_factors = {2, 23, 103, 3541},
-	.num_prime_factors = 4
-},
-{ // 2^28 + 3
-	.prime = 268435459,
-	.known_primroot = 2,
-	.prime_factors = {2, 3, 19, 87211},
-	.num_prime_factors = 4
-},
-{ // 2^32 + 15
-	.prime = 4294967311,
-	.known_primroot = 3,
-	.prime_factors = {2, 3, 5, 131, 364289},
-	.num_prime_factors = 5
-}
-};
+static cyclic_group_t groups[] = {{// 2^8 + 1
+				   .prime = 257,
+				   .known_primroot = 3,
+				   .prime_factors = {2},
+				   .num_prime_factors = 1},
+				  {// 2^16 + 1
+				   .prime = 65537,
+				   .known_primroot = 3,
+				   .prime_factors = {2},
+				   .num_prime_factors = 1},
+				  {// 2^24 + 43
+				   .prime = 16777259,
+				   .known_primroot = 2,
+				   .prime_factors = {2, 23, 103, 3541},
+				   .num_prime_factors = 4},
+				  {// 2^28 + 3
+				   .prime = 268435459,
+				   .known_primroot = 2,
+				   .prime_factors = {2, 3, 19, 87211},
+				   .num_prime_factors = 4},
+				  {// 2^32 + 15
+				   .prime = 4294967311,
+				   .known_primroot = 3,
+				   .prime_factors = {2, 3, 5, 131, 364289},
+				   .num_prime_factors = 5}};
 
 #define COPRIME 1
 #define NOT_COPRIME 0
@@ -93,10 +86,12 @@ static cyclic_group_t groups[] = {
 // Check whether an integer is coprime with (p - 1)
 static int check_coprime(uint64_t check, const cyclic_group_t *group)
 {
-	for (unsigned i=0; i < group->num_prime_factors; i++) {
-		if (group->prime_factors[i] > check && !(group->prime_factors[i] % check)) {
+	for (unsigned i = 0; i < group->num_prime_factors; i++) {
+		if (group->prime_factors[i] > check &&
+		    !(group->prime_factors[i] % check)) {
 			return NOT_COPRIME;
-		} else if (group->prime_factors[i] < check && !(check % group->prime_factors[i])) {
+		} else if (group->prime_factors[i] < check &&
+			   !(check % group->prime_factors[i])) {
 			return NOT_COPRIME;
 		} else if (group->prime_factors[i] == check) {
 			return NOT_COPRIME;
@@ -109,14 +104,15 @@ static int check_coprime(uint64_t check, const cyclic_group_t *group)
 // which is a generator of the additive group mod (p - 1)
 static uint32_t find_primroot(const cyclic_group_t *group, aesrand_t *aes)
 {
-	uint32_t candidate = (uint32_t) ((aesrand_getword(aes) & 0xFFFFFFFF) % group->prime);
+	uint32_t candidate =
+	    (uint32_t)((aesrand_getword(aes) & 0xFFFFFFFF) % group->prime);
 	if (candidate == 0) {
 		++candidate;
 	}
 	while (check_coprime(candidate, group) != COPRIME) {
 		++candidate;
-		//special case where we need to restart check from begin
-		if(candidate >= group->prime) { 
+		// special case where we need to restart check from begin
+		if (candidate >= group->prime) {
 			candidate = 1;
 		}
 	}
@@ -124,9 +120,9 @@ static uint32_t find_primroot(const cyclic_group_t *group, aesrand_t *aes)
 	return retv;
 }
 
-const cyclic_group_t* get_group(uint64_t min_size)
+const cyclic_group_t *get_group(uint64_t min_size)
 {
-	for(unsigned i = 0; i < sizeof(groups); ++i) {
+	for (unsigned i = 0; i < sizeof(groups); ++i) {
 		if (groups[i].prime > min_size) {
 			return &groups[i];
 		}
@@ -135,17 +131,17 @@ const cyclic_group_t* get_group(uint64_t min_size)
 	assert(0);
 }
 
-cycle_t make_cycle(const cyclic_group_t* group, aesrand_t *aes)
+cycle_t make_cycle(const cyclic_group_t *group, aesrand_t *aes)
 {
 	cycle_t cycle;
 	cycle.group = group;
 	cycle.generator = find_primroot(group, aes);
-	cycle.offset = (uint32_t) (aesrand_getword(aes) & 0xFFFFFFFF);
+	cycle.offset = (uint32_t)(aesrand_getword(aes) & 0xFFFFFFFF);
 	cycle.offset %= group->prime;
 	return cycle;
 }
 
-uint64_t isomorphism(uint64_t additive_elt, const cyclic_group_t* mult_group)
+uint64_t isomorphism(uint64_t additive_elt, const cyclic_group_t *mult_group)
 {
 	assert(additive_elt < mult_group->prime);
 	mpz_t base, power, prime, primroot;
@@ -154,7 +150,7 @@ uint64_t isomorphism(uint64_t additive_elt, const cyclic_group_t* mult_group)
 	mpz_init_set_ui(prime, mult_group->prime);
 	mpz_init(primroot);
 	mpz_powm(primroot, base, power, prime);
-	uint64_t retv = (uint64_t) mpz_get_ui(primroot);
+	uint64_t retv = (uint64_t)mpz_get_ui(primroot);
 	log_debug("zmap", "Isomorphism: %llu", retv);
 	mpz_clear(base);
 	mpz_clear(power);

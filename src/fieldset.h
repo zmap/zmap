@@ -6,9 +6,9 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#include <stdlib.h>
-#include <stdint.h>
 #include "types.h"
+#include <stdint.h>
+#include <stdlib.h>
 
 #ifndef FIELDSET_H
 #define FIELDSET_H
@@ -43,8 +43,8 @@ typedef struct fielddef_set {
 } fielddefset_t;
 
 typedef union field_val {
-	void	  *ptr;
-	uint64_t   num;
+	void *ptr;
+	uint64_t num;
 } field_val_t;
 
 // the internal field type used by fieldset
@@ -62,10 +62,10 @@ typedef struct field {
 typedef struct fieldset {
 	int len;
 	field_t fields[MAX_FIELDS];
-    // only used for repeated.
-    int inner_type; // type of repeated element. e.g., FS_STRING
-    int type; // REPEATED or FIELDSET
-    int free_; // should elements be freed
+	// only used for repeated.
+	int inner_type; // type of repeated element. e.g., FS_STRING
+	int type;       // REPEATED or FIELDSET
+	int free_;      // should elements be freed
 } fieldset_t;
 
 // we pass a different fieldset to an output module than
@@ -89,7 +89,7 @@ fieldset_t *fs_new_repeated_string(int free_);
 fieldset_t *fs_new_repeated_binary(int free_);
 fieldset_t *fs_new_repeated_fieldset();
 
-char* fs_get_string_by_index(fieldset_t *fs, int index);
+char *fs_get_string_by_index(fieldset_t *fs, int index);
 
 int fds_get_index_by_name(fielddefset_t *fds, char *name);
 
@@ -103,16 +103,18 @@ void fs_add_bool(fieldset_t *fs, const char *name, int value);
 
 void fs_add_string(fieldset_t *fs, const char *name, char *value, int free_);
 
-void fs_add_unsafe_string(fieldset_t *fs, const char *name, char *value, int free_);
+void fs_add_unsafe_string(fieldset_t *fs, const char *name, char *value,
+			  int free_);
 
 void fs_chkadd_string(fieldset_t *fs, const char *name, char *value, int free_);
 
-void fs_chkadd_unsafe_string(fieldset_t *fs, const char *name, char *value, int free_);
+void fs_chkadd_unsafe_string(fieldset_t *fs, const char *name, char *value,
+			     int free_);
 
 void fs_add_constchar(fieldset_t *fs, const char *name, const char *value);
 
-void fs_add_binary(fieldset_t *fs, const char *name, size_t len,
-		void *value, int free_);
+void fs_add_binary(fieldset_t *fs, const char *name, size_t len, void *value,
+		   int free_);
 
 void fs_add_fieldset(fieldset_t *fs, const char *name, fieldset_t *child);
 void fs_add_repeated(fieldset_t *fs, const char *name, fieldset_t *child);
@@ -126,19 +128,19 @@ void fs_modify_bool(fieldset_t *fs, const char *name, int value);
 
 void fs_modify_string(fieldset_t *fs, const char *name, char *value, int free_);
 
-void fs_modify_binary(fieldset_t *fs, const char *name, size_t len,
-		void *value, int free_);
+void fs_modify_binary(fieldset_t *fs, const char *name, size_t len, void *value,
+		      int free_);
 
 uint64_t fs_get_uint64_by_index(fieldset_t *fs, int index);
 
 void fs_free(fieldset_t *fs);
 
-void fs_generate_fieldset_translation(translation_t *t,
-		fielddefset_t *avail, char** req, int reqlen);
+void fs_generate_fieldset_translation(translation_t *t, fielddefset_t *avail,
+				      char **req, int reqlen);
 
 fieldset_t *translate_fieldset(fieldset_t *fs, translation_t *t);
 
-void fs_generate_full_fieldset_translation(translation_t *t, fielddefset_t *avail);
+void fs_generate_full_fieldset_translation(translation_t *t,
+					   fielddefset_t *avail);
 
 #endif // FIELDSET_H
-

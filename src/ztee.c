@@ -10,27 +10,27 @@
 #define _WITH_GETLINE
 #include <stdio.h>
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 #include <errno.h>
 #include <getopt.h>
 #include <pthread.h>
-#include <unistd.h>
 #include <signal.h>
+#include <unistd.h>
 
+#include "../lib/csv.h"
 #include "../lib/lockfd.h"
 #include "../lib/logger.h"
 #include "../lib/queue.h"
 #include "../lib/util.h"
 #include "../lib/xalloc.h"
-#include "../lib/csv.h"
 
 #include "topt.h"
 
 typedef enum file_format { FORMAT_CSV, FORMAT_JSON, FORMAT_RAW } format_t;
-static const char *format_names[] = { "csv", "json", "raw" };
+static const char *format_names[] = {"csv", "json", "raw"};
 
 typedef struct ztee_conf {
 	// Files
@@ -64,7 +64,8 @@ static ztee_conf_t tconf;
 
 static int print_from_csv(char *line);
 
-static format_t test_input_format(char *line, size_t len) {
+static format_t test_input_format(char *line, size_t len)
+{
 	// Check for empty input, remember line contains '\n'
 	if (len < 2) {
 		return FORMAT_RAW;
@@ -92,48 +93,56 @@ double start_time;
 
 pthread_t threads[3];
 
-//one thread reads in
-//one thread writes out and parses
+// one thread reads in
+// one thread writes out and parses
 
-//pops next element and determines what to do
-//if zqueue_t is empty and read_in is finished, then
-//it exits
-void *process_queue (void* my_q);
+// pops next element and determines what to do
+// if zqueue_t is empty and read_in is finished, then
+// it exits
+void *process_queue(void *my_q);
 
-//uses fgets to read from stdin and add it to the zqueue_t
-void *read_in (void* my_q);
+// uses fgets to read from stdin and add it to the zqueue_t
+void *read_in(void *my_q);
 
-//does the same as find UP but finds only successful IPs, determined by the
-//is_successful field and flag
-void find_successful_IP (char* my_string);
+// does the same as find UP but finds only successful IPs, determined by the
+// is_successful field and flag
+void find_successful_IP(char *my_string);
 
-//finds IP in the string of csv and sends it to stdout for zgrab
-//you need to know what position is the csv string the ip field is in
-//zero indexed
-void find_IP (char* my_string);
+// finds IP in the string of csv and sends it to stdout for zgrab
+// you need to know what position is the csv string the ip field is in
+// zero indexed
+void find_IP(char *my_string);
 
-//writes a csv string out to csv file
-//fprintf(stderr, "Is empty inside if %i\n", is_empty(queue));
-void write_out_to_file (char* data);
+// writes a csv string out to csv file
+// fprintf(stderr, "Is empty inside if %i\n", is_empty(queue));
+void write_out_to_file(char *data);
 
-//figure out how many fields are present if it is a csv
-void figure_out_fields (char* data);
+// figure out how many fields are present if it is a csv
+void figure_out_fields(char *data);
 
-//check that the output file is either in a csv form or json form
-//throws error is it is not either
-//NOTE: JSON OUTPUT NOT IMPLEMENTED
+// check that the output file is either in a csv form or json form
+// throws error is it is not either
+// NOTE: JSON OUTPUT NOT IMPLEMENTED
 void output_file_is_csv();
 
 void print_thread_error();
 
-//monitor code for ztee
-//executes every second
+// monitor code for ztee
+// executes every second
 void *monitor_ztee(void *my_q);
 
-#define SET_IF_GIVEN(DST,ARG) \
-	{ if (args.ARG##_given) { (DST) = args.ARG##_arg; }; }
-#define SET_BOOL(DST,ARG) \
-	{ if (args.ARG##_given) { (DST) = 1; }; }
+#define SET_IF_GIVEN(DST, ARG)                                                 \
+	{                                                                      \
+		if (args.ARG##_given) {                                        \
+			(DST) = args.ARG##_arg;                                \
+		};                                                             \
+	}
+#define SET_BOOL(DST, ARG)                                                     \
+	{                                                                      \
+		if (args.ARG##_given) {                                        \
+			(DST) = 1;                                             \
+		};                                                             \
+	}
 
 int main(int argc, char *argv[])
 {
@@ -184,14 +193,14 @@ int main(int argc, char *argv[])
 	}
 	if (args.inputs_num > 1) {
 		log_fatal("ztee", "Extra positional arguments starting with %s",
-				args.inputs[1]);
+			  args.inputs[1]);
 	}
 
 	tconf.output_filename = args.inputs[0];
 	tconf.output_file = fopen(tconf.output_filename, "w");
 	if (!tconf.output_file) {
 		log_fatal("ztee", "Could not open output file %s, %s",
-				tconf.output_filename, strerror(errno));
+			  tconf.output_filename, strerror(errno));
 	}
 
 	// Read actual options
@@ -207,8 +216,9 @@ int main(int argc, char *argv[])
 		FILE *file = fopen(filename, "w");
 		if (!file) {
 			char *err = strerror(errno);
-			log_fatal("ztee", "unable to open status updates file %s (%s)",
-					filename, err);
+			log_fatal("ztee",
+				  "unable to open status updates file %s (%s)",
+				  filename, err);
 		}
 		// Set the variables in state
 		tconf.status_updates_filename = filename;
@@ -224,7 +234,8 @@ int main(int argc, char *argv[])
 	// Detect the input format
 	if (!raw) {
 		format_t format = test_input_format(first_line, first_line_len);
-		log_info("ztee", "detected input format %s", format_names[format]);
+		log_info("ztee", "detected input format %s",
+			 format_names[format]);
 		tconf.in_format = format;
 	} else {
 		tconf.in_format = FORMAT_RAW;
@@ -240,24 +251,22 @@ int main(int argc, char *argv[])
 	int found_success = 0;
 	int found_ip = 0;
 	if (tconf.in_format == FORMAT_CSV) {
-		static const char *success_names[] = { "success" };
-		static const char *ip_names[] = { "saddr", "ip" };
+		static const char *success_names[] = {"success"};
+		static const char *ip_names[] = {"saddr", "ip"};
 		int success_idx = csv_find_index(header, success_names, 1);
 		if (success_idx >= 0) {
 			found_success = 1;
-			tconf.success_field = (size_t) success_idx;
+			tconf.success_field = (size_t)success_idx;
 		}
 		int ip_idx = csv_find_index(header, ip_names, 2);
 		if (found_ip >= 0) {
 			found_ip = 1;
-			tconf.ip_field = (size_t) ip_idx;
+			tconf.ip_field = (size_t)ip_idx;
 		}
 		if (!found_ip) {
 			log_fatal("ztee", "Unable to find IP/SADDR field");
 		}
 	}
-
-
 
 	if (tconf.success_only) {
 		if (tconf.in_format != FORMAT_CSV) {
@@ -268,9 +277,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-
 	// Make the queue
-	zqueue_t* queue = queue_init();
+	zqueue_t *queue = queue_init();
 	assert(queue);
 
 	// Add the first line to the queue if needed
@@ -294,7 +302,8 @@ int main(int argc, char *argv[])
 	// Start the monitor thread if necessary, and join to it
 	if (tconf.monitor || tconf.status_updates_file) {
 		pthread_t monitor_thread;
-		if (pthread_create(&monitor_thread, NULL, monitor_ztee, queue)) {
+		if (pthread_create(&monitor_thread, NULL, monitor_ztee,
+				   queue)) {
 			log_fatal("ztee", "unable to create monitor thread");
 		}
 		pthread_join(monitor_thread, NULL);
@@ -306,7 +315,7 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-void *process_queue(void* arg)
+void *process_queue(void *arg)
 {
 	zqueue_t *queue = arg;
 	FILE *output_file = tconf.output_file;
@@ -323,7 +332,6 @@ void *process_queue(void* arg)
 		}
 		znode_t *node = pop_front_unsafe(queue);
 		pthread_mutex_unlock(&queue->lock);
-
 
 		// Write raw data to output file
 		fprintf(output_file, "%s", node->data);
@@ -365,12 +373,13 @@ void *process_queue(void* arg)
 	return NULL;
 }
 
-void *read_in(void* arg)
+void *read_in(void *arg)
 {
 	// Allocate buffers
-	zqueue_t *queue = (zqueue_t*) arg;
+	zqueue_t *queue = (zqueue_t *)arg;
 	size_t length = 1000;
-	char *input = xcalloc(sizeof(char), length);;
+	char *input = xcalloc(sizeof(char), length);
+	;
 
 	// Read in from stdin and add to back of linked list
 	while (getline(&input, &length, stdin) > 0) {
@@ -439,7 +448,7 @@ void output_file_is_csv()
 	*/
 }
 
-void print_thread_error(char* string)
+void print_thread_error(char *string)
 {
 	fprintf(stderr, "Could not create thread %s\n", string);
 	return;
@@ -483,18 +492,20 @@ void update_stats(stats_t *stats, zqueue_t *queue)
 	stats->buffer_avg_size = stats->_buffer_size_sum / age;
 }
 
-void *monitor_ztee(void* arg)
+void *monitor_ztee(void *arg)
 {
-	zqueue_t *queue = (zqueue_t *) arg;
+	zqueue_t *queue = (zqueue_t *)arg;
 	stats_t *stats = xmalloc(sizeof(stats_t));
 
 	if (tconf.status_updates_file) {
-		fprintf(tconf.status_updates_file,
-				"time_past,total_read_in,read_in_last_sec,read_per_sec_avg,"
-				"buffer_current_size,buffer_avg_size\n");
+		fprintf(
+		    tconf.status_updates_file,
+		    "time_past,total_read_in,read_in_last_sec,read_per_sec_avg,"
+		    "buffer_current_size,buffer_avg_size\n");
 		fflush(tconf.status_updates_file);
 		if (ferror(tconf.status_updates_file)) {
-			log_fatal("ztee", "unable to write to status updates file");
+			log_fatal("ztee",
+				  "unable to write to status updates file");
 		}
 	}
 	while (!process_done) {
@@ -503,29 +514,31 @@ void *monitor_ztee(void* arg)
 		update_stats(stats, queue);
 		if (tconf.monitor) {
 			lock_file(stderr);
-			fprintf(stderr, "%5s read_rate: %u rows/s (avg %u rows/s), buffer_size: %u (avg %u)\n",
-					stats->time_past_str,
-					stats->read_last_sec,
-					stats->read_per_sec_avg,
-					stats->buffer_cur_size,
-					stats->buffer_avg_size);
+			fprintf(stderr,
+				"%5s read_rate: %u rows/s (avg %u rows/s), "
+				"buffer_size: %u (avg %u)\n",
+				stats->time_past_str, stats->read_last_sec,
+				stats->read_per_sec_avg, stats->buffer_cur_size,
+				stats->buffer_avg_size);
 			fflush(stderr);
 			unlock_file(stderr);
 			if (ferror(stderr)) {
-				log_fatal("ztee", "unable to write status updates to stderr");
+				log_fatal(
+				    "ztee",
+				    "unable to write status updates to stderr");
 			}
 		}
 		if (tconf.status_updates_file) {
-			fprintf(tconf.status_updates_file, "%u,%u,%u,%u,%u,%u\n",
-					stats->time_past,
-					stats->total_read,
-					stats->read_last_sec,
-					stats->read_per_sec_avg,
-					stats->buffer_cur_size,
-					stats->buffer_avg_size);
+			fprintf(tconf.status_updates_file,
+				"%u,%u,%u,%u,%u,%u\n", stats->time_past,
+				stats->total_read, stats->read_last_sec,
+				stats->read_per_sec_avg, stats->buffer_cur_size,
+				stats->buffer_avg_size);
 			fflush(tconf.status_updates_file);
 			if (ferror(tconf.status_updates_file)) {
-				log_fatal("ztee", "unable to write to status updates file");
+				log_fatal(
+				    "ztee",
+				    "unable to write to status updates file");
 			}
 		}
 	}

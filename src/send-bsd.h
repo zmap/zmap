@@ -9,16 +9,15 @@
 #ifndef ZMAP_SEND_BSD_H
 #define ZMAP_SEND_BSD_H
 
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/ioctl.h>
 #include <fcntl.h>
+#include <sys/ioctl.h>
+#include <sys/time.h>
+#include <sys/types.h>
 
 #include "../lib/includes.h"
 
-#include <netinet/in.h>
 #include <net/bpf.h>
-
+#include <netinet/in.h>
 
 #ifdef ZMAP_SEND_LINUX_H
 #error "Don't include both send-bsd.h and send-linux.h"

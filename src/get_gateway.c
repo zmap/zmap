@@ -6,13 +6,13 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#include <stdlib.h>
+#include <assert.h>
+#include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <string.h>
 #include <unistd.h>
-#include <errno.h>
-#include <assert.h>
-#include <string.h>
 
 #include <pcap/pcap.h>
 
@@ -22,8 +22,8 @@
 
 #include <sys/ioctl.h>
 
-
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) ||       \
+    defined(__DragonFly__)
 #include "get_gateway-bsd.h"
 #else // (linux)
 #include "get_gateway-linux.h"
