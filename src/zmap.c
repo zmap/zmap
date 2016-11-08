@@ -322,6 +322,8 @@ int main(int argc, char *argv[])
 	zconf.log_directory = args.log_directory_arg;
 	if (args.disable_syslog_given) {
 		zconf.syslog = 0;
+	} else {
+		zconf.syslog = 1;
 	}
 	if (zconf.log_file && zconf.log_directory) {
 		log_init(stderr, zconf.log_level, zconf.syslog, "zmap");
