@@ -49,6 +49,9 @@
 #undef  MIN
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
 
+// allow 1mb lines + newline + \0 
+#define MAX_LINE_LENGTH 1024*1024 + 2
+
 static inline char* zmin(char *a, char *b) {
     if (a && !b)
         return a;
@@ -176,11 +179,17 @@ int main(int argc, char **argv)
 		}
 	}
 	// process addresses
-	char line[1000];
-	char original[1000];
-	while (fgets(line, 1000, stdin) != NULL) {
+	char *line = malloc(MAX_LINE_LENGTH);
+	assert(line);
+	char *original = malloc(MAX_LINE_LENGTH);
+	assert(original);
+	while (fgets(line, MAX_LINE_LENGTH, stdin) != NULL) {
+		size_t len = strlen(line);	
+		if (len >= (MAX_LINE_LENGTH-1)) {
+			log_fatal("zblacklist", "received line longer than max length: %i", MAX_LINE_LENGTH);
+		}
 		// remove new line
-		memcpy(original, line, strlen(line) + 1);
+		memcpy(original, line, len + 1);
 		char *n = zmin(zmin(zmin(zmin(strchr(line, '\n'),
                         strchr(line, ',')),
                         strchr(line, '\t')),
