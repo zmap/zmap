@@ -29,6 +29,8 @@ option "seed"                   e "Seed used to select address permutation"
 option "max-targets"			n "Cap number of IPs to generate (as a number or a percentage of the address space)"
     typestr="n"
     optional string
+option "disable-syslog"           - "Disables logging messages to syslog"
+    optional
 
 section "Sharding"
 
