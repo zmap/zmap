@@ -127,7 +127,7 @@ int main(int argc, char **argv)
 	SET_BOOL(no_dupchk_pres, no_duplicate_checking);
 	conf.check_duplicates = !no_dupchk_pres;
 	SET_BOOL(conf.ignore_errors, ignore_blacklist_errors);
-        SET_BOOL(conf.disable_syslog, disable_syslog);
+	SET_BOOL(conf.disable_syslog, disable_syslog);
 
 	// initialize logging
 	FILE *logfile = stderr;
