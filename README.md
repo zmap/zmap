@@ -23,6 +23,17 @@ layer handshakes.
 
 Documentation and examples can be found at https://zmap.io/.
 
+IPv6 support
+------------
+
+We added IPv6 support to ZMap and include the following new probe modules:
+
+* ICMPv6 Echo Request
+* IPv6 TCP SYN (any port)
+* IPV6 UDP (any port and payload)
+
+More information and access to our IPv6 hitlist is available on [our website](https://net.in.tum.de/pub/ipv6-hitlist/).
+
 License and Copyright
 ---------------------
 
