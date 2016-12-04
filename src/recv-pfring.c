@@ -57,7 +57,8 @@ void recv_packets()
 		return;
 	}
 	// Successfully got a packet, now handle it
-	handle_packet(pf_buffer->len, pf_buffer->data);
+	uint8_t* pkt_buf = pfring_zc_pkt_buff_data(pf_buffer, pf_recv);
+	handle_packet(pf_buffer->len, pkt_buf);
 }
 
 int recv_update_stats(void)

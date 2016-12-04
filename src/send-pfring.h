@@ -27,7 +27,7 @@ int send_run_init(sock_t socket)
 int send_packet(sock_t sock, void *buf, int len, uint32_t idx)
 {
 	sock.pf.buffers[idx]->len = len;
-	memcpy(sock.pf.buffers[idx]->data, buf, len);
+	memcpy(pfring_zc_pkt_buff_data(sock.pf.buffers[idx], sock.pf.queue), buf, len);
 	int ret;
 	do {
 		ret = pfring_zc_send_pkt(sock.pf.queue, &sock.pf.buffers[idx], 0);

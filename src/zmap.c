@@ -46,8 +46,9 @@
 
 #ifdef PFRING
 #include <pfring_zc.h>
-static int32_t distrib_func(pfring_zc_pkt_buff *pkt, void *arg) {
+static int32_t distrib_func(pfring_zc_pkt_buff *pkt, pfring_zc_queue *in_queue, void *arg) {
 	(void) pkt;
+	(void) in_queue;
 	(void) arg;
 	return 0;
 }
