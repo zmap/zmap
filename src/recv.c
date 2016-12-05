@@ -47,17 +47,17 @@ void handle_packet(uint32_t buflen, const u_char *bytes) {
 
 	if (!zconf.probe_module->validate_packet(ip_hdr, buflen - (zconf.send_ip_pkts ? 0 : sizeof(struct ether_header)),
 				&src_ip, validation)) {
-        zrecv.validation_failed++;
+		zrecv.validation_failed++;
 		return;
 	} else {
-        zrecv.validation_passed++;
+		zrecv.validation_passed++;
 	}
-    // woo! We've validated that the packet is a response to our scan
+	// woo! We've validated that the packet is a response to our scan
 	int is_repeat = pbm_check(seen, ntohl(src_ip));
-    // track whether this is the first packet in an IP fragment.
-    if (ip_hdr->ip_off & IP_MF) {
-        zrecv.ip_fragments++;
-    }
+	// track whether this is the first packet in an IP fragment.
+	if (ip_hdr->ip_off & IP_MF) {
+		zrecv.ip_fragments++;
+	}
 
 	fieldset_t *fs = fs_new_fieldset();
 	fs_add_ip_fields(fs, ip_hdr);
