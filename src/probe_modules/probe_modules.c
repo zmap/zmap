@@ -19,7 +19,7 @@
 #include "probe_modules.h"
 #include "packet.h"
 
-extern probe_module_t module_tcp_cisco_backdoor;
+//extern probe_module_t module_tcp_cisco_backdoor;
 extern probe_module_t module_tcp_synscan;
 extern probe_module_t module_tcp_synackscan;
 extern probe_module_t module_icmp_echo;
@@ -40,7 +40,7 @@ probe_module_t* probe_modules[] = {
 	&module_ntp,
 	&module_upnp,
 	&module_dns,
-	&module_tcp_cisco_backdoor,
+	//&module_tcp_cisco_backdoor,
 	&module_bacnet
 	// ADD YOUR MODULE HERE
 };
