@@ -121,6 +121,11 @@ void json_metadata(FILE *file)
 		json_object_new_int64(zconf.total_allowed));
 	json_object_object_add(obj, "blacklist_total_not_allowed",
 		json_object_new_int64(zconf.total_disallowed));
+	json_object_object_add(obj, "validation_passed",
+            json_object_new_int(zrecv.validation_passed));
+	json_object_object_add(obj, "validation_failed",
+            json_object_new_int(zrecv.validation_failed));
+
 //	json_object_object_add(obj, "blacklisted",
 //            json_object_new_int64(zsend.blacklisted));
 //	json_object_object_add(obj, "whitelisted",

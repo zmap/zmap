@@ -172,6 +172,9 @@ struct state_recv {
 	// how many packets did we receive that were marked as being the first
 	// fragment in a stream
 	uint32_t ip_fragments;
+	// metrics about _only_ validate_packet
+	uint32_t validation_passed;
+	uint32_t validation_failed;
 
 	int complete;  // has the scanner finished sending?
 	double start;  // timestamp of when recv started
