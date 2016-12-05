@@ -277,7 +277,6 @@ int send_run(sock_t st, shard_t *s)
 		// adaptive timing delay
 		send_rate = (double) zconf.rate / zconf.senders;
 		if (delay > 0) {
-			count++;
             if (send_rate < slow_rate) {
                 double t = now();
                 double last_rate = (1.0 / (t - last_time));
@@ -328,8 +327,8 @@ int send_run(sock_t st, shard_t *s)
 			break;
 		}
 		for (int i=0; i < zconf.packet_streams; i++) {
+			count++;
 			uint32_t src_ip = get_src_ip(curr, i);
-
 		  	uint32_t validation[VALIDATE_BYTES/sizeof(uint32_t)];
 			validate_gen(src_ip, curr, (uint8_t *)validation);
 			zconf.probe_module->make_packet(buf, src_ip, curr,
