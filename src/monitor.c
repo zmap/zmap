@@ -141,7 +141,7 @@ static void update_pcap_stats(pthread_mutex_t *recv_ready_mutex) {
 }
 
 static void export_stats(int_status_t *intrnl, export_status_t *exp,
-												 iterator_t *it) {
+		iterator_t *it) {
 	uint32_t total_sent = iterator_get_sent(it);
 	uint32_t total_tried_sent = iterator_get_tried_sent(it);
 	uint32_t total_fail = iterator_get_fail(it);
@@ -176,8 +176,7 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 
 	// application level statistics
 	if (zconf.fsconf.app_success_index >= 0) {
-		exp->app_success_rate =
-				(app_success - intrnl->last_recv_app_success) / delta;
+		exp->app_success_rate = (app_success - intrnl->last_recv_app_success) / delta;
 		number_string(exp->app_success_rate, exp->app_success_rate_str,
 									NUMBER_STR_LEN);
 		exp->app_success_avg = (app_success / age);
@@ -254,13 +253,13 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 static void log_drop_warnings(export_status_t *exp) {
 	if (exp->pcap_drop_last / exp->recv_rate > 0.05) {
 		log_warn("monitor", "Dropped %.0f packets in the last second, (%u total "
-												"dropped (pcap: %u + iface: %u))",
-						 exp->pcap_drop_last, exp->pcap_drop_total, exp->pcap_drop,
-						 exp->pcap_ifdrop);
+						"dropped (pcap: %u + iface: %u))",
+				exp->pcap_drop_last, exp->pcap_drop_total, exp->pcap_drop,
+				exp->pcap_ifdrop);
 	}
 	if (exp->fail_last / exp->send_rate > 0.01) {
 		log_warn("monitor", "Failed to send %.0f packets/sec (%u total failures)",
-						 exp->fail_last, exp->fail_total);
+				exp->fail_last, exp->fail_total);
 	}
 }
 
@@ -268,11 +267,11 @@ static void onscreen_appsuccess(export_status_t *exp) {
 	// this when probe module handles application-level success rates
 	if (!exp->complete) {
 		fprintf(stderr, "%5s %0.0f%%%s; sent: %u %sp/s (%sp/s avg); "
-										"recv: %u %sp/s (%sp/s avg); "
-										"app success: %u %sp/s (%sp/s avg); "
-										"drops: %sp/s (%sp/s avg); "
-										"hitrate: %0.2f%% "
-										"app hitrate: %0.2f%%\n",
+						"recv: %u %sp/s (%sp/s avg); "
+						"app success: %u %sp/s (%sp/s avg); "
+						"drops: %sp/s (%sp/s avg); "
+						"hitrate: %0.2f%% "
+						"app hitrate: %0.2f%%\n",
 						exp->time_past_str, exp->percent_complete, exp->time_remaining_str,
 						exp->total_sent, exp->send_rate_str, exp->send_rate_avg_str,
 						exp->recv_success_unique, exp->recv_rate_str, exp->recv_avg_str,
@@ -281,11 +280,11 @@ static void onscreen_appsuccess(export_status_t *exp) {
 						exp->pcap_drop_avg_str, exp->hitrate, exp->app_hitrate);
 	} else {
 		fprintf(stderr, "%5s %0.0f%%%s; sent: %u done (%sp/s avg); "
-										"recv: %u %sp/s (%sp/s avg); "
-										"app success: %u %sp/s (%sp/s avg); "
-										"drops: %sp/s (%sp/s avg); "
-										"hitrate: %0.2f%% "
-										"app hitrate: %0.2f%%\n",
+						"recv: %u %sp/s (%sp/s avg); "
+						"app success: %u %sp/s (%sp/s avg); "
+						"drops: %sp/s (%sp/s avg); "
+						"hitrate: %0.2f%% "
+						"app hitrate: %0.2f%%\n",
 						exp->time_past_str, exp->percent_complete, exp->time_remaining_str,
 						exp->total_sent, exp->send_rate_avg_str, exp->recv_success_unique,
 						exp->recv_rate_str, exp->recv_avg_str, exp->app_recv_success_unique,
@@ -298,9 +297,9 @@ static void onscreen_appsuccess(export_status_t *exp) {
 static void onscreen_generic(export_status_t *exp) {
 	if (!exp->complete) {
 		fprintf(stderr, "%5s %0.0f%%%s; send: %u %sp/s (%sp/s avg); "
-										"recv: %u %sp/s (%sp/s avg); "
-										"drops: %sp/s (%sp/s avg); "
-										"hitrate: %0.2f%%\n",
+						"recv: %u %sp/s (%sp/s avg); "
+						"drops: %sp/s (%sp/s avg); "
+						"hitrate: %0.2f%%\n",
 						exp->time_past_str, exp->percent_complete, exp->time_remaining_str,
 						exp->total_sent, exp->send_rate_str, exp->send_rate_avg_str,
 						exp->recv_success_unique, exp->recv_rate_str, exp->recv_avg_str,
@@ -322,10 +321,10 @@ static FILE *init_status_update_file(char *path) {
 	FILE *f = fopen(path, "wb");
 	if (!f) {
 		log_fatal("csv", "could not open status updates file (%s): %s",
-							zconf.status_updates_file, strerror(errno));
+				zconf.status_updates_file, strerror(errno));
 	}
 	log_debug("monitor", "status updates CSV will be saved to %s",
-						zconf.status_updates_file);
+			zconf.status_updates_file);
 	fprintf(
 			f,
 			"real-time,time-elapsed,time-remaining,"
@@ -347,26 +346,26 @@ static void update_status_updates_file(export_status_t *exp, FILE *f) {
 	struct tm *ptm = localtime(&sec);
 	strftime(timestamp, 20, "%Y-%m-%d %H:%M:%S", ptm);
 
-	fprintf(f, "%s,%u,%u,"
-						 "%f,%f,%u,"
-						 "%u,%.0f,%.0f,"
-						 "%u,%.0f,%.0f,"
-						 "%u,%.0f,%.0f,"
-						 "%u,%.0f,%.0f,"
-						 "%u,%.0f,%.0f\n",
-					timestamp, exp->time_past, exp->time_remaining, exp->percent_complete,
-					exp->hitrate, exp->send_threads, exp->total_sent, exp->send_rate,
-					exp->send_rate_avg, exp->recv_success_unique, exp->recv_rate,
-					exp->recv_avg, exp->total_recv, exp->recv_total_rate,
-					exp->recv_total_avg, exp->pcap_drop_total, exp->pcap_drop_last,
-					exp->pcap_drop_avg, exp->fail_total, exp->fail_last, exp->fail_avg);
+	fprintf(f,  "%s,%u,%u,"
+				"%f,%f,%u,"
+				"%u,%.0f,%.0f,"
+				"%u,%.0f,%.0f,"
+				"%u,%.0f,%.0f,"
+				"%u,%.0f,%.0f,"
+				"%u,%.0f,%.0f\n",
+				timestamp, exp->time_past, exp->time_remaining, exp->percent_complete,
+				exp->hitrate, exp->send_threads, exp->total_sent, exp->send_rate,
+				exp->send_rate_avg, exp->recv_success_unique, exp->recv_rate,
+				exp->recv_avg, exp->total_recv, exp->recv_total_rate,
+				exp->recv_total_avg, exp->pcap_drop_total, exp->pcap_drop_last,
+				exp->pcap_drop_avg, exp->fail_total, exp->fail_last, exp->fail_avg);
 	fflush(f);
 }
 
 static inline void check_min_hitrate(export_status_t *exp) {
 	if (exp->seconds_under_min_hitrate >= MIN_HITRATE_TIME_WINDOW) {
 		log_fatal("monitor", "hitrate below %.0f for %.0f seconds. aborting scan.",
-							zconf.min_hitrate, exp->seconds_under_min_hitrate);
+				zconf.min_hitrate, exp->seconds_under_min_hitrate);
 	}
 }
 
@@ -374,7 +373,7 @@ static inline void check_max_sendto_failures(export_status_t *exp) {
 	if (zconf.max_sendto_failures >= 0 &&
 			exp->fail_total > (uint32_t)zconf.max_sendto_failures) {
 		log_fatal("monitor", "maxiumum number of sendto failures (%i) exceeded",
-							zconf.max_sendto_failures);
+				zconf.max_sendto_failures);
 	}
 }
 
@@ -418,3 +417,4 @@ void monitor_run(iterator_t *it, pthread_mutex_t *lock) {
 		fclose(f);
 	}
 }
+
