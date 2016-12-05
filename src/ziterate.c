@@ -41,6 +41,8 @@ struct zit_conf {
 	int check_duplicates;
 	int ignore_errors;
 	int verbosity;
+	int disable_syslog;
+
 	// sharding options
 	uint8_t shard_num;
 	uint8_t total_shards;
@@ -91,6 +93,7 @@ int main(int argc, char **argv)
 	}
 	// Read the boolean flags
 	SET_BOOL(conf.ignore_errors, ignore_blacklist_errors);
+	SET_BOOL(conf.disable_syslog, disable_syslog);
 
 	// initialize logging
 	FILE *logfile = stderr;
@@ -102,7 +105,7 @@ int main(int argc, char **argv)
 			exit(1);
 		}
 	}
-	if (log_init(logfile, conf.verbosity, 1, "ziterate")) {
+	if (log_init(logfile, conf.verbosity, !conf.disable_syslog, "ziterate")) {
 		fprintf(stderr, "FATAL: unable able to initialize logging\n");
 		exit(1);
 	}

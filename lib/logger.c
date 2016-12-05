@@ -27,6 +27,8 @@ static enum LogLevel log_output_level = ZLOG_INFO;
 static FILE *log_output_stream = NULL;
 static int color = 0;
 
+static int log_to_syslog = 0;
+
 static const char *log_level_name[] = {
 	"FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE" };
 
@@ -116,9 +118,12 @@ int log_fatal(const char *name, const char *message, ...) {
 	va_start(va, message);
 	LogLogVA(ZLOG_FATAL, name, message, va);
 	va_end(va);
-	va_start(va, message);
-	vsyslog(LOG_MAKEPRI(LOG_USER, LOG_CRIT), message, va);
-	va_end(va);
+
+	if (log_to_syslog) {
+		va_start(va, message);
+		vsyslog(LOG_MAKEPRI(LOG_USER, LOG_CRIT), message, va);
+		va_end(va);
+	}
 
 	exit(EXIT_FAILURE);
 }
@@ -129,9 +134,11 @@ int log_error(const char *name, const char *message, ...) {
 	int ret = LogLogVA(ZLOG_ERROR, name, message, va);
 	va_end(va);
 
-	va_start(va, message);
-	vsyslog(LOG_MAKEPRI(LOG_USER, LOG_ERR), message, va);
-	va_end(va);
+	if (log_to_syslog) {
+		va_start(va, message);
+		vsyslog(LOG_MAKEPRI(LOG_USER, LOG_ERR), message, va);
+		va_end(va);
+	}
 
 	return ret;
 }
@@ -141,9 +148,12 @@ int log_warn(const char *name, const char *message, ...) {
 	va_start(va, message);
 	int ret = LogLogVA(ZLOG_WARN, name, message, va);
 	va_end(va);
-	va_start(va, message);
-	vsyslog(LOG_MAKEPRI(LOG_USER, LOG_WARNING), message, va);
-	va_end(va);
+
+	if (log_to_syslog) {
+		va_start(va, message);
+		vsyslog(LOG_MAKEPRI(LOG_USER, LOG_WARNING), message, va);
+		va_end(va);
+	}
 
 	return ret;
 }
@@ -159,9 +169,11 @@ int log_info(const char *name, const char *message, ...) {
 	strcat(prefixed, ": ");
 	strcat(prefixed, message);
 
-	va_start(va, message);
-	vsyslog(LOG_MAKEPRI(LOG_USER, LOG_INFO), prefixed, va);
-	va_end(va);
+	if (log_to_syslog) {
+		va_start(va, message);
+		vsyslog(LOG_MAKEPRI(LOG_USER, LOG_INFO), prefixed, va);
+		va_end(va);
+	}
 
 	free(prefixed);
 
@@ -179,9 +191,11 @@ int log_debug(const char *name, const char *message, ...) {
 	strcat(prefixed, ": ");
 	strcat(prefixed, message);
 
-	va_start(va, message);
-	vsyslog(LOG_MAKEPRI(LOG_USER, LOG_DEBUG), prefixed, va);
-	va_end(va);
+	if (log_to_syslog) {
+		va_start(va, message);
+		vsyslog(LOG_MAKEPRI(LOG_USER, LOG_DEBUG), prefixed, va);
+		va_end(va);
+	}
 
 	free(prefixed);
 
@@ -200,9 +214,11 @@ extern int log_trace(const char *name, const char *message, ...) {
 	strcat(prefixed, ": ");
 	strcat(prefixed, message);
 
-	va_start(va, message);
-	vsyslog(LOG_MAKEPRI(LOG_USER, LOG_DEBUG), prefixed, va);
-	va_end(va);
+	if (log_to_syslog) {
+		va_start(va, message);
+		vsyslog(LOG_MAKEPRI(LOG_USER, LOG_DEBUG), prefixed, va);
+		va_end(va);
+	}
 
 	free(prefixed);
 
@@ -216,6 +232,7 @@ int log_init(FILE *stream, enum LogLevel level,
 	log_output_stream = stream;
 	log_output_level = level;
 	if (syslog_enabled) {
+		log_to_syslog = 1;
 		openlog(appname, 0, LOG_USER); //no options
 	}
 	if (isatty(fileno(log_output_stream))) {
