@@ -503,10 +503,10 @@ int main(int argc, char *argv[])
 				zconf.output_fields_len);
 	}
 	// default filtering behavior is to drop unsuccessful and duplicates
-	if (!strcmp(args.output_filter_arg, "default")) {
+	if (!args.output_filter_arg || !strcmp(args.output_filter_arg, "default")) {
 		zconf.filter_duplicates = 1;
 		zconf.filter_unsuccessful = 1;
-		log_debug("zmap", "no output filter. will use default: exclude duplicates and unssuccessful");
+		log_debug("filter", "no output filter. will use default: exclude duplicates and unssuccessful");
 	} else {
 		// Run it through yyparse to build the expression tree
 		if (!parse_filter_string(args.output_filter_arg)) {
@@ -517,6 +517,7 @@ int main(int argc, char *argv[])
 			log_fatal("zmap", "Invalid filter");
 		}
 		zconf.output_filter_str = args.output_filter_arg;
+		log_debug("filter", "will use output filter %s", args.output_filter_arg);
 	}
 
 	SET_BOOL(zconf.dryrun, dryrun);
