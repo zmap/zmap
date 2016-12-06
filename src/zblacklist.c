@@ -207,6 +207,10 @@ int main(int argc, char **argv)
 		struct in_addr addr;
 		if (!inet_aton(line, &addr)) {
 			log_warn("zblacklist", "invalid input address: %s", line);
+			if (!conf.ignore_input_errors) {
+				printf("%s", original);
+			}
+			continue;
 		}
 		if (conf.check_duplicates) {
 			if (pbm_check(seen, ntohl(addr.s_addr))) {
