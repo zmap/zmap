@@ -41,8 +41,9 @@
 
 #include "output_modules/output_modules.h"
 #include "probe_modules/probe_modules.h"
+#ifdef JSON
 #include "output_modules/module_json.h"
-
+#endif
 
 int test_recursive_fieldsets(void)
 {
@@ -60,8 +61,11 @@ int test_recursive_fieldsets(void)
     fs_add_string(outer, "name", strdup("value"), 0);
     fs_add_string(inner, "name2", strdup("value2"), 0);
     fs_add_fieldset(outer, "inner", inner);
-
+    
+    #ifdef JSON
     print_json_fieldset(outer);
+    #endif
+    
     fs_free(outer);
 
     return EXIT_SUCCESS;
