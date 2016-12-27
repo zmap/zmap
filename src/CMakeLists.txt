@@ -143,10 +143,19 @@ else()
     set(ZTESTSOURCES ${ZTESTSOURCES} recv-pcap.c)
 endif()
 
+# Set configure time zmap version
 configure_file(topt.ggo.in ${CMAKE_BINARY_DIR}/src/topt.ggo @ONLY)
 configure_file(zbopt.ggo.in ${CMAKE_BINARY_DIR}/src/zbopt.ggo @ONLY)
 configure_file(zitopt.ggo.in ${CMAKE_BINARY_DIR}/src/zitopt.ggo @ONLY)
 configure_file(zopt.ggo.in ${CMAKE_BINARY_DIR}/src/zopt.ggo @ONLY)
+# Additional ggo.in's should be added here and CMakeVersion.txt
+
+# This sets a *build* time dependency that checks git
+if("${ZMAP_VERSION}" STREQUAL "DEVELOPMENT")
+    add_custom_target(git_versioning ALL
+        COMMAND ${CMAKE_COMMAND} -D PATH:STRING="${CMAKE_BINARY_DIR}/src" -P CMakeVersion.txt 
+        )
+endif()
 
 add_custom_command(OUTPUT zopt.h
     COMMAND gengetopt -C --no-help --no-version --unamed-opts=SUBNETS -i "${CMAKE_CURRENT_BINARY_DIR}/zopt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/zopt"

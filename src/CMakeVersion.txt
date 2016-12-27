@@ -1,0 +1,14 @@
+set(GIT_CMD "git")
+set(GIT_ARGS "log" "-n" "1" "--pretty=format:%h - %ad")
+execute_process(COMMAND ${GIT_CMD} ${GIT_ARGS}
+    RESULT_VARIABLE GIT_RESULT
+    OUTPUT_VARIABLE GIT_COMMIT)
+    if (GIT_RESULT)
+        set (GIT_COMMIT "UNKNOWN")
+    endif()
+set(ZMAP_VERSION "Development Build. Commit ${GIT_COMMIT}")
+
+configure_file(topt.ggo.in "${PATH}/topt.ggo" @ONLY)
+configure_file(zbopt.ggo.in "${PATH}/zbopt.ggo" @ONLY)
+configure_file(zitopt.ggo.in "${PATH}/zitopt.ggo" @ONLY)
+configure_file(zopt.ggo.in "${PATH}/zopt.ggo" @ONLY)
