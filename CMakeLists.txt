@@ -11,18 +11,6 @@ option(WITH_WERROR "Build with -Werror" OFF)
 option(WITH_PFRING "Build with PF_RING ZC for send (10 GigE)" OFF)
 option(FORCE_CONF_INSTALL "Overwrites existing configuration files at install" OFF)
 
-if("${ZMAP_VERSION}" STREQUAL "DEVELOPMENT")
-    set(GIT_CMD "git")
-    set(GIT_ARGS "log" "-n" "1" "--pretty=format:%h - %ad")
-    execute_process(COMMAND ${GIT_CMD} ${GIT_ARGS}
-        RESULT_VARIABLE GIT_RESULT
-        OUTPUT_VARIABLE GIT_COMMIT)
-    if (GIT_RESULT)
-        set (GIT_COMMIT "UNKNOWN")
-    endif()
-    set(ZMAP_VERSION "Development Build. Commit ${GIT_COMMIT}")
-endif()
-
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(USING_CLANG "YES")
 else()
