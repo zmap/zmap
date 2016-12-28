@@ -8,7 +8,7 @@ execute_process(COMMAND ${GIT_CMD} ${GIT_ARGS}
     endif()
 set(ZMAP_VERSION "Development Build. Commit ${GIT_COMMIT}")
 
-configure_file(topt.ggo.in topt.ggo @ONLY)
-configure_file(zbopt.ggo.in zbopt.ggo @ONLY)
-configure_file(zitopt.ggo.in zitopt.ggo @ONLY)
-configure_file(zopt.ggo.in zopt.ggo @ONLY)
+configure_file(topt.ggo.in "${PATH}/topt.ggo" @ONLY)
+configure_file(zbopt.ggo.in "${PATH}/zbopt.ggo" @ONLY)
+configure_file(zitopt.ggo.in "${PATH}/zitopt.ggo" @ONLY)
+configure_file(zopt.ggo.in "${PATH}/zopt.ggo" @ONLY)
