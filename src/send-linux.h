@@ -40,17 +40,6 @@ int send_run_init(sock_t s)
 	}
 	int ifindex = if_idx.ifr_ifindex;
 
-	// find source IP address associated with the dev from which we're sending.
-	// while we won't use this address for sending packets, we need the address
-	// to set certain socket options and it's easiest to just use the primary
-	// address the OS believes is associated.
-	struct ifreq if_ip;
-	memset(&if_ip, 0, sizeof(struct ifreq));
-	strncpy(if_ip.ifr_name, zconf.iface, IFNAMSIZ-1);
-	if (ioctl(sock, SIOCGIFADDR, &if_ip) < 0) {
-		perror("SIOCGIFADDR");
-		return EXIT_FAILURE;
-	}
 	// destination address for the socket
 	memset((void*) &sockaddr, 0, sizeof(struct sockaddr_ll));
 	sockaddr.sll_ifindex = ifindex;
