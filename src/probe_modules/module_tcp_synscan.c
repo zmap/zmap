@@ -23,13 +23,13 @@
 probe_module_t module_tcp_synscan;
 static uint32_t num_ports;
 
-int synscan_global_initialize(struct state_conf *state)
+static int synscan_global_initialize(struct state_conf *state)
 {
 	num_ports = state->source_port_last - state->source_port_first + 1;
 	return EXIT_SUCCESS;
 }
 
-int synscan_init_perthread(void* buf, macaddr_t *src,
+static int synscan_init_perthread(void* buf, macaddr_t *src,
 		macaddr_t *gw, port_h_t dst_port,
 		__attribute__((unused)) void **arg_ptr)
 {
@@ -44,7 +44,7 @@ int synscan_init_perthread(void* buf, macaddr_t *src,
 	return EXIT_SUCCESS;
 }
 
-int synscan_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
+static int synscan_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 		uint32_t *validation, int probe_num, __attribute__((unused)) void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -68,6 +68,7 @@ int synscan_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 	return EXIT_SUCCESS;
 }
 
+// not static because used by synack scan
 void synscan_print_packet(FILE *fp, void* packet)
 {
 	struct ether_header *ethh = (struct ether_header *) packet;
@@ -83,7 +84,7 @@ void synscan_print_packet(FILE *fp, void* packet)
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
-int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
+static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		__attribute__((unused))uint32_t *src_ip,
 		uint32_t *validation)
 {
@@ -123,7 +124,7 @@ int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	return 1;
 }
 
-void synscan_process_packet(const u_char *packet,
+static void synscan_process_packet(const u_char *packet,
 		__attribute__((unused)) uint32_t len, fieldset_t *fs,
 		__attribute__((unused)) uint32_t *validation)
 {

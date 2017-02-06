@@ -35,3 +35,6 @@ IP addresses using a blacklist or whitelist.
 
   * `--ignore-blacklist-errors`:
     Ignore invalid entries in the blacklist. Default is false.
+
+  * `--ignore-input-errors`:
+    Don't print invalid entries in the input. Default is false.

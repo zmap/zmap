@@ -46,8 +46,9 @@
 
 #ifdef PFRING
 #include <pfring_zc.h>
-static int32_t distrib_func(pfring_zc_pkt_buff *pkt, void *arg) {
+static int32_t distrib_func(pfring_zc_pkt_buff *pkt, pfring_zc_queue *in_queue, void *arg) {
 	(void) pkt;
+	(void) in_queue;
 	(void) arg;
 	return 0;
 }
@@ -154,8 +155,8 @@ static void start_zmap(void)
 	if (zconf.output_module && zconf.output_module->init) {
 		if (zconf.output_module->init(&zconf, zconf.output_fields,
 				zconf.output_fields_len)) {
-            log_fatal("zmap", "output module did not initialize successfully.");
-        }
+			log_fatal("zmap", "output module did not initialize successfully.");
+		}
 	}
 
 	iterator_t *it = send_init();
@@ -372,9 +373,6 @@ int main(int argc, char *argv[])
 	if (!strcmp(args.output_module_arg, "default")) {
 		log_debug("zmap", "no output module provided. will use csv.");
 		zconf.output_module = get_output_module_by_name("csv");
-		zconf.raw_output_fields = (char*) "saddr";
-		zconf.filter_duplicates = 1;
-		zconf.filter_unsuccessful = 1;
 	} else {
 		zconf.output_module = get_output_module_by_name(args.output_module_arg);
 		if (!zconf.output_module) {
@@ -388,17 +386,17 @@ int main(int argc, char *argv[])
 				args.probe_module_arg);
 	  exit(EXIT_FAILURE);
 	}
-    // check whether the probe module is going to generate dynamic data
-    // and that the output module can support exporting that data out of
-    // zmap. If they can't, then quit.
-    if (zconf.probe_module->output_type == OUTPUT_TYPE_DYNAMIC
-            && !zconf.output_module->supports_dynamic_output) {
-        log_fatal("zmap", "specified probe module (%s) requires dynamic "
-                "output support, which output module (%s) does not support. "
-                "Most likely you want to use JSON output.",
-                args.probe_module_arg,
-                args.output_module_arg);
-    }
+	// check whether the probe module is going to generate dynamic data
+	// and that the output module can support exporting that data out of
+	// zmap. If they can't, then quit.
+	if (zconf.probe_module->output_type == OUTPUT_TYPE_DYNAMIC
+			&& !zconf.output_module->supports_dynamic_output) {
+		log_fatal("zmap", "specified probe module (%s) requires dynamic "
+				"output support, which output module (%s) does not support. "
+				"Most likely you want to use JSON output.",
+				args.probe_module_arg,
+				args.output_module_arg);
+	}
 	if (args.help_given) {
 		cmdline_parser_print_help();
 		printf("\nProbe-module (%s) Help:\n", zconf.probe_module->name);
@@ -504,18 +502,22 @@ int main(int argc, char *argv[])
 				&zconf.fsconf.defs, zconf.output_fields,
 				zconf.output_fields_len);
 	}
-	// Parse and validate the output filter, if any
-	if (args.output_filter_arg) {
+	// default filtering behavior is to drop unsuccessful and duplicates
+	if (!args.output_filter_arg || !strcmp(args.output_filter_arg, "default")) {
+		zconf.filter_duplicates = 1;
+		zconf.filter_unsuccessful = 1;
+		log_debug("filter", "no output filter. will use default: exclude duplicates and unssuccessful");
+	} else {
 		// Run it through yyparse to build the expression tree
 		if (!parse_filter_string(args.output_filter_arg)) {
 			log_fatal("zmap", "Unable to parse filter expression");
 		}
-
 		// Check the fields used against the fieldset in use
 		if (!validate_filter(zconf.filter.expression, &zconf.fsconf.defs)) {
 			log_fatal("zmap", "Invalid filter");
 		}
 		zconf.output_filter_str = args.output_filter_arg;
+		log_debug("filter", "will use output filter %s", args.output_filter_arg);
 	}
 
 	SET_BOOL(zconf.dryrun, dryrun);
@@ -761,12 +763,7 @@ int main(int argc, char *argv[])
 	if (args.sender_threads_given) {
 		zconf.senders = args.sender_threads_arg;
 	} else {
-		int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
-		zconf.senders = max_int(num_cores - 1, 1);
-		if (!zconf.quiet || zconf.status_updates_file) {
-			// If monitoring, save a core for the monitor thread
-			zconf.senders = max_int(zconf.senders - 1, 1);
-		}
+		zconf.senders = 1;
 	}
 	if (2*zconf.senders >= zsend.targets) {
 		log_warn("zmap", "too few targets relative to senders, dropping to one sender");

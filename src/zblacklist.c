@@ -66,7 +66,8 @@ struct zbl_conf {
 	char *whitelist_filename;
 	char *log_filename;
 	int check_duplicates;
-	int ignore_errors;
+	int ignore_blacklist_errors;
+	int ignore_input_errors;
 	int verbosity;
 	int disable_syslog;
 	//struct zbl_stats stats;
@@ -83,7 +84,8 @@ int main(int argc, char **argv)
 	conf.verbosity = 3;
 	memset(&conf, 0, sizeof(struct zbl_conf));
 	int no_dupchk_pres = 0;
-	conf.ignore_errors = 0;
+	conf.ignore_blacklist_errors = 0;
+	conf.ignore_input_errors = 0;
 
 	struct gengetopt_args_info args;
 	struct cmdline_parser_params *params;
@@ -126,7 +128,8 @@ int main(int argc, char **argv)
 	// Read the boolean flags
 	SET_BOOL(no_dupchk_pres, no_duplicate_checking);
 	conf.check_duplicates = !no_dupchk_pres;
-	SET_BOOL(conf.ignore_errors, ignore_blacklist_errors);
+	SET_BOOL(conf.ignore_blacklist_errors, ignore_blacklist_errors);
+	SET_BOOL(conf.ignore_input_errors, ignore_input_errors);
 	SET_BOOL(conf.disable_syslog, disable_syslog);
 
 	// initialize logging
@@ -169,7 +172,7 @@ int main(int argc, char **argv)
 	}
 
 	if (blacklist_init(conf.whitelist_filename, conf.blacklist_filename,
-			NULL, 0, NULL, 0, conf.ignore_errors)) {
+			NULL, 0, NULL, 0, conf.ignore_blacklist_errors)) {
 		log_fatal("zmap", "unable to initialize blacklist / whitelist");
 	}
 	// initialize paged bitmap
@@ -204,6 +207,10 @@ int main(int argc, char **argv)
 		struct in_addr addr;
 		if (!inet_aton(line, &addr)) {
 			log_warn("zblacklist", "invalid input address: %s", line);
+			if (!conf.ignore_input_errors) {
+				printf("%s", original);
+			}
+			continue;
 		}
 		if (conf.check_duplicates) {
 			if (pbm_check(seen, ntohl(addr.s_addr))) {

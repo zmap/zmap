@@ -25,6 +25,8 @@ option "no-duplicate-checking"    - "Don't deduplicate IP addresses (default fal
     optional
 option "ignore-blacklist-errors"  - "Ignore invalid entires in the blacklist/whitelist (default false)"
     optional
+option "ignore-input-errors"      - "Don't print invalid entires in the input (default false)"
+    optional
 option "disable-syslog"           - "Disables logging messages to syslog"
     optional
 

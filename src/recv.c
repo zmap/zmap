@@ -69,7 +69,10 @@ void handle_packet(uint32_t buflen, const u_char *bytes) {
 
 	if (!zconf.probe_module->validate_packet(ip_hdr, buflen - (zconf.send_ip_pkts ? 0 : sizeof(struct ether_header)),
 				&src_ip, validation)) {
+		zrecv.validation_failed++;
 		return;
+	} else {
+		zrecv.validation_passed++;
 	}
 
 	// IPv6

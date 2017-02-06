@@ -301,7 +301,6 @@ int send_run(sock_t st, shard_t *s)
 		// adaptive timing delay
 		send_rate = (double) zconf.rate / zconf.senders;
 		if (delay > 0) {
-			count++;
             if (send_rate < slow_rate) {
                 double t = now();
                 double last_rate = (1.0 / (t - last_time));
@@ -352,9 +351,9 @@ int send_run(sock_t st, shard_t *s)
 			break;
 		}
 		for (int i=0; i < zconf.packet_streams; i++) {
-			uint32_t src_ip;
-
-		  	uint32_t validation[VALIDATE_BYTES/sizeof(uint32_t)];
+			count++;
+			uint32_t src_ip = get_src_ip(curr, i);
+			uint32_t validation[VALIDATE_BYTES/sizeof(uint32_t)];
 			// IPv6
 			if (ipv6) {
 				((struct in6_addr *) probe_data)[0] = ipv6_src;
