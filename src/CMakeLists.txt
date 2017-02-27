@@ -182,10 +182,17 @@ add_custom_command(OUTPUT lexer.c
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/lexer.l"
 )
 
+if(NetBSD)
+add_custom_command(OUTPUT parser.c
+    COMMAND yacc -d -o "${CMAKE_CURRENT_BINARY_DIR}/parser.c" "${CMAKE_CURRENT_SOURCE_DIR}/parser.y"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/parser.y"
+)
+else()
 add_custom_command(OUTPUT parser.c
     COMMAND byacc -d -o "${CMAKE_CURRENT_BINARY_DIR}/parser.c" "${CMAKE_CURRENT_SOURCE_DIR}/parser.y"
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/parser.y"
 )
+endif()
 
 add_executable(zmap ${SOURCES})
 add_executable(zblacklist ${ZBLSOURCES})
