@@ -21,6 +21,10 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "FreeBSD" OR "${CMAKE_SYSTEM_NAME}" MATCHES "N
     set(BSD "YES")
 endif()
 
+if("${CMAKE_SYSTEM_NAME}" MATCHES "NetBSD")
+    set(NetBSD "YES")
+endif()
+
 # Hardening and warnings for building with gcc
 # Maybe add -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations
 set(GCCWARNINGS
@@ -120,6 +124,11 @@ endif()
 if(BSD)
     include_directories(/usr/local/include)
     link_directories(/usr/local/lib)
+endif()
+
+if(NetBSD)
+    include_directories(/usr/pkg/include)
+    link_directories(/usr/pkg/lib)
 endif()
 
 add_subdirectory(lib)

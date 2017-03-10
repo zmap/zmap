@@ -17,7 +17,13 @@
 #include <netinet/ip_icmp.h>
 #include <netinet/udp.h>
 #include <netinet/tcp.h>
+
+#if defined(__NetBSD__)
+#define ICMP_UNREACH_PRECEDENCE_CUTOFF ICMP_UNREACH_PREC_CUTOFF
+#include <net/if_ether.h>
+#else
 #include <net/ethernet.h>
+#endif
 
 #include <netdb.h>
 #include <net/if.h>
