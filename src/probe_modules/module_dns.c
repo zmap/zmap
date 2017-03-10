@@ -65,6 +65,10 @@
 // THIS INCLUDES THE NULL BYTE
 #define MAX_NAME_LENGTH 512
 
+#if defined(__NetBSD__) && !defined(__cplusplus) && defined(bool)
+#undef bool
+#endif
+
 typedef uint8_t bool;
 
 // zmap boilerplate

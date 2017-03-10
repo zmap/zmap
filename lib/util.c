@@ -282,15 +282,33 @@ int set_cpu(uint32_t core)
 	return EXIT_SUCCESS;
 }
 
+#elif defined(__NetBSD__)
+
+int set_cpu(uint32_t core)
+{
+	cpuset_t *cpuset = cpuset_create();
+	if (cpuset == NULL) {
+		return EXIT_FAILURE;
+	}
+	cpuset_zero(cpuset);
+	cpuset_set(core, cpuset);
+	cpuset_destroy(cpuset);
+
+	if (pthread_setaffinity_np(pthread_self(),
+				cpuset_size(cpuset), cpuset) != 0) {
+		return EXIT_FAILURE;
+	}
+	return EXIT_SUCCESS;
+}
+
 #else
 
-#if defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(__FreeBSD__)
 #include <sys/param.h>
 #include <sys/cpuset.h>
 #include <pthread_np.h>
 #define cpu_set_t cpuset_t
 #endif
-
 
 int set_cpu(uint32_t core)
 {
