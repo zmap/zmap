@@ -372,7 +372,7 @@ static inline void check_min_hitrate(export_status_t *exp) {
 static inline void check_max_sendto_failures(export_status_t *exp) {
 	if (zconf.max_sendto_failures >= 0 &&
 			exp->fail_total > (uint32_t)zconf.max_sendto_failures) {
-		log_fatal("monitor", "maxiumum number of sendto failures (%i) exceeded",
+		log_fatal("monitor", "maximum number of sendto failures (%i) exceeded",
 				zconf.max_sendto_failures);
 	}
 }
@@ -417,4 +417,3 @@ void monitor_run(iterator_t *it, pthread_mutex_t *lock) {
 		fclose(f);
 	}
 }
-
