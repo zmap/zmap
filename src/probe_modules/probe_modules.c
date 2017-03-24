@@ -29,7 +29,9 @@ extern probe_module_t module_ntp;
 extern probe_module_t module_upnp;
 extern probe_module_t module_dns;
 extern probe_module_t module_bacnet;
+extern probe_module_t module_tcp_synopt;
 extern probe_module_t module_ipv6_tcp_synscan;
+extern probe_module_t module_ipv6_tcp_synopt;
 extern probe_module_t module_ipv6_udp;
 extern probe_module_t module_ipv6_udp_dns;
 extern probe_module_t module_icmp6_echoscan;
@@ -47,7 +49,9 @@ probe_module_t* probe_modules[] = {
 	&module_dns,
 	//&module_tcp_cisco_backdoor,
 	&module_bacnet,
+	&module_tcp_synopt,
 	&module_ipv6_tcp_synscan,
+	&module_ipv6_tcp_synopt,
 	&module_ipv6_udp,
 	&module_ipv6_udp_dns,
 	&module_icmp6_echoscan
