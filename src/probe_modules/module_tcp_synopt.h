@@ -27,6 +27,9 @@ static inline void tcpsynopt_process_packet_parse(
 	fs_add_uint64(fs, "tsval", (uint64_t) 0);
 	fs_add_uint64(fs, "tsecr", (uint64_t) 0);
 	fs_add_uint64(fs, "tsdiff", (uint64_t) 1);
+	fs_add_uint64(fs, "qsfunc", (uint64_t) 0);
+	fs_add_uint64(fs, "qsttl", (uint64_t) 0);
+	fs_add_uint64(fs, "qsnonce", (uint64_t) 0);
 	fs_add_uint64(fs, "wscale", (uint64_t) 0);
 	fs_add_string(fs, "mptcpkey", (char*) "--",0);
 	fs_add_uint64(fs, "mptcpdiff", (uint64_t) 0);
