@@ -8,6 +8,31 @@
 
 #pragma once
 
+static fielddef_t fields[] = {
+		{.name = "sport",  .type = "int", .desc = "TCP source port"},
+		{.name = "dport",  .type = "int", .desc = "TCP destination port"},
+		{.name = "seqnum", .type = "int", .desc = "TCP sequence number"},
+		{.name = "acknum", .type = "int", .desc = "TCP acknowledgement number"},
+		{.name = "window", .type = "int", .desc = "TCP window"},
+		{.name = "tcpmss", .type = "int", .desc = "TCP mss"},
+		{.name = "tsval", .type = "int", .desc = "tsval"},
+		{.name = "tsecr", .type = "int", .desc = "tsecr"},
+		{.name = "tsdiff", .type = "int", .desc = "tsval"},
+		{.name = "qsfunc", .type = "int", .desc = "qsfunc"},
+		{.name = "qsttl", .type = "int", .desc = "qsttl"},
+		{.name = "qsnonce", .type = "int", .desc = "qsnonce"},
+		{.name = "echo", .type = "int", .desc = "echo"},
+		{.name = "echoreply", .type = "int", .desc = "echoreply"},
+		{.name = "wscale", .type = "int", .desc = "tsval"},
+		{.name = "mptcpkey", .type = "string", .desc = "tsval"},
+		{.name = "mptcpdiff", .type = "int", .desc = "tsval"},
+		{.name = "tfocookie", .type = "int", .desc = "tsval"},
+		{.name = "optionshex", .type = "string", .desc = "TCP options"},
+		{.name = "optionstext", .type = "string", .desc = "TCP options"},
+		{.name = "classification", .type="string", .desc = "packet classification"},
+		{.name = "success", .type="int", .desc = "is response considered success"}
+};
+
 static inline void tcpsynopt_process_packet_parse(
 	__attribute__((unused)) uint32_t len, fieldset_t *fs,
 	struct tcphdr *tcp, __attribute__((unused)) unsigned int optionbytes2)

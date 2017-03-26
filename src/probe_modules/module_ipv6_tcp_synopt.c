@@ -196,7 +196,7 @@ void ipv6_tcp_synopt_process_packet(const u_char *packet,
 	struct ip6_hdr *ipv6_hdr = (struct ip6_hdr *) (&eth_hdr[1]);
 	struct tcphdr *tcp_hdr = (struct tcphdr*) (&ipv6_hdr[1]);
 	//	unsigned int optionbytes2=len-(sizeof(struct ether_header)+ntohs(ipv6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen) + sizeof(struct tcphdr));
-	unsigned int optionbytes2=len-(sizeof(struct ether_header)+sizeof(struct ip6_hdr) + sizeof(struct tcphdr));	
+	unsigned int optionbytes2=len-(sizeof(struct ether_header)+sizeof(struct ip6_hdr) + sizeof(struct tcphdr));
 	tcpsynopt_process_packet_parse(len, fs,tcp_hdr,optionbytes2);
 	return;
 
@@ -382,26 +382,6 @@ void ipv6_tcp_synopt_process_packet(const u_char *packet,
 		fs_add_uint64(fs, "success", 1);
 	}*/
 }
-
-static fielddef_t fields[] = {
-	{.name = "sport",  .type = "int", .desc = "TCP source port"},
-	{.name = "dport",  .type = "int", .desc = "TCP destination port"},
-	{.name = "seqnum", .type = "int", .desc = "TCP sequence number"},
-	{.name = "acknum", .type = "int", .desc = "TCP acknowledgement number"},
-	{.name = "window", .type = "int", .desc = "TCP window"},
-	{.name = "tcpmss", .type = "int", .desc = "TCP mss"},
-	{.name = "tsval", .type = "int", .desc = "tsval"},	
-	{.name = "tsecr", .type = "int", .desc = "tsecr"},
-	{.name = "tsdiff", .type = "int", .desc = "tsval"},	
-	{.name = "wscale", .type = "int", .desc = "tsval"},	
-	{.name = "mptcpkey", .type = "string", .desc = "tsval"},	
-	{.name = "mptcpdiff", .type = "int", .desc = "tsval"},	
-	{.name = "tfocookie", .type = "int", .desc = "tsval"},	
-	{.name = "optionshex", .type = "string", .desc = "TCP options"},
-	{.name = "optionstext", .type = "string", .desc = "TCP options"},
-	{.name = "classification", .type="string", .desc = "packet classification"},
-	{.name = "success", .type="int", .desc = "is response considered success"}
-};
 
 probe_module_t module_ipv6_tcp_synopt = {
 	.name = "ipv6_tcp_synopt",
