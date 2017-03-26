@@ -228,6 +228,8 @@ static fielddef_t fields[] = {
 	{.name = "qsfunc", .type = "int", .desc = "qsfunc"},
 	{.name = "qsttl", .type = "int", .desc = "qsttl"},
 	{.name = "qsnonce", .type = "int", .desc = "qsnonce"},
+	{.name = "echo", .type = "int", .desc = "echo"},
+	{.name = "echoreply", .type = "int", .desc = "echoreply"},
 	{.name = "wscale", .type = "int", .desc = "tsval"},
 	{.name = "mptcpkey", .type = "string", .desc = "tsval"},
 	{.name = "mptcpdiff", .type = "int", .desc = "tsval"},

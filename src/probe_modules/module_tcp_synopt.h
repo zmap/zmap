@@ -30,6 +30,8 @@ static inline void tcpsynopt_process_packet_parse(
 	fs_add_uint64(fs, "qsfunc", (uint64_t) 0);
 	fs_add_uint64(fs, "qsttl", (uint64_t) 0);
 	fs_add_uint64(fs, "qsnonce", (uint64_t) 0);
+	fs_add_uint64(fs, "echo", (uint64_t) 0);
+	fs_add_uint64(fs, "echoreply", (uint64_t) 0);
 	fs_add_uint64(fs, "wscale", (uint64_t) 0);
 	fs_add_string(fs, "mptcpkey", (char*) "--",0);
 	fs_add_uint64(fs, "mptcpdiff", (uint64_t) 0);
@@ -97,9 +99,17 @@ static inline void tcpsynopt_process_packet_parse(
 			i=i+3;
 			break;
 		case 4: // SACK permitted
-				snprintf(&buft[j],6,"SACK-"); j=j+5;
-				i=i+2;				
-				break;
+			snprintf(&buft[j],6,"SACK-"); j=j+5;
+			i=i+2;
+			break;
+		case 6: // Echo Request
+			snprintf(&buft[j],5,"ECHO-"); j=j+5;
+			fs_modify_uint64(fs, "echo", (uint64_t)(ntohl(*(unsigned int*) &opts[i+2])));
+			i=i+6;
+		case 7: // Echo Reply
+			snprintf(&buft[j],6,"ECHOR-"); j=j+6;
+			fs_modify_uint64(fs, "echoreply", (uint64_t)(ntohl(*(unsigned int*) &opts[i+2])));
+			i=i+6;
 		case 8: // timestamps
 			if( (0xff & opts[i+1]) == 0x0a){
 				snprintf(&buft[j],4,"TS-"); j=j+3;
@@ -167,14 +177,6 @@ static inline void tcpsynopt_process_packet_parse(
 		case 5: // SACK, only permitted in SYN
 				snprintf(&buft[j],2,"X"); j++;
 				i=i+ (unsigned int)(0xff & opts[i+1]);
-				break;
-		case 6: // obsolete
-				snprintf(&buft[j],2,"X"); j++;
-				i=i+6;
-				break;
-		case 7: // obsolete
-				snprintf(&buft[j],2,"X"); j++;
-				i=i+6;
 				break;
 		case 9: // obsolete
 				snprintf(&buft[j],2,"X"); j++;
