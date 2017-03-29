@@ -1,0 +1,11 @@
+
+probe-module ipv6_tcp_synopt
+probe-args=hex:0402080affffffff0101010103030101220240021e0c00810c0c0c0c0c0c0c0c000000000
+
+output-module csv
+output-fields saddr,sport,optionshex,optionstext,success,tcpmss,tsval,tsecr,tsdiff,wscale,mptcpkey,mptcpdiff,tfocookie
+
+
+ipv6-source-ip "2001:4ca0:108:42::8"
+gateway-mac 00:1b:ed:e6:7b:00
+interface eth2

@@ -1,0 +1,6 @@
+
+probe-module tcp_synopt
+probe-args=hex:0402080affffffff0101010103030101220240021e0c00810c0c0c0c0c0c0c0c000000000
+
+output-module csv
+output-fields saddr,sport,optionshex,optionstext,success,tcpmss,tsval,tsecr,tsdiff,wscale,mptcpkey,mptcpdiff,tfocookie
