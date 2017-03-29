@@ -6,7 +6,10 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-// probe module for performing TCP SYN scans over IPv6
+// probe module for performing TCP SYN OPT scans over IPv6
+// based on TCP SYN module, with changes by Quirin Scheitle and Markus Sosnowski
+
+
 
 #include <stdlib.h>
 #include <stdio.h>
