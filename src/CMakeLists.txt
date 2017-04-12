@@ -87,11 +87,11 @@ set(ZTESTSOURCES
     state.c
     summary.c
     validate.c
-    zopt_compat.c
+    ztopt_compat.c
     ${PROBE_MODULE_SOURCES}
     ${OUTPUT_MODULE_SOURCES}
     tests/test_harness.c
-    "${CMAKE_CURRENT_BINARY_DIR}/zopt.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/ztopt.h"
     "${CMAKE_CURRENT_BINARY_DIR}/lexer.c"
     "${CMAKE_CURRENT_BINARY_DIR}/parser.c"
     ${EXTRA_PROBE_MODULES}
@@ -148,6 +148,7 @@ configure_file(topt.ggo.in ${CMAKE_BINARY_DIR}/src/topt.ggo @ONLY)
 configure_file(zbopt.ggo.in ${CMAKE_BINARY_DIR}/src/zbopt.ggo @ONLY)
 configure_file(zitopt.ggo.in ${CMAKE_BINARY_DIR}/src/zitopt.ggo @ONLY)
 configure_file(zopt.ggo.in ${CMAKE_BINARY_DIR}/src/zopt.ggo @ONLY)
+configure_file(ztopt.ggo.in ${CMAKE_BINARY_DIR}/src/ztopt.ggo @ONLY)
 # Additional ggo.in's should be added here and CMakeVersion.txt
 
 # This sets a *build* time dependency that checks git
@@ -175,6 +176,11 @@ add_custom_command(OUTPUT zbopt.h
 add_custom_command(OUTPUT zitopt.h
 	COMMAND gengetopt -C --no-help --no-version --unamed-opts=SUBNETS -i "${CMAKE_CURRENT_BINARY_DIR}/zitopt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/zitopt"
     DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/zitopt.ggo"
+)
+
+add_custom_command(OUTPUT ztopt.h
+	COMMAND gengetopt -C --no-help --no-version --unamed-opts=SUBNETS -i "${CMAKE_CURRENT_BINARY_DIR}/ztopt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/ztopt"
+    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/ztopt.ggo"
 )
 
 add_custom_command(OUTPUT lexer.c
