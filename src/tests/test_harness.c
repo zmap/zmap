@@ -17,6 +17,7 @@
 #include <errno.h>
 #include <pwd.h>
 #include <time.h>
+#include <getopt.h>
 
 #include <pcap/pcap.h>
 #include <json.h>
@@ -30,7 +31,6 @@
 #include "../lib/xalloc.h"
 
 #include "aesrand.h"
-#include "zopt.h"
 #include "send.h"
 #include "recv.h"
 #include "state.h"
@@ -42,6 +42,7 @@
 #include "output_modules/output_modules.h"
 #include "probe_modules/probe_modules.h"
 #include "output_modules/module_json.h"
+#include "ztopt.h"
 
 
 int test_recursive_fieldsets(void)
@@ -69,6 +70,28 @@ int test_recursive_fieldsets(void)
 
 int main(UNUSED int argc, UNUSED char **argv)
 {
+	struct gengetopt_args_info args;
+	struct cmdline_parser_params *params;
+	params = cmdline_parser_params_create();
+	assert(params);
+	params->initialize = 1;
+	params->override = 0;
+	params->check_required = 0;
+
+	if (cmdline_parser_ext(argc, argv, &args, params) != 0) {
+		exit(EXIT_SUCCESS);
+	}
+
+	// Handle help text and version
+	if (args.help_given) {
+		cmdline_parser_print_help();
+		exit(EXIT_SUCCESS);
+	}
+	if (args.version_given) {
+		cmdline_parser_print_version();
+		exit(EXIT_SUCCESS);
+	}
+
     for (int i=0; i< 100000000; i++)
         test_recursive_fieldsets();
     return EXIT_SUCCESS;
