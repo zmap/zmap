@@ -111,7 +111,7 @@ static int icmp_validate_packet(const struct ip *ip_hdr,
 			sizeof(struct ip)) > len) {
 			return 0;
 		}
-		struct ip *ip_inner = (struct ip*) ((char *) icmp_h+8);
+		struct ip *ip_inner = (struct ip*) ((char *) icmp_h + 8);
 		if (((uint32_t) 4 * ip_hdr->ip_hl + ICMP_TIMXCEED_UNREACH_HEADER_SIZE +
 				4*ip_inner->ip_hl + 8 /*1st 8 bytes of original*/ ) > len) {
 			return 0;
