@@ -179,7 +179,7 @@ add_custom_command(OUTPUT zitopt.h
 )
 
 add_custom_command(OUTPUT ztopt.h
-	COMMAND gengetopt -C --no-help --no-version --unamed-opts=SUBNETS -i "${CMAKE_CURRENT_BINARY_DIR}/ztopt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/ztopt"
+	COMMAND gengetopt -C --no-help --no-version -i "${CMAKE_CURRENT_BINARY_DIR}/ztopt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/ztopt"
     DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/ztopt.ggo"
 )
 
