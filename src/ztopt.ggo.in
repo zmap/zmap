@@ -16,6 +16,3 @@ option "help"                   h "Print help and exit"
     optional
 option "version"                V "Print version and exit"
     optional
-
-text "\nExamples:\n\
-    ztests (Prints hello world message repeatedly)\n"
