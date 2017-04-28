@@ -69,6 +69,16 @@ and installed by running:
   ```
 
 # Miscellaneous notes:
+- Out of source builds can be performed by running:
+  ```sh
+  cmake -H"." -B"build/"
+  cd build/
+  make -j4
+  sudo make install
+  ```
+
+  Note: Running `cmake .` pollutes the source directory and may interfere with out of source builds.
+
 - **Enabling development turns on debug symbols, and turns off optimizations.
 Release builds should be built with `-DENABLE_DEVELOPMENT=OFF`.**
 
