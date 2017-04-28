@@ -154,7 +154,7 @@ configure_file(ztopt.ggo.in ${CMAKE_BINARY_DIR}/src/ztopt.ggo @ONLY)
 # This sets a *build* time dependency that checks git
 if("${ZMAP_VERSION}" STREQUAL "DEVELOPMENT")
     add_custom_target(git_versioning ALL
-        COMMAND ${CMAKE_COMMAND} -D PATH:STRING="${CMAKE_BINARY_DIR}/src" -P CMakeVersion.txt 
+        COMMAND ${CMAKE_COMMAND} -D ORIG_SRC_DIR:STRING="${CMAKE_SOURCE_DIR}" -P "${CMAKE_SOURCE_DIR}/src/CMakeVersion.txt"
         )
 endif()
 
