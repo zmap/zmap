@@ -71,8 +71,9 @@ and installed by running:
 # Miscellaneous notes:
 - Out of source builds can be performed by running:
   ```sh
-  cmake -H"." -B"build/"
+  mkdir build/
   cd build/
+  cmake ../
   make -j4
   sudo make install
   ```
