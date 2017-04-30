@@ -8,8 +8,8 @@ execute_process(COMMAND ${GIT_CMD} ${GIT_ARGS}
     endif()
 set(ZMAP_VERSION "Development Build. Commit ${GIT_COMMIT}")
 
-configure_file(topt.ggo.in "${PATH}/topt.ggo" @ONLY)
-configure_file(zbopt.ggo.in "${PATH}/zbopt.ggo" @ONLY)
-configure_file(zitopt.ggo.in "${PATH}/zitopt.ggo" @ONLY)
-configure_file(zopt.ggo.in "${PATH}/zopt.ggo" @ONLY)
-configure_file(ztopt.ggo.in "${PATH}/ztopt.ggo" @ONLY)
+configure_file("${ORIG_SRC_DIR}/src/topt.ggo.in" "${CMAKE_BINARY_DIR}/topt.ggo" @ONLY)
+configure_file("${ORIG_SRC_DIR}/src/zbopt.ggo.in" "${CMAKE_BINARY_DIR}/zbopt.ggo" @ONLY)
+configure_file("${ORIG_SRC_DIR}/src/zitopt.ggo.in" "${CMAKE_BINARY_DIR}/zitopt.ggo" @ONLY)
+configure_file("${ORIG_SRC_DIR}/src/zopt.ggo.in" "${CMAKE_BINARY_DIR}/zopt.ggo" @ONLY)
+configure_file("${ORIG_SRC_DIR}/src/ztopt.ggo.in" "${CMAKE_BINARY_DIR}/ztopt.ggo" @ONLY)
