@@ -21,8 +21,6 @@ involved scans, e.g., banner grab or TLS handshake, take a look at ZGrab
 (https://github.com/zmap/zgrab), ZMap's sister project that does application
 layer handshakes.
 
-Documentation and examples can be found at https://zmap.io/.
-
 Installation
 ------------
 
