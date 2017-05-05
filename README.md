@@ -46,7 +46,7 @@ Instructions on building ZMap from source can be found in [INSTALL](https://gith
 License and Copyright
 ---------------------
 
-ZMap Copyright 2013 Regents of the University of Michigan
+ZMap Copyright 2017 Regents of the University of Michigan
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use
 this file except in compliance with the License. You may obtain a copy of the
