@@ -92,13 +92,12 @@ int send_nl_req(uint16_t msg_type, uint32_t seq,
 	return sock;
 }
 
+
+
 int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
 {
-	char buf[8192];
-	memset(&buf, 0, 8192);
 	struct ndmsg req;
 	memset(&req, 0, sizeof(struct ndmsg));
-	struct nlmsghdr *nlhdr;
 
 	if (!gw_ip || !hw_mac) {
 		return -1;
@@ -110,14 +109,15 @@ int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
 	req.ndm_type = NDA_LLADDR;
 
 	int sock = send_nl_req(RTM_GETNEIGH, 1, &req, sizeof(req));
-
 	// Read responses
+	char *buf = xmalloc(64000);
 	unsigned nl_len = read_nl_sock(sock, buf, sizeof(buf));
 	if (nl_len <= 0) {
+		free(buf);
 		return -1;
 	}
 	// Parse responses
-	nlhdr = (struct nlmsghdr *)buf;
+	struct nlmsghdr *nlhdr = (struct nlmsghdr *) buf;
 	while (NLMSG_OK(nlhdr, nl_len)) {
 		struct rtattr *rt_attr;
 		struct rtmsg *rt_msg;
@@ -127,11 +127,10 @@ int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
 		int correct_ip = 0;
 
 		rt_msg = (struct rtmsg *) NLMSG_DATA(nlhdr);
-
 		if ((rt_msg->rtm_family != AF_INET)) {
+			free(buf);
 			return -1;
 		}
-
 		rt_attr = (struct rtattr *) RTM_RTA(rt_msg);
 		rt_len = RTM_PAYLOAD(nlhdr);
 		while (RTA_OK(rt_attr, rt_len)) {
@@ -139,22 +138,20 @@ int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
 			case NDA_LLADDR:
 				if (RTA_PAYLOAD(rt_attr) != IFHWADDRLEN) {
 					// could be using a VPN
-					log_fatal("get_gateway", "Unexpected hardware address length (%d).\n\n"
-						"    If you are using a VPN, supply the --vpn flag (and provide an"
+					log_fatal("get_gateway", "Unexpected hardware address length (%d)."
+						" If you are using a VPN, supply the --vpn flag (and provide an"
                         " interface via -i)",
 						RTA_PAYLOAD(rt_attr));
-					exit(1);
 				}
 				memcpy(mac, RTA_DATA(rt_attr), IFHWADDRLEN);
 				break;
 			case NDA_DST:
 				if (RTA_PAYLOAD(rt_attr) != sizeof(dst_ip)) {
 					// could be using a VPN
-					log_fatal("get_gateway", "Unexpected IP address length (%d).\n"
-						"    If you are using a VPN, supply the --vpn flag"
+					log_fatal("get_gateway", "Unexpected IP address length (%d)."
+						" If you are using a VPN, supply the --vpn flag"
                         " (and provide an interface via -i)",
 						RTA_PAYLOAD(rt_attr));
-					exit(1);
 				}
 				memcpy(&dst_ip, RTA_DATA(rt_attr), sizeof(dst_ip));
 				if (memcmp(&dst_ip, gw_ip, sizeof(dst_ip)) == 0) {
@@ -166,10 +163,12 @@ int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
 		}
 		if (correct_ip) {
 			memcpy(hw_mac, mac, IFHWADDRLEN);
+			free(buf);
 			return 0;
 		}
 		nlhdr = NLMSG_NEXT(nlhdr, nl_len);
 	}
+	free(buf);
 	return -1;
 }
 
