@@ -35,6 +35,11 @@ Arch Linux: Available through AUR
 
 Instructions on building ZMap from source can be found in [INSTALL](https://github.com/zmap/zmap/blob/master/INSTALL.md).
 
+Using ZMap
+----------
+
+There is information on how to use ZMap in our [Github Wiki](https://github.com/zmap/zmap/wiki).
+
 
 License and Copyright
 ---------------------
