@@ -1,27 +1,42 @@
-# SYSTEM REQUIREMENTS
+## Installing/Building ZMap
 
-ZMap is designed to run on GNU/Linux systems and can be built with most recent versions of gcc. Currently, running it requires at least 600MB of free memory.
+### Installing from Package Manager
 
-#### INSTALLING PREBUILT PACKAGE FROM PACKAGE MANAGER
+ZMap operates on GNU/Linux, Mac OS, and BSD. The latest stable version (v2.1.1)
+can be installed using most OS package managers:
 
-If you want to install zmap on Fedora 19+ or EPEL 6+, just type:
+Fedora 19+ or EPEL 6+:
   ```sh
   yum install zmap
   ```
 
-If you want to install zmap on Debian 8+, just type:
+Debian 8+, Ubuntu 14.04+:
   ```sh
-  sudo apt-get install zmap
+  sudo apt install zmap
   ```
 
-If you want to install zmap on Archlinux, just type:
+Arch Linux:
   ```sh
   pacman -S zmap
   ```
 
-#### BUILDING FROM SOURCE
+Gentoo:
+  ```sh
+  sudo emerge zmap
+  ```
 
-You can also build ZMap from sources, following fundamentals required:
+Mac OS (brew):
+  ```sh
+  brew install zmap
+  ```
+
+### Building from Source
+
+It is also possible to build ZMap from source.
+
+#### Installing ZMap Dependencies
+
+ZMap has the following dependencies:
 
   - [CMake](http://www.cmake.org/) - Cross-platform, open-source build system
   - [GMP](http://gmplib.org/) - Free library for arbitrary precision arithmetic
@@ -30,16 +45,14 @@ You can also build ZMap from sources, following fundamentals required:
   - [flex](http://flex.sourceforge.net/) and [byacc](http://invisible-island.net/byacc/) - Output filter lexer and parser generator.
   - [json-c](https://github.com/json-c/json-c/) - JSON implementation in C
   - [libunistring](https://www.gnu.org/software/libunistring/) - Unicode string library for C
+  - [libdnet](https://github.com/dugsong/libdnet) - (Mac Only) Gateway and route detection.
 
 In addition, you can get following packages to get further functionalities:
+
   - [hiredis](https://github.com/redis/hiredis) - RedisDB support in C
   - [mongo-c-driver](https://github.com/mongodb/mongo-c-driver/) - MongoDB support in C
 
----
-*On Mac, ZMap uses [libdnet](https://github.com/dugsong/libdnet) for gateway and route detection.*
-
----
-**You can compile fundamental dependencies on your own, but using package manager is strongly recommended:**
+You can install these dependencies with the following commands
 
 * On Debian-based systems by running:
    ```sh
@@ -56,6 +69,8 @@ In addition, you can get following packages to get further functionalities:
   brew install pkg-config cmake gmp gengetopt json-c byacc libdnet libunistring
   ```
 
+#### Building and Installing ZMap
+
 Once these prerequisites have been installed, ZMap can be compiled
 by running:
   ```sh
@@ -68,7 +83,8 @@ and installed by running:
   sudo make install
   ```
 
-# Miscellaneous notes:
+## Miscellaneous Notes
+
 - **Enabling development turns on debug symbols, and turns off optimizations.
 Release builds should be built with `-DENABLE_DEVELOPMENT=OFF`.**
 
