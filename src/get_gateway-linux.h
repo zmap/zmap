@@ -92,8 +92,6 @@ int send_nl_req(uint16_t msg_type, uint32_t seq,
 	return sock;
 }
 
-
-
 int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
 {
 	struct ndmsg req;
