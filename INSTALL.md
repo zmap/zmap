@@ -97,3 +97,5 @@ except during early development. Release builds should be built with `-DENABLE_L
 
 - Building packages for some systems like Fedora and RHEL requires a user-definable directory (buildroot) to put files, the conducive way to respect prefix is to run cmake with `-DRESPECT_INSTALL_PREFIX_CONFIG=ON`.
 
+- Manpages (and their HTML representations) are generated from the `.ronn` source files in the repository, using the [ronn](https://github.com/rtomayko/ronn) tool. This does not happen automatically as part of the build process; to regenerate the man pages you'll need to run `make manpages`. This target assumes that `ronn` is in your PATH.
+
