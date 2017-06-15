@@ -180,7 +180,7 @@ fields, and write filters over the output fields.
    * `--notes`:
      Inject user-specified notes into scan metadata
 
-   * `--user-metadata`
+   * `--user-metadata`:
      Inject user-specified JSON metadata into scan metadata
 
 ### ADDITIONAL OPTIONS ###
@@ -205,15 +205,15 @@ fields, and write filters over the output fields.
    * `--cores`:
      Comma-separated list of cores to pin to
 
-   * `--ignore-invalid-hosts`:
-      Ignore invalid hosts in whitelist/blacklist file
+   * `--ignore-blacklist-errors`:
+      Ignore invalid, malformed, or unresolvable entries in whitelist/blacklist file.
+      Replaces the pre-v3.x `--ignore-invalid-hosts` option.
 
    * `-h`, `--help`:
      Print help and exit
 
    * `-V`, `--version`:
      Print version and exit
-
 
 ### OUTPUT FILTERS ###
 
