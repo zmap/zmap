@@ -206,7 +206,8 @@ fields, and write filters over the output fields.
      Comma-separated list of cores to pin to
 
    * `--ignore-blacklist-errors`:
-      Ignore invalid, malformed, or unresolvable entries in whitelist/blacklist file
+      Ignore invalid, malformed, or unresolvable entries in whitelist/blacklist file.
+      Replaces the pre-v3.x `--ignore-invalid-hosts` option.
 
    * `-h`, `--help`:
      Print help and exit
