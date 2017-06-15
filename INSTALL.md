@@ -99,3 +99,9 @@ except during early development. Release builds should be built with `-DENABLE_L
 
 - Manpages (and their HTML representations) are generated from the `.ronn` source files in the repository, using the [ronn](https://github.com/rtomayko/ronn) tool. This does not happen automatically as part of the build process; to regenerate the man pages you'll need to run `make manpages`. This target assumes that `ronn` is in your PATH.
 
+- ZMap may be installed to an alternative directory, with the `CMAKE_INSTALL_PREFIX` option. For example, run
+    ```
+    cmake -DCMAKE_INSTALL_PREFIX=$HOME/opt .
+    make -j4
+    make install
+    ```
