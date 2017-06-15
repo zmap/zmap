@@ -522,7 +522,7 @@ int main(int argc, char *argv[])
 
 	SET_BOOL(zconf.dryrun, dryrun);
 	SET_BOOL(zconf.quiet, quiet);
-	SET_BOOL(zconf.ignore_invalid_hosts, ignore_invalid_hosts);
+	zconf.ignore_invalid_hosts = args.ignore_invalid_hosts_given || args.ignore_blacklist_errors_given;
 	zconf.cooldown_secs = args.cooldown_time_arg;
 	SET_IF_GIVEN(zconf.output_filename, output_file);
 	SET_IF_GIVEN(zconf.blacklist_filename, blacklist_file);

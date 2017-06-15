@@ -205,8 +205,8 @@ fields, and write filters over the output fields.
    * `--cores`:
      Comma-separated list of cores to pin to
 
-   * `--ignore-invalid-hosts`:
-      Ignore invalid hosts in whitelist/blacklist file
+   * `--ignore-blacklist-errors`, `--ignore-invalid-hosts`:
+      Ignore invalid entries in whitelist/blacklist file
 
    * `-h`, `--help`:
      Print help and exit

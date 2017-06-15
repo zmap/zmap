@@ -173,7 +173,9 @@ option "sender-threads"         T "Threads used to send packets"
 
 option "cores"                  - "Comma-separated list of cores to pin to"
     optional string
-option "ignore-invalid-hosts"   - "Ignore invalid hosts in whitelist/blacklist file"
+option "ignore-invalid-hosts"   - "Ignore invalid entries in whitelist/blacklist file. Equivalent to --ignore-blacklist-errors"
+    optional
+option "ignore-blacklist-errors" - "Ignore invalid entries in whitelist/blacklist file. Equivalent to --ignore-invalid-hosts"
     optional
 option "help"                   h "Print help and exit"
     optional
