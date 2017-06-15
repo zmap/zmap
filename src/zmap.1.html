@@ -61,7 +61,7 @@
 
   <ol class='man-decor man-head man head'>
     <li class='tl'>zmap(1)</li>
-    <li class='tc'></li>
+    <li class='tc'>zmap</li>
     <li class='tr'>zmap(1)</li>
   </ol>
 
@@ -112,7 +112,8 @@ be excluded.</p></dd>
 <h3 id="SCAN-OPTIONS">SCAN OPTIONS</h3>
 
 <dl>
-<dt> <code>-r</code>, <code>--rate=pps</code></dt><dd><p> Set the send rate in packets/sec</p></dd>
+<dt> <code>-r</code>, <code>--rate=pps</code></dt><dd><p> Set the send rate in packets/sec. Note: when combined with --probes,  this is
+ total packets per second, not IPs per second.</p></dd>
 <dt> <code>-B</code>, <code>--bandwidth=bps</code></dt><dd><p> Set the send rate in bits/second (supports suffixes G, M, and K (e.g. -B
  10M for 10 mbps). This overrides the --rate flag.</p></dd>
 <dt> <code>-n</code>, <code>--max-targets=n</code></dt><dd><p> Cap the number of targets to probe. This can either be a number (e.g. -n
@@ -212,7 +213,7 @@ fields, and write filters over the output fields.</p>
 <dt> <code>--max-sendto-failures</code></dt><dd><p> Maximum NIC sendto failures before scan is aborted</p></dd>
 <dt> <code>--min-hitrate</code></dt><dd><p> Minimum hitrate that scan can hit before scan is aborted</p></dd>
 <dt> <code>--cores</code></dt><dd><p> Comma-separated list of cores to pin to</p></dd>
-<dt> <code>--ignore-invalid-hosts</code></dt><dd><p>  Ignore invalid hosts in whitelist/blacklist file</p></dd>
+<dt> <code>--ignore-blacklist-errors</code>, <code>--ignore-invalid-hosts</code></dt><dd><p>  Ignore invalid entries in whitelist/blacklist file</p></dd>
 <dt> <code>-h</code>, <code>--help</code></dt><dd><p> Print help and exit</p></dd>
 <dt> <code>-V</code>, <code>--version</code></dt><dd><p> Print version and exit</p></dd>
 </dl>
@@ -264,8 +265,8 @@ decreasing by 5%.</p>
 
 
   <ol class='man-decor man-foot man foot'>
-    <li class='tl'></li>
-    <li class='tc'>October 2016</li>
+    <li class='tl'>ZMap</li>
+    <li class='tc'>June 2017</li>
     <li class='tr'>zmap(1)</li>
   </ol>
 

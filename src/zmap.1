@@ -1,7 +1,7 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "ZMAP" "1" "October 2016" "" ""
+.TH "ZMAP" "1" "June 2017" "ZMap" "zmap"
 .
 .SH "NAME"
 \fBzmap\fR \- The Fast Internet Scanner
@@ -44,7 +44,7 @@ File of individual IP addresses to scan, one\-per line\. This feature allows you
 .
 .TP
 \fB\-r\fR, \fB\-\-rate=pps\fR
-Set the send rate in packets/sec
+Set the send rate in packets/sec\. Note: when combined with \-\-probes, this is total packets per second, not IPs per second\.
 .
 .TP
 \fB\-B\fR, \fB\-\-bandwidth=bps\fR
@@ -212,8 +212,8 @@ Minimum hitrate that scan can hit before scan is aborted
 Comma\-separated list of cores to pin to
 .
 .TP
-\fB\-\-ignore\-invalid\-hosts\fR
-Ignore invalid hosts in whitelist/blacklist file
+\fB\-\-ignore\-blacklist\-errors\fR, \fB\-\-ignore\-invalid\-hosts\fR
+Ignore invalid entries in whitelist/blacklist file
 .
 .TP
 \fB\-h\fR, \fB\-\-help\fR
