@@ -19,6 +19,8 @@
 #include <arpa/inet.h>
 #include <pcap/pcap.h>
 
+#define GW_BUFFER_SIZE 64000
+
 char *get_default_iface(void)
 {
 	char errbuf[PCAP_ERRBUF_SIZE];
@@ -108,8 +110,8 @@ int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
 
 	int sock = send_nl_req(RTM_GETNEIGH, 1, &req, sizeof(req));
 	// Read responses
-	char *buf = xmalloc(64000);
-	unsigned nl_len = read_nl_sock(sock, buf, sizeof(buf));
+	char *buf = xmalloc(GW_BUFFER_SIZE);
+	int nl_len = read_nl_sock(sock, buf, GW_BUFFER_SIZE);
 	if (nl_len <= 0) {
 		free(buf);
 		return -1;

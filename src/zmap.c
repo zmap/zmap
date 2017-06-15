@@ -506,7 +506,11 @@ int main(int argc, char *argv[])
 	if (!args.output_filter_arg || !strcmp(args.output_filter_arg, "default")) {
 		zconf.filter_duplicates = 1;
 		zconf.filter_unsuccessful = 1;
-		log_debug("filter", "no output filter. will use default: exclude duplicates and unssuccessful");
+		log_debug("filter", "no output filter specified. will use default: exclude duplicates and unssuccessful");
+	} else if (args.output_filter_arg && !strcmp(args.output_filter_arg, "")) {
+		zconf.filter_duplicates = 0;
+		zconf.filter_unsuccessful = 0;
+		log_debug("filter", "empty output filter. will not exclude any values");
 	} else {
 		// Run it through yyparse to build the expression tree
 		if (!parse_filter_string(args.output_filter_arg)) {
