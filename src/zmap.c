@@ -525,7 +525,7 @@ int main(int argc, char *argv[])
 	}
 	// --ignore-invalid-hosts is deprecated and will be removed in zmap 4.0
 	if (args.ignore_invalid_hosts_given) {
-		log_warn("zmap", "--ignore-invalid-hosts is deprecated and will be removed in zmap 4.0. Use --ignore-blacklist-errors instead to ignore invalid blacklist/whitelist entries.");
+		log_warn("zmap", "--ignore-invalid-hosts is deprecated and will be removed in ZMap 4.0. Use --ignore-blacklist-errors instead to ignore invalid blacklist/whitelist entries.");
 	}
 	zconf.ignore_invalid_hosts = args.ignore_invalid_hosts_given || args.ignore_blacklist_errors_given;
 
