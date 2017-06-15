@@ -205,7 +205,7 @@ fields, and write filters over the output fields.
    * `--cores`:
      Comma-separated list of cores to pin to
 
-   * `--ignore-blacklist-errors`, `--ignore-invalid-hosts`:
+   * `--ignore-blacklist-errors`:
       Ignore invalid entries in whitelist/blacklist file
 
    * `-h`, `--help`:
@@ -213,7 +213,6 @@ fields, and write filters over the output fields.
 
    * `-V`, `--version`:
      Print version and exit
-
 
 ### OUTPUT FILTERS ###
 
