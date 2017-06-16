@@ -1,5 +1,5 @@
 ziterate(1) - ZMap IP permutation generation file
-======================================
+=================================================
 
 ## SYNOPSIS
 
@@ -27,6 +27,9 @@ order similar to how ZMap generates random addresses to be scanned.
   * `-l`, `--log-file=name`:
     File to log to.
 
+  * `--disable-syslog`:
+    Disable logging messages to syslog.
+
   * `-v`, `--verbosity`:
     Level of log detail (0-5, default=3)
 
@@ -35,6 +38,9 @@ order similar to how ZMap generates random addresses to be scanned.
 
   * `--seed=n`:
     Seed used to select address permutation.
+
+  * `-n`, `--max-targets=n`:
+    Cap number of IPs to generate (as a number or a percentage of the address space)
 
 
 ### SHARDING ###
@@ -51,6 +57,5 @@ order similar to how ZMap generates random addresses to be scanned.
   * `-h`, `--help`:
     Print help text and exit.
 
-  * `-v`, `--version`:
+  * `-V`, `--version`:
     Print version and exit.
-

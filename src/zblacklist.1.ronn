@@ -27,6 +27,9 @@ IP addresses using a blacklist or whitelist.
   * `-l`, `--log-file=name`:
     File to log to.
 
+  * `--disable-syslog`:
+    Disable logging messages to syslog.
+
   * `-v`, `--verbosity`:
     Level of log detail (0-5, default=3)
 
@@ -34,7 +37,17 @@ IP addresses using a blacklist or whitelist.
     Don't deduplicate input addresses. Default is false.
 
   * `--ignore-blacklist-errors`:
-    Ignore invalid entries in the blacklist. Default is false.
+    Ignore invalid, malformed, or unresolvable entries in the
+    blacklist/whitelist. Default is false.
 
   * `--ignore-input-errors`:
     Don't print invalid entries in the input. Default is false.
+
+
+### ADDITIONAL OPTIONS ###
+
+  * `-h`, `--help`:
+    Print help and exit
+
+  * `-V`, `--version`:
+    Print version and exit

@@ -1,7 +1,7 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "ZBLACKLIST" "1" "May 2017" "ZMap" "zblacklist"
+.TH "ZBLACKLIST" "1" "June 2017" "ZMap" "zblacklist"
 .
 .SH "NAME"
 \fBzblacklist\fR \- zmap IP blacklist tool
@@ -29,6 +29,10 @@ File of subnets to include, in CIDR notation, one\-per line\. All other subnets 
 File to log to\.
 .
 .TP
+\fB\-\-disable\-syslog\fR
+Disable logging messages to syslog\.
+.
+.TP
 \fB\-v\fR, \fB\-\-verbosity\fR
 Level of log detail (0\-5, default=3)
 .
@@ -38,9 +42,19 @@ Don\'t deduplicate input addresses\. Default is false\.
 .
 .TP
 \fB\-\-ignore\-blacklist\-errors\fR
-Ignore invalid entries in the blacklist\. Default is false\.
+Ignore invalid, malformed, or unresolvable entries in the blacklist/whitelist\. Default is false\.
 .
 .TP
 \fB\-\-ignore\-input\-errors\fR
 Don\'t print invalid entries in the input\. Default is false\.
+.
+.SS "ADDITIONAL OPTIONS"
+.
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help and exit
+.
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+Print version and exit
 
