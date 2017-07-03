@@ -24,6 +24,10 @@ extern output_module_t module_csv_redis;
 extern output_module_t module_mongodb;
 #endif
 
+#ifdef ELK
+extern output_module_t module_elk;
+#endif
+
 output_module_t* output_modules[] = {
 	&module_csv_file,
 	&module_json_file,
@@ -33,6 +37,9 @@ output_module_t* output_modules[] = {
 #endif
 #ifdef MONGODB
 	&module_mongodb,
+#endif
+#ifdef ELK
+	&module_elk,
 #endif
 	// ADD YOUR MODULE HERE
 };
