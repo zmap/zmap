@@ -29,6 +29,10 @@ if(WITH_MONGO)
     set(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_mongodb.c)
 endif()
 
+if(WITH_ELK)
+    set(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_elk.c)
+endif()
+
 set(PROBE_MODULE_SOURCES
     probe_modules/module_icmp_echo.c
     probe_modules/module_icmp_echo_time.c
@@ -229,6 +233,7 @@ target_link_libraries(
     ${REDIS_LIBS}
     ${JSON_LIBRARIES}
     ${MONGO_LIBRARIES}
+    curl
 )
 
 target_link_libraries(
@@ -259,6 +264,7 @@ target_link_libraries(
     ${REDIS_LIBS}
     ${JSON_LIBRARIES}
     ${MONGO_LIBRARIES}
+    curl
 )
 
 # Install binary
