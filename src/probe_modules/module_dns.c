@@ -29,6 +29,10 @@
  * Usage: zmap -p 53 --probe-module=dns --probe-args="ANY,www.example.com"
  *			-O json --output-fields=* 8.8.8.8
  *
+ * We also support multiple questions, of the form: "A,example.com;AAAA,www.example.com"
+ * This requires --probes=X, where X matches the number of questions in --probe-args,
+ * and --output-filter="" to remove the implicit "filter_duplicates" configuration flag.
+ *
  * Based on a deprecated udp_dns module.
  */
 
@@ -78,11 +82,13 @@ static int num_ports;
 const char default_domain[] = "www.google.com";
 const uint16_t default_qtype = DNS_QTYPE_A;
 
-static char *dns_packet = NULL;
-static uint16_t dns_packet_len = 0; // Not including udp header
-static uint16_t qname_len = 0;
-static char* qname = NULL;
-static uint16_t qtype = 0;
+static char **dns_packets;
+static uint16_t *dns_packet_lens; // Not including udp header
+static uint16_t *qname_lens;
+static char **qnames;
+static uint16_t *qtypes;
+static int num_questions = 0;
+
 
 /* Array of qtypes we support. Jumping through some hoops (1 level of
  * indirection) so the per-packet processing time is fast. Keep this in sync with:
@@ -160,35 +166,40 @@ static uint16_t domain_to_qname(char** qname_handle, const char* domain)
 	return len;
 }
 
-static int build_global_dns_packet(const char* domain)
+static int build_global_dns_packets(char* domains[], int num_domains)
 {
-	qname_len = domain_to_qname(&qname, domain);
-	dns_packet_len = sizeof(dns_header) + qname_len + sizeof(dns_question_tail);
+    for (int i = 0; i < num_domains; i++) {
 
-	if (dns_packet_len > DNS_SEND_LEN) {
-			log_fatal("dns", "DNS packet bigger (%d) than our limit (%d)",
-					dns_packet_len, DNS_SEND_LEN);
-			return EXIT_FAILURE;
+	    qname_lens[i] = domain_to_qname(&qnames[i], domains[i]);
+        if (domains[i] != (char*) default_domain) {
+            free(domains[i]);
+        }
+	    dns_packet_lens[i] = sizeof(dns_header) + qname_lens[i] + sizeof(dns_question_tail);
+	    if (dns_packet_lens[i] > DNS_SEND_LEN) {
+	    		log_fatal("dns", "DNS packet bigger (%d) than our limit (%d)",
+	    				dns_packet_lens[i], DNS_SEND_LEN);
+	    		return EXIT_FAILURE;
+	    }
+
+	    dns_packets[i] = xmalloc(dns_packet_lens[i]);
+
+	    dns_header* dns_header_p = (dns_header*)dns_packets[i];
+	    char* qname_p = dns_packets[i] + sizeof(dns_header);
+	    dns_question_tail* tail_p = (dns_question_tail*)(dns_packets[i] +
+	    		sizeof(dns_header) + qname_lens[i]);
+
+	    // All other header fields should be 0. Except id, which we set per thread.
+	    // Please recurse as needed.
+	    dns_header_p->rd = 1; // Is one bit. Don't need htons
+	    // We have 1 question
+	    dns_header_p->qdcount = htons(1);
+	    memcpy(qname_p, qnames[i], qname_lens[i]);
+	    // Set the qtype to what we passed from args
+	    tail_p->qtype = htons(qtypes[i]);
+	    // Set the qclass to The Internet (TM) (R) (I hope you're happy now Zakir)
+	    tail_p->qclass = htons(0x01); // MAGIC NUMBER. Let's be honest. This is only ever 1
 	}
-
-	dns_packet = xmalloc(dns_packet_len);
-
-	dns_header* dns_header_p = (dns_header*)dns_packet;
-	char* qname_p = dns_packet + sizeof(dns_header);
-	dns_question_tail* tail_p = (dns_question_tail*)(dns_packet +
-			sizeof(dns_header) + qname_len);
-
-	// All other header fields should be 0. Except id, which we set per thread.
-	// Please recurse as needed.
-	dns_header_p->rd = 1; // Is one bit. Don't need htons
-	// We have 1 question
-	dns_header_p->qdcount = htons(1);
-	memcpy(qname_p, qname, qname_len);
-	// Set the qtype to what we passed from args
-	tail_p->qtype = htons(qtype);
-	// Set the qclass to The Internet (TM) (R) (I hope you're happy now Zakir)
-	tail_p->qclass = htons(0x01); // MAGIC NUMBER. Let's be honest. This is only ever 1
-	return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }
 
 static uint16_t get_name_helper(const char* data, uint16_t data_len,
@@ -515,49 +526,120 @@ static bool process_response_answer(char **data, uint16_t* data_len,
 
 static int dns_global_initialize(struct state_conf *conf)
 {
-	char *qtype_str = NULL;
-	char *domain = NULL;
+    num_questions = conf->packet_streams;
+    if (num_questions < 1) {
+        log_fatal("dns", "Invalid number of probes for the DNS module:", num_questions);
+    }
+
+    // Setup the global structures
+    dns_packets = xmalloc(sizeof(char*) * num_questions);
+    dns_packet_lens = xmalloc(sizeof(uint16_t) * num_questions);
+    qname_lens = xmalloc(sizeof(uint16_t) * num_questions);
+    qnames = xmalloc(sizeof(char*) * num_questions);
+    qtypes = xmalloc(sizeof(uint16_t) * num_questions);
+
+    char *qtype_str = NULL;
+    char *domains[num_questions];
+
+    for (int i = 0; i < num_questions; i++) {
+		domains[i] = (char*) default_domain;
+		qtypes[i] = default_qtype;
+    }
+
 	// This is zmap boilerplate. Why do I have to write this?
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
 	udp_set_num_ports(num_ports);
 	setup_qtype_str_map();
-	// Want to add support for multiple questions? Start here.
-	if (!conf->probe_args) { // no parameters passed in. Use defaults
-		domain = (char*) default_domain;
-		qtype = default_qtype;
-	} else {
-		char *probe_arg_delimiter_p = strchr(conf->probe_args, ',');
-		if (probe_arg_delimiter_p == NULL ||
-				probe_arg_delimiter_p == conf->probe_args ||
-				conf->probe_args + strlen(conf->probe_args) == probe_arg_delimiter_p + 1) {
-			log_fatal("dns", "Invalid probe args. Format: \"A,google.com\"");
-		}
-		domain = probe_arg_delimiter_p + 1;
-		qtype_str = xmalloc(probe_arg_delimiter_p - conf->probe_args + 1);
-		strncpy(qtype_str, conf->probe_args,
-				probe_arg_delimiter_p - conf->probe_args);
-		qtype_str[probe_arg_delimiter_p - conf->probe_args] = '\0';
-		qtype = qtype_str_to_code(qtype_str);
-		if (!qtype) {
-			log_fatal("dns", "Incorrect qtype supplied. %s", qtype_str);
-			return EXIT_FAILURE;
-		}
+
+    if (conf->probe_args) { // no parameters passed in. Use defaults
+		
+        int arg_strlen = strlen(conf->probe_args);
+        char* arg_pos = conf->probe_args;
+    
+        for (int i = 0; i < num_questions; i++) {
+            if (arg_pos >= (conf->probe_args + arg_strlen)) {
+                log_fatal("dns", "More probes than questions configured. Add additional questions.");
+            }
+
+            char *probe_q_delimiter_p = strchr(arg_pos, ',');
+            char *probe_arg_delimiter_p = strchr(arg_pos, ';');
+
+		    if (probe_q_delimiter_p == NULL || probe_q_delimiter_p == arg_pos || 
+				arg_pos + strlen(arg_pos) == (probe_q_delimiter_p + 1) || 
+                (probe_arg_delimiter_p == NULL && (i + 1) != num_questions)) {
+			        log_fatal("dns", "Invalid probe args. Format: \"A,google.com\" or \"A,google.com;A,example.com\"");
+            }
+
+            int domain_len = 0;
+
+            if (probe_arg_delimiter_p) {
+                domain_len = probe_arg_delimiter_p - probe_q_delimiter_p - 1;
+            } else {
+                domain_len = strlen(probe_q_delimiter_p);
+            }
+            assert(domain_len > 0);
+
+            domains[i] = xmalloc(domain_len + 1);
+            strncpy(domains[i], probe_q_delimiter_p + 1, domain_len);
+            domains[i][domain_len] = '\0';
+
+            qtype_str = xmalloc(probe_q_delimiter_p - arg_pos + 1);
+		    strncpy(qtype_str, arg_pos, probe_q_delimiter_p - arg_pos);
+		    qtype_str[probe_q_delimiter_p - arg_pos] = '\0';
+		
+            qtypes[i] = qtype_str_to_code(qtype_str);
+	        free(qtype_str);
+		    if (!qtypes[i]) {
+			    log_fatal("dns", "Incorrect qtype supplied. %s", qtype_str);
+			    return EXIT_FAILURE;
+		    }
+
+            arg_pos = probe_q_delimiter_p + domain_len + 2;
+        }
+
+        if (arg_pos != conf->probe_args + arg_strlen + 2) {
+            log_fatal("dns", "More args than probes passed. Add additional probes.");
+        }
+
 	}
-	free(qtype_str);
-	return build_global_dns_packet(domain);
+	return build_global_dns_packets(domains, num_questions);
 }
 
 static int dns_global_cleanup(UNUSED struct state_conf *zconf,
 		UNUSED struct state_send *zsend, UNUSED struct state_recv *zrecv)
 {
-	if (dns_packet) {
-		free(dns_packet);
+	if (dns_packets) {
+        for (int i = 0; i < num_questions; i++) {
+		    if (dns_packets[i]) {
+                free(dns_packets[i]);
+            }
+        }
+        free(dns_packets);
 	}
-	dns_packet = NULL;
-	if (qname) {
-		free(qname);
+	dns_packets = NULL;
+
+	if (qnames) {
+        for (int i = 0; i < num_questions; i++) {
+		    if (qnames[i]) {
+                free(qnames[i]);
+            }
+        }
+		free(qnames);
 	}
-	qname = NULL;
+	qnames = NULL;
+
+    if (dns_packet_lens) {
+        free(dns_packet_lens);
+    }
+
+    if (qname_lens) {
+        free(qname_lens);
+    }
+
+    if (qtypes) {
+        free(qtypes);
+    }
+
 	return EXIT_SUCCESS;
 }
 
@@ -566,35 +648,55 @@ int dns_init_perthread(void* buf, macaddr_t *src,
 		UNUSED void **arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
+
+	// Setup assuming num_questions == 0
 	struct ether_header *eth_header = (struct ether_header *) buf;
 	make_eth_header(eth_header, src, gw);
 
 	struct ip *ip_header = (struct ip*)(&eth_header[1]);
 	uint16_t len = htons(sizeof(struct ip) + sizeof(struct udphdr) +
-		dns_packet_len);
+		dns_packet_lens[0]);
 	make_ip_header(ip_header, IPPROTO_UDP, len);
 
 	struct udphdr *udp_header = (struct udphdr*)(&ip_header[1]);
-	len = sizeof(struct udphdr) + dns_packet_len;
+	len = sizeof(struct udphdr) + dns_packet_lens[0];
 	make_udp_header(udp_header, zconf.target_port, len);
 
 	char* payload = (char*)(&udp_header[1]);
 	module_dns.packet_length = sizeof(struct ether_header) + sizeof(struct ip)
-				+ sizeof(struct udphdr) + dns_packet_len;
+				+ sizeof(struct udphdr) + dns_packet_lens[0];
 	assert(module_dns.packet_length <= MAX_PACKET_SIZE);
 
-	memcpy(payload, dns_packet, dns_packet_len);
+	memcpy(payload, dns_packets[0], dns_packet_lens[0]);
 
 	return EXIT_SUCCESS;
 }
 
 int dns_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 		uint32_t *validation, int probe_num, UNUSED void *arg,
-		UNUSED int *len)
+		int *len)
 {
 	struct ether_header *eth_header = (struct ether_header *) buf;
 	struct ip *ip_header = (struct ip*) (&eth_header[1]);
 	struct udphdr *udp_header= (struct udphdr *) &ip_header[1];
+
+	// For num_questions == 1, we handle this in per-thread init. Do less work
+	if (num_questions > 1) {
+
+		uint16_t encoded_len = htons(sizeof(struct ip) + sizeof(struct udphdr) + dns_packet_lens[probe_num]);
+		make_ip_header(ip_header, IPPROTO_UDP, encoded_len);
+
+	    encoded_len = sizeof(struct udphdr) + dns_packet_lens[probe_num];
+	    make_udp_header(udp_header, ntohs(udp_header->uh_dport), encoded_len);
+
+	    char* payload = (char*)(&udp_header[1]);
+	    *len = sizeof(struct ether_header) + sizeof(struct ip)
+	    			+ sizeof(struct udphdr) + dns_packet_lens[probe_num];
+	    
+		assert(*len <= MAX_PACKET_SIZE);
+
+	    memcpy(payload, dns_packets[probe_num], dns_packet_lens[probe_num]);
+	}
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
@@ -602,7 +704,8 @@ int dns_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 					 validation));
 
 	dns_header* dns_header_p = (dns_header*) &udp_header[1];
-	dns_header_p->id = validation[2] & 0xFFFF;
+    
+    dns_header_p->id = validation[2] & 0xFFFF;
 
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *) ip_header);
@@ -614,7 +717,7 @@ void dns_print_packet(FILE *fp, void* packet)
 {
 	struct ether_header *ethh = (struct ether_header *) packet;
 	struct ip *iph = (struct ip *) &ethh[1];
-	struct udphdr *udph  = (struct udphdr*) (iph + 4*iph->ip_hl);
+	struct udphdr *udph  = (struct udphdr*) (&iph[1]);
 	fprintf(fp, "------------------------------------------------------\n");
 	fprintf(fp, "dns { source: %u | dest: %u | checksum: %#04X }\n",
 		ntohs(udph->uh_sport),
@@ -664,13 +767,22 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		assert(0);
 		return 0;
 	}
-	// Verify our source port.
+    // Verify our source port.
 	if (sport != zconf.target_port) {
 		return 0;
 	}
 	// Verify our packet length.
 	uint16_t udp_len = ntohs(udp->uh_ulen);
-	if (udp_len < dns_packet_len) {
+	
+	int match = 0;
+
+	for (int i = 0; i < num_questions; i++ ) {
+		if (udp_len >= dns_packet_lens[i]) {
+			match += 1;
+		}
+	}
+
+	if (match == 0) {
 		return 0;
 	}
 	// Verify the packet length is ok.
@@ -689,27 +801,38 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		struct udphdr *udp_hdr = (struct udphdr *) ((char *) ip_hdr +
 				ip_hdr->ip_hl * 4);
 		uint16_t udp_len = ntohs(udp_hdr->uh_ulen);
-		assert(udp_len >= dns_packet_len);
-		char* qname_p = NULL;
-		dns_question_tail* tail_p = NULL;
-		bool is_valid = 0;
-		dns_header* dns_header_p = (dns_header*) &udp_hdr[1];
-		// verify our dns transaction id
-		if (dns_header_p->id == (validation[2] & 0xFFFF)) {
-			// Verify our question
-			qname_p = (char*) dns_header_p + sizeof(dns_header);
-			tail_p = (dns_question_tail*)(dns_packet + sizeof(dns_header) +
-					qname_len);
-			// Verify our qname
-			if (strcmp(qname, qname_p) == 0) {
-				// Verify the qtype and qclass.
-				if (tail_p->qtype == htons(qtype) && tail_p->qclass \
-						== htons(0x01)) {
-					is_valid = 1;
-				}
-			}
-		}
-		dns_header* dns_hdr = (dns_header*) &udp_hdr[1];
+		
+        int match = 0;
+        bool is_valid = 0;
+        for (int i = 0; i < num_questions; i++) {   
+            if (udp_len < dns_packet_lens[i]) {
+                continue;
+            }
+            match += 1;
+
+		    char* qname_p = NULL;
+		    dns_question_tail* tail_p = NULL;
+		    dns_header* dns_header_p = (dns_header*) &udp_hdr[1];
+		    // verify our dns transaction id
+		    if (dns_header_p->id == (validation[2] & 0xFFFF)) {
+		    	// Verify our question
+		    	qname_p = (char*) dns_header_p + sizeof(dns_header);
+		    	tail_p = (dns_question_tail*)(dns_packets[i] + sizeof(dns_header) +
+		    			qname_lens[i]);
+		    	// Verify our qname
+		    	if (strcmp(qnames[i], qname_p) == 0) {
+		    		// Verify the qtype and qclass.
+		    		if (tail_p->qtype == htons(qtypes[i]) && tail_p->qclass \
+		    				== htons(0x01)) {
+		    			is_valid = 1;
+                        break;
+		    		}
+		    	}
+		    }
+        }
+        assert(match > 0);
+
+        dns_header* dns_hdr = (dns_header*) &udp_hdr[1];
 		uint16_t qr = dns_hdr->qr;
 		uint16_t rcode = dns_hdr->rcode;
 		// Success: Has the right validation bits and the right Q
@@ -730,7 +853,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
-	        // DNS data
+	    // DNS data
 		if (!is_valid) {
 			// DNS header
 			fs_add_null(fs, "dns_id");
