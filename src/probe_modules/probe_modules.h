@@ -18,7 +18,7 @@ typedef int (*probe_thread_init_cb)(void* packetbuf, macaddr_t* src_mac,
 
 typedef int (*probe_make_packet_cb)(void* packetbuf, ipaddr_n_t src_ip,
 		ipaddr_n_t dst_ip,
-		uint32_t *validation, int probe_num, void *arg);
+		uint32_t *validation, int probe_num, void *arg, int *len);
 
 typedef void (*probe_print_packet_cb)(FILE *, void* packetbuf);
 typedef int (*probe_close_cb)(struct state_conf*,

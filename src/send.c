@@ -331,14 +331,14 @@ int send_run(sock_t st, shard_t *s)
 			uint32_t src_ip = get_src_ip(curr, i);
 		  	uint32_t validation[VALIDATE_BYTES/sizeof(uint32_t)];
 			validate_gen(src_ip, curr, (uint8_t *)validation);
+			int length = zconf.probe_module->packet_length;
 			zconf.probe_module->make_packet(buf, src_ip, curr,
-					validation, i, probe_data);
+					validation, i, probe_data, &length);
 			if (zconf.dryrun) {
 				lock_file(stdout);
 				zconf.probe_module->print_packet(stdout, buf);
 				unlock_file(stdout);
 			} else {
-				int length = zconf.probe_module->packet_length;
 				void *contents = buf + zconf.send_ip_pkts*sizeof(struct ether_header);
 				int any_sends_successful = 0;
 				for (int i = 0; i < attempts; ++i) {

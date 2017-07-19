@@ -46,7 +46,8 @@ static int synackscan_init_perthread(void* buf, macaddr_t *src,
 }
 
 static int synackscan_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
-		uint32_t *validation, int probe_num, __attribute__((unused)) void *arg)
+		uint32_t *validation, int probe_num, __attribute__((unused)) void *arg,
+		__attribute__((unused)) int *len)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip*)(&eth_header[1]);
