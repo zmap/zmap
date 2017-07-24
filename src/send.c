@@ -334,7 +334,10 @@ int send_run(sock_t st, shard_t *s)
 			size_t length = zconf.probe_module->packet_length;
 			zconf.probe_module->make_packet(buf, &length, src_ip, curr,
 					validation, i, probe_data);
-			assert(length <= MAX_PACKET_SIZE);
+			if (length > MAX_PACKET_SIZE) {
+				log_fatal("send", "send thread %hhu set length (%zu) larger than MAX (%zu)",
+						s->id, length, MAX_PACKET_SIZE);
+			}
 			if (zconf.dryrun) {
 				lock_file(stdout);
 				zconf.probe_module->print_packet(stdout, buf);
