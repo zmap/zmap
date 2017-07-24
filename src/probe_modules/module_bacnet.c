@@ -74,7 +74,7 @@ int bacnet_init_perthread(void *buf, macaddr_t *src,
 
 int bacnet_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 				uint32_t *validation, int probe_num, UNUSED void *arg,
-				UNUSED int *len)
+				UNUSED size_t *buf_len)
 {
 	struct ether_header *eth_header = (struct ether_header *) buf;
 	struct ip *ip_header = (struct ip*) (&eth_header[1]);

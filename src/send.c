@@ -331,9 +331,10 @@ int send_run(sock_t st, shard_t *s)
 			uint32_t src_ip = get_src_ip(curr, i);
 		  	uint32_t validation[VALIDATE_BYTES/sizeof(uint32_t)];
 			validate_gen(src_ip, curr, (uint8_t *)validation);
-			int length = zconf.probe_module->packet_length;
+			size_t length = zconf.probe_module->packet_length;
 			zconf.probe_module->make_packet(buf, src_ip, curr,
 					validation, i, probe_data, &length);
+			assert(length <= MAX_PACKET_SIZE);
 			if (zconf.dryrun) {
 				lock_file(stdout);
 				zconf.probe_module->print_packet(stdout, buf);
