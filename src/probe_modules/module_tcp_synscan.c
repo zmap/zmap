@@ -44,9 +44,9 @@ static int synscan_init_perthread(void* buf, macaddr_t *src,
 	return EXIT_SUCCESS;
 }
 
-static int synscan_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
-		uint32_t *validation, int probe_num, __attribute__((unused)) void *arg,
-		__attribute__((unused)) size_t *buf_len)
+static int synscan_make_packet(void *buf, UNUSED size_t *buf_len,
+		ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint32_t *validation,
+		int probe_num, UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip*)(&eth_header[1]);

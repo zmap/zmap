@@ -64,9 +64,9 @@ static int synscan_init_perthread(void* buf, macaddr_t *src,
 //#define EXPECTED_RESPONSE_ACK 0x000C123E // wrong byte order
 #define EXPECTED_RESPONSE_ACK 0x3E120C00
 
-static int synscan_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
-		uint32_t *validation, int probe_num, __attribute__((unused)) void *arg,
-		__attribute__((unused)) size_t *buf_len)
+static int synscan_make_packet(void *buf, UNUSED size_t *buf_len,
+		ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint32_t *validation,
+		int probe_num, UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip*)(&eth_header[1]);

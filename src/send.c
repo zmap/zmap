@@ -332,8 +332,8 @@ int send_run(sock_t st, shard_t *s)
 		  	uint32_t validation[VALIDATE_BYTES/sizeof(uint32_t)];
 			validate_gen(src_ip, curr, (uint8_t *)validation);
 			size_t length = zconf.probe_module->packet_length;
-			zconf.probe_module->make_packet(buf, src_ip, curr,
-					validation, i, probe_data, &length);
+			zconf.probe_module->make_packet(buf, &length, src_ip, curr,
+					validation, i, probe_data);
 			assert(length <= MAX_PACKET_SIZE);
 			if (zconf.dryrun) {
 				lock_file(stdout);
