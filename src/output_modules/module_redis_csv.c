@@ -88,7 +88,7 @@ int rediscsvmodule_init(struct state_conf *conf, UNUSED char **fields, UNUSED in
 
 static int rediscsvmodule_flush(void)
 {
-	if (redis_lpush_strings(rctx, (char*) queue_name, buffer, buffer_fill)) {
+	if (redis_rpush_strings(rctx, (char*) queue_name, buffer, buffer_fill)) {
 		return EXIT_FAILURE;
 	}
 	for (int i=0; i < buffer_fill; i++) {
@@ -110,6 +110,8 @@ static size_t guess_csv_string_length(fieldset_t *fs)
 			len += 2; // potential quotes
 		} else if (f->type == FS_UINT64) {
 			len += INT_STR_LEN;
+		} else if (f->type == FS_BOOL) {
+			len += INT_STR_LEN; // 0 or 1 PRIi32 is used to print ...
 		} else if (f->type == FS_BINARY) {
 			len += 2*f->len;
 		} else if (f->type == FS_NULL) {
@@ -157,6 +159,11 @@ void make_csv_string(fieldset_t *fs, char *out, size_t len)
 				log_fatal("redis-csv", "out of memory---will overflow");
 			}
 			sprintf(dataloc, "%" PRIu64, (uint64_t) f->value.num);
+		} else if (f->type == FS_BOOL) {
+			if (strlen(dataloc) + INT_STR_LEN >= len) {
+				log_fatal("redis-csv", "out of memory---will overflow");
+			}
+			sprintf(dataloc, "%" PRIi32, (int) f->value.num);
 		} else if (f->type == FS_BINARY) {
 			if (strlen(dataloc) + 2*f->len >= len) {
 				log_fatal("redis-csv", "out of memory---will overflow");
