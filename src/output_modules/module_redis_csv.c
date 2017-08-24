@@ -111,7 +111,7 @@ static size_t guess_csv_string_length(fieldset_t *fs)
 		} else if (f->type == FS_UINT64) {
 			len += INT_STR_LEN;
 		} else if (f->type == FS_BOOL) {
-			len += 1; // 0 or 1
+			len += INT_STR_LEN; // 0 or 1 PRIi32 is used to print ...
 		} else if (f->type == FS_BINARY) {
 			len += 2*f->len;
 		} else if (f->type == FS_NULL) {
