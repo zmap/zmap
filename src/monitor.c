@@ -10,6 +10,7 @@
 
 #include "monitor.h"
 
+#include <assert.h>
 #include <errno.h>
 #include <math.h>
 #include <stdio.h>
@@ -99,7 +100,7 @@ typedef struct export_scan_status {
 
 } export_status_t;
 
-static FILE *f = NULL;
+static FILE *status_fd = NULL;
 
 // find minimum of an array of doubles
 static double min_d(double array[], int n) {
@@ -318,7 +319,7 @@ static void onscreen_generic(export_status_t *exp) {
 }
 
 static FILE *init_status_update_file(char *path) {
-	FILE *f = fopen(path, "wb");
+	FILE *f = fopen(path, "w");
 	if (!f) {
 		log_fatal("csv", "could not open status updates file (%s): %s",
 				zconf.status_updates_file, strerror(errno));
@@ -379,7 +380,8 @@ static inline void check_max_sendto_failures(export_status_t *exp) {
 
 void monitor_init(void) {
 	if (zconf.status_updates_file) {
-		f = init_status_update_file(zconf.status_updates_file);
+		status_fd = init_status_update_file(zconf.status_updates_file);
+		assert(status_fd);
 	}
 }
 
@@ -402,8 +404,8 @@ void monitor_run(iterator_t *it, pthread_mutex_t *lock) {
 			}
 			unlock_file(stderr);
 		}
-		if (f) {
-			update_status_updates_file(export_status, f);
+		if (status_fd) {
+			update_status_updates_file(export_status, status_fd);
 		}
 		sleep(UPDATE_INTERVAL);
 	}
@@ -412,8 +414,8 @@ void monitor_run(iterator_t *it, pthread_mutex_t *lock) {
 		fflush(stderr);
 		unlock_file(stderr);
 	}
-	if (f) {
-		fflush(f);
-		fclose(f);
+	if (status_fd) {
+		fflush(status_fd);
+		fclose(status_fd);
 	}
 }
