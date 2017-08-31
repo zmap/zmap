@@ -380,6 +380,7 @@ int main(int argc, char *argv[])
 				args.output_module_arg);
 		}
 	}
+	zconf.output_module_name = strdup(args.output_module_arg);
 	zconf.probe_module = get_probe_module_by_name(args.probe_module_arg);
 	if (!zconf.probe_module) {
 		log_fatal("zmap", "specified probe module (%s) does not exist\n",
@@ -475,12 +476,20 @@ int main(int argc, char *argv[])
 		log_fatal("fieldset", "probe module does not supply "
 					  "required packet classification field.");
 	}
+	// default output module does not support multiple fields throw an error
+	// if the user asks for this because otherwise we'll generate a malformed
+	// CSV file when this gets redirected to the CSV output module
+	if (args.output_fields_given && !strcmp(args.output_module_arg, "default")) {
+		log_fatal("output", "default output module does not support multiple"
+				  " fields. Please specify an output module (e.g., CSV)");
+	}
 	// process the list of requested output fields.
 	if (args.output_fields_given) {
 		zconf.raw_output_fields = args.output_fields_arg;
 	} else if (!zconf.raw_output_fields) {
 		zconf.raw_output_fields = (char*) "saddr";
 	}
+	// add all fields if wildcard received
 	if (!strcmp(zconf.raw_output_fields, "*")) {
 		zconf.output_fields_len = zconf.fsconf.defs.len;
 		zconf.output_fields = xcalloc(zconf.fsconf.defs.len, sizeof(char*));
