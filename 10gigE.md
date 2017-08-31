@@ -7,6 +7,7 @@ NIC and Linux.
 
 ### Prerequisites
 
+  0. A working ZMap development environment (see [INSTALL.md](install.md))
   1. A [PF_RING ZC](http://www.ntop.org/products/pf_ring/pf_ring-zc-zero-copy/)
      license from ntop.
   2. PF_RING ZC headers and kernel module
@@ -14,6 +15,7 @@ NIC and Linux.
   4. A Linux (not BSD or Mac) installation
   5. For best results, a computer with at least 8 *physical* cores on the same
      NUMA node.
+  6. libnuma (`sudo apt-get install libnuma-dev`)
 
 ### Building
 
@@ -52,5 +54,4 @@ you're scanning. As always, follow scanning best practices, honor blacklist
 requests, and signal benign/research intent via domain names and websites on
 your scan IPs.
 
-Remember, you're sending a lot of traffic. This is what happened at the
-University of Michigan during a 10 Gbps scan.
+Remember, you're sending a lot of traffic.

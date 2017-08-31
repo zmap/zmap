@@ -17,7 +17,7 @@
 #include <net/if.h>
 #include <net/if_dl.h>
 
-#if !defined(__APPLE__)
+#if defined(_SYSTYPE_BSD)
 
 #if __GNUC__ < 4
 #error "gcc version >= 4 is required"

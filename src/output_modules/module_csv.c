@@ -40,7 +40,7 @@ int csv_init(struct state_conf *conf, char **fields, int fieldlens)
 		file = stdout;
 		log_info("csv", "no output file selected, will use stdout");
 	}
-	if (fieldlens > 1 && file) {
+	if (file && strcmp(conf->output_module_name, "default")) {
 		log_debug("csv", "more than one field, will add headers");
 		for (int i=0; i < fieldlens; i++) {
 			if (i) {
