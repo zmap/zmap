@@ -15,6 +15,7 @@
 #include <string.h>
 #include <assert.h>
 
+#include "../../lib/blacklist.h"
 #include "../../lib/includes.h"
 #include "../../lib/xalloc.h"
 #include "../../lib/lockfd.h"
@@ -385,14 +386,13 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 
 int udp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		uint32_t *src_ip, uint32_t *validation)
-
 {
 	return udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports);
 }
 
 
 int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
-		__attribute__((unused))uint32_t *src_ip, uint32_t *validation,
+		uint32_t *src_ip, uint32_t *validation,
 		int num_ports)
 {
 	uint16_t dport, sport;
@@ -437,6 +437,9 @@ int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		return 0;
 	}
 	if (!check_dst_port(sport, num_ports, validation)) {
+		return 0;
+	}
+	if (!blacklist_is_allowed(*src_ip)) {
 		return 0;
 	}
 	return 1;
