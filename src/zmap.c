@@ -380,6 +380,7 @@ int main(int argc, char *argv[])
 				args.output_module_arg);
 		}
 	}
+	zconf.output_module_name = strdup(args.output_module_arg);
 	zconf.probe_module = get_probe_module_by_name(args.probe_module_arg);
 	if (!zconf.probe_module) {
 		log_fatal("zmap", "specified probe module (%s) does not exist\n",
