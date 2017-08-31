@@ -61,7 +61,7 @@
 
   <ol class='man-decor man-head man head'>
     <li class='tl'>zmap(1)</li>
-    <li class='tc'></li>
+    <li class='tc'>zmap</li>
     <li class='tr'>zmap(1)</li>
   </ol>
 
@@ -112,7 +112,8 @@ be excluded.</p></dd>
 <h3 id="SCAN-OPTIONS">SCAN OPTIONS</h3>
 
 <dl>
-<dt> <code>-r</code>, <code>--rate=pps</code></dt><dd><p> Set the send rate in packets/sec</p></dd>
+<dt> <code>-r</code>, <code>--rate=pps</code></dt><dd><p> Set the send rate in packets/sec. Note: when combined with --probes,  this is
+ total packets per second, not IPs per second.</p></dd>
 <dt> <code>-B</code>, <code>--bandwidth=bps</code></dt><dd><p> Set the send rate in bits/second (supports suffixes G, M, and K (e.g. -B
  10M for 10 mbps). This overrides the --rate flag.</p></dd>
 <dt> <code>-n</code>, <code>--max-targets=n</code></dt><dd><p> Cap the number of targets to probe. This can either be a number (e.g. -n
@@ -179,26 +180,17 @@ fields, and write filters over the output fields.</p>
 
 <h3 id="LOGGING-AND-METADATA-OPTIONS">LOGGING AND METADATA OPTIONS</h3>
 
-<ul>
-<li><p> <code>-q</code>, <code>--quiet</code>:
- Do not print status updates once per second</p></li>
-<li><p> <code>-v</code>, <code>--verbosity=n</code>:
- Level of log detail (0-5, default=3)</p></li>
-<li><p> <code>-l</code>, <code>--log-file=filename</code>:
- Output file for log messages. By default, stderr.</p></li>
-<li><p> <code>-m</code>, <code>--metadata-file=filename</code>:
- Output file for scan metadata (JSON)</p></li>
-<li><p> <code>-L</code>, <code>--log-directory</code>:
- Write log entries to a timestamped file in this directory</p></li>
-<li><p> <code>-u</code>, <code>--status-updates-file</code>:
- Write scan progress updates to CSV file"</p></li>
-<li><p> <code>--disable-syslog</code>:
- Disables logging messages to syslog</p></li>
-<li><p> <code>--notes</code>:
- Inject user-specified notes into scan metadata</p></li>
-<li><p> <code>--user-metadata</code>
- Inject user-specified JSON metadata into scan metadata</p></li>
-</ul>
+<dl>
+<dt> <code>-q</code>, <code>--quiet</code></dt><dd><p> Do not print status updates once per second</p></dd>
+<dt> <code>-v</code>, <code>--verbosity=n</code></dt><dd><p> Level of log detail (0-5, default=3)</p></dd>
+<dt> <code>-l</code>, <code>--log-file=filename</code></dt><dd><p> Output file for log messages. By default, stderr.</p></dd>
+<dt> <code>-m</code>, <code>--metadata-file=filename</code></dt><dd><p> Output file for scan metadata (JSON)</p></dd>
+<dt> <code>-L</code>, <code>--log-directory</code></dt><dd><p> Write log entries to a timestamped file in this directory</p></dd>
+<dt> <code>-u</code>, <code>--status-updates-file</code></dt><dd><p> Write scan progress updates to CSV file"</p></dd>
+<dt> <code>--disable-syslog</code></dt><dd><p> Disables logging messages to syslog</p></dd>
+<dt> <code>--notes</code></dt><dd><p> Inject user-specified notes into scan metadata</p></dd>
+<dt> <code>--user-metadata</code></dt><dd><p> Inject user-specified JSON metadata into scan metadata</p></dd>
+</dl>
 
 
 <h3 id="ADDITIONAL-OPTIONS">ADDITIONAL OPTIONS</h3>
@@ -212,7 +204,8 @@ fields, and write filters over the output fields.</p>
 <dt> <code>--max-sendto-failures</code></dt><dd><p> Maximum NIC sendto failures before scan is aborted</p></dd>
 <dt> <code>--min-hitrate</code></dt><dd><p> Minimum hitrate that scan can hit before scan is aborted</p></dd>
 <dt> <code>--cores</code></dt><dd><p> Comma-separated list of cores to pin to</p></dd>
-<dt> <code>--ignore-invalid-hosts</code></dt><dd><p>  Ignore invalid hosts in whitelist/blacklist file</p></dd>
+<dt> <code>--ignore-blacklist-errors</code></dt><dd><p>  Ignore invalid, malformed, or unresolvable entries in whitelist/blacklist file.
+  Replaces the pre-v3.x <code>--ignore-invalid-hosts</code> option.</p></dd>
 <dt> <code>-h</code>, <code>--help</code></dt><dd><p> Print help and exit</p></dd>
 <dt> <code>-V</code>, <code>--version</code></dt><dd><p> Print version and exit</p></dd>
 </dl>
@@ -264,8 +257,8 @@ decreasing by 5%.</p>
 
 
   <ol class='man-decor man-foot man foot'>
-    <li class='tl'></li>
-    <li class='tc'>October 2016</li>
+    <li class='tl'>ZMap</li>
+    <li class='tc'>June 2017</li>
     <li class='tr'>zmap(1)</li>
   </ol>
 

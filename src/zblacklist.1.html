@@ -91,17 +91,27 @@ IP addresses using a blacklist or whitelist.</p>
 <dt><code>-w</code>, <code>--whitelist-file=name</code></dt><dd><p>File of subnets to include, in CIDR notation, one-per line. All other
 subnets will be excluded.</p></dd>
 <dt><code>-l</code>, <code>--log-file=name</code></dt><dd><p>File to log to.</p></dd>
+<dt><code>--disable-syslog</code></dt><dd><p>Disable logging messages to syslog.</p></dd>
 <dt><code>-v</code>, <code>--verbosity</code></dt><dd><p>Level of log detail (0-5, default=3)</p></dd>
 <dt><code>--no-duplicate-checking</code></dt><dd><p>Don't deduplicate input addresses. Default is false.</p></dd>
-<dt><code>--ignore-blacklist-errors</code></dt><dd><p>Ignore invalid entries in the blacklist. Default is false.</p></dd>
+<dt><code>--ignore-blacklist-errors</code></dt><dd><p>Ignore invalid, malformed, or unresolvable entries in the
+blacklist/whitelist. Default is false.</p></dd>
 <dt><code>--ignore-input-errors</code></dt><dd><p>Don't print invalid entries in the input. Default is false.</p></dd>
+</dl>
+
+
+<h3 id="ADDITIONAL-OPTIONS">ADDITIONAL OPTIONS</h3>
+
+<dl>
+<dt><code>-h</code>, <code>--help</code></dt><dd><p>Print help and exit</p></dd>
+<dt><code>-V</code>, <code>--version</code></dt><dd><p>Print version and exit</p></dd>
 </dl>
 
 
 
   <ol class='man-decor man-foot man foot'>
     <li class='tl'>ZMap</li>
-    <li class='tc'>December 2016</li>
+    <li class='tc'>June 2017</li>
     <li class='tr'>zblacklist(1)</li>
   </ol>
 

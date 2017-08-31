@@ -1,7 +1,7 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "ZMAP" "1" "October 2016" "" ""
+.TH "ZMAP" "1" "June 2017" "ZMap" "zmap"
 .
 .SH "NAME"
 \fBzmap\fR \- The Fast Internet Scanner
@@ -44,7 +44,7 @@ File of individual IP addresses to scan, one\-per line\. This feature allows you
 .
 .TP
 \fB\-r\fR, \fB\-\-rate=pps\fR
-Set the send rate in packets/sec
+Set the send rate in packets/sec\. Note: when combined with \-\-probes, this is total packets per second, not IPs per second\.
 .
 .TP
 \fB\-B\fR, \fB\-\-bandwidth=bps\fR
@@ -156,34 +156,41 @@ Specify an output filter over the fields defined by the probe module\. See the o
 .
 .SS "LOGGING AND METADATA OPTIONS"
 .
-.IP "\(bu" 4
-\fB\-q\fR, \fB\-\-quiet\fR: Do not print status updates once per second
+.TP
+\fB\-q\fR, \fB\-\-quiet\fR
+Do not print status updates once per second
 .
-.IP "\(bu" 4
-\fB\-v\fR, \fB\-\-verbosity=n\fR: Level of log detail (0\-5, default=3)
+.TP
+\fB\-v\fR, \fB\-\-verbosity=n\fR
+Level of log detail (0\-5, default=3)
 .
-.IP "\(bu" 4
-\fB\-l\fR, \fB\-\-log\-file=filename\fR: Output file for log messages\. By default, stderr\.
+.TP
+\fB\-l\fR, \fB\-\-log\-file=filename\fR
+Output file for log messages\. By default, stderr\.
 .
-.IP "\(bu" 4
-\fB\-m\fR, \fB\-\-metadata\-file=filename\fR: Output file for scan metadata (JSON)
+.TP
+\fB\-m\fR, \fB\-\-metadata\-file=filename\fR
+Output file for scan metadata (JSON)
 .
-.IP "\(bu" 4
-\fB\-L\fR, \fB\-\-log\-directory\fR: Write log entries to a timestamped file in this directory
+.TP
+\fB\-L\fR, \fB\-\-log\-directory\fR
+Write log entries to a timestamped file in this directory
 .
-.IP "\(bu" 4
-\fB\-u\fR, \fB\-\-status\-updates\-file\fR: Write scan progress updates to CSV file"
+.TP
+\fB\-u\fR, \fB\-\-status\-updates\-file\fR
+Write scan progress updates to CSV file"
 .
-.IP "\(bu" 4
-\fB\-\-disable\-syslog\fR: Disables logging messages to syslog
+.TP
+\fB\-\-disable\-syslog\fR
+Disables logging messages to syslog
 .
-.IP "\(bu" 4
-\fB\-\-notes\fR: Inject user\-specified notes into scan metadata
+.TP
+\fB\-\-notes\fR
+Inject user\-specified notes into scan metadata
 .
-.IP "\(bu" 4
-\fB\-\-user\-metadata\fR Inject user\-specified JSON metadata into scan metadata
-.
-.IP "" 0
+.TP
+\fB\-\-user\-metadata\fR
+Inject user\-specified JSON metadata into scan metadata
 .
 .SS "ADDITIONAL OPTIONS"
 .
@@ -212,8 +219,8 @@ Minimum hitrate that scan can hit before scan is aborted
 Comma\-separated list of cores to pin to
 .
 .TP
-\fB\-\-ignore\-invalid\-hosts\fR
-Ignore invalid hosts in whitelist/blacklist file
+\fB\-\-ignore\-blacklist\-errors\fR
+Ignore invalid, malformed, or unresolvable entries in whitelist/blacklist file\. Replaces the pre\-v3\.x \fB\-\-ignore\-invalid\-hosts\fR option\.
 .
 .TP
 \fB\-h\fR, \fB\-\-help\fR

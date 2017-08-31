@@ -61,7 +61,7 @@
 
   <ol class='man-decor man-head man head'>
     <li class='tl'>ziterate(1)</li>
-    <li class='tc'></li>
+    <li class='tc'>ziterate</li>
     <li class='tr'>ziterate(1)</li>
   </ol>
 
@@ -91,9 +91,11 @@ order similar to how ZMap generates random addresses to be scanned.</p>
 <dt><code>-w</code>, <code>--whitelist-file=name</code></dt><dd><p>File of subnets to include, in CIDR notation, one-per line. All other
 subnets will be excluded.</p></dd>
 <dt><code>-l</code>, <code>--log-file=name</code></dt><dd><p>File to log to.</p></dd>
+<dt><code>--disable-syslog</code></dt><dd><p>Disable logging messages to syslog.</p></dd>
 <dt><code>-v</code>, <code>--verbosity</code></dt><dd><p>Level of log detail (0-5, default=3)</p></dd>
 <dt><code>--ignore-blacklist-errors</code></dt><dd><p>Ignore invalid entries in the blacklist. Default is false.</p></dd>
 <dt><code>--seed=n</code></dt><dd><p>Seed used to select address permutation.</p></dd>
+<dt><code>-n</code>, <code>--max-targets=n</code></dt><dd><p>Cap number of IPs to generate (as a number or a percentage of the address space)</p></dd>
 </dl>
 
 
@@ -109,14 +111,14 @@ subnets will be excluded.</p></dd>
 
 <dl>
 <dt><code>-h</code>, <code>--help</code></dt><dd><p>Print help text and exit.</p></dd>
-<dt><code>-v</code>, <code>--version</code></dt><dd><p>Print version and exit.</p></dd>
+<dt><code>-V</code>, <code>--version</code></dt><dd><p>Print version and exit.</p></dd>
 </dl>
 
 
 
   <ol class='man-decor man-foot man foot'>
-    <li class='tl'></li>
-    <li class='tc'>August 2016</li>
+    <li class='tl'>ZMap</li>
+    <li class='tc'>June 2017</li>
     <li class='tr'>ziterate(1)</li>
   </ol>
 
