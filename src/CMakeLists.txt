@@ -201,10 +201,10 @@ add_custom_command(OUTPUT parser.c
 endif()
 
 add_custom_target(manpages ronn "${CMAKE_CURRENT_SOURCE_DIR}/zmap.1.ronn" --organization="ZMap" --manual="zmap"
-	COMMAND ronn "${CMAKE_CURRENT_SOURCE_DIR}/zblacklist.1.ronn" --organization="ZMap" --manual="zblacklist"
-	COMMAND ronn "${CMAKE_CURRENT_SOURCE_DIR}/ziterate.1.ronn" --organization="ZMap" --manual="ziterate"
-	COMMAND ronn "${CMAKE_CURRENT_SOURCE_DIR}/ztee.1.ronn" --organization="ZMap" --manual="ztee"
-	SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/zblacklist.1.ronn" "${CMAKE_CURRENT_SOURCE_DIR}/ziterate.1.ronn" "${CMAKE_CURRENT_SOURCE_DIR}/zmap.1.ronn" "${CMAKE_CURRENT_SOURCE_DIR}/ztee.1.ronn"
+    COMMAND ronn "${CMAKE_CURRENT_SOURCE_DIR}/zblacklist.1.ronn" --organization="ZMap" --manual="zblacklist"
+    COMMAND ronn "${CMAKE_CURRENT_SOURCE_DIR}/ziterate.1.ronn" --organization="ZMap" --manual="ziterate"
+    COMMAND ronn "${CMAKE_CURRENT_SOURCE_DIR}/ztee.1.ronn" --organization="ZMap" --manual="ztee"
+    SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/zblacklist.1.ronn" "${CMAKE_CURRENT_SOURCE_DIR}/ziterate.1.ronn" "${CMAKE_CURRENT_SOURCE_DIR}/zmap.1.ronn" "${CMAKE_CURRENT_SOURCE_DIR}/ztee.1.ronn"
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
 )
 
