@@ -370,6 +370,12 @@ int redis_lpush(redisContext* rctx, char *redisqueuename,
 	return redis_push(rctx, redisqueuename, buf, num, len, "LPUSH");
 }
 
+int redis_rpush(redisContext* rctx, char *redisqueuename,
+		void *buf, int num, size_t len)
+{
+	return redis_push(rctx, redisqueuename, buf, num, len, "RPUSH");
+}
+
 int redis_spush(redisContext* rctx, char *redisqueuename,
 		void *buf, int num, size_t len)
 {
@@ -434,6 +440,11 @@ static int redis_push_strings(redisContext* rctx, char *redisqueuename,
 int redis_lpush_strings(redisContext* rctx, char *redisqueuename, char **buf, int num)
 {
 	return redis_push_strings(rctx, redisqueuename, buf, num, "LPUSH");
+}
+
+int redis_rpush_strings(redisContext* rctx, char *redisqueuename, char **buf, int num)
+{
+	return redis_push_strings(rctx, redisqueuename, buf, num, "RPUSH");
 }
 
 int redis_spush_strings(redisContext* rctx, char *redisqueuename, char **buf, int num)
