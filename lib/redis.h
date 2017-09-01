@@ -44,6 +44,7 @@ long redis_get_sizeof_list(redisContext*, const char*);
 long redis_get_sizeof_set(redisContext*, const char*);
 
 int redis_lpush(redisContext*, char*, void*, int, size_t);
+int redis_rpush(redisContext*, char*, void*, int, size_t);
 
 int redis_lpull(redisContext*, char*, void*, int, size_t, int*);
 
@@ -55,9 +56,11 @@ int redis_lpull_one(redisContext *rctx, char *queuename, void **buf, size_t *len
 int redis_spull_one(redisContext *rctx, char *queuename, void **buf, size_t *len);
 
 int redis_lpush_one(redisContext *rctx, char *queuename, void *buf, size_t len);
+int redis_rpush_one(redisContext *rctx, char *queuename, void *buf, size_t len);
 int redis_spush_one(redisContext *rctx, char *queuename, void *buf, size_t len);
 
 int redis_lpush_strings(redisContext *rctx, char *redisqueuename, char **buf, int num);
+int redis_rpush_strings(redisContext *rctx, char *redisqueuename, char **buf, int num);
 int redis_spush_strings(redisContext *rctx, char *redisqueuename, char **buf, int num);
 
 redisContext* redis_connect(char *connstr);
