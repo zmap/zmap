@@ -64,7 +64,7 @@ You can install these dependencies with the following commands
    sudo yum install cmake gmp-devel gengetopt libpcap-devel flex byacc json-c-devel libunistring-devel
    ```
 
-* On Mac OS systems [Homebrew](http://brew.sh/):
+* On Mac OS systems using [Homebrew](http://brew.sh/):
   ```sh
   brew install pkg-config cmake gmp gengetopt json-c byacc libdnet libunistring
   ```
