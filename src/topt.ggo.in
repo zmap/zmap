@@ -34,5 +34,5 @@ option "version"                V "Print version and exit"
 text "\nExamples:\n\
     zmap -p 80 -o - | ztee zmap.csv (save zmap output to zmap.csv and output all IP addresses to stdout)\n\
     zmap -p 80 --output-fields=* -o - | ztee --success-only zmap.csv  (save all zmap output to zmap.csv, print IPs from successful rows to stdout)\n\
-    zmap -p 80 -o - | ztee -u status.csv zmap.csv (save zmap output to zmap.csv, write status updates to status.csv, print all IPs to stdout)"
-    echo "hello, ztee" | ztee --raw out.txt (write text to out.txt and to stdout, like tee)
+    zmap -p 80 -o - | ztee -u status.csv zmap.csv (save zmap output to zmap.csv, write status updates to status.csv, print all IPs to stdout)\n\
+    echo \"hello, ztee\" | ztee --raw out.txt (write text to out.txt and to stdout, like tee)"
