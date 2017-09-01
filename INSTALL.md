@@ -99,6 +99,8 @@ except during early development. Release builds should be built with `-DENABLE_L
 
 - Manpages (and their HTML representations) are generated from the `.ronn` source files in the repository, using the [ronn](https://github.com/rtomayko/ronn) tool. This does not happen automatically as part of the build process; to regenerate the man pages you'll need to run `make manpages`. This target assumes that `ronn` is in your PATH.
 
+- Building with some versions of CMake may fail with `unable to find parser.h`. If this happens, try updating CMake. If it still fails, don't clone ZMap into a path that contains the string `.com`, and try again.
+
 - ZMap may be installed to an alternative directory, with the `CMAKE_INSTALL_PREFIX` option. For example, run
     ```
     cmake -DCMAKE_INSTALL_PREFIX=$HOME/opt .
