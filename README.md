@@ -29,7 +29,7 @@ Fedora, CentOS, and RHEL: `sudo yum install zmap`
 
 Gentoo: `sudo emerge zmap`
 
-Mac OS (brew): `brew install zmap`
+Mac OS (using [Homebrew](https://brew.sh)): `brew install zmap`
 
 Arch Linux: Available through AUR
 
@@ -54,4 +54,3 @@ Unless required by applicable law or agreed to in writing, software distributed
 under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 CONDITIONS OF ANY KIND, either express or implied. See LICENSE for the specific
 language governing permissions and limitations under the License.
-
