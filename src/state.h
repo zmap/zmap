@@ -78,6 +78,7 @@ struct state_conf {
 	uint8_t total_shards;
 	int packet_streams;
 	struct probe_module *probe_module;
+	char *output_module_name;
 	struct output_module *output_module;
 	char *probe_args;
 	char *output_args;
