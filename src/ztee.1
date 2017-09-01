@@ -1,7 +1,7 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "ZTEE" "1" "May 2017" "ZMap" "ztee"
+.TH "ZTEE" "1" "September 2017" "ZMap" "ztee"
 .
 .SH "NAME"
 \fBztee\fR \- output buffer and splitter
@@ -15,25 +15,35 @@ ztee [ OPTIONS\.\.\. ] [ FILE\.\.\. ]
 .P
 See \fB\-\-help\fR for examples\.
 .
+.SH "CSV PROCESSING AND RAW MODE"
+\fIZTee\fR operates by default on CSV\-format output from ZMap\. It only outputs IP addresses (from the input\'s \fBip\fR or \fBsaddr\fR field) to stdout, while writing all input to the output file\. ZTee does not print the first line of input to stdout, since that row is the CSV header\.
+.
+.P
+To operate on data in any other format, pass the \fB\-\-raw\fR flag\. In raw mode, ztee behaves like tee: it will not transform or attempt to parse the input data\.
+.
 .SH "OPTIONS"
 .
 .SS "BASIC OPTIONS"
 .
 .TP
 \fB\-r\fR, \fB\-\-raw\fR
-Ignore input formatting and pass through raw input\. This causes ztee to behavior identical to tee, except with buffering\.
+Ignore input formatting and pass through raw input\. This causes ztee to behave exactly like tee, with the addition of buffering\.
+.
+.TP
+\fB\-\-success\-only\fR
+Only write to stdout rows where success=1 or success=true\. Invalid in combination with \fB\-\-raw\fR\.
 .
 .TP
 \fB\-m\fR, \fB\-\-monitor\fR
-Print monitor output to stderr
+Print monitor data to stderr
 .
 .TP
 \fB\-u\fR, \fB\-\-status\-updates\-file\fR
-Write status updates (monitor data) to a file in CSV format
+Write status updates (monitor data) to the given file, in CSV format
 .
 .TP
 \fB\-l\fR, \fB\-\-log\-file=name\fR
-File to log to\.
+Write errors etc\. to the given file\. If none, ZTee logs to stderr\.
 .
 .SS "ADDITIONAL OPTIONS"
 .
@@ -42,6 +52,6 @@ File to log to\.
 Display help
 .
 .TP
-\fB\-v, \-\-version\fR
+\fB\-V, \-\-version\fR
 Display version
 
