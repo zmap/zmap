@@ -10,13 +10,6 @@ before_install:
   - pip install --user sh
   - python ./scripts/install_mongo.py
   - export PATH=/opt/bin:$PATH
-matrix: 
-  include:
-    - os: osx
-      before_install:
-        - brew update
-        - brew install gengetopt byacc libdnet libunistring
-          mongo-c hiredis
 script: 
   - mkdir __build
   - cd __build
