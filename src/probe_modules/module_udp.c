@@ -436,7 +436,11 @@ int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		// packet and wouldn't have been altered by something responding on a
 		// different port
 		uint16_t dport = ntohs(udp->uh_dport);
+		uint16_t sport = ntohs(udp->uh_sport);
 		if (dport != zconf.target_port) {
+			return PACKET_INVALID;
+		}
+		if (!check_dst_port(sport, num_ports, validation)) {
 			return PACKET_INVALID;
 		}
 	} else {
