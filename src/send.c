@@ -36,8 +36,7 @@
 #include "validate.h"
 
 // OS specific functions called by send_run
-static inline int send_packet(sock_t sock, void *buf, int len,
-			      uint32_t idx);
+static inline int send_packet(sock_t sock, void *buf, int len, uint32_t idx);
 static inline int send_run_init(sock_t sock);
 
 // Include the right implementations
@@ -63,7 +62,6 @@ static uint32_t num_src_addrs;
 // Source ports for outgoing packets
 static uint16_t num_src_ports;
 
-
 void sig_handler_increase_speed(UNUSED int signal)
 {
 	int old_rate = zconf.rate;
@@ -80,14 +78,12 @@ void sig_handler_decrease_speed(UNUSED int signal)
 		 old_rate, zconf.rate);
 }
 
-
 // global sender initialize (not thread specific)
 iterator_t *send_init(void)
 {
 	// generate a new primitive root and starting position
 	iterator_t *it;
-	it = iterator_init(zconf.senders, zconf.shard_num,
-			   zconf.total_shards);
+	it = iterator_init(zconf.senders, zconf.shard_num, zconf.total_shards);
 	// process the dotted-notation addresses passed to ZMAP and determine
 	// the source addresses from which we'll send packets;
 	srcip_first = inet_addr(zconf.source_ip_first);
@@ -117,8 +113,7 @@ iterator_t *send_init(void)
 	}
 
 	// process the source port range that ZMap is allowed to use
-	num_src_ports =
-	    zconf.source_port_last - zconf.source_port_first + 1;
+	num_src_ports = zconf.source_port_last - zconf.source_port_first + 1;
 	log_debug("send", "will send from %i address%s on %u source ports",
 		  num_src_addrs, ((num_src_addrs == 1) ? "" : "es"),
 		  num_src_ports);
@@ -178,8 +173,7 @@ iterator_t *send_init(void)
 		  zconf.hw_mac[3], zconf.hw_mac[4], zconf.hw_mac[5]);
 
 	if (zconf.dryrun) {
-		log_info("send",
-			 "dryrun mode -- won't actually send packets");
+		log_info("send", "dryrun mode -- won't actually send packets");
 	}
 	// initialize random validation key
 	validate_init();
@@ -190,7 +184,6 @@ iterator_t *send_init(void)
 	zsend.start = now();
 	return it;
 }
-
 
 static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
 {
@@ -245,7 +238,7 @@ int send_run(sock_t st, shard_t * s)
 	uint32_t max_targets = s->state.max_targets;
 	volatile int vi;
 	struct timespec ts, rem;
-	double send_rate = (double) zconf.rate / zconf.senders;
+	double send_rate = (double)zconf.rate / zconf.senders;
 	const double slow_rate = 50;	// packets per seconds per thread
 	// at which it uses the slow methods
 	long nsec_per_sec = 1000 * 1000 * 1000;
@@ -258,7 +251,7 @@ int send_run(sock_t st, shard_t * s)
 			last_time = now() - (1.0 / send_rate);
 		} else {
 			// estimate initial rate
-			for (vi = delay; vi--;);
+			for (vi = delay; vi--;) ;
 			delay *=
 			    1 / (now() -
 				 last_time) / (zconf.rate / zconf.senders);
@@ -287,14 +280,13 @@ int send_run(sock_t st, shard_t * s)
 	uint32_t idx = 0;
 	while (1) {
 		// adaptive timing delay
-		send_rate = (double) zconf.rate / zconf.senders;
+		send_rate = (double)zconf.rate / zconf.senders;
 		if (delay > 0) {
 			if (send_rate < slow_rate) {
 				double t = now();
 				double last_rate = (1.0 / (t - last_time));
 
-				sleep_time *=
-				    ((last_rate / send_rate) + 1) / 2;
+				sleep_time *= ((last_rate / send_rate) + 1) / 2;
 				ts.tv_sec = sleep_time / nsec_per_sec;
 				ts.tv_nsec = sleep_time % nsec_per_sec;
 				log_debug("sleep",
@@ -304,15 +296,13 @@ int send_run(sock_t st, shard_t * s)
 				}
 				last_time = t;
 			} else {
-				for (vi = delay; vi--;);
+				for (vi = delay; vi--;) ;
 				if (!interval || (count % interval == 0)) {
 					double t = now();
-					delay *=
-					    (double) (count - last_count)
+					delay *= (double)(count - last_count)
 					    / (t -
 					       last_time) / (zconf.rate /
-							     zconf.
-							     senders);
+							     zconf.senders);
 					if (delay < 1)
 						delay = 1;
 					last_count = count;
@@ -355,8 +345,7 @@ int send_run(sock_t st, shard_t * s)
 		for (int i = 0; i < zconf.packet_streams; i++) {
 			count++;
 			uint32_t src_ip = get_src_ip(curr, i);
-			uint32_t validation[VALIDATE_BYTES /
-					    sizeof(uint32_t)];
+			uint32_t validation[VALIDATE_BYTES / sizeof(uint32_t)];
 			validate_gen(src_ip, curr, (uint8_t *) validation);
 			size_t length = zconf.probe_module->packet_length;
 			zconf.probe_module->make_packet(buf, &length,
@@ -370,8 +359,7 @@ int send_run(sock_t st, shard_t * s)
 			}
 			if (zconf.dryrun) {
 				lock_file(stdout);
-				zconf.probe_module->print_packet(stdout,
-								 buf);
+				zconf.probe_module->print_packet(stdout, buf);
 				unlock_file(stdout);
 			} else {
 				void *contents =
@@ -380,9 +368,8 @@ int send_run(sock_t st, shard_t * s)
 				    sizeof(struct ether_header);
 				int any_sends_successful = 0;
 				for (int i = 0; i < attempts; ++i) {
-					int rc =
-					    send_packet(st, contents,
-							length, idx);
+					int rc = send_packet(st, contents,
+							     length, idx);
 					if (rc < 0) {
 						struct in_addr addr;
 						addr.s_addr = curr;
@@ -431,7 +418,7 @@ int send_run(sock_t st, shard_t * s)
 			}
 		}
 	}
-      cleanup:
+ cleanup:
 	if (zconf.dryrun) {
 		lock_file(stdout);
 		fflush(stdout);
