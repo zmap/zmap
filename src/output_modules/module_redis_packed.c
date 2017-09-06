@@ -84,7 +84,7 @@ int redismodule_init(struct state_conf *conf, char **fields, int fieldlens)
 
 static int redismodule_flush(void)
 {
-	if (redis_lpush(rctx, (char *)queue_name, buffer,
+	if (redis_rpush(rctx, (char *)queue_name, buffer,
 			buffer_fill, sizeof(uint32_t))) {
 		return EXIT_FAILURE;
 	}

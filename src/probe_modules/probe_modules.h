@@ -7,6 +7,9 @@
 #define OUTPUT_TYPE_STATIC 1
 #define OUTPUT_TYPE_DYNAMIC 2
 
+#define PACKET_VALID	1
+#define PACKET_INVALID	0
+
 typedef struct probe_response_type {
 		const uint8_t is_success;
 		const char *name;

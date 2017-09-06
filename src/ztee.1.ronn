@@ -14,27 +14,41 @@ to stdout, and writes the original output to FILE.
 
 See `--help` for examples.
 
+## CSV PROCESSING AND RAW MODE
+
+*ZTee* operates by default on CSV-format output from ZMap. It only outputs IP
+addresses (from the input's `ip` or `saddr` field) to stdout, while writing all
+input to the output file. ZTee does not print the first line of input to stdout,
+since that row is the CSV header.
+
+To operate on data in any other format, pass the `--raw` flag. In raw mode, ztee
+behaves like tee: it will not transform or attempt to parse the input data.
+
 ## OPTIONS
 
 ### BASIC OPTIONS ###
 
   * `-r`, `--raw`:
     Ignore input formatting and pass through raw input. This causes
-    ztee to behavior identical to tee, except with buffering.
+    ztee to behave exactly like tee, with the addition of buffering.
+
+  * `--success-only`:
+    Only write to stdout rows where success=1 or success=true. Invalid
+    in combination with `--raw`.
 
   * `-m`, `--monitor`:
-    Print monitor output to stderr
+    Print monitor data to stderr
 
   * `-u`, `--status-updates-file`:
-    Write status updates (monitor data) to a file in CSV format
+    Write status updates (monitor data) to the given file, in CSV format
 
   * `-l`, `--log-file=name`:
-    File to log to.
+    Write errors etc. to the given file. If none, ZTee logs to stderr.
 
 ### ADDITIONAL OPTIONS ###
 
   * `-h, --help`:
     Display help
 
-  * `-v, --version`:
+  * `-V, --version`:
     Display version

@@ -15,6 +15,7 @@
 #include <string.h>
 #include <assert.h>
 
+#include "../../lib/blacklist.h"
 #include "../../lib/includes.h"
 #include "../../lib/xalloc.h"
 #include "../../lib/lockfd.h"
@@ -219,7 +220,6 @@ int udp_global_cleanup(__attribute__((unused)) struct state_conf *zconf,
 		udp_template_free(udp_template);
 		udp_template = NULL;
 	}
-
 	return EXIT_SUCCESS;
 }
 
@@ -385,61 +385,68 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len, fieldset_t *f
 
 int udp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		uint32_t *src_ip, uint32_t *validation)
-
 {
 	return udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports);
 }
 
 
 int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
-		__attribute__((unused))uint32_t *src_ip, uint32_t *validation,
+		uint32_t *src_ip, uint32_t *validation,
 		int num_ports)
 {
-	uint16_t dport, sport;
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		if ((4*ip_hdr->ip_hl + sizeof(struct udphdr)) > len) {
 			// buffer not large enough to contain expected udp header
-			return 0;
+			return PACKET_INVALID;
 		}
 		struct udphdr *udp = (struct udphdr*) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
-
-		sport = ntohs(udp->uh_dport);
-		dport = ntohs(udp->uh_sport);
+		uint16_t sport = ntohs(udp->uh_dport);
+		if (!check_dst_port(sport, num_ports, validation)) {
+			return PACKET_INVALID;
+		}
+		if (!blacklist_is_allowed(*src_ip)) {
+			return PACKET_INVALID;
+		}
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		// UDP can return ICMP Destination unreach
 		// IP( ICMP( IP( UDP ) ) ) for a destination unreach
-		uint32_t min_len = 4*ip_hdr->ip_hl + ICMP_UNREACH_HEADER_SIZE
+		const uint32_t min_len = 4*ip_hdr->ip_hl + ICMP_UNREACH_HEADER_SIZE
 				+ sizeof(struct ip) + sizeof(struct udphdr);
 		if (len < min_len) {
 			// Not enough information for us to validate
-			return 0;
+			return PACKET_INVALID;
 		}
-
 		struct icmp *icmp = (struct icmp*) ((char *) ip_hdr + 4*ip_hdr->ip_hl);
 		if (icmp->icmp_type != ICMP_UNREACH) {
-			return 0;
+			return PACKET_INVALID;
 		}
-
 		struct ip *ip_inner = (struct ip*) ((char *) icmp + ICMP_UNREACH_HEADER_SIZE);
 		// Now we know the actual inner ip length, we should recheck the buffer
 		if (len < 4*ip_inner->ip_hl - sizeof(struct ip) + min_len) {
-			return 0;
+			return PACKET_INVALID;
 		}
-		// This is the packet we sent
+		// find original destination IP and check that we sent a packet to that IP address
+		uint32_t dest = ip_inner->ip_dst.s_addr;
+		if (!blacklist_is_allowed(dest)) {
+			return PACKET_INVALID;
+		}
+		// This is the UDP packet we sent
 		struct udphdr *udp = (struct udphdr *) ((char*) ip_inner + 4*ip_inner->ip_hl);
-
-		sport = ntohs(udp->uh_sport);
-		dport = ntohs(udp->uh_dport);
+		// we can always check the destination port because this is the original
+		// packet and wouldn't have been altered by something responding on a
+		// different port
+		uint16_t dport = ntohs(udp->uh_dport);
+		uint16_t sport = ntohs(udp->uh_sport);
 		if (dport != zconf.target_port) {
-			return 0;
+			return PACKET_INVALID;
+		}
+		if (!check_dst_port(sport, num_ports, validation)) {
+			return PACKET_INVALID;
 		}
 	} else {
-		return 0;
+		return PACKET_INVALID;
 	}
-	if (!check_dst_port(sport, num_ports, validation)) {
-		return 0;
-	}
-	return 1;
+	return PACKET_VALID;
 }
 
 // Add a new field to the template
@@ -469,8 +476,7 @@ void udp_template_add_field(udp_payload_template_t *t,
 // Free all buffers held by the payload template, including its own
 void udp_template_free(udp_payload_template_t *t)
 {
-	unsigned int x;
-	for (x=0; x < t->fcount; x++) {
+	for (unsigned int x=0; x < t->fcount; x++) {
 		if (t->fields[x]->data) {
 			free(t->fields[x]->data);
 			t->fields[x]->data = NULL;
@@ -487,8 +493,9 @@ void udp_template_free(udp_payload_template_t *t)
 int udp_random_bytes(char *dst, int len, const unsigned char *charset,
 		int charset_len, aesrand_t *aes) {
 	int i;
-	for(i=0; i<len; i++)
+	for (i=0; i<len; i++) {
 		*dst++ = charset[ (aesrand_getword(aes) & 0xFFFFFFFF) % charset_len ];
+	}
 	return i;
 }
 
@@ -763,13 +770,12 @@ udp_payload_template_t * udp_template_load(char *buf, unsigned int len)
 	}
 
 	// Store the trailing bytes as a final data field
-	if ( s < p ) {
+	if (s < p) {
 		tlen = p - s;
 		tmp = xmalloc(tlen);
 		memcpy(tmp, s, tlen);
 		udp_template_add_field(t, UDP_DATA, tlen, tmp);
 	}
-
 	return t;
 }
 
