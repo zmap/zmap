@@ -44,9 +44,9 @@ static inline int send_run_init(sock_t sock);
 #include "send-pfring.h"
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
 #include "send-bsd.h"
-#else				/* LINUX */
+#else /* LINUX */
 #include "send-linux.h"
-#endif				/* __APPLE__ || __FreeBSD__ || __NetBSD__ || __DragonFly__ */
+#endif /* __APPLE__ || __FreeBSD__ || __NetBSD__ || __DragonFly__ */
 
 // The iterator over the cyclic group
 
@@ -418,7 +418,7 @@ int send_run(sock_t st, shard_t * s)
 			}
 		}
 	}
- cleanup:
+cleanup:
 	if (zconf.dryrun) {
 		lock_file(stdout);
 		fflush(stdout);
