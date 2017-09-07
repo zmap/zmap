@@ -12,6 +12,7 @@
 #define VALIDATE_BYTES 16
 
 void validate_init();
-void validate_gen(const uint32_t src, const uint32_t dst, uint8_t output[VALIDATE_BYTES]);
+void validate_gen(const uint32_t src, const uint32_t dst,
+		  uint8_t output[VALIDATE_BYTES]);
 
-#endif//_VALIDATE_H
+#endif //_VALIDATE_H

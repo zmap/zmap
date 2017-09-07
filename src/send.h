@@ -12,7 +12,7 @@
 #include "iterator.h"
 #include "socket.h"
 
-iterator_t* send_init(void);
-int send_run(sock_t, shard_t*);
+iterator_t *send_init(void);
+int send_run(sock_t, shard_t *);
 
-#endif //SEND_H
+#endif // SEND_H

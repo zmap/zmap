@@ -10,10 +10,18 @@ extern "C" {
 #endif
 
 // do not collide with constants defined in syslog.h
-enum LogLevel { ZLOG_FATAL, ZLOG_ERROR, ZLOG_WARN, ZLOG_INFO, ZLOG_DEBUG, ZLOG_TRACE,
-					ZNUM_LOGLEVELS };
+enum LogLevel {
+	ZLOG_FATAL,
+	ZLOG_ERROR,
+	ZLOG_WARN,
+	ZLOG_INFO,
+	ZLOG_DEBUG,
+	ZLOG_TRACE,
+	ZNUM_LOGLEVELS
+};
 
-int log_fatal(const char *loggerName, const char *logMessage, ...) __attribute__((noreturn));
+int log_fatal(const char *loggerName, const char *logMessage, ...)
+    __attribute__((noreturn));
 
 int log_error(const char *loggerName, const char *logMessage, ...);
 
@@ -29,11 +37,10 @@ int log_trace(const char *loggerName, const char *logMessage, ...);
 #define log_trace(...) ;
 #endif
 
+int log_init(FILE *stream, enum LogLevel level, int syslog_enabled,
+	     const char *syslog_app);
 
-int log_init(FILE *stream, enum LogLevel level,
-		int syslog_enabled, const char *syslog_app);
-
-void check_and_log_file_error(FILE *file, const char*name);
+void check_and_log_file_error(FILE *file, const char *name);
 
 size_t dstrftime(char *, size_t, const char *, double);
 
@@ -44,4 +51,3 @@ double now();
 #endif
 
 #endif // _LOGGER_H
-

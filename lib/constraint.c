@@ -59,10 +59,11 @@ typedef struct node {
 #define RADIX_LENGTH 20
 
 struct _constraint {
-	node_t *root;     // root node of the tree
-	uint32_t *radix;  // array of prefixes (/RADIX_LENGTH) that are painted paint_value
-	size_t radix_len; // number of prefixes in radix array
-	int painted;      // have we precomputed counts for each node?
+	node_t *root;	// root node of the tree
+	uint32_t *radix;     // array of prefixes (/RADIX_LENGTH) that are painted
+			     // paint_value
+	size_t radix_len;    // number of prefixes in radix array
+	int painted;	 // have we precomputed counts for each node?
 	value_t paint_value; // value for which we precomputed counts
 };
 
@@ -71,7 +72,7 @@ struct _constraint {
 #define IS_LEAF(node) ((node)->l == NULL)
 
 // Allocate a new leaf with the given value
-static node_t* _create_leaf(value_t value)
+static node_t *_create_leaf(value_t value)
 {
 	node_t *node = xmalloc(sizeof(node_t));
 	node->l = NULL;
@@ -109,7 +110,8 @@ static void _set_recurse(node_t *node, uint32_t prefix, int len, value_t value)
 	assert(0 <= len && len <= 32);
 
 	if (len == 0) {
-		// We're at the end of the prefix; make this a leaf and set the value.
+		// We're at the end of the prefix; make this a leaf and set the
+		// value.
 		if (!IS_LEAF(node)) {
 			_convert_to_leaf(node);
 		}
@@ -123,8 +125,9 @@ static void _set_recurse(node_t *node, uint32_t prefix, int len, value_t value)
 			// A larger prefix has the same value, so we're done.
 			return;
 		}
-		// The larger prefix has a different value, so we need to convert it
-		// into an internal node and continue processing on one of the leaves.
+		// The larger prefix has a different value, so we need to
+		// convert it into an internal node and continue processing on
+		// one of the leaves.
 		node->l = _create_leaf(node->value);
 		node->r = _create_leaf(node->value);
 	}
@@ -140,7 +143,8 @@ static void _set_recurse(node_t *node, uint32_t prefix, int len, value_t value)
 	// At this point, we're an internal node, and the value is set
 	// by one of our children or its descendent.  If both children are
 	// leaves with the same value, we can discard them and become a left.
-	if (IS_LEAF(node->r) && IS_LEAF(node->l) && node->r->value == node->l->value) {
+	if (IS_LEAF(node->r) && IS_LEAF(node->l) &&
+	    node->r->value == node->l->value) {
 		node->value = node->l->value;
 		_convert_to_leaf(node);
 	}
@@ -210,7 +214,8 @@ static int _lookup_index(node_t *root, uint64_t n)
 // (i.e., if there are three addresses with value 0xFF, looking up index 1
 // will return the second one).
 // Note that the tree must have been previously painted with this value.
-uint32_t constraint_lookup_index(constraint_t *con, uint64_t index, value_t value)
+uint32_t constraint_lookup_index(constraint_t *con, uint64_t index,
+				 value_t value)
 {
 	assert(con);
 	if (!con->painted || con->paint_value != value) {
@@ -220,7 +225,8 @@ uint32_t constraint_lookup_index(constraint_t *con, uint64_t index, value_t valu
 	uint64_t radix_idx = index / (1 << (32 - RADIX_LENGTH));
 	if (radix_idx < con->radix_len) {
 		// Radix lookup
-		uint32_t radix_offset = index % (1 << (32 - RADIX_LENGTH));	// TODO: bitwise maths
+		uint32_t radix_offset =
+		    index % (1 << (32 - RADIX_LENGTH)); // TODO: bitwise maths
 		return con->radix[radix_idx] | radix_offset;
 	}
 
@@ -238,8 +244,8 @@ uint32_t constraint_lookup_index(constraint_t *con, uint64_t index, value_t valu
 // leaves under it set to value.
 // If exclude_radix is specified, the number of addresses will exlcude prefixes
 // that are a /RADIX_LENGTH or larger
-static uint64_t _count_ips_recurse(node_t *node, value_t value,
-		uint64_t size, int paint, int exclude_radix)
+static uint64_t _count_ips_recurse(node_t *node, value_t value, uint64_t size,
+				   int paint, int exclude_radix)
 {
 	assert(node);
 	uint64_t n;
@@ -247,15 +253,18 @@ static uint64_t _count_ips_recurse(node_t *node, value_t value,
 		if (node->value == value) {
 			n = size;
 			// Exclude prefixes already included in the radix
-			if (exclude_radix && size >= (1 << (32 -RADIX_LENGTH))) {
+			if (exclude_radix &&
+			    size >= (1 << (32 - RADIX_LENGTH))) {
 				n = 0;
 			}
 		} else {
 			n = 0;
 		}
 	} else {
-		n = _count_ips_recurse(node->l, value, size >> 1, paint, exclude_radix) +
-			_count_ips_recurse(node->r, value, size >> 1, paint, exclude_radix);
+		n = _count_ips_recurse(node->l, value, size >> 1, paint,
+				       exclude_radix) +
+		    _count_ips_recurse(node->r, value, size >> 1, paint,
+				       exclude_radix);
 	}
 	if (paint) {
 		node->count = n;
@@ -267,7 +276,7 @@ static uint64_t _count_ips_recurse(node_t *node, value_t value,
 // the given prefix.  This is either the internal node that
 // corresponds to the end of the prefix or a leaf node that
 // encompasses the prefix. (Note: prefix must be in host byte order.)
-static node_t* _lookup_node(node_t *root, uint32_t prefix, int len)
+static node_t *_lookup_node(node_t *root, uint32_t prefix, int len)
 {
 	assert(root);
 	assert(0 <= len && len <= 32);
@@ -276,7 +285,7 @@ static node_t* _lookup_node(node_t *root, uint32_t prefix, int len)
 	uint32_t mask = 0x80000000;
 	int i;
 
-	for (i=0; i < len; i++) {
+	for (i = 0; i < len; i++) {
 		if (IS_LEAF(node)) {
 			return node;
 		}
@@ -303,7 +312,7 @@ void constraint_paint_value(constraint_t *con, value_t value)
 	// Fill in the radix array with a list of addresses
 	uint32_t i;
 	con->radix_len = 0;
-	for (i=0; i < (1 << RADIX_LENGTH); i++) {
+	for (i = 0; i < (1 << RADIX_LENGTH); i++) {
 		uint32_t prefix = i << (32 - RADIX_LENGTH);
 		node_t *node = _lookup_node(con->root, prefix, RADIX_LENGTH);
 		if (IS_LEAF(node) && node->value == value) {
@@ -312,7 +321,8 @@ void constraint_paint_value(constraint_t *con, value_t value)
 		}
 	}
 	log_debug("constraint", "%lu IPs in radix array, %lu IPs in tree",
-			con->radix_len * (1 << (32 - RADIX_LENGTH)), con->root->count);
+		  con->radix_len * (1 << (32 - RADIX_LENGTH)),
+		  con->root->count);
 	con->painted = 1;
 	con->paint_value = value;
 }
@@ -322,17 +332,19 @@ uint64_t constraint_count_ips(constraint_t *con, value_t value)
 {
 	assert(con);
 	if (con->painted && con->paint_value == value) {
-		return con->root->count + con->radix_len * (1 << (32 - RADIX_LENGTH));
+		return con->root->count +
+		       con->radix_len * (1 << (32 - RADIX_LENGTH));
 	} else {
-		return _count_ips_recurse(con->root, value, (uint64_t)1 << 32, 0, 0);
+		return _count_ips_recurse(con->root, value, (uint64_t)1 << 32,
+					  0, 0);
 	}
 }
 
 // Initialize the tree.
 // All addresses will initially have the given value.
-constraint_t* constraint_init(value_t value)
+constraint_t *constraint_init(value_t value)
 {
-	constraint_t* con = xmalloc(sizeof(constraint_t));
+	constraint_t *con = xmalloc(sizeof(constraint_t));
 	con->root = _create_leaf(value);
 	con->radix = xcalloc(sizeof(uint32_t), 1 << RADIX_LENGTH);
 	con->painted = 0;
@@ -370,8 +382,10 @@ int main(void)
 
 		printf("count(0)=%ld\n", constraint_count_ips(con, 0));
 		printf("count(1)=%ld\n", constraint_count_ips(con, 1));
-		printf("%d\n", constraint_lookup_ip(con,ntohl(inet_addr("10.11.12.0"))));
-		assert(constraint_count_ips(con, 0) + constraint_count_ips(con, 1) == (uint64_t)1 << 32);
+		printf("%d\n",
+constraint_lookup_ip(con,ntohl(inet_addr("10.11.12.0"))));
+		assert(constraint_count_ips(con, 0) + constraint_count_ips(con,
+1) == (uint64_t)1 << 32);
 
 		uint32_t i=0, count=0;
 		do {
@@ -384,4 +398,3 @@ int main(void)
 	constraint_free(con);
 }
 */
-

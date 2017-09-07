@@ -9,7 +9,6 @@
 #include <pthread.h>
 #include "iterator.h"
 
-
 #ifndef MONITOR_H
 #define MONITOR_H
 

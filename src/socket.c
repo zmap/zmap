@@ -23,7 +23,7 @@ sock_t get_dryrun_socket(void)
 	int sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock <= 0) {
 		log_fatal("send", "couldn't create socket. Error: %s\n",
-			strerror(errno));
+			  strerror(errno));
 	}
 	sock_t s;
 	s.sock = sock;

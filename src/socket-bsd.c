@@ -48,7 +48,7 @@ sock_t get_socket(UNUSED uint32_t id)
 	strlcpy(ifr.ifr_name, zconf.iface, sizeof(ifr.ifr_name));
 
 	// Bind the bpf to the interface
-	if (ioctl(bpf, BIOCSETIF, (char *) &ifr) < 0) {
+	if (ioctl(bpf, BIOCSETIF, (char *)&ifr) < 0) {
 		return ret;
 	}
 

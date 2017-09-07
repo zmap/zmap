@@ -6,41 +6,34 @@
 
 static void die() __attribute__((noreturn));
 
-void* xcalloc(size_t count, size_t size)
+void *xcalloc(size_t count, size_t size)
 {
-	void* res = calloc(count, size);
+	void *res = calloc(count, size);
 	if (res == NULL) {
 		die();
 	}
 	return res;
 }
 
-void xfree(void *ptr)
-{
-	free(ptr);
-}
+void xfree(void *ptr) { free(ptr); }
 
-void* xmalloc(size_t size)
+void *xmalloc(size_t size)
 {
-	void* res = malloc(size);
+	void *res = malloc(size);
 	if (res == NULL) {
 		die();
 	}
-	memset(res, 0 , size);
+	memset(res, 0, size);
 	return res;
 }
 
-void* xrealloc(void *ptr, size_t size)
+void *xrealloc(void *ptr, size_t size)
 {
-	void* res = realloc(ptr, size);
+	void *res = realloc(ptr, size);
 	if (res == NULL) {
 		die();
 	}
 	return res;
 }
 
-void die()
-{
-	log_fatal("zmap", "Out of memory");
-}
-
+void die() { log_fatal("zmap", "Out of memory"); }
