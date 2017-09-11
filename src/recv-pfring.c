@@ -29,7 +29,7 @@ void recv_init()
 	pf_buffer = pfring_zc_get_packet_handle(zconf.pf.cluster);
 	if (pf_buffer == NULL) {
 		log_fatal("recv", "Could not get packet handle: %s",
-				strerror(errno));
+			  strerror(errno));
 	}
 }
 
@@ -57,7 +57,7 @@ void recv_packets()
 		return;
 	}
 	// Successfully got a packet, now handle it
-	uint8_t* pkt_buf = pfring_zc_pkt_buff_data(pf_buffer, pf_recv);
+	uint8_t *pkt_buf = pfring_zc_pkt_buff_data(pf_buffer, pf_recv);
 	handle_packet(pf_buffer->len, pkt_buf);
 }
 
@@ -76,4 +76,3 @@ int recv_update_stats(void)
 	}
 	return EXIT_SUCCESS;
 }
-

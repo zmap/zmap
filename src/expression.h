@@ -16,13 +16,9 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-enum operation {
-	GT, LT, EQ, NEQ, AND, OR, LT_EQ, GT_EQ
-};
+enum operation { GT, LT, EQ, NEQ, AND, OR, LT_EQ, GT_EQ };
 
-enum node_type {
-	OP, FIELD, STRING, INT
-};
+enum node_type { OP, FIELD, STRING, INT };
 
 struct field_id {
 	int index;
@@ -43,13 +39,13 @@ typedef struct node_st {
 	union node_value value;
 } node_t;
 
-node_t* make_op_node(enum operation op);
+node_t *make_op_node(enum operation op);
 
-node_t* make_field_node(char *fieldname);
+node_t *make_field_node(char *fieldname);
 
-node_t* make_string_node(char *literal);
+node_t *make_string_node(char *literal);
 
-node_t* make_int_node(int literal);
+node_t *make_int_node(int literal);
 
 int evaluate_expression(node_t *root, fieldset_t *fields);
 

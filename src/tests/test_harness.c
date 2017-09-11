@@ -44,28 +44,27 @@
 #include "output_modules/module_json.h"
 #include "ztopt.h"
 
-
 int test_recursive_fieldsets(void)
 {
-    fieldset_t *outer = fs_new_fieldset();
-    fieldset_t *inner = fs_new_fieldset();
+	fieldset_t *outer = fs_new_fieldset();
+	fieldset_t *inner = fs_new_fieldset();
 
-    fieldset_t *repeated = fs_new_repeated_string(0);
-    assert(repeated->type == FS_REPEATED);
-    assert(repeated->len == 0);
-    assert(repeated->inner_type == FS_STRING);
-    for (int i=0; i < 10; i++) {
-        fs_add_string(repeated, NULL, (char*) "hello world!", 0);
-    }
-    fs_add_repeated(outer, (char*) "repeatedstuff", repeated);
-    fs_add_string(outer, "name", strdup("value"), 0);
-    fs_add_string(inner, "name2", strdup("value2"), 0);
-    fs_add_fieldset(outer, "inner", inner);
+	fieldset_t *repeated = fs_new_repeated_string(0);
+	assert(repeated->type == FS_REPEATED);
+	assert(repeated->len == 0);
+	assert(repeated->inner_type == FS_STRING);
+	for (int i = 0; i < 10; i++) {
+		fs_add_string(repeated, NULL, (char *)"hello world!", 0);
+	}
+	fs_add_repeated(outer, (char *)"repeatedstuff", repeated);
+	fs_add_string(outer, "name", strdup("value"), 0);
+	fs_add_string(inner, "name2", strdup("value2"), 0);
+	fs_add_fieldset(outer, "inner", inner);
 
-    print_json_fieldset(outer);
-    fs_free(outer);
+	print_json_fieldset(outer);
+	fs_free(outer);
 
-    return EXIT_SUCCESS;
+	return EXIT_SUCCESS;
 }
 
 int main(UNUSED int argc, UNUSED char **argv)
@@ -92,8 +91,7 @@ int main(UNUSED int argc, UNUSED char **argv)
 		exit(EXIT_SUCCESS);
 	}
 
-    for (int i=0; i< 100000000; i++)
-        test_recursive_fieldsets();
-    return EXIT_SUCCESS;
+	for (int i = 0; i < 100000000; i++)
+		test_recursive_fieldsets();
+	return EXIT_SUCCESS;
 }
-

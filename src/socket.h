@@ -37,5 +37,4 @@ typedef struct {
 sock_t get_dryrun_socket(void);
 sock_t get_socket(uint32_t id);
 
-
 #endif /* ZMAP_SOCKET_H */

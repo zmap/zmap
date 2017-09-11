@@ -35,8 +35,7 @@
 
 #include "zbopt.h"
 
-
-//struct zbl_stats {
+// struct zbl_stats {
 //	uint32_t cidr_entries;
 //	uint32_t allowed_addrs;
 //	uint32_t input_addrs;
@@ -46,19 +45,20 @@
 //	uint32_t duplicates;
 //};
 
-#undef  MIN
-#define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
+#undef MIN
+#define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
 
-// allow 1mb lines + newline + \0 
-#define MAX_LINE_LENGTH 1024*1024 + 2
+// allow 1mb lines + newline + \0
+#define MAX_LINE_LENGTH 1024 * 1024 + 2
 
-static inline char* zmin(char *a, char *b) {
-    if (a && !b)
-        return a;
-    else if (b && !a)
-        return b;
-    else
-        return MIN(a,b);
+static inline char *zmin(char *a, char *b)
+{
+	if (a && !b)
+		return a;
+	else if (b && !a)
+		return b;
+	else
+		return MIN(a, b);
 }
 
 struct zbl_conf {
@@ -70,13 +70,21 @@ struct zbl_conf {
 	int ignore_input_errors;
 	int verbosity;
 	int disable_syslog;
-	//struct zbl_stats stats;
+	// struct zbl_stats stats;
 };
 
-#define SET_IF_GIVEN(DST,ARG) \
-	{ if (args.ARG##_given) { (DST) = args.ARG##_arg; }; }
-#define SET_BOOL(DST,ARG) \
-	{ if (args.ARG##_given) { (DST) = 1; }; }
+#define SET_IF_GIVEN(DST, ARG)                                                 \
+	{                                                                      \
+		if (args.ARG##_given) {                                        \
+			(DST) = args.ARG##_arg;                                \
+		};                                                             \
+	}
+#define SET_BOOL(DST, ARG)                                                     \
+	{                                                                      \
+		if (args.ARG##_given) {                                        \
+			(DST) = 1;                                             \
+		};                                                             \
+	}
 
 int main(int argc, char **argv)
 {
@@ -137,42 +145,52 @@ int main(int argc, char **argv)
 	if (conf.log_filename) {
 		logfile = fopen(conf.log_filename, "w");
 		if (!logfile) {
-			fprintf(stderr, "FATAL: unable to open specified logfile (%s)\n",
-					conf.log_filename);
+			fprintf(
+			    stderr,
+			    "FATAL: unable to open specified logfile (%s)\n",
+			    conf.log_filename);
 			exit(1);
 		}
 	}
-	if (log_init(logfile, conf.verbosity, !conf.disable_syslog, "zblacklist")) {
+	if (log_init(logfile, conf.verbosity, !conf.disable_syslog,
+		     "zblacklist")) {
 		fprintf(stderr, "FATAL: unable able to initialize logging\n");
 		exit(1);
 	}
 
 	if (!conf.blacklist_filename && !conf.whitelist_filename) {
-		log_fatal("zblacklist", "must specify either a whitelist or blacklist file");
+		log_fatal("zblacklist",
+			  "must specify either a whitelist or blacklist file");
 	}
 
 	// parse blacklist
 	if (conf.blacklist_filename) {
-		log_debug("zblacklist", "blacklist file at %s to be used", conf.blacklist_filename);
+		log_debug("zblacklist", "blacklist file at %s to be used",
+			  conf.blacklist_filename);
 	} else {
 		log_debug("zblacklist", "no blacklist file specified");
 	}
-	if (conf.blacklist_filename && access(conf.blacklist_filename, R_OK) == -1) {
-		log_fatal("zblacklist", "unable to read specified blacklist file (%s)",
-				conf.blacklist_filename);
+	if (conf.blacklist_filename &&
+	    access(conf.blacklist_filename, R_OK) == -1) {
+		log_fatal("zblacklist",
+			  "unable to read specified blacklist file (%s)",
+			  conf.blacklist_filename);
 	}
 	if (conf.whitelist_filename) {
-		log_debug("zblacklist", "whitelist file at %s to be used", conf.whitelist_filename);
+		log_debug("zblacklist", "whitelist file at %s to be used",
+			  conf.whitelist_filename);
 	} else {
 		log_debug("zblacklist", "no whitelist file specified");
 	}
-	if (conf.whitelist_filename && access(conf.whitelist_filename, R_OK) == -1) {
-		log_fatal("zblacklist", "unable to read specified whitelist file (%s)",
-				conf.whitelist_filename);
+	if (conf.whitelist_filename &&
+	    access(conf.whitelist_filename, R_OK) == -1) {
+		log_fatal("zblacklist",
+			  "unable to read specified whitelist file (%s)",
+			  conf.whitelist_filename);
 	}
 
 	if (blacklist_init(conf.whitelist_filename, conf.blacklist_filename,
-			NULL, 0, NULL, 0, conf.ignore_blacklist_errors)) {
+			   NULL, 0, NULL, 0, conf.ignore_blacklist_errors)) {
 		log_fatal("zmap", "unable to initialize blacklist / whitelist");
 	}
 	// initialize paged bitmap
@@ -180,7 +198,8 @@ int main(int argc, char **argv)
 	if (conf.check_duplicates) {
 		seen = pbm_init();
 		if (!seen) {
-			log_fatal("zblacklist", "unable to initialize paged bitmap");
+			log_fatal("zblacklist",
+				  "unable to initialize paged bitmap");
 		}
 	}
 	// process addresses
@@ -189,24 +208,27 @@ int main(int argc, char **argv)
 	char *original = malloc(MAX_LINE_LENGTH);
 	assert(original);
 	while (fgets(line, MAX_LINE_LENGTH, stdin) != NULL) {
-		size_t len = strlen(line);	
-		if (len >= (MAX_LINE_LENGTH-1)) {
-			log_fatal("zblacklist", "received line longer than max length: %i", MAX_LINE_LENGTH);
+		size_t len = strlen(line);
+		if (len >= (MAX_LINE_LENGTH - 1)) {
+			log_fatal("zblacklist",
+				  "received line longer than max length: %i",
+				  MAX_LINE_LENGTH);
 		}
 		// remove new line
 		memcpy(original, line, len + 1);
-		char *n = zmin(zmin(zmin(zmin(strchr(line, '\n'),
-                        strchr(line, ',')),
-                        strchr(line, '\t')),
-                        strchr(line, ' ')),
-                        strchr(line, '#'));
+		char *n =
+		    zmin(zmin(zmin(zmin(strchr(line, '\n'), strchr(line, ',')),
+				   strchr(line, '\t')),
+			      strchr(line, ' ')),
+			 strchr(line, '#'));
 		assert(n);
 		n[0] = 0;
 		log_debug("zblacklist", "input value %s", line);
 		// parse into int
 		struct in_addr addr;
 		if (!inet_aton(line, &addr)) {
-			log_warn("zblacklist", "invalid input address: %s", line);
+			log_warn("zblacklist", "invalid input address: %s",
+				 line);
 			if (!conf.ignore_input_errors) {
 				printf("%s", original);
 			}
@@ -214,13 +236,16 @@ int main(int argc, char **argv)
 		}
 		if (conf.check_duplicates) {
 			if (pbm_check(seen, ntohl(addr.s_addr))) {
-				log_debug("zblacklist", "%s is a duplicate: skipped", line);
+				log_debug("zblacklist",
+					  "%s is a duplicate: skipped", line);
 				continue;
 			} else {
-				log_debug("zblacklist", "%s not a duplicate: skipped", line);
+				log_debug("zblacklist",
+					  "%s not a duplicate: skipped", line);
 			}
 		} else {
-				log_debug("zblacklist", "no duplicate checking for %s", line);
+			log_debug("zblacklist", "no duplicate checking for %s",
+				  line);
 		}
 		// check if in blacklist
 		if (blacklist_is_allowed(addr.s_addr)) {

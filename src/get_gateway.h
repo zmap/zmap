@@ -15,6 +15,6 @@ int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac);
 int get_default_gw(struct in_addr *gw, char *iface);
 int get_iface_ip(char *iface, struct in_addr *ip);
 int get_iface_hw_addr(char *iface, unsigned char *hw_mac);
-char* get_default_iface(void);
+char *get_default_iface(void);
 
 #endif
