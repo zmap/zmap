@@ -120,9 +120,9 @@ double compute_remaining_time(double age, uint64_t tried_sent)
 {
 	if (!zsend.complete) {
 		double remaining[] = {INFINITY, INFINITY, INFINITY};
-		if (zsend.targets) {
+		if (zsend.max_targets) {
 			double done = (double)tried_sent /
-				      (zsend.targets / zconf.total_shards);
+				      (zsend.max_targets / zconf.total_shards);
 			remaining[0] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;
 		}

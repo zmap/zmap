@@ -26,6 +26,7 @@ typedef struct cyclic_group {
 typedef struct cycle {
 	const cyclic_group_t *group;
 	uint64_t generator;
+	uint64_t order;
 	uint32_t offset;
 } cycle_t;
 

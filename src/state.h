@@ -147,7 +147,7 @@ struct state_send {
 	int warmup;
 	int complete;
 	uint32_t first_scanned;
-	uint32_t targets;
+	uint32_t max_targets;
 	uint32_t sendto_failures;
 	uint32_t max_index;
 	uint8_t **list_of_ips_pbm;

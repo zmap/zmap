@@ -828,18 +828,12 @@ int main(int argc, char *argv[])
 	zconf.total_allowed = allowed;
 	zconf.total_disallowed = blacklist_count_not_allowed();
 	assert(allowed <= (1LL << 32));
-	if (allowed == (1LL << 32)) {
-		zsend.targets = 0xFFFFFFFF;
-	} else {
-		zsend.targets = allowed;
-	}
-	if (zsend.targets > zconf.max_targets) {
-		zsend.targets = zconf.max_targets;
-	}
-	if (!zsend.targets) {
+	if (!zconf.total_allowed) {
 		log_fatal("zmap", "zero eligible addresses to scan");
 	}
-
+	if (zconf.max_targets) {
+		zsend.max_targets = zconf.max_targets;
+	}
 #ifndef PFRING
 	// Set the correct number of threads, default to num_cores - 1
 	if (args.sender_threads_given) {
@@ -847,7 +841,7 @@ int main(int argc, char *argv[])
 	} else {
 		zconf.senders = 1;
 	}
-	if (2 * zconf.senders >= zsend.targets) {
+	if (2 * zconf.senders >= zsend.max_targets) {
 		log_warn(
 		    "zmap",
 		    "too few targets relative to senders, dropping to one sender");

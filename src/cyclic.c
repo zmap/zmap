@@ -138,6 +138,7 @@ cycle_t make_cycle(const cyclic_group_t *group, aesrand_t *aes)
 	cycle.generator = find_primroot(group, aes);
 	cycle.offset = (uint32_t)(aesrand_getword(aes) & 0xFFFFFFFF);
 	cycle.offset %= group->prime;
+	cycle.order = group->prime - 1;
 	return cycle;
 }
 
