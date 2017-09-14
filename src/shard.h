@@ -9,7 +9,6 @@
 #ifndef ZMAP_SHARD_H
 #define ZMAP_SHARD_H
 
-#include <signal.h>
 #include <stdint.h>
 
 #include "cyclic.h"
