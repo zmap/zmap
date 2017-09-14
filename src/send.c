@@ -84,6 +84,13 @@ iterator_t *send_init(void)
 {
 	// generate a new primitive root and starting position
 	iterator_t *it;
+	uint32_t num_subshards = (uint32_t) zconf.senders * (uint32_t) zconf.total_shards;
+	if (num_subshards > blacklist_count_allowed()) {
+		log_fatal("send", "senders * shards > allowed probes");
+	}
+	if (zsend.max_targets && (num_subshards > zsend.max_targets)) {
+		log_fatal("send", "senders * shards > max targets");
+	}
 	it = iterator_init(zconf.senders, zconf.shard_num, zconf.total_shards);
 	// process the dotted-notation addresses passed to ZMAP and determine
 	// the source addresses from which we'll send packets;
