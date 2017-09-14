@@ -42,7 +42,7 @@ void shard_init(shard_t *shard, uint8_t shard_idx, uint8_t num_shards,
 	uint32_t num_subshards = (uint32_t)num_shards * (uint32_t)num_threads;
 	uint64_t num_elts = cycle->order;
 	assert(num_subshards < num_elts);
-	assert(num_subshards < max_total_targets);
+	assert(!max_total_targets || (num_subshards <= max_total_targets));
 
 	// This instance of ZMap will run T subshards, with one subshard per
 	// thread. This composes a single shard, as specified by the command
