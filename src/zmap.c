@@ -754,10 +754,10 @@ int main(int argc, char *argv[])
 		    "Need to specify both shard number and total number of shards");
 	}
 	if (args.shard_given) {
-		enforce_range("shard", args.shard_arg, 0, 254);
+		enforce_range("shard", args.shard_arg, 0, 65534);
 	}
 	if (args.shards_given) {
-		enforce_range("shards", args.shards_arg, 1, 254);
+		enforce_range("shards", args.shards_arg, 1, 65535);
 	}
 	SET_IF_GIVEN(zconf.shard_num, shard);
 	SET_IF_GIVEN(zconf.total_shards, shards);
