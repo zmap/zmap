@@ -119,7 +119,7 @@ static double min_d(double array[], int n)
 double compute_remaining_time(double age, uint64_t tried_sent)
 {
 	if (!zsend.complete) {
-		double remaining[] = {INFINITY, INFINITY, INFINITY};
+		double remaining[] = {INFINITY, INFINITY, INFINITY, INFINITY};
 		if (zsend.max_targets) {
 			double done = (double)tried_sent /
 				      (zsend.max_targets / zconf.total_shards);
@@ -134,6 +134,12 @@ double compute_remaining_time(double age, uint64_t tried_sent)
 			double done =
 			    (double)zrecv.success_unique / zconf.max_results;
 			remaining[2] = (1. - done) * (age / done);
+		}
+		if (zsend.max_index) {
+			double done = (double)tried_sent /
+				      (zsend.max_index / zconf.total_shards);
+			remaining[3] =
+			    (1. - done) * (age / done) + zconf.cooldown_secs;
 		}
 		return min_d(remaining, sizeof(remaining) / sizeof(double));
 	} else {
