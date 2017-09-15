@@ -19,8 +19,8 @@
 
 typedef struct iterator iterator_t;
 
-iterator_t *iterator_init(uint8_t num_threads, uint8_t shard,
-			  uint8_t num_shards);
+iterator_t *iterator_init(uint8_t num_threads, uint16_t shard,
+			  uint16_t num_shards);
 
 uint32_t iterator_get_sent(iterator_t *it);
 uint32_t iterator_get_tried_sent(iterator_t *it);

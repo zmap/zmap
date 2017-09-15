@@ -75,8 +75,8 @@ struct state_conf {
 	// address generation
 	uint32_t generator;
 	// sharding options
-	uint8_t shard_num;
-	uint8_t total_shards;
+	uint16_t shard_num;
+	uint16_t total_shards;
 	int packet_streams;
 	struct probe_module *probe_module;
 	char *output_module_name;

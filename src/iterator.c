@@ -56,8 +56,8 @@ void shard_complete(uint8_t thread_id, void *arg)
 	pthread_mutex_unlock(&it->mutex);
 }
 
-iterator_t *iterator_init(uint8_t num_threads, uint8_t shard,
-			  uint8_t num_shards)
+iterator_t *iterator_init(uint8_t num_threads, uint16_t shard,
+			  uint16_t num_shards)
 {
 	uint64_t num_addrs = blacklist_count_allowed();
 	iterator_t *it = xmalloc(sizeof(struct iterator));
