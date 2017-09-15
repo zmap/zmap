@@ -74,7 +74,7 @@ struct state_send zsend = {
     .warmup = 1,
     .complete = 0,
     .sendto_failures = 0,
-    .targets = 0,
+    .max_targets = 0,
     .list_of_ips_pbm = NULL,
 };
 
