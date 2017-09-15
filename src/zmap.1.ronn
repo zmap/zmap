@@ -91,7 +91,6 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
    * `--retries=n`:
      Number of times to try resending a packet if the sendto call fails (default=10)
 
-
 ### NETWORK OPTIONS ###
 
    * `-s`, `--source-port=port|range`:
@@ -109,9 +108,6 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
 
    * `-i`, `--interface=name`:
      Network interface to use
-
-   * `-X`, `--vpn`:
-     Send IP layer packets instead of ethernet packets (for non-Ethernet VPNs)
 
 ### PROBE OPTIONS ###
 
