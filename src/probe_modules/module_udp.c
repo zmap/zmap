@@ -37,15 +37,6 @@ static udp_payload_template_t *udp_template = NULL;
 
 static const char *udp_send_msg_default = "GET / HTTP/1.1\r\nHost: www\r\n\r\n";
 
-const char *udp_unreach_strings[] = {
-    "network unreachable",      "host unreachable",
-    "protocol unreachable",     "port unreachable",
-    "fragments required",       "source route failed",
-    "network unknown",		"host unknown",
-    "source host isolated",     "network admin. prohibited",
-    "host admin. prohibited",   "network unreachable TOS",
-    "host unreachable TOS",     "communication admin. prohibited",
-    "host presdence violation", "precedence cutoff"};
 
 const char *udp_usage_error =
     "unknown UDP probe specification (expected file:/path or text:STRING or hex:01020304 or template:/path or template-fields)";
@@ -407,7 +398,7 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len,
 		if (icmp->icmp_code <= ICMP_UNREACH_PRECEDENCE_CUTOFF) {
 			fs_add_string(
 			    fs, "icmp_unreach_str",
-			    (char *)udp_unreach_strings[icmp->icmp_code], 0);
+			    (char *)icmp_unreach_strings[icmp->icmp_code], 0);
 		} else {
 			fs_add_string(fs, "icmp_unreach_str", (char *)"unknown",
 				      0);

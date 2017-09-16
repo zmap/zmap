@@ -1054,7 +1054,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		if (icmp->icmp_code <= ICMP_UNREACH_PRECEDENCE_CUTOFF) {
 			fs_add_string(
 			    fs, "icmp_unreach_str",
-			    (char *)udp_unreach_strings[icmp->icmp_code], 0);
+			    (char *)icmp_unreach_strings[icmp->icmp_code], 0);
 		} else {
 			fs_add_string(fs, "icmp_unreach_str", (char *)"unknown",
 				      0);

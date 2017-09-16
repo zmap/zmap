@@ -93,11 +93,11 @@ static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 				uint32_t *src_ip, uint32_t *validation)
 {
 	if (ip_hdr->ip_p != IPPROTO_ICMP) {
-		return 0;
+		return PACKET_INVALID;
 	}
 	// check if buffer is large enough to contain expected icmp header
 	if (((uint32_t)4 * ip_hdr->ip_hl + ICMP_SMALLEST_SIZE) > len) {
-		return 0;
+		return PACKET_INVALID;
 	}
 	struct icmp *icmp_h =
 	    (struct icmp *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
@@ -111,13 +111,13 @@ static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		// original IP header + 1st 8B of original ICMP frame
 		if ((4 * ip_hdr->ip_hl + ICMP_TIMXCEED_UNREACH_HEADER_SIZE +
 		     sizeof(struct ip)) > len) {
-			return 0;
+			return PACKET_INVALID;
 		}
 		struct ip *ip_inner = (struct ip *)((char *)icmp_h + 8);
 		if (((uint32_t)4 * ip_hdr->ip_hl +
 		     ICMP_TIMXCEED_UNREACH_HEADER_SIZE + 4 * ip_inner->ip_hl +
 		     8 /*1st 8 bytes of original*/) > len) {
-			return 0;
+			return PACKET_INVALID;
 		}
 		struct icmp *icmp_inner =
 		    (struct icmp *)((char *)ip_inner + 4 * ip_hdr->ip_hl);
@@ -130,12 +130,12 @@ static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	}
 	// validate icmp id and seqnum
 	if (icmp_idnum != (validation[1] & 0xFFFF)) {
-		return 0;
+		return PACKET_INVALID;
 	}
 	if (icmp_seqnum != (validation[2] & 0xFFFF)) {
-		return 0;
+		return PACKET_INVALID;
 	}
-	return 1;
+	return PACKET_VALID;
 }
 
 static void icmp_echo_process_packet(const u_char *packet,

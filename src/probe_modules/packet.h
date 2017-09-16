@@ -102,4 +102,7 @@ get_src_port(int num_ports, int probe_num, uint32_t *validation)
 // Note: caller must free return value
 char *make_ip_str(uint32_t ip);
 
+extern const char *icmp_unreach_strings[];
+
 #endif
+
