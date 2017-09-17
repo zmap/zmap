@@ -23,5 +23,5 @@ Reviewing
   the first commit. We don't need to see your development process, we just want a
   succint description of what this PR did in the Git log.
 
-[kernelguide](https://www.kernel.org/doc/Documentation/process/coding-style.rst)
+[kernelguide]: https://www.kernel.org/doc/Documentation/process/coding-style.rst
 
