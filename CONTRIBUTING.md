@@ -11,6 +11,10 @@ Developing
   configuration file](/.clang-format) for `clang-format` that applies this
   style. You can use the [indent.sh](./indent.sh) script to apply this style.
 
+- Before submitting a PR, please rebase/squash your commits down to a single
+  commit. Follow these [commit message guidelines][guidelines], especially with
+  regard to formatting.
+
 
 Reviewing
 ---------
@@ -18,10 +22,13 @@ Reviewing
 - All commits must be reviewed in the form of a pull request by a ZMap
   maintainer. This usually means @zakird or @dadrian (or both).
 
-- All pull-requests should be squash-merged into master from the Github web
-  interface. When in doubt, delete the commit messages from everything except
-  the first commit. We don't need to see your development process, we just want a
-  succint description of what this PR did in the Git log.
+- All pull-requests should be squash-merged into master.
+
+- When squash-merging, put the PR number in the commit title. Github does this
+  automatically in the web interface.  Condense the commit messages down to a
+  single messsage; often this can just be the commit message from the first
+  commit in a PR. Follow the commit formatting guidelines [here][guidelines].
 
 [kernelguide]: https://www.kernel.org/doc/Documentation/process/coding-style.rst
+[guidelines]: https://github.com/torvalds/subsurface-for-dirk/blob/master/README#L92
 
