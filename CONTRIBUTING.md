@@ -9,7 +9,7 @@ Developing
 
 - ZMap code follows the [Linux kernel style guide][kernelguide]. We mantain [a
   configuration file](/.clang-format) for `clang-format` that applies this
-  style. You can use the [indent.sh](./indent.sh) script to apply this style.
+  style. You can use the [format.sh](/format.sh) script to apply this style.
 
 - Before submitting a PR, please rebase/squash your commits down to a single
   commit. Follow these [commit message guidelines][guidelines], especially with
