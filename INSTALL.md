@@ -108,4 +108,3 @@ except during early development. Release builds should be built with `-DENABLE_L
     make install
     ```
 
-- ZMap code follows the [Linux kernel style guide](https://www.kernel.org/doc/Documentation/process/coding-style.rst). We mantain [a configuration file](/.clang-format) for `clang-format` that applies this style.
