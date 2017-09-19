@@ -18,7 +18,7 @@ ZMap's sister project that performs application-layer handshakes.
 Installation
 ------------
 
-The latest stable release of ZMap is version 2.1.1 and supports Linux, Mac OS, and
+The latest stable release of ZMap is version 2.1.1 and supports Linux, macOS, and
 BSD. It can be installed through the built-in package managers on the following
 operating systems:
 
