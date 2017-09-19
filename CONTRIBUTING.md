@@ -2,11 +2,11 @@ Contributing to ZMap
 ====================
 
 ZMap accepts contributions in the form of issues and pull requests. In either
-case, please [search](https://github.com/zmap/zmap/issues) to see if it has been
-addressed previously before posting.
+case, before posting please [search](https://github.com/zmap/zmap/issues) to see
+if your change or bug report has been addressed previously.
 
 [INSTALL](https://github.com/zmap/zmap/blob/master/INSTALL.md#building-from-source)
-provides guidance on buildign ZMap from source.
+provides guidance on building ZMap from source.
 
 Developing
 ----------
