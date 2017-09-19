@@ -5,8 +5,8 @@ ZMap accepts contributions in the form of issues and pull requests. In either
 case, before posting please [search](https://github.com/zmap/zmap/issues) to see
 if your change or bug report has been addressed previously.
 
-[INSTALL](https://github.com/zmap/zmap/blob/master/INSTALL.md#building-from-source)
-provides guidance on building ZMap from source.
+[INSTALL](INSTALL.md#building-from-source) provides guidance on building ZMap
+from source.
 
 Developing
 ----------
