@@ -35,7 +35,7 @@ operating systems:
 Usage
 -----
 
-A guide to using ZMap is found in our [Github Wiki](https://github.com/zmap/zmap/wiki).
+A guide to using ZMap is found in our [GitHub Wiki](https://github.com/zmap/zmap/wiki).
 
 License and Copyright
 ---------------------
