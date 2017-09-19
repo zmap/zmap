@@ -1,8 +1,12 @@
-CONTRIBUTING
-============
+Contributing to ZMap
+====================
 
 ZMap accepts contributions in the form of issues and pull requests. In either
-case, please search to see if it has been addressed previously before posting.
+case, please [search](https://github.com/zmap/zmap/issues) to see if it has been
+addressed previously before posting.
+
+[INSTALL](https://github.com/zmap/zmap/blob/master/INSTALL.md#building-from-source)
+provides guidance on buildign ZMap from source.
 
 Developing
 ----------
@@ -14,7 +18,6 @@ Developing
 - Before submitting a PR, please rebase/squash your commits down to a single
   commit. Follow these [commit message guidelines][guidelines], especially with
   regard to formatting.
-
 
 Reviewing
 ---------
@@ -31,4 +34,3 @@ Reviewing
 
 [kernelguide]: https://www.kernel.org/doc/Documentation/process/coding-style.rst
 [guidelines]: https://github.com/torvalds/subsurface-for-dirk/blob/master/README#L92
-
