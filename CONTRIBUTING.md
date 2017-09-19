@@ -27,7 +27,7 @@ Reviewing
 
 - All pull-requests should be squash-merged into master.
 
-- When squash-merging, put the PR number in the commit title. Github does this
+- When squash-merging, put the PR number in the commit title. GitHub does this
   automatically in the web interface.  Condense the commit messages down to a
   single messsage; often this can just be the commit message from the first
   commit in a PR. Follow the commit formatting guidelines [here][guidelines].
