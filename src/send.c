@@ -243,8 +243,8 @@ int send_run(sock_t st, shard_t *s)
 	pthread_mutex_unlock(&send_mutex);
 
 	// adaptive timing to hit target rate
-	uint32_t count = 0;
-	uint32_t last_count = count;
+	uint64_t count = 0;
+	uint64_t last_count = count;
 	double last_time = now();
 	uint32_t delay = 0;
 	int interval = 0;
