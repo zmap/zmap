@@ -271,7 +271,7 @@ int send_run(sock_t st, shard_t *s)
 			last_time = now();
 		}
 	}
-
+	//printf("XXX Starting: rate: %u, interval: %u, delay: %u\n", zconf.rate, interval, delay);
 	// Get the initial IP to scan.
 	uint32_t current_ip = shard_get_cur_ip(s);
 
@@ -314,12 +314,17 @@ int send_run(sock_t st, shard_t *s)
 				for (vi = delay; vi--;)
 					;
 				if (!interval || (count % interval == 0)) {
+					//printf("XXX Adjust, pre: rate: %u, interval: %u, delay: %u\n", zconf.rate, interval, delay);
 					double t = now();
+					assert(count == 0 || count > last_count);
+					assert(t > last_time);
 					delay *= (double)(count - last_count) /
 						 (t - last_time) /
 						 (zconf.rate / zconf.senders);
+					//printf("XXX Adjust, mid: rate: %u, interval: %u, delay: %u\n", zconf.rate, interval, delay);
 					if (delay < 1)
 						delay = 1;
+					//printf("XXX Adjust, post: rate: %u, interval: %u, delay: %u\n\n", zconf.rate, interval, delay);
 					last_count = count;
 					last_time = t;
 				}
