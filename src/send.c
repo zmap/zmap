@@ -314,7 +314,7 @@ int send_run(sock_t st, shard_t *s)
 					;
 				if (!interval || (count % interval == 0)) {
 					double t = now();
-					assert(count == 0 || count > last_count);
+					assert(count > last_count);
 					assert(t > last_time);
 					delay *= (double)(count - last_count) /
 						 (t - last_time) /
