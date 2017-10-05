@@ -296,7 +296,7 @@ int send_run(sock_t st, shard_t *s)
 	while (1) {
 		// Adaptive timing delay
 		send_rate = (double)zconf.rate / zconf.senders;
-		if (delay > 0) {
+		if (count && delay > 0) {
 			if (send_rate < slow_rate) {
 				double t = now();
 				double last_rate = (1.0 / (t - last_time));
@@ -314,17 +314,14 @@ int send_run(sock_t st, shard_t *s)
 				for (vi = delay; vi--;)
 					;
 				if (!interval || (count % interval == 0)) {
-					//printf("XXX Adjust, pre: rate: %u, interval: %u, delay: %u\n", zconf.rate, interval, delay);
 					double t = now();
 					assert(count == 0 || count > last_count);
 					assert(t > last_time);
 					delay *= (double)(count - last_count) /
 						 (t - last_time) /
 						 (zconf.rate / zconf.senders);
-					//printf("XXX Adjust, mid: rate: %u, interval: %u, delay: %u\n", zconf.rate, interval, delay);
 					if (delay < 1)
-						delay = 1;
-					//printf("XXX Adjust, post: rate: %u, interval: %u, delay: %u\n\n", zconf.rate, interval, delay);
+						log_fatal("send", "send rate exceeds system capabilities");
 					last_count = count;
 					last_time = t;
 				}
