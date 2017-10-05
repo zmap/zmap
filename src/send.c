@@ -271,7 +271,6 @@ int send_run(sock_t st, shard_t *s)
 			last_time = now();
 		}
 	}
-	//printf("XXX Starting: rate: %u, interval: %u, delay: %u\n", zconf.rate, interval, delay);
 	// Get the initial IP to scan.
 	uint32_t current_ip = shard_get_cur_ip(s);
 
