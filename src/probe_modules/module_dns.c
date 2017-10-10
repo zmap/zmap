@@ -794,48 +794,23 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation)
 {
 	// This does the heavy lifting.
-	if (!udp_validate_packet(ip_hdr, len, src_ip, validation)) {
-		return 0;
+	if (udp_validate_packet(ip_hdr, len, src_ip, validation) == PACKET_INVALID) {
+		return PACKET_INVALID;
 	}
-
-	uint16_t sport = 0;
-
 	// This entire if..elif..else block is getting at the udp body
 	struct udphdr *udp = NULL;
+	uint16_t sport = 0;
+
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		udp = (struct udphdr *)((char *)ip_hdr + ip_hdr->ip_hl * 4);
 		sport = ntohs(udp->uh_sport);
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
-		// UDP can return ICMP Destination unreach
-		// IP( ICMP( IP( UDP ) ) ) for a destination unreach
-		uint32_t min_len = 4 * ip_hdr->ip_hl +
-				   ICMP_UNREACH_HEADER_SIZE +
-				   sizeof(struct ip) + sizeof(struct udphdr);
-		if (len < min_len) {
-			// Not enough information for us to validate
-			return 0;
-		}
-		struct icmp *icmp =
-		    (struct icmp *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
-		struct ip *ip_inner =
-		    (struct ip *)((char *)icmp + ICMP_UNREACH_HEADER_SIZE);
-		// Now we know the actual inner ip length, we should recheck the
-		// buffer
-		if (len < 4 * ip_inner->ip_hl - sizeof(struct ip) + min_len) {
-			return 0;
-		}
-		// This is the packet we sent
-		udp = (struct udphdr *)((char *)ip_inner + 4 * ip_inner->ip_hl);
-		sport = ntohs(udp->uh_dport);
 	} else {
-		// We should never get here unless udp_validate_packet() has
-		// changed.
 		assert(0);
-		return 0;
 	}
 	// Verify our source port.
 	if (sport != zconf.target_port) {
-		return 0;
+		return PACKET_INVALID;
 	}
 	// Verify our packet length.
 	uint16_t udp_len = ntohs(udp->uh_ulen);

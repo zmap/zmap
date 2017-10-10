@@ -90,41 +90,57 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 				   __attribute__((unused)) uint32_t *src_ip,
 				   uint32_t *validation)
 {
-	if (ip_hdr->ip_p != IPPROTO_TCP) {
-		return 0;
-	}
-	if ((4 * ip_hdr->ip_hl + sizeof(struct tcphdr)) > len) {
-		// buffer not large enough to contain expected tcp header
-		return 0;
-	}
-	struct tcphdr *tcp =
-	    (struct tcphdr *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
-	uint16_t sport = tcp->th_sport;
-	uint16_t dport = tcp->th_dport;
-	// validate source port
-	if (ntohs(sport) != zconf.target_port) {
-		return 0;
-	}
-	// validate destination port
-	if (!check_dst_port(ntohs(dport), num_ports, validation)) {
-		return 0;
-	}
-
-	// We treat RST packets different from non RST packets
-	if (tcp->th_flags & TH_RST) {
-		// For RST packets, recv(ack) == sent(seq) + 0 or + 1
-		if (htonl(tcp->th_ack) != htonl(validation[0]) &&
-		    htonl(tcp->th_ack) != htonl(validation[0]) + 1) {
-			return 0;
+	if (ip_hdr->ip_p == IPPROTO_TCP) {
+		struct tcphdr *tcp = get_tcp_header(ip_hdr, len);
+		if (!tcp) {
+			return PACKET_INVALID;
+		}
+		uint16_t sport = ntohs(tcp->th_sport);
+		uint16_t dport = ntohs(tcp->th_dport);
+		// validate source port
+		if (sport != zconf.target_port) {
+			return PACKET_INVALID;
+		}
+		// validate destination port
+		if (!check_dst_port(dport, num_ports, validation)) {
+			return PACKET_INVALID;
+		}
+		// We treat RST packets different from non RST packets
+		if (tcp->th_flags & TH_RST) {
+			// For RST packets, recv(ack) == sent(seq) + 0 or + 1
+			if (htonl(tcp->th_ack) != htonl(validation[0]) &&
+			    htonl(tcp->th_ack) != htonl(validation[0]) + 1) {
+				return PACKET_INVALID;
+			}
+		} else {
+			// For non RST packets, recv(ack) == sent(seq) + 1
+			if (htonl(tcp->th_ack) != htonl(validation[0]) + 1) {
+				return PACKET_INVALID;
+			}
+		}
+	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
+		struct ip *ip_inner;
+		size_t ip_inner_len;
+		if (icmp_helper_validate(ip_hdr, len, sizeof(struct udphdr),
+			    &ip_inner, &ip_inner_len) == PACKET_INVALID) {
+			return PACKET_INVALID;
+		}
+		struct tcphdr *tcp = get_tcp_header(ip_inner, ip_inner_len);
+		// we can always check the destination port because this is the
+		// original packet and wouldn't have been altered by something
+		// responding on a different port
+		uint16_t sport = ntohs(tcp->th_sport);
+		uint16_t dport = ntohs(tcp->th_dport);
+		if (dport != zconf.target_port) {
+			return PACKET_INVALID;
+		}
+		if (!check_dst_port(sport, num_ports, validation)) {
+			return PACKET_INVALID;
 		}
 	} else {
-		// For non RST packets, recv(ack) == sent(seq) + 1
-		if (htonl(tcp->th_ack) != htonl(validation[0]) + 1) {
-			return 0;
-		}
+		return PACKET_INVALID;
 	}
-
-	return 1;
+	return PACKET_VALID;
 }
 
 static void synscan_process_packet(const u_char *packet,
