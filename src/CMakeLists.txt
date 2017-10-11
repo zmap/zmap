@@ -37,6 +37,7 @@ set(PROBE_MODULE_SOURCES
     probe_modules/module_ntp.c
     probe_modules/module_upnp.c
     probe_modules/module_dns.c
+    probe_modules/module_dns_raw.c
     probe_modules/module_bacnet.c
 )
 
