@@ -314,13 +314,12 @@ int send_run(sock_t st, shard_t *s)
 					;
 				if (!interval || (count % interval == 0)) {
 					double t = now();
-					assert(count > last_count);
-					assert(t > last_time);
 					delay *= (double)(count - last_count) /
 						 (t - last_time) /
 						 (zconf.rate / zconf.senders);
-					if (delay < 1)
-						log_fatal("send", "send rate exceeds system capabilities");
+					if (delay <= 2) {
+						delay = 2;
+					}
 					last_count = count;
 					last_time = t;
 				}
