@@ -267,6 +267,9 @@ int send_run(sock_t st, shard_t *s)
 				;
 			delay *= 1 / (now() - last_time) /
 				 (zconf.rate / zconf.senders);
+			if (delay < 2) {
+				delay = 2;
+			}
 			interval = (zconf.rate / zconf.senders) / 20;
 			last_time = now();
 		}
@@ -317,7 +320,7 @@ int send_run(sock_t st, shard_t *s)
 					delay *= (double)(count - last_count) /
 						 (t - last_time) /
 						 (zconf.rate / zconf.senders);
-					if (delay <= 2) {
+					if (delay < 2) {
 						delay = 2;
 					}
 					last_count = count;
