@@ -116,7 +116,6 @@ int bacnet_validate_packet(const struct ip *ip_hdr, uint32_t len,
 			return PACKET_INVALID;
 		}
 	}
-	// ICMP case is handled by udp_do_validate_packet
 	return PACKET_VALID;
 }
 

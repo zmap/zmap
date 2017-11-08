@@ -128,11 +128,8 @@ static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		}
 		// This following line seems very wrong.
 		//*src_ip = ip_inner->ip_dst.s_addr;
-
-		// TODO not 100% sure these values are correct
 		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
 			     (uint8_t *)validation);
-
 		// validate icmp id and seqnum
 		return imcp_validate_id_seq(icmp_inner, validation);
 	}

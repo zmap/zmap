@@ -794,7 +794,7 @@ void dns_print_packet(FILE *fp, void *packet)
 int dns_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation)
 {
-	// This does the heavy lifting.
+	// this does the heavy lifting
 	if (udp_do_validate_packet(ip_hdr, len, src_ip, validation,
 				num_ports, zconf.target_port) == PACKET_INVALID) {
 		return PACKET_INVALID;
@@ -804,7 +804,7 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 		if (!udp) {
 			return PACKET_INVALID;
 		}
-		// Verify our packet length.
+		// verify our packet length
 		uint16_t udp_len = ntohs(udp->uh_ulen);
 		int match = 0;
 		for (int i = 0; i < num_questions; i++) {
@@ -815,7 +815,6 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 		if (match == 0) {
 			return PACKET_INVALID;
 		}
-		// Verify the packet length is ok.
 		if (len < udp_len) {
 			return PACKET_INVALID;
 		}

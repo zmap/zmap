@@ -139,7 +139,6 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		if (dport != zconf.target_port) {
 			return PACKET_INVALID;
 		}
-		// TODO not 100% sure these values are correct
 		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
                   (uint8_t *)validation);
 		if (!check_dst_port(sport, num_ports, validation)) {
