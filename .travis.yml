@@ -1,25 +1,32 @@
 language: c
 os: linux
-sudo: required
 dist: trusty
+addons:
+  apt:
+    packages:
+      - build-essential
+      - cmake
+      - libgmp3-dev gengetopt
+      - gengetopt
+      - libpcap-dev
+      - flex
+      - byacc
+      - libjson-c-dev 
+      - pkg-config
+      - libunistring-dev
+      - libsasl2-dev
+      - python-dev
+      - python-pip
+      - libhiredis-dev
 before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -qq build-essential cmake libgmp3-dev gengetopt
-    libpcap-dev flex byacc libjson-c-dev pkg-config libunistring-dev
-    libsasl2-dev python-dev python-pip libhiredis-dev
   - pip install --user sh
-  - python ./scripts/install_mongo.py
   - export PATH=/opt/bin:$PATH
-matrix: 
-  include:
-    - os: osx
-      before_install:
-        - brew update
-        - brew install gengetopt byacc libdnet libunistring
-          mongo-c hiredis
 script: 
-  - cmake -DENABLE_DEVELOPMENT=ON -DWITH_REDIS=ON -DWITH_MONGO=ON
+  - mkdir __build
+  - cd __build
+  - cmake -DENABLE_DEVELOPMENT=ON -DWITH_REDIS=ON $TRAVIS_BUILD_DIR
   - make
+  - cd $TRAVIS_BUILD_DIR
   - python ./scripts/check_manfile.py
 compiler: clang
 notifications:

@@ -1,4 +1,5 @@
 .*
+!.clang-format
 *.o
 *.a
 *.pyc
@@ -14,6 +15,8 @@ src/zitopt.c
 src/zitopt.h
 src/topt.c
 src/topt.h
+src/ztopt.c
+src/ztopt.h
 src/*.ggo
 src/zblacklist
 src/ztee

@@ -14,14 +14,14 @@ section "Basic arguments"
 
 option "success-only"           - "Only write to stdout rows where success=1 or success=true"
     optional
-option "monitor"                m "Print monitor output to stdout"
+option "monitor"                m "Print monitor data to stderr"
     optional
-option "status-updates-file"    u "File to write status updates in CSV format"
+option "status-updates-file"    u "File to write status updates, in CSV format"
     typestr="monitor.csv"
     optional string
-option "log-file"               l "File to log to"
+option "log-file"               l "File to log errors, etc. to"
     optional string
-option "raw"                    r "Ignore input formatting"
+option "raw"                    r "Ignore input formatting and pass through raw input"
     optional
 
 section "Additional options"
@@ -32,6 +32,7 @@ option "version"                V "Print version and exit"
     optional
 
 text "\nExamples:\n\
-    zmap -p 80 -o - | ztee zmap.csv (save zmap output to zmap.csv and output all rows to stdout)\n\
-    zmap -p 80 --output-fields=* -o - | ztee -S zmap.csv  (save all zmap output to zmap.csv, print successful rows to stdout)\n\
-    zmap -p 80 -o - | ztee -s status.csv zmap.csv (save zmap output to zmap.csv, write status updates to status.csv)"
+    zmap -p 80 -o - | ztee zmap.csv (save zmap output to zmap.csv and output all IP addresses to stdout)\n\
+    zmap -p 80 --output-fields=* -o - | ztee --success-only zmap.csv  (save all zmap output to zmap.csv, print IPs from successful rows to stdout)\n\
+    zmap -p 80 -o - | ztee -u status.csv zmap.csv (save zmap output to zmap.csv, write status updates to status.csv, print all IPs to stdout)\n\
+    echo \"hello, ztee\" | ztee --raw out.txt (write text to out.txt and to stdout, like tee)"

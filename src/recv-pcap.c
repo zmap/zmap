@@ -6,7 +6,6 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-
 #include "recv.h"
 
 #include <stdlib.h>
@@ -32,8 +31,8 @@
 
 static pcap_t *pc = NULL;
 
-void packet_cb(u_char __attribute__((__unused__)) *user,
-		const struct pcap_pkthdr *p, const u_char *bytes)
+void packet_cb(u_char __attribute__((__unused__)) * user,
+	       const struct pcap_pkthdr *p, const u_char *bytes)
 {
 	if (!p) {
 		return;
@@ -45,7 +44,7 @@ void packet_cb(u_char __attribute__((__unused__)) *user,
 		return;
 	}
 	// length of entire packet captured by libpcap
-	uint32_t buflen = (uint32_t) p->caplen;
+	uint32_t buflen = (uint32_t)p->caplen;
 	handle_packet(buflen, bytes);
 }
 
@@ -56,17 +55,19 @@ void recv_init()
 	char bpftmp[BPFLEN];
 	char errbuf[PCAP_ERRBUF_SIZE];
 	pc = pcap_open_live(zconf.iface, zconf.probe_module->pcap_snaplen,
-					PCAP_PROMISC, PCAP_TIMEOUT, errbuf);
+			    PCAP_PROMISC, PCAP_TIMEOUT, errbuf);
 	if (pc == NULL) {
-		log_fatal("recv", "could not open device %s: %s",
-						zconf.iface, errbuf);
+		log_fatal("recv", "could not open device %s: %s", zconf.iface,
+			  errbuf);
 	}
 	struct bpf_program bpf;
 
-	snprintf(bpftmp, sizeof(bpftmp)-1, "not ether src %02x:%02x:%02x:%02x:%02x:%02x",
-		zconf.hw_mac[0], zconf.hw_mac[1], zconf.hw_mac[2],
-		zconf.hw_mac[3], zconf.hw_mac[4], zconf.hw_mac[5]);
-	assert(strlen(zconf.probe_module->pcap_filter) + 10 < (BPFLEN - strlen(bpftmp)));
+	snprintf(bpftmp, sizeof(bpftmp) - 1,
+		 "not ether src %02x:%02x:%02x:%02x:%02x:%02x", zconf.hw_mac[0],
+		 zconf.hw_mac[1], zconf.hw_mac[2], zconf.hw_mac[3],
+		 zconf.hw_mac[4], zconf.hw_mac[5]);
+	assert(strlen(zconf.probe_module->pcap_filter) + 10 <
+	       (BPFLEN - strlen(bpftmp)));
 	if (zconf.probe_module->pcap_filter) {
 		strcat(bpftmp, " and (");
 		strcat(bpftmp, zconf.probe_module->pcap_filter);
@@ -81,7 +82,7 @@ void recv_init()
 	// set pcap_dispatch to not hang if it never receives any packets
 	// this could occur if you ever scan a small number of hosts as
 	// documented in issue #74.
-	if (pcap_setnonblock (pc, 1, errbuf) == -1) {
+	if (pcap_setnonblock(pc, 1, errbuf) == -1) {
 		log_fatal("recv", "pcap_setnonblock error:%s", errbuf);
 	}
 }
@@ -110,7 +111,7 @@ int recv_update_stats(void)
 	struct pcap_stat pcst;
 	if (pcap_stats(pc, &pcst)) {
 		log_error("recv", "unable to retrieve pcap statistics: %s",
-				pcap_geterr(pc));
+			  pcap_geterr(pc));
 		return EXIT_FAILURE;
 	} else {
 		zrecv.pcap_recv = pcst.ps_recv;

@@ -1,0 +1,18 @@
+# ZTests Copyright 2014 Regents of the University of Michigan
+
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at http://www.apache.org/licenses/LICENSE-2.0
+
+# ztests option description to be processed by gengetopt
+
+package "ztests"
+version "@ZMAP_VERSION@"
+purpose "A tests harness tool for zmap"
+
+section "Additional options"
+
+option "help"                   h "Print help and exit"
+    optional
+option "version"                V "Print version and exit"
+    optional

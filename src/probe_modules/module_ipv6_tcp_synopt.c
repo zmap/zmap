@@ -113,7 +113,7 @@ int ipv6_tcp_synopt_init_perthread(void* buf, macaddr_t *src,
 	return EXIT_SUCCESS;
 }
 
-int ipv6_tcp_synopt_make_packet(void *buf, __attribute__((unused)) ipaddr_n_t src_ip, __attribute__((unused)) ipaddr_n_t dst_ip,
+int ipv6_tcp_synopt_make_packet(void *buf, UNUSED size_t *buf_len, __attribute__((unused)) ipaddr_n_t src_ip, __attribute__((unused)) ipaddr_n_t dst_ip,
         uint32_t *validation, int probe_num, void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *) buf;

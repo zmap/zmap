@@ -6,7 +6,6 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-
 #include <assert.h>
 #include <pthread.h>
 #include <stdint.h>
@@ -34,7 +33,7 @@ struct iterator {
 
 void shard_complete(uint8_t thread_id, void *arg)
 {
-	iterator_t *it = (iterator_t *) arg;
+	iterator_t *it = (iterator_t *)arg;
 	assert(thread_id < it->num_threads);
 	pthread_mutex_lock(&it->mutex);
 	it->complete[thread_id] = 1;
@@ -57,8 +56,8 @@ void shard_complete(uint8_t thread_id, void *arg)
 	pthread_mutex_unlock(&it->mutex);
 }
 
-iterator_t* iterator_init(uint8_t num_threads, uint8_t shard,
-			  uint8_t num_shards)
+iterator_t *iterator_init(uint8_t num_threads, uint16_t shard,
+			  uint16_t num_shards)
 {
 	uint64_t num_addrs = blacklist_count_allowed();
 	iterator_t *it = xmalloc(sizeof(struct iterator));
@@ -66,8 +65,9 @@ iterator_t* iterator_init(uint8_t num_threads, uint8_t shard,
 	if (num_addrs > (1LL << 32)) {
 		zsend.max_index = 0xFFFFFFFF;
 	} else {
-		zsend.max_index = (uint32_t) num_addrs;
+		zsend.max_index = (uint32_t)num_addrs;
 	}
+	log_debug("iterator", "max index %u", zsend.max_index);
 	it->cycle = make_cycle(group, zconf.aes);
 	it->num_threads = num_threads;
 	it->curr_threads = num_threads;
@@ -75,16 +75,9 @@ iterator_t* iterator_init(uint8_t num_threads, uint8_t shard,
 	it->complete = xcalloc(it->num_threads, sizeof(uint8_t));
 	pthread_mutex_init(&it->mutex, NULL);
 	for (uint8_t i = 0; i < num_threads; ++i) {
-		shard_init(&it->thread_shards[i],
-			   shard,
-			   num_shards,
-			   i,
-			   num_threads,
-			   &it->cycle,
-			   shard_complete,
-			   it
-			   );
-
+		shard_init(&it->thread_shards[i], shard, num_shards, i,
+			   num_threads, zsend.max_targets, &it->cycle,
+			   shard_complete, it);
 	}
 	zconf.generator = it->cycle.generator;
 	return it;
@@ -117,9 +110,7 @@ uint32_t iterator_get_fail(iterator_t *it)
 	return fails;
 }
 
-
-
-shard_t* get_shard(iterator_t *it, uint8_t thread_id)
+shard_t *get_shard(iterator_t *it, uint8_t thread_id)
 {
 	assert(thread_id < it->num_threads);
 	return &it->thread_shards[thread_id];
@@ -130,4 +121,3 @@ uint32_t iterator_get_curr_send_threads(iterator_t *it)
 	assert(it);
 	return it->curr_threads;
 }
-

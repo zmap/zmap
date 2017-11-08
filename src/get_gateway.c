@@ -22,8 +22,8 @@
 
 #include <sys/ioctl.h>
 
-
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) ||       \
+    defined(__DragonFly__)
 #include "get_gateway-bsd.h"
 #else // (linux)
 #include "get_gateway-linux.h"

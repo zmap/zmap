@@ -56,6 +56,7 @@
     <a href="#NAME">NAME</a>
     <a href="#SYNOPSIS">SYNOPSIS</a>
     <a href="#DESCRIPTION">DESCRIPTION</a>
+    <a href="#CSV-PROCESSING-AND-RAW-MODE">CSV PROCESSING AND RAW MODE</a>
     <a href="#OPTIONS">OPTIONS</a>
   </div>
 
@@ -83,16 +84,28 @@ to stdout, and writes the original output to FILE.</p>
 
 <p>See <code>--help</code> for examples.</p>
 
+<h2 id="CSV-PROCESSING-AND-RAW-MODE">CSV PROCESSING AND RAW MODE</h2>
+
+<p><em>ZTee</em> operates by default on CSV-format output from ZMap. It only outputs IP
+addresses (from the input's <code>ip</code> or <code>saddr</code> field) to stdout, while writing all
+input to the output file. ZTee does not print the first line of input to stdout,
+since that row is the CSV header.</p>
+
+<p>To operate on data in any other format, pass the <code>--raw</code> flag. In raw mode, ztee
+behaves like tee: it will not transform or attempt to parse the input data.</p>
+
 <h2 id="OPTIONS">OPTIONS</h2>
 
 <h3 id="BASIC-OPTIONS">BASIC OPTIONS</h3>
 
 <dl>
 <dt><code>-r</code>, <code>--raw</code></dt><dd><p>Ignore input formatting and pass through raw input. This causes
-ztee to behavior identical to tee, except with buffering.</p></dd>
-<dt><code>-m</code>, <code>--monitor</code></dt><dd><p>Print monitor output to stderr</p></dd>
-<dt><code>-u</code>, <code>--status-updates-file</code></dt><dd><p>Write status updates (monitor data) to a file in CSV format</p></dd>
-<dt><code>-l</code>, <code>--log-file=name</code></dt><dd><p>File to log to.</p></dd>
+ztee to behave exactly like tee, with the addition of buffering.</p></dd>
+<dt><code>--success-only</code></dt><dd><p>Only write to stdout rows where success=1 or success=true. Invalid
+in combination with <code>--raw</code>.</p></dd>
+<dt><code>-m</code>, <code>--monitor</code></dt><dd><p>Print monitor data to stderr</p></dd>
+<dt><code>-u</code>, <code>--status-updates-file</code></dt><dd><p>Write status updates (monitor data) to the given file, in CSV format</p></dd>
+<dt><code>-l</code>, <code>--log-file=name</code></dt><dd><p>Write errors etc. to the given file. If none, ZTee logs to stderr.</p></dd>
 </dl>
 
 
@@ -100,14 +113,14 @@ ztee to behavior identical to tee, except with buffering.</p></dd>
 
 <dl>
 <dt><code>-h, --help</code></dt><dd><p>Display help</p></dd>
-<dt><code>-v, --version</code></dt><dd><p>Display version</p></dd>
+<dt><code>-V, --version</code></dt><dd><p>Display version</p></dd>
 </dl>
 
 
 
   <ol class='man-decor man-foot man foot'>
-    <li class='tl'>zmap v2.1.1</li>
-    <li class='tc'>September 2015</li>
+    <li class='tl'>ZMap</li>
+    <li class='tc'>September 2017</li>
     <li class='tr'>ztee(1)</li>
   </ol>
 

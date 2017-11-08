@@ -10,6 +10,7 @@
 
 #include "monitor.h"
 
+#include <assert.h>
 #include <errno.h>
 #include <math.h>
 #include <stdio.h>
@@ -57,9 +58,10 @@ typedef struct export_scan_status {
 	uint32_t send_threads;
 	double percent_complete;
 
-	double hitrate;		 // network, e.g. SYN-ACK vs RST
-	double app_hitrate; // application level, e.g. DNS response versus correct
-											// lookup.
+	double hitrate; // network, e.g. SYN-ACK vs RST
+	double
+	    app_hitrate; // application level, e.g. DNS response versus correct
+			 // lookup.
 
 	double send_rate;
 	char send_rate_str[NUMBER_STR_LEN];
@@ -99,10 +101,11 @@ typedef struct export_scan_status {
 
 } export_status_t;
 
-static FILE *f = NULL;
+static FILE *status_fd = NULL;
 
 // find minimum of an array of doubles
-static double min_d(double array[], int n) {
+static double min_d(double array[], int n)
+{
 	double value = INFINITY;
 	for (int i = 0; i < n; i++) {
 		if (array[i] < value) {
@@ -113,19 +116,30 @@ static double min_d(double array[], int n) {
 }
 
 // estimate time remaining time based on config and state
-double compute_remaining_time(double age, uint64_t tried_sent) {
+double compute_remaining_time(double age, uint64_t tried_sent)
+{
 	if (!zsend.complete) {
-		double remaining[] = {INFINITY, INFINITY, INFINITY};
-		if (zsend.targets) {
-			double done = (double)tried_sent / (zsend.targets / zconf.total_shards);
-			remaining[0] = (1. - done) * (age / done) + zconf.cooldown_secs;
+		double remaining[] = {INFINITY, INFINITY, INFINITY, INFINITY};
+		if (zsend.max_targets) {
+			double done = (double)tried_sent /
+				      (zsend.max_targets / zconf.total_shards);
+			remaining[0] =
+			    (1. - done) * (age / done) + zconf.cooldown_secs;
 		}
 		if (zconf.max_runtime) {
-			remaining[1] = (zconf.max_runtime - age) + zconf.cooldown_secs;
+			remaining[1] =
+			    (zconf.max_runtime - age) + zconf.cooldown_secs;
 		}
 		if (zconf.max_results) {
-			double done = (double)zrecv.success_unique / zconf.max_results;
+			double done =
+			    (double)zrecv.success_unique / zconf.max_results;
 			remaining[2] = (1. - done) * (age / done);
+		}
+		if (zsend.max_index) {
+			double done = (double)tried_sent /
+				      (zsend.max_index / zconf.total_shards);
+			remaining[3] =
+			    (1. - done) * (age / done) + zconf.cooldown_secs;
 		}
 		return min_d(remaining, sizeof(remaining) / sizeof(double));
 	} else {
@@ -133,7 +147,8 @@ double compute_remaining_time(double age, uint64_t tried_sent) {
 	}
 }
 
-static void update_pcap_stats(pthread_mutex_t *recv_ready_mutex) {
+static void update_pcap_stats(pthread_mutex_t *recv_ready_mutex)
+{
 	// ask pcap for fresh values
 	pthread_mutex_lock(recv_ready_mutex);
 	recv_update_stats();
@@ -141,7 +156,8 @@ static void update_pcap_stats(pthread_mutex_t *recv_ready_mutex) {
 }
 
 static void export_stats(int_status_t *intrnl, export_status_t *exp,
-		iterator_t *it) {
+			 iterator_t *it)
+{
 	uint32_t total_sent = iterator_get_sent(it);
 	uint32_t total_tried_sent = iterator_get_tried_sent(it);
 	uint32_t total_fail = iterator_get_fail(it);
@@ -160,7 +176,8 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 	} else {
 		char buf[20];
 		time_string(ceil(remaining_secs), 1, buf, sizeof(buf));
-		snprintf(exp->time_remaining_str, NUMBER_STR_LEN, " (%s left)", buf);
+		snprintf(exp->time_remaining_str, NUMBER_STR_LEN, " (%s left)",
+			 buf);
 	}
 	exp->time_past = age;
 	exp->time_remaining = remaining_secs;
@@ -176,12 +193,13 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 
 	// application level statistics
 	if (zconf.fsconf.app_success_index >= 0) {
-		exp->app_success_rate = (app_success - intrnl->last_recv_app_success) / delta;
+		exp->app_success_rate =
+		    (app_success - intrnl->last_recv_app_success) / delta;
 		number_string(exp->app_success_rate, exp->app_success_rate_str,
-									NUMBER_STR_LEN);
+			      NUMBER_STR_LEN);
 		exp->app_success_avg = (app_success / age);
 		number_string(exp->app_success_avg, exp->app_success_avg_str,
-									NUMBER_STR_LEN);
+			      NUMBER_STR_LEN);
 	}
 
 	if (!total_sent) {
@@ -202,16 +220,20 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 	if (fabs(intrnl->min_hitrate_start) < .00001) {
 		exp->seconds_under_min_hitrate = 0;
 	} else {
-		exp->seconds_under_min_hitrate = cur_time - intrnl->min_hitrate_start;
+		exp->seconds_under_min_hitrate =
+		    cur_time - intrnl->min_hitrate_start;
 	}
 	if (!zsend.complete) {
 		exp->send_rate = (total_sent - intrnl->last_sent) / delta;
-		number_string(exp->send_rate, exp->send_rate_str, NUMBER_STR_LEN);
+		number_string(exp->send_rate, exp->send_rate_str,
+			      NUMBER_STR_LEN);
 		exp->send_rate_avg = total_sent / age;
-		number_string(exp->send_rate_avg, exp->send_rate_avg_str, NUMBER_STR_LEN);
+		number_string(exp->send_rate_avg, exp->send_rate_avg_str,
+			      NUMBER_STR_LEN);
 	} else {
 		exp->send_rate_avg = total_sent / (zsend.finish - zsend.start);
-		number_string(exp->send_rate_avg, exp->send_rate_avg_str, NUMBER_STR_LEN);
+		number_string(exp->send_rate_avg, exp->send_rate_avg_str,
+			      NUMBER_STR_LEN);
 	}
 	// export other pre-calculated values
 	exp->total_sent = total_sent;
@@ -226,11 +248,15 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 	exp->pcap_drop = zrecv.pcap_drop;
 	exp->pcap_ifdrop = zrecv.pcap_ifdrop;
 	exp->pcap_drop_total = exp->pcap_drop + exp->pcap_ifdrop;
-	exp->pcap_drop_last = (exp->pcap_drop_total - intrnl->last_pcap_drop) / delta;
+	exp->pcap_drop_last =
+	    (exp->pcap_drop_total - intrnl->last_pcap_drop) / delta;
 	exp->pcap_drop_avg = exp->pcap_drop_total / age;
-	number_string(exp->pcap_drop_total, exp->pcap_drop_total_str, NUMBER_STR_LEN);
-	number_string(exp->pcap_drop_last, exp->pcap_drop_last_str, NUMBER_STR_LEN);
-	number_string(exp->pcap_drop_avg, exp->pcap_drop_avg_str, NUMBER_STR_LEN);
+	number_string(exp->pcap_drop_total, exp->pcap_drop_total_str,
+		      NUMBER_STR_LEN);
+	number_string(exp->pcap_drop_last, exp->pcap_drop_last_str,
+		      NUMBER_STR_LEN);
+	number_string(exp->pcap_drop_avg, exp->pcap_drop_avg_str,
+		      NUMBER_STR_LEN);
 
 	zsend.sendto_failures = total_fail;
 	exp->fail_total = zsend.sendto_failures;
@@ -250,95 +276,113 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 	intrnl->last_recv_total = exp->total_recv;
 }
 
-static void log_drop_warnings(export_status_t *exp) {
+static void log_drop_warnings(export_status_t *exp)
+{
 	if (exp->pcap_drop_last / exp->recv_rate > 0.05) {
-		log_warn("monitor", "Dropped %.0f packets in the last second, (%u total "
-						"dropped (pcap: %u + iface: %u))",
-				exp->pcap_drop_last, exp->pcap_drop_total, exp->pcap_drop,
-				exp->pcap_ifdrop);
+		log_warn("monitor",
+			 "Dropped %.0f packets in the last second, (%u total "
+			 "dropped (pcap: %u + iface: %u))",
+			 exp->pcap_drop_last, exp->pcap_drop_total,
+			 exp->pcap_drop, exp->pcap_ifdrop);
 	}
 	if (exp->fail_last / exp->send_rate > 0.01) {
-		log_warn("monitor", "Failed to send %.0f packets/sec (%u total failures)",
-				exp->fail_last, exp->fail_total);
+		log_warn("monitor",
+			 "Failed to send %.0f packets/sec (%u total failures)",
+			 exp->fail_last, exp->fail_total);
 	}
 }
 
-static void onscreen_appsuccess(export_status_t *exp) {
+static void onscreen_appsuccess(export_status_t *exp)
+{
 	// this when probe module handles application-level success rates
 	if (!exp->complete) {
-		fprintf(stderr, "%5s %0.0f%%%s; sent: %u %sp/s (%sp/s avg); "
-						"recv: %u %sp/s (%sp/s avg); "
-						"app success: %u %sp/s (%sp/s avg); "
-						"drops: %sp/s (%sp/s avg); "
-						"hitrate: %0.2f%% "
-						"app hitrate: %0.2f%%\n",
-						exp->time_past_str, exp->percent_complete, exp->time_remaining_str,
-						exp->total_sent, exp->send_rate_str, exp->send_rate_avg_str,
-						exp->recv_success_unique, exp->recv_rate_str, exp->recv_avg_str,
-						exp->app_recv_success_unique, exp->app_success_rate_str,
-						exp->app_success_avg_str, exp->pcap_drop_last_str,
-						exp->pcap_drop_avg_str, exp->hitrate, exp->app_hitrate);
+		fprintf(stderr,
+			"%5s %0.0f%%%s; sent: %u %sp/s (%sp/s avg); "
+			"recv: %u %sp/s (%sp/s avg); "
+			"app success: %u %sp/s (%sp/s avg); "
+			"drops: %sp/s (%sp/s avg); "
+			"hitrate: %0.2f%% "
+			"app hitrate: %0.2f%%\n",
+			exp->time_past_str, exp->percent_complete,
+			exp->time_remaining_str, exp->total_sent,
+			exp->send_rate_str, exp->send_rate_avg_str,
+			exp->recv_success_unique, exp->recv_rate_str,
+			exp->recv_avg_str, exp->app_recv_success_unique,
+			exp->app_success_rate_str, exp->app_success_avg_str,
+			exp->pcap_drop_last_str, exp->pcap_drop_avg_str,
+			exp->hitrate, exp->app_hitrate);
 	} else {
-		fprintf(stderr, "%5s %0.0f%%%s; sent: %u done (%sp/s avg); "
-						"recv: %u %sp/s (%sp/s avg); "
-						"app success: %u %sp/s (%sp/s avg); "
-						"drops: %sp/s (%sp/s avg); "
-						"hitrate: %0.2f%% "
-						"app hitrate: %0.2f%%\n",
-						exp->time_past_str, exp->percent_complete, exp->time_remaining_str,
-						exp->total_sent, exp->send_rate_avg_str, exp->recv_success_unique,
-						exp->recv_rate_str, exp->recv_avg_str, exp->app_recv_success_unique,
-						exp->app_success_rate_str, exp->app_success_avg_str,
-						exp->pcap_drop_last_str, exp->pcap_drop_avg_str, exp->hitrate,
-						exp->app_hitrate);
+		fprintf(stderr,
+			"%5s %0.0f%%%s; sent: %u done (%sp/s avg); "
+			"recv: %u %sp/s (%sp/s avg); "
+			"app success: %u %sp/s (%sp/s avg); "
+			"drops: %sp/s (%sp/s avg); "
+			"hitrate: %0.2f%% "
+			"app hitrate: %0.2f%%\n",
+			exp->time_past_str, exp->percent_complete,
+			exp->time_remaining_str, exp->total_sent,
+			exp->send_rate_avg_str, exp->recv_success_unique,
+			exp->recv_rate_str, exp->recv_avg_str,
+			exp->app_recv_success_unique, exp->app_success_rate_str,
+			exp->app_success_avg_str, exp->pcap_drop_last_str,
+			exp->pcap_drop_avg_str, exp->hitrate, exp->app_hitrate);
 	}
 }
 
-static void onscreen_generic(export_status_t *exp) {
+static void onscreen_generic(export_status_t *exp)
+{
 	if (!exp->complete) {
-		fprintf(stderr, "%5s %0.0f%%%s; send: %u %sp/s (%sp/s avg); "
-						"recv: %u %sp/s (%sp/s avg); "
-						"drops: %sp/s (%sp/s avg); "
-						"hitrate: %0.2f%%\n",
-						exp->time_past_str, exp->percent_complete, exp->time_remaining_str,
-						exp->total_sent, exp->send_rate_str, exp->send_rate_avg_str,
-						exp->recv_success_unique, exp->recv_rate_str, exp->recv_avg_str,
-						exp->pcap_drop_last_str, exp->pcap_drop_avg_str, exp->hitrate);
+		fprintf(stderr,
+			"%5s %0.0f%%%s; send: %u %sp/s (%sp/s avg); "
+			"recv: %u %sp/s (%sp/s avg); "
+			"drops: %sp/s (%sp/s avg); "
+			"hitrate: %0.2f%%\n",
+			exp->time_past_str, exp->percent_complete,
+			exp->time_remaining_str, exp->total_sent,
+			exp->send_rate_str, exp->send_rate_avg_str,
+			exp->recv_success_unique, exp->recv_rate_str,
+			exp->recv_avg_str, exp->pcap_drop_last_str,
+			exp->pcap_drop_avg_str, exp->hitrate);
 	} else {
-		fprintf(stderr, "%5s %0.0f%%%s; send: %u done (%sp/s avg); "
-										"recv: %u %sp/s (%sp/s avg); "
-										"drops: %sp/s (%sp/s avg); "
-										"hitrate: %0.2f%%\n",
-						exp->time_past_str, exp->percent_complete, exp->time_remaining_str,
-						exp->total_sent, exp->send_rate_avg_str, exp->recv_success_unique,
-						exp->recv_rate_str, exp->recv_avg_str, exp->pcap_drop_last_str,
-						exp->pcap_drop_avg_str, exp->hitrate);
+		fprintf(stderr,
+			"%5s %0.0f%%%s; send: %u done (%sp/s avg); "
+			"recv: %u %sp/s (%sp/s avg); "
+			"drops: %sp/s (%sp/s avg); "
+			"hitrate: %0.2f%%\n",
+			exp->time_past_str, exp->percent_complete,
+			exp->time_remaining_str, exp->total_sent,
+			exp->send_rate_avg_str, exp->recv_success_unique,
+			exp->recv_rate_str, exp->recv_avg_str,
+			exp->pcap_drop_last_str, exp->pcap_drop_avg_str,
+			exp->hitrate);
 	}
 	fflush(stderr);
 }
 
-static FILE *init_status_update_file(char *path) {
-	FILE *f = fopen(path, "wb");
+static FILE *init_status_update_file(char *path)
+{
+	FILE *f = fopen(path, "w");
 	if (!f) {
 		log_fatal("csv", "could not open status updates file (%s): %s",
-				zconf.status_updates_file, strerror(errno));
+			  zconf.status_updates_file, strerror(errno));
 	}
 	log_debug("monitor", "status updates CSV will be saved to %s",
-			zconf.status_updates_file);
+		  zconf.status_updates_file);
 	fprintf(
-			f,
-			"real-time,time-elapsed,time-remaining,"
-			"percent-complete,hit-rate,active-send-threads,"
-			"sent-total,sent-last-one-sec,sent-avg-per-sec,"
-			"recv-success-total,recv-success-last-one-sec,recv-success-avg-per-sec,"
-			"recv-total,recv-total-last-one-sec,recv-total-avg-per-sec,"
-			"pcap-drop-total,drop-last-one-sec,drop-avg-per-sec,"
-			"sendto-fail-total,sendto-fail-last-one-sec,sendto-fail-avg-per-sec\n");
+	    f,
+	    "real-time,time-elapsed,time-remaining,"
+	    "percent-complete,hit-rate,active-send-threads,"
+	    "sent-total,sent-last-one-sec,sent-avg-per-sec,"
+	    "recv-success-total,recv-success-last-one-sec,recv-success-avg-per-sec,"
+	    "recv-total,recv-total-last-one-sec,recv-total-avg-per-sec,"
+	    "pcap-drop-total,drop-last-one-sec,drop-avg-per-sec,"
+	    "sendto-fail-total,sendto-fail-last-one-sec,sendto-fail-avg-per-sec\n");
 	fflush(f);
 	return f;
 }
 
-static void update_status_updates_file(export_status_t *exp, FILE *f) {
+static void update_status_updates_file(export_status_t *exp, FILE *f)
+{
 	struct timeval now;
 	char timestamp[256];
 	gettimeofday(&now, NULL);
@@ -346,44 +390,53 @@ static void update_status_updates_file(export_status_t *exp, FILE *f) {
 	struct tm *ptm = localtime(&sec);
 	strftime(timestamp, 20, "%Y-%m-%d %H:%M:%S", ptm);
 
-	fprintf(f,  "%s,%u,%u,"
-				"%f,%f,%u,"
-				"%u,%.0f,%.0f,"
-				"%u,%.0f,%.0f,"
-				"%u,%.0f,%.0f,"
-				"%u,%.0f,%.0f,"
-				"%u,%.0f,%.0f\n",
-				timestamp, exp->time_past, exp->time_remaining, exp->percent_complete,
-				exp->hitrate, exp->send_threads, exp->total_sent, exp->send_rate,
-				exp->send_rate_avg, exp->recv_success_unique, exp->recv_rate,
-				exp->recv_avg, exp->total_recv, exp->recv_total_rate,
-				exp->recv_total_avg, exp->pcap_drop_total, exp->pcap_drop_last,
-				exp->pcap_drop_avg, exp->fail_total, exp->fail_last, exp->fail_avg);
+	fprintf(f,
+		"%s,%u,%u,"
+		"%f,%f,%u,"
+		"%u,%.0f,%.0f,"
+		"%u,%.0f,%.0f,"
+		"%u,%.0f,%.0f,"
+		"%u,%.0f,%.0f,"
+		"%u,%.0f,%.0f\n",
+		timestamp, exp->time_past, exp->time_remaining,
+		exp->percent_complete, exp->hitrate, exp->send_threads,
+		exp->total_sent, exp->send_rate, exp->send_rate_avg,
+		exp->recv_success_unique, exp->recv_rate, exp->recv_avg,
+		exp->total_recv, exp->recv_total_rate, exp->recv_total_avg,
+		exp->pcap_drop_total, exp->pcap_drop_last, exp->pcap_drop_avg,
+		exp->fail_total, exp->fail_last, exp->fail_avg);
 	fflush(f);
 }
 
-static inline void check_min_hitrate(export_status_t *exp) {
+static inline void check_min_hitrate(export_status_t *exp)
+{
 	if (exp->seconds_under_min_hitrate >= MIN_HITRATE_TIME_WINDOW) {
-		log_fatal("monitor", "hitrate below %.0f for %.0f seconds. aborting scan.",
-				zconf.min_hitrate, exp->seconds_under_min_hitrate);
+		log_fatal("monitor",
+			  "hitrate below %.0f for %.0f seconds. aborting scan.",
+			  zconf.min_hitrate, exp->seconds_under_min_hitrate);
 	}
 }
 
-static inline void check_max_sendto_failures(export_status_t *exp) {
+static inline void check_max_sendto_failures(export_status_t *exp)
+{
 	if (zconf.max_sendto_failures >= 0 &&
-			exp->fail_total > (uint32_t)zconf.max_sendto_failures) {
-		log_fatal("monitor", "maxiumum number of sendto failures (%i) exceeded",
-				zconf.max_sendto_failures);
+	    exp->fail_total > (uint32_t)zconf.max_sendto_failures) {
+		log_fatal("monitor",
+			  "maximum number of sendto failures (%i) exceeded",
+			  zconf.max_sendto_failures);
 	}
 }
 
-void monitor_init(void) {
+void monitor_init(void)
+{
 	if (zconf.status_updates_file) {
-		f = init_status_update_file(zconf.status_updates_file);
+		status_fd = init_status_update_file(zconf.status_updates_file);
+		assert(status_fd);
 	}
 }
 
-void monitor_run(iterator_t *it, pthread_mutex_t *lock) {
+void monitor_run(iterator_t *it, pthread_mutex_t *lock)
+{
 	int_status_t *internal_status = xmalloc(sizeof(int_status_t));
 	export_status_t *export_status = xmalloc(sizeof(export_status_t));
 
@@ -402,8 +455,8 @@ void monitor_run(iterator_t *it, pthread_mutex_t *lock) {
 			}
 			unlock_file(stderr);
 		}
-		if (f) {
-			update_status_updates_file(export_status, f);
+		if (status_fd) {
+			update_status_updates_file(export_status, status_fd);
 		}
 		sleep(UPDATE_INTERVAL);
 	}
@@ -412,9 +465,8 @@ void monitor_run(iterator_t *it, pthread_mutex_t *lock) {
 		fflush(stderr);
 		unlock_file(stderr);
 	}
-	if (f) {
-		fflush(f);
-		fclose(f);
+	if (status_fd) {
+		fflush(status_fd);
+		fclose(status_fd);
 	}
 }
-

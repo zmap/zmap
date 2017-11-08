@@ -19,7 +19,6 @@
 #include <netinet/in.h>
 #include <net/bpf.h>
 
-
 #ifdef ZMAP_SEND_LINUX_H
 #error "Don't include both send-bsd.h and send-linux.h"
 #endif

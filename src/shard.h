@@ -13,6 +13,8 @@
 
 #include "cyclic.h"
 
+#define ZMAP_SHARD_DONE 0
+
 typedef void (*shard_complete_cb)(uint8_t id, void *arg);
 
 typedef struct shard {
@@ -24,7 +26,6 @@ typedef struct shard {
 		uint32_t failures;
 		uint32_t first_scanned;
 		uint32_t max_targets;
-		uint32_t list_of_ips_tried_sent;
 	} state;
 	struct shard_params {
 		uint64_t first;
@@ -33,22 +34,17 @@ typedef struct shard {
 		uint64_t modulus;
 	} params;
 	uint64_t current;
-	uint8_t id;
+	uint8_t thread_id;
 	shard_complete_cb cb;
 	void *arg;
 } shard_t;
 
-void shard_init(shard_t* shard,
-		uint8_t shard_id,
-		uint8_t num_shards,
-		uint8_t sub_id,
-		uint8_t num_subshard,
-		const cycle_t* cycle,
-		shard_complete_cb cb,
-		void *arg);
+void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
+		uint8_t thread_idx, uint8_t num_threads,
+		uint32_t max_total_targets, const cycle_t *cycle,
+		shard_complete_cb cb, void *arg);
 
 uint32_t shard_get_cur_ip(shard_t *shard);
 uint32_t shard_get_next_ip(shard_t *shard);
-
 
 #endif /* ZMAP_SHARD_H */

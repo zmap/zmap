@@ -16,18 +16,19 @@
 #define DYNAMIC_SUPPORT 1
 
 // called at scanner initialization
-typedef int (*output_init_cb)(struct state_conf *, char **fields, int fieldslen);
+typedef int (*output_init_cb)(struct state_conf *, char **fields,
+			      int fieldslen);
 
 // called on packet receipt
 typedef int (*output_packet_cb)(fieldset_t *fs);
 
 // called periodically during the scan
-typedef int (*output_update_cb)(struct state_conf*,
-		struct state_send*, struct state_recv*);
+typedef int (*output_update_cb)(struct state_conf *, struct state_send *,
+				struct state_recv *);
 
 typedef struct output_module {
 	const char *name;
-    int supports_dynamic_output;
+	int supports_dynamic_output;
 	int filter_duplicates;
 	int filter_unsuccessful;
 	unsigned update_interval;
@@ -39,7 +40,7 @@ typedef struct output_module {
 	const char *helptext;
 } output_module_t;
 
-output_module_t* get_output_module_by_name(const char*);
+output_module_t *get_output_module_by_name(const char *);
 
 void print_output_modules(void);
 

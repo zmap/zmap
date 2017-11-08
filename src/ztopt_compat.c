@@ -6,9 +6,10 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#include "output_modules.h"
+#if __GNUC__ < 4
+#error "gcc version >= 4 is required"
+#elif __GNUC_MINOR__ >= 6
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#endif
 
-int redismodule_init(struct state_conf *conf, char **fields, int fieldlens);
-int redismodule_process(fieldset_t *fs);
-int redismodule_close(struct state_conf *c, struct state_send *s,
-		      struct state_recv *r);
+#include "ztopt.c"

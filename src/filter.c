@@ -32,8 +32,10 @@ static int validate_node(node_t *node, fielddefset_t *fields)
 		for (index = 0; index < fields->len; index++) {
 			if (fields->fielddefs[index].name) {
 				if (strcmp(fields->fielddefs[index].name,
-						node->left_child->value.field.fieldname) == 0) {
-					node->left_child->value.field.index = index;
+					   node->left_child->value.field
+					       .fieldname) == 0) {
+					node->left_child->value.field.index =
+					    index;
 					found = 1;
 					break;
 				}
@@ -41,26 +43,30 @@ static int validate_node(node_t *node, fielddefset_t *fields)
 		}
 		if (!found) {
 			fprintf(stderr, "Field '%s' does not exist\n",
-					node->left_child->value.field.fieldname);
+				node->left_child->value.field.fieldname);
 			return 0;
 		}
 		// Fieldname is fine, match the type.
 		switch (node->right_child->type) {
 		case STRING:
-			if (strcmp(fields->fielddefs[index].type, "string") == 0) {
+			if (strcmp(fields->fielddefs[index].type, "string") ==
+			    0) {
 				return 1;
 			} else {
-				fprintf(stderr, "Field '%s' is not of type 'string'\n",
-						fields->fielddefs[index].name);
+				fprintf(stderr,
+					"Field '%s' is not of type 'string'\n",
+					fields->fielddefs[index].name);
 				return 0;
 			}
 		case INT:
 			if (strcmp(fields->fielddefs[index].type, "int") == 0 ||
-					strcmp(fields->fielddefs[index].type, "bool") == 0) {
+			    strcmp(fields->fielddefs[index].type, "bool") ==
+				0) {
 				return 1;
 			} else {
-				fprintf(stderr, "Field '%s' is not of type 'int'\n",
-						fields->fielddefs[index].name);
+				fprintf(stderr,
+					"Field '%s' is not of type 'int'\n",
+					fields->fielddefs[index].name);
 				return 0;
 			}
 		default:
@@ -72,7 +78,6 @@ static int validate_node(node_t *node, fielddefset_t *fields)
 	}
 	// Didn't validate
 	return 0;
-
 }
 
 int parse_filter_string(char *filter)
@@ -82,7 +87,8 @@ int parse_filter_string(char *filter)
 	yy_delete_buffer(buffer_state);
 	if (status) {
 		// Error
-		log_error("zmap", "Unable to parse filter string: '%s'", filter);
+		log_error("zmap", "Unable to parse filter string: '%s'",
+			  filter);
 		return 0;
 	}
 	zconf.filter.expression = zfilter;
@@ -104,5 +110,6 @@ int validate_filter(node_t *root, fielddefset_t *fields)
 	if (!valid) {
 		return 0;
 	}
-	return (validate_filter(root->left_child, fields) && validate_filter(root->right_child, fields));
+	return (validate_filter(root->left_child, fields) &&
+		validate_filter(root->right_child, fields));
 }

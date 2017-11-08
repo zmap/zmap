@@ -25,10 +25,6 @@ if(WITH_REDIS)
     set(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_redis_packed.c output_modules/module_redis_csv.c)
 endif()
 
-if(WITH_MONGO)
-    set(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_mongodb.c)
-endif()
-
 set(PROBE_MODULE_SOURCES
     probe_modules/module_icmp_echo.c
     probe_modules/module_icmp_echo_time.c
@@ -95,11 +91,11 @@ set(ZTESTSOURCES
     state.c
     summary.c
     validate.c
-    zopt_compat.c
+    ztopt_compat.c
     ${PROBE_MODULE_SOURCES}
     ${OUTPUT_MODULE_SOURCES}
     tests/test_harness.c
-    "${CMAKE_CURRENT_BINARY_DIR}/zopt.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/ztopt.h"
     "${CMAKE_CURRENT_BINARY_DIR}/lexer.c"
     "${CMAKE_CURRENT_BINARY_DIR}/parser.c"
     ${EXTRA_PROBE_MODULES}
@@ -156,12 +152,13 @@ configure_file(topt.ggo.in ${CMAKE_BINARY_DIR}/src/topt.ggo @ONLY)
 configure_file(zbopt.ggo.in ${CMAKE_BINARY_DIR}/src/zbopt.ggo @ONLY)
 configure_file(zitopt.ggo.in ${CMAKE_BINARY_DIR}/src/zitopt.ggo @ONLY)
 configure_file(zopt.ggo.in ${CMAKE_BINARY_DIR}/src/zopt.ggo @ONLY)
+configure_file(ztopt.ggo.in ${CMAKE_BINARY_DIR}/src/ztopt.ggo @ONLY)
 # Additional ggo.in's should be added here and CMakeVersion.txt
 
 # This sets a *build* time dependency that checks git
 if("${ZMAP_VERSION}" STREQUAL "DEVELOPMENT")
     add_custom_target(git_versioning ALL
-        COMMAND ${CMAKE_COMMAND} -D PATH:STRING="${CMAKE_BINARY_DIR}/src" -P CMakeVersion.txt 
+        COMMAND ${CMAKE_COMMAND} -D ORIG_SRC_DIR:STRING="${CMAKE_SOURCE_DIR}" -P "${CMAKE_SOURCE_DIR}/src/CMakeVersion.txt"
         )
 endif()
 
@@ -185,14 +182,34 @@ add_custom_command(OUTPUT zitopt.h
     DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/zitopt.ggo"
 )
 
+add_custom_command(OUTPUT ztopt.h
+	COMMAND gengetopt -C --no-help --no-version -i "${CMAKE_CURRENT_BINARY_DIR}/ztopt.ggo" -F "${CMAKE_CURRENT_BINARY_DIR}/ztopt"
+    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/ztopt.ggo"
+)
+
 add_custom_command(OUTPUT lexer.c
     COMMAND flex -o "${CMAKE_CURRENT_BINARY_DIR}/lexer.c" --header-file="${CMAKE_CURRENT_BINARY_DIR}/lexer.h" "${CMAKE_CURRENT_SOURCE_DIR}/lexer.l"
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/lexer.l"
 )
 
+if(NetBSD)
+add_custom_command(OUTPUT parser.c
+    COMMAND yacc -d -o "${CMAKE_CURRENT_BINARY_DIR}/parser.c" "${CMAKE_CURRENT_SOURCE_DIR}/parser.y"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/parser.y"
+)
+else()
 add_custom_command(OUTPUT parser.c
     COMMAND byacc -d -o "${CMAKE_CURRENT_BINARY_DIR}/parser.c" "${CMAKE_CURRENT_SOURCE_DIR}/parser.y"
     DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/parser.y"
+)
+endif()
+
+add_custom_target(manpages ronn "${CMAKE_CURRENT_SOURCE_DIR}/zmap.1.ronn" --organization="ZMap" --manual="zmap"
+    COMMAND ronn "${CMAKE_CURRENT_SOURCE_DIR}/zblacklist.1.ronn" --organization="ZMap" --manual="zblacklist"
+    COMMAND ronn "${CMAKE_CURRENT_SOURCE_DIR}/ziterate.1.ronn" --organization="ZMap" --manual="ziterate"
+    COMMAND ronn "${CMAKE_CURRENT_SOURCE_DIR}/ztee.1.ronn" --organization="ZMap" --manual="ztee"
+    SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/zblacklist.1.ronn" "${CMAKE_CURRENT_SOURCE_DIR}/ziterate.1.ronn" "${CMAKE_CURRENT_SOURCE_DIR}/zmap.1.ronn" "${CMAKE_CURRENT_SOURCE_DIR}/ztee.1.ronn"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
 )
 
 add_executable(zmap ${SOURCES})
@@ -215,7 +232,6 @@ target_link_libraries(
     ${DNET_LIBRARIES}
     ${REDIS_LIBS}
     ${JSON_LIBRARIES}
-    ${MONGO_LIBRARIES}
 )
 
 target_link_libraries(
@@ -245,7 +261,6 @@ target_link_libraries(
     ${DNET_LIBRARIES}
     ${REDIS_LIBS}
     ${JSON_LIBRARIES}
-    ${MONGO_LIBRARIES}
 )
 
 # Install binary

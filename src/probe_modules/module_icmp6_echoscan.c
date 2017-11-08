@@ -47,7 +47,7 @@ static int icmp6_echo_init_perthread(void* buf, macaddr_t *src,
 	return EXIT_SUCCESS;
 }
 
-static int icmp6_echo_make_packet(void *buf, __attribute__((unused))  ipaddr_n_t src_ip,  __attribute__((unused)) ipaddr_n_t dst_ip, uint32_t *validation, __attribute__((unused)) int probe_num, __attribute__((unused)) void *arg)
+static int icmp6_echo_make_packet(void *buf, UNUSED size_t *buf_len, UNUSED ipaddr_n_t src_ip,  UNUSED ipaddr_n_t dst_ip, uint32_t *validation, UNUSED int probe_num, UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *) buf;
 	struct ip6_hdr *ip6_header = (struct ip6_hdr *)(&eth_header[1]);

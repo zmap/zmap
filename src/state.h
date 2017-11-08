@@ -44,22 +44,23 @@ struct state_conf {
 	port_h_t target_port;
 	port_h_t source_port_first;
 	port_h_t source_port_last;
-	// maximum number of packets that the scanner will send before terminating
+	// maximum number of packets that the scanner will send before
+	// terminating
 	uint32_t max_targets;
 	// maximum number of seconds that scanner will run before terminating
 	uint32_t max_runtime;
 	// maximum number of results before terminating
 	uint32_t max_results;
 	// name of network interface that
-   	// will be utilized for sending/receiving
+	// will be utilized for sending/receiving
 	char *iface;
 	// rate in packets per second
 	// that the sender will maintain
 	int rate;
 	// rate in bits per second
 	uint64_t bandwidth;
-	// how many seconds after the termination of the sender will the receiver
-	// continue to process responses
+	// how many seconds after the termination of the sender will the
+	// receiver continue to process responses
 	int cooldown_secs;
 	// number of sending threads
 	uint8_t senders;
@@ -74,10 +75,11 @@ struct state_conf {
 	// address generation
 	uint32_t generator;
 	// sharding options
-	uint8_t shard_num;
-	uint8_t total_shards;
+	uint16_t shard_num;
+	uint16_t total_shards;
 	int packet_streams;
 	struct probe_module *probe_module;
+	char *output_module_name;
 	struct output_module *output_module;
 	char *probe_args;
 	char *output_args;
@@ -86,7 +88,6 @@ struct state_conf {
 	uint32_t gw_ip;
 	int gw_mac_set;
 	int hw_mac_set;
-	int send_ip_pkts;
 	char *source_ip_first;
 	char *source_ip_last;
 	char *output_filename;
@@ -136,7 +137,6 @@ struct state_conf {
 };
 extern struct state_conf zconf;
 
-
 // global sender stats
 struct state_send {
 	double start;
@@ -148,7 +148,7 @@ struct state_send {
 	int warmup;
 	int complete;
 	uint32_t first_scanned;
-	uint32_t targets;
+	uint32_t max_targets;
 	uint32_t sendto_failures;
 	uint32_t max_index;
 	uint8_t **list_of_ips_pbm;
@@ -190,7 +190,6 @@ struct state_recv {
 	uint32_t pcap_drop;
 	// number of packets dropped by the network interface or its driver.
 	uint32_t pcap_ifdrop;
-
 };
 extern struct state_recv zrecv;
 

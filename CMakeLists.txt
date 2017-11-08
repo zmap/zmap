@@ -3,7 +3,6 @@ project(ZMAP C)
 set(ZMAP_VERSION DEVELOPMENT) # Change DEVELOPMENT to version number for release
 
 option(WITH_REDIS "Build with support for Redis DB" OFF)
-option(WITH_MONGO "Build with support for MongoDB" OFF)
 option(ENABLE_DEVELOPMENT "Enable development specific compiler and linker flags" OFF)
 option(ENABLE_LOG_TRACE "Enable log trace messages" OFF)
 option(RESPECT_INSTALL_PREFIX_CONFIG "Respect CMAKE_INSTALL_PREFIX for /etc" OFF)
@@ -19,6 +18,10 @@ endif()
 
 if("${CMAKE_SYSTEM_NAME}" MATCHES "FreeBSD" OR "${CMAKE_SYSTEM_NAME}" MATCHES "NetBSD" OR "${CMAKE_SYSTEM_NAME}" MATCHES "DragonFly")
     set(BSD "YES")
+endif()
+
+if("${CMAKE_SYSTEM_NAME}" MATCHES "NetBSD")
+    set(NetBSD "YES")
 endif()
 
 # Hardening and warnings for building with gcc
@@ -78,18 +81,6 @@ if(WITH_REDIS)
     add_definitions("-DREDIS")
 endif()
 
-if(WITH_MONGO)
-    include(FindPkgConfig)
-    pkg_check_modules(MONGO libmongoc-1.0)
-    if(MONGO_FOUND)
-        include_directories(${MONGO_INCLUDE_DIRS})
-    else()
-        message(FATAL_ERROR "Did not find libmongoc-1.0")
-    endif()
-    add_definitions("-DMONGODB")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MONGO_CFLAGS_OTHER}")
-endif()
-
 if(WITH_PFRING)
     add_definitions("-DPFRING")
     set(PFRING_LIBRARIES pfring rt numa)
@@ -120,6 +111,11 @@ endif()
 if(BSD)
     include_directories(/usr/local/include)
     link_directories(/usr/local/lib)
+endif()
+
+if(NetBSD)
+    include_directories(/usr/pkg/include)
+    link_directories(/usr/pkg/lib)
 endif()
 
 add_subdirectory(lib)
