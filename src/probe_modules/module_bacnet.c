@@ -98,30 +98,26 @@ int bacnet_validate_packet(const struct ip *ip_hdr, uint32_t len,
 			   uint32_t *src_ip, uint32_t *validation)
 {
 	// this will reject packets that aren't UDP or ICMP
-	if (!udp_do_validate_packet(ip_hdr, len, src_ip, validation,
-				    num_ports)) {
-		return 0;
+	if (udp_do_validate_packet(ip_hdr, len, src_ip, validation,
+				    num_ports, zconf.target_port) == PACKET_INVALID) {
+		return PACKET_INVALID;
 	}
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
-		struct udphdr *udp =
-		    (struct udphdr *)((char *)ip_hdr + ip_hdr->ip_hl * 4);
-		uint16_t sport = ntohs(udp->uh_sport);
-		if (sport != zconf.target_port) {
-			return 0;
+		struct udphdr *udp = get_udp_header(ip_hdr, len);
+		if (!udp) {
+			return PACKET_INVALID;
 		}
-		if (udp->uh_ulen < sizeof(struct udphdr)) {
-			return 0;
-		}
-		if (udp->uh_ulen <
-		    sizeof(struct udphdr) + sizeof(struct bacnet_vlc)) {
-			return 0;
+		const size_t min_len = sizeof(struct udphdr) + sizeof(struct bacnet_vlc);
+		if (udp->uh_ulen < min_len) {
+			return PACKET_INVALID;
 		}
 		struct bacnet_vlc *vlc = (struct bacnet_vlc *)&udp[1];
 		if (vlc->type != ZMAP_BACNET_TYPE_IP) {
-			return 0;
+			return PACKET_INVALID;
 		}
 	}
-	return 1;
+	// ICMP case is handled by udp_do_validate_packet
+	return PACKET_VALID;
 }
 
 void bacnet_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,

@@ -174,11 +174,6 @@ int icmp_helper_validate(const struct ip *ip_hdr, uint32_t len,
 	return PACKET_VALID;
 }
 
-
-
-
-
-
 // Note: caller must free return value
 char *make_ip_str(uint32_t ip)
 {

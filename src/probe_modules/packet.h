@@ -121,6 +121,15 @@ static inline struct udphdr *get_udp_header(const struct ip *ip_hdr, uint32_t le
 	return (struct udphdr *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
 }
 
+static inline struct icmp *get_icmp_header(const struct ip *ip_hdr, uint32_t len) {
+	// buf not large enough to contain expected udp header
+	if ((4 * ip_hdr->ip_hl + sizeof(struct icmp)) > len) {
+		return NULL;
+	}
+	return (struct icmp *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
+}
+
+
 // Note: caller must free return value
 char *make_ip_str(uint32_t ip);
 

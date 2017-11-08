@@ -89,53 +89,53 @@ static void icmp_echo_print_packet(FILE *fp, void *packet)
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
+static int imcp_validate_id_seq(struct icmp *icmp_h,
+		uint32_t *validation) {
+	if (icmp_h->icmp_id != (validation[1] & 0xFFFF)) {
+		return PACKET_INVALID;
+	}
+	if (icmp_h->icmp_seq != (validation[2] & 0xFFFF)) {
+		return PACKET_INVALID;
+	}
+	return PACKET_VALID;
+}
+
+
 static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
-				uint32_t *src_ip, uint32_t *validation)
+				UNUSED uint32_t *src_ip, uint32_t *validation)
 {
 	if (ip_hdr->ip_p != IPPROTO_ICMP) {
 		return PACKET_INVALID;
 	}
-	// check if buffer is large enough to contain expected icmp header
-	if (((uint32_t)4 * ip_hdr->ip_hl + ICMP_SMALLEST_SIZE) > len) {
+	struct icmp *icmp_h = get_icmp_header(ip_hdr, len);
+	if (!icmp_h) {
 		return PACKET_INVALID;
 	}
-	struct icmp *icmp_h =
-	    (struct icmp *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
-	uint16_t icmp_idnum = icmp_h->icmp_id;
-	uint16_t icmp_seqnum = icmp_h->icmp_seq;
-	// ICMP validation is tricky: for some packet types, we must look inside
-	// the payload
-	if (icmp_h->icmp_type == ICMP_TIMXCEED ||
-	    icmp_h->icmp_type == ICMP_UNREACH) {
-		// Should have 16B TimeExceeded/Dest_Unreachable header +
-		// original IP header + 1st 8B of original ICMP frame
-		if ((4 * ip_hdr->ip_hl + ICMP_TIMXCEED_UNREACH_HEADER_SIZE +
-		     sizeof(struct ip)) > len) {
+	if (icmp_h->icmp_type == ICMP_ECHOREPLY) {
+		return imcp_validate_id_seq(icmp_h, validation);
+	} else {
+		// handle unresearch/quench/redirect/timeout
+		struct ip *ip_inner;
+		size_t ip_inner_len;
+		int icmp_inner_valid = icmp_helper_validate(ip_hdr, len,
+				sizeof(struct icmp), &ip_inner, &ip_inner_len);
+		if (icmp_inner_valid == PACKET_INVALID) {
 			return PACKET_INVALID;
 		}
-		struct ip *ip_inner = (struct ip *)((char *)icmp_h + 8);
-		if (((uint32_t)4 * ip_hdr->ip_hl +
-		     ICMP_TIMXCEED_UNREACH_HEADER_SIZE + 4 * ip_inner->ip_hl +
-		     8 /*1st 8 bytes of original*/) > len) {
+		struct icmp *icmp_inner = get_icmp_header(ip_inner, ip_inner_len);
+		if (!icmp_inner) {
 			return PACKET_INVALID;
 		}
-		struct icmp *icmp_inner =
-		    (struct icmp *)((char *)ip_inner + 4 * ip_hdr->ip_hl);
-		// Regenerate validation and icmp id based off inner payload
-		icmp_idnum = icmp_inner->icmp_id;
-		icmp_seqnum = icmp_inner->icmp_seq;
-		*src_ip = ip_inner->ip_dst.s_addr;
+		// This following line seems very wrong.
+		//*src_ip = ip_inner->ip_dst.s_addr;
+
+		// TODO not 100% sure these values are correct
 		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
 			     (uint8_t *)validation);
+
+		// validate icmp id and seqnum
+		return imcp_validate_id_seq(icmp_inner, validation);
 	}
-	// validate icmp id and seqnum
-	if (icmp_idnum != (validation[1] & 0xFFFF)) {
-		return PACKET_INVALID;
-	}
-	if (icmp_seqnum != (validation[2] & 0xFFFF)) {
-		return PACKET_INVALID;
-	}
-	return PACKET_VALID;
 }
 
 static void icmp_echo_process_packet(const u_char *packet,

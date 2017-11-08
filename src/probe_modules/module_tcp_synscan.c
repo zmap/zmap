@@ -19,6 +19,7 @@
 #include "../fieldset.h"
 #include "probe_modules.h"
 #include "packet.h"
+#include "validate.h"
 
 probe_module_t module_tcp_synscan;
 static uint32_t num_ports;
@@ -87,7 +88,7 @@ void synscan_print_packet(FILE *fp, void *packet)
 }
 
 static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
-				   __attribute__((unused)) uint32_t *src_ip,
+				   uint32_t *src_ip,
 				   uint32_t *validation)
 {
 	if (ip_hdr->ip_p == IPPROTO_TCP) {
@@ -103,6 +104,10 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		}
 		// validate destination port
 		if (!check_dst_port(dport, num_ports, validation)) {
+			return PACKET_INVALID;
+		}
+		// check whether we'll ever send to this IP during the scan
+		if (!blacklist_is_allowed(*src_ip)) {
 			return PACKET_INVALID;
 		}
 		// We treat RST packets different from non RST packets
@@ -134,6 +139,9 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		if (dport != zconf.target_port) {
 			return PACKET_INVALID;
 		}
+		// TODO not 100% sure these values are correct
+		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
+                  (uint8_t *)validation);
 		if (!check_dst_port(sport, num_ports, validation)) {
 			return PACKET_INVALID;
 		}

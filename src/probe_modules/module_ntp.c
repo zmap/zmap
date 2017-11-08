@@ -53,18 +53,8 @@ int ntp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 int ntp_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation)
 {
-	if (!udp_validate_packet(ip_hdr, len, src_ip, validation)) {
-		return 0;
-	}
-	if (ip_hdr->ip_p == IPPROTO_UDP) {
-		struct udphdr *udp =
-		    (struct udphdr *)((char *)ip_hdr + ip_hdr->ip_hl * 4);
-		uint16_t sport = ntohs(udp->uh_sport);
-		if (sport != zconf.target_port) {
-			return 0;
-		}
-	}
-	return 1;
+	return udp_do_validate_packet(ip_hdr, len, src_ip, validation,
+				num_ports, zconf.target_port);
 }
 
 void ntp_process_packet(const u_char *packet,

@@ -115,8 +115,6 @@ static udp_payload_field_type_def_t udp_payload_template_fields[] = {
 	 .ftype = UDP_RAND_ALPHANUM,
 	 .desc = "Random mixed-case letters (a-z) and numbers"}};
 
-void udp_set_num_ports(int x) { num_ports = x; }
-
 int udp_global_initialize(struct state_conf *conf)
 {
 	char *args, *c;
@@ -423,7 +421,7 @@ int udp_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation)
 {
 	return udp_do_validate_packet(ip_hdr, len, src_ip, validation,
-					  num_ports);
+					  num_ports, NO_SRC_PORT_VALIDATION);
 }
 
 // Do very basic validation that this is an ICMP response to a packet we sent
@@ -433,19 +431,26 @@ int udp_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 
 int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
 			   uint32_t *src_ip, uint32_t *validation,
-			   int num_ports)
+			   int num_ports, int expected_port)
 {
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		struct udphdr *udp = get_udp_header(ip_hdr, len);
 		if (!udp) {
 			return PACKET_INVALID;
 		}
-		uint16_t sport = ntohs(udp->uh_dport);
-		if (!check_dst_port(sport, num_ports, validation)) {
+		uint16_t dport = ntohs(udp->uh_dport);
+		if (!check_dst_port(dport, num_ports, validation)) {
 			return PACKET_INVALID;
 		}
 		if (!blacklist_is_allowed(*src_ip)) {
 			return PACKET_INVALID;
+		}
+		if (expected_port != NO_SRC_PORT_VALIDATION) {
+			uint16_t ep = (uint16_t) expected_port;
+			uint16_t sport = ntohs(udp->uh_sport);
+			if (sport != ep) {
+				return PACKET_INVALID;
+			}
 		}
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		struct ip *ip_inner;

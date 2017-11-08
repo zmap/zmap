@@ -273,7 +273,8 @@ static uint16_t get_name_helper(const char *data, uint16_t data_len,
 				bytes_consumed += 2;
 				log_trace(
 				    "dns",
-				    "_get_name_helper OUT. rec level %d success. %d rec bytes consumed. %d bytes consumed.",
+				    "_get_name_helper OUT. rec level %d success. "
+					"%d rec bytes consumed. %d bytes consumed.",
 				    recursion_level, rec_bytes_consumed,
 				    bytes_consumed);
 				return bytes_consumed;
@@ -593,7 +594,7 @@ static int dns_global_initialize(struct state_conf *conf)
 
 	// This is zmap boilerplate. Why do I have to write this?
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
-	udp_set_num_ports(num_ports);
+
 	setup_qtype_str_map();
 
 	if (conf->probe_args) { // no parameters passed in. Use defaults
@@ -794,44 +795,32 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation)
 {
 	// This does the heavy lifting.
-	if (udp_validate_packet(ip_hdr, len, src_ip, validation) == PACKET_INVALID) {
+	if (udp_do_validate_packet(ip_hdr, len, src_ip, validation,
+				num_ports, zconf.target_port) == PACKET_INVALID) {
 		return PACKET_INVALID;
 	}
-	// This entire if..elif..else block is getting at the udp body
-	struct udphdr *udp = NULL;
-	uint16_t sport = 0;
-
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
-		udp = (struct udphdr *)((char *)ip_hdr + ip_hdr->ip_hl * 4);
-		sport = ntohs(udp->uh_sport);
-	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
-	} else {
-		assert(0);
-	}
-	// Verify our source port.
-	if (sport != zconf.target_port) {
-		return PACKET_INVALID;
-	}
-	// Verify our packet length.
-	uint16_t udp_len = ntohs(udp->uh_ulen);
-
-	int match = 0;
-
-	for (int i = 0; i < num_questions; i++) {
-		if (udp_len >= dns_packet_lens[i]) {
-			match += 1;
+		struct udphdr *udp = get_udp_header(ip_hdr, len);
+		if (!udp) {
+			return PACKET_INVALID;
+		}
+		// Verify our packet length.
+		uint16_t udp_len = ntohs(udp->uh_ulen);
+		int match = 0;
+		for (int i = 0; i < num_questions; i++) {
+			if (udp_len >= dns_packet_lens[i]) {
+				match += 1;
+			}
+		}
+		if (match == 0) {
+			return PACKET_INVALID;
+		}
+		// Verify the packet length is ok.
+		if (len < udp_len) {
+			return PACKET_INVALID;
 		}
 	}
-
-	if (match == 0) {
-		return 0;
-	}
-	// Verify the packet length is ok.
-	if (len < udp_len) {
-		return 0;
-	}
-	// Looks good.
-	return 1;
+	return PACKET_VALID;
 }
 
 void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,

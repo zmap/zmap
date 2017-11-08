@@ -30,10 +30,11 @@ static const char *upnp_query = "M-SEARCH * HTTP/1.1\r\n"
 
 probe_module_t module_upnp;
 
+static int num_ports;
+
 int upnp_global_initialize(struct state_conf *state)
 {
-	int num_ports = state->source_port_last - state->source_port_first + 1;
-	udp_set_num_ports(num_ports);
+	num_ports = state->source_port_last - state->source_port_first + 1;
 	return EXIT_SUCCESS;
 }
 
@@ -70,23 +71,8 @@ int upnp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 int upnp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 			 uint32_t *src_ip, uint32_t *validation)
 {
-	if (!udp_validate_packet(ip_hdr, len, src_ip, validation)) {
-		return 0;
-	}
-	if (ip_hdr->ip_p == IPPROTO_UDP) {
-		struct udphdr *udp =
-		    (struct udphdr *)((char *)ip_hdr + ip_hdr->ip_hl * 4);
-		uint16_t sport = ntohs(udp->uh_sport);
-		if (sport != zconf.target_port) {
-			return 0;
-		}
-		size_t expected_length =
-		    4 * ip_hdr->ip_hl + ntohs(udp->uh_ulen);
-		if (expected_length > len) {
-			return 0;
-		}
-	}
-	return 1;
+	return udp_do_validate_packet(ip_hdr, len, src_ip, validation,
+			num_ports, zconf.target_port);
 }
 
 void upnp_process_packet(const u_char *packet,
