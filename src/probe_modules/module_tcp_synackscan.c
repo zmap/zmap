@@ -19,6 +19,7 @@
 #include "../fieldset.h"
 #include "probe_modules.h"
 #include "packet.h"
+#include "validate.h"
 #include "module_tcp_synscan.h"
 
 probe_module_t module_tcp_synackscan;
@@ -79,46 +80,69 @@ static int synackscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 				      __attribute__((unused)) uint32_t *src_ip,
 				      uint32_t *validation)
 {
-	if (ip_hdr->ip_p != IPPROTO_TCP) {
-		return 0;
-	}
-	if ((4 * ip_hdr->ip_hl + sizeof(struct tcphdr)) > len) {
-		// buffer not large enough to contain expected tcp header
-		return 0;
-	}
-	struct tcphdr *tcp =
-	    (struct tcphdr *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
-	uint16_t sport = tcp->th_sport;
-	uint16_t dport = tcp->th_dport;
-	// validate source port
-	if (ntohs(sport) != zconf.target_port) {
-		return 0;
-	}
-	// validate destination port
-	if (!check_dst_port(ntohs(dport), num_ports, validation)) {
-		return 0;
-	}
 
-	// We handle RST packets different than all other packets
-	if (tcp->th_flags & TH_RST) {
-		// A RST packet must have either:
-		//	1) resp(ack) == sent(seq) + 1, or
-		//	2) resp(seq) == sent(ack), or
-		//	3) resp(seq) == sent(ack) + 1
-		// All other cases are a failure.
-		if (htonl(tcp->th_ack) != htonl(validation[0]) + 1 &&
-		    htonl(tcp->th_seq) != htonl(validation[2]) &&
-		    htonl(tcp->th_seq) != (htonl(validation[2]) + 1)) {
-			return 0;
+	if (ip_hdr->ip_p == IPPROTO_TCP) {
+		struct tcphdr *tcp = get_tcp_header(ip_hdr, len);
+		if (!tcp) {
+			return PACKET_INVALID;
+		}
+		uint16_t sport = ntohs(tcp->th_sport);
+		uint16_t dport = ntohs(tcp->th_dport);
+		// validate source port
+		if (sport != zconf.target_port) {
+			return PACKET_INVALID;
+		}
+		// validate destination port
+		if (!check_dst_port(dport, num_ports, validation)) {
+			return PACKET_INVALID;
+		}
+		// check whether we'll ever send to this IP during the scan
+		if (!blacklist_is_allowed(*src_ip)) {
+			return PACKET_INVALID;
+		}
+		// We handle RST packets different than all other packets
+		if (tcp->th_flags & TH_RST) {
+			// A RST packet must have either:
+			//	1) resp(ack) == sent(seq) + 1, or
+			//	2) resp(seq) == sent(ack), or
+			//	3) resp(seq) == sent(ack) + 1
+			// All other cases are a failure.
+			if (htonl(tcp->th_ack) != htonl(validation[0]) + 1 &&
+			    htonl(tcp->th_seq) != htonl(validation[2]) &&
+			    htonl(tcp->th_seq) != (htonl(validation[2]) + 1)) {
+				return PACKET_INVALID;
+			}
+		} else {
+			// For non RST packets, we must have resp(ack) == sent(seq) + 1
+			if (htonl(tcp->th_ack) != htonl(validation[0]) + 1) {
+				return PACKET_INVALID;
+			}
+		}
+	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
+		struct ip *ip_inner;
+		size_t ip_inner_len;
+		if (icmp_helper_validate(ip_hdr, len, sizeof(struct udphdr),
+			    &ip_inner, &ip_inner_len) == PACKET_INVALID) {
+			return PACKET_INVALID;
+		}
+		struct tcphdr *tcp = get_tcp_header(ip_inner, ip_inner_len);
+		// we can always check the destination port because this is the
+		// original packet and wouldn't have been altered by something
+		// responding on a different port
+		uint16_t sport = ntohs(tcp->th_sport);
+		uint16_t dport = ntohs(tcp->th_dport);
+		if (dport != zconf.target_port) {
+			return PACKET_INVALID;
+		}
+		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
+                  (uint8_t *)validation);
+		if (!check_dst_port(sport, num_ports, validation)) {
+			return PACKET_INVALID;
 		}
 	} else {
-		// For non RST packets, we must have resp(ack) == sent(seq) + 1
-		if (htonl(tcp->th_ack) != htonl(validation[0]) + 1) {
-			return 0;
-		}
+		return PACKET_INVALID;
 	}
-
-	return 1;
+	return PACKET_VALID;
 }
 
 static void synackscan_process_packet(const u_char *packet,
