@@ -584,13 +584,12 @@ static const u32 Td4[256] = {
     0x14141414U, 0x63636363U, 0x55555555U, 0x21212121U, 0x0c0c0c0cU,
     0x7d7d7d7dU,
 };
-static const u32 rcon[] =
-    {
-	0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000, 0x20000000,
-	0x40000000, 0x80000000, 0x1B000000, 0x36000000, /* for 128-bit blocks,
-							   Rijndael never uses
-							   more than 10 rcon
-							   values */
+static const u32 rcon[] = {
+    0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000, 0x20000000,
+    0x40000000, 0x80000000, 0x1B000000, 0x36000000, /* for 128-bit blocks,
+						       Rijndael never uses
+						       more than 10 rcon
+						       values */
 };
 
 #define SWAP(x) (_lrotl(x, 8) & 0x00ff00ff | _lrotr(x, 8) & 0xff00ff00)
@@ -889,7 +888,7 @@ void rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16],
 		}
 	}
 	rk += Nr << 2;
-#else   /* !FULL_UNROLL */
+#else  /* !FULL_UNROLL */
 	/*
 	 * Nr - 1 full rounds:
 	 */
@@ -918,7 +917,7 @@ void rijndaelEncrypt(const u32 rk[/*4*(Nr + 1)*/], int Nr, const u8 pt[16],
 		s3 = Te0[(t3 >> 24)] ^ Te1[(t0 >> 16) & 0xff] ^
 		     Te2[(t1 >> 8) & 0xff] ^ Te3[(t2)&0xff] ^ rk[3];
 	}
-#endif  /* ?FULL_UNROLL */
+#endif /* ?FULL_UNROLL */
 	/*
 	 * apply last round and
 	 * map cipher state to byte array block:

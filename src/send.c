@@ -243,8 +243,8 @@ int send_run(sock_t st, shard_t *s)
 	pthread_mutex_unlock(&send_mutex);
 
 	// adaptive timing to hit target rate
-	uint32_t count = 0;
-	uint32_t last_count = count;
+	uint64_t count = 0;
+	uint64_t last_count = count;
 	double last_time = now();
 	uint32_t delay = 0;
 	int interval = 0;
@@ -271,7 +271,6 @@ int send_run(sock_t st, shard_t *s)
 			last_time = now();
 		}
 	}
-
 	// Get the initial IP to scan.
 	uint32_t current_ip = shard_get_cur_ip(s);
 
@@ -296,7 +295,7 @@ int send_run(sock_t st, shard_t *s)
 	while (1) {
 		// Adaptive timing delay
 		send_rate = (double)zconf.rate / zconf.senders;
-		if (delay > 0) {
+		if (count && delay > 0) {
 			if (send_rate < slow_rate) {
 				double t = now();
 				double last_rate = (1.0 / (t - last_time));
@@ -315,11 +314,13 @@ int send_run(sock_t st, shard_t *s)
 					;
 				if (!interval || (count % interval == 0)) {
 					double t = now();
+					assert(count > last_count);
+					assert(t > last_time);
 					delay *= (double)(count - last_count) /
 						 (t - last_time) /
 						 (zconf.rate / zconf.senders);
 					if (delay < 1)
-						delay = 1;
+						log_fatal("send", "send rate exceeds system capabilities");
 					last_count = count;
 					last_time = t;
 				}

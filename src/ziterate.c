@@ -8,7 +8,8 @@
 
 /*
  * ZIterate is a simple utility that will iteratate over the IPv4
- * space in a pseudo-random fashion, utilizing the sharding capabilities * of ZMap.
+ * space in a pseudo-random fashion, utilizing the sharding capabilities * of
+ * ZMap.
  */
 
 #define _GNU_SOURCE
@@ -208,8 +209,7 @@ int main(int argc, char **argv)
 	}
 	zconf.aes = aesrand_init_from_seed(conf.seed);
 
-	iterator_t *it =
-	    iterator_init(1, conf.shard_num, conf.total_shards);
+	iterator_t *it = iterator_init(1, conf.shard_num, conf.total_shards);
 	shard_t *shard = get_shard(it, 0);
 	uint32_t next_int = shard_get_cur_ip(shard);
 	struct in_addr next_ip;

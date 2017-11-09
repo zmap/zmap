@@ -13,14 +13,13 @@
 #include <string.h>
 
 typedef struct __attribute__((packed)) {
-	uint16_t id;     /* transaction ID */
-	unsigned rd : 1; /* recursion desired */
-	unsigned tc : 1; /* truncation */
-	unsigned aa : 1; /* authoritative answer */
-	unsigned
-	    opcode : 4;  /* opcode 0=std query 1=Inverse query 2=srv status
-			    request */
-	unsigned qr : 1; /* query/response */
+	uint16_t id;	 /* transaction ID */
+	unsigned rd : 1;     /* recursion desired */
+	unsigned tc : 1;     /* truncation */
+	unsigned aa : 1;     /* authoritative answer */
+	unsigned opcode : 4; /* opcode 0=std query 1=Inverse query 2=srv status
+				request */
+	unsigned qr : 1;     /* query/response */
 
 	unsigned rcode : 4; /* response code */
 	unsigned cd : 1;    /* checking disabled */
