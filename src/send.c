@@ -141,6 +141,10 @@ iterator_t *send_init(void)
 		pkt_len *= 8;
 		// 7 byte MAC preamble, 1 byte Start frame, 4 byte CRC, 12 byte inter-frame gap
 		pkt_len += 8 * 24;
+		// adjust calculated length if less than the minimum size of an ethernet frame
+		if (pkt_len < 84 * 8) {
+			pkt_len = 84 * 8;
+		}
 		// rate is a uint32_t so, don't overflow
 		if (zconf.bandwidth / pkt_len > 0xFFFFFFFFu) {
 			zconf.rate = 0;
@@ -156,8 +160,8 @@ iterator_t *send_init(void)
 			}
 		}
 		log_debug("send",
-			  "using bandwidth %lu bits/s for %zu bit probe, rate set to %d pkt/s",
-			  zconf.bandwidth, pkt_len, zconf.rate);
+			  "using bandwidth %lu bits/s for %zu byte probe, rate set to %d pkt/s",
+			  zconf.bandwidth, pkt_len/8, zconf.rate);
 	}
 	// Get the source hardware address, and give it to the probe
 	// module
