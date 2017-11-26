@@ -25,7 +25,7 @@ operating systems:
 
 | OS                                        |                             |
 | ----------------------------------------- | --------------------------- |
-| Debian or Ubuntu                          | `sudo apt install zmap`     |
+| Debian and Ubuntu                         | `sudo apt install zmap`     |
 | Fedora, CentOS, and RHEL                  | `sudo yum install zmap`     |
 | Gentoo                                    | `sudo emerge zmap`          |
 | macOS (using [Homebrew](https://brew.sh)) | `brew install zmap`         |
