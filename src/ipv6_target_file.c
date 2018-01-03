@@ -21,7 +21,11 @@ static FILE *fp;
 
 int ipv6_target_file_init(char *file)
 {
-	fp = fopen(file, "r");
+	if (strcmp(file, "-") == 0) {
+		fp = stdin;
+	} else {
+		fp = fopen(file, "r");
+	}
 	if (fp == NULL) {
 		log_fatal(LOGGER_NAME, "unable to open %s file: %s: %s",
 				LOGGER_NAME, file, strerror(errno));
