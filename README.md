@@ -9,11 +9,12 @@ is capable scanning the entire public IPv4 address space in under 45 minutes. Wi
 a 10gigE connection and [PF_RING](http://www.ntop.org/products/packet-capture/pf_ring/),
 ZMap can scan the IPv4 address space in under 5 minutes.
 
-ZMap operates on GNU/Linux, macOS, and BSD. ZMap currently has full implemented
+ZMap operates on GNU/Linux, Mac OS, and BSD. ZMap currently has fully implemented
 probe modules for TCP SYN scans, ICMP, DNS queries, UPnP, BACNET, and can send a
-large number of UDP probes. If you are looking to do more involved scans, e.g.,
+large number of [UDP probes](https://github.com/zmap/zmap/blob/master/examples/udp-probes/README).
+If you are looking to do more involved scans, e.g.,
 banner grab or TLS handshake, take a look at [ZGrab](https://github.com/zmap/zgrab),
-ZMap's sister project that performs application-layer handshakes.
+ZMap's sister project that performs stateful application-layer handshakes.
 
 Installation
 ------------
@@ -24,7 +25,7 @@ operating systems:
 
 | OS                                        |                             |
 | ----------------------------------------- | --------------------------- |
-| Debian or Ubuntu                          | `sudo apt install zmap`     |
+| Debian and Ubuntu                         | `sudo apt install zmap`     |
 | Fedora, CentOS, and RHEL                  | `sudo yum install zmap`     |
 | Gentoo                                    | `sudo emerge zmap`          |
 | macOS (using [Homebrew](https://brew.sh)) | `brew install zmap`         |
