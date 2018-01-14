@@ -573,7 +573,7 @@ static int dns_global_initialize(struct state_conf *conf)
 {
 	num_questions = conf->packet_streams;
 	if (num_questions < 1) {
-		log_fatal("dns", "Invalid number of probes for the DNS module:",
+		log_fatal("dns", "Invalid number of probes for the DNS module: %i",
 			  num_questions);
 	}
 
@@ -782,13 +782,13 @@ void dns_print_packet(FILE *fp, void *packet)
 	struct ether_header *ethh = (struct ether_header *)packet;
 	struct ip *iph = (struct ip *)&ethh[1];
 	struct udphdr *udph = (struct udphdr *)(&iph[1]);
-	fprintf(fp, "------------------------------------------------------\n");
+	fprintf(fp, PRINT_PACKET_SEP);
 	fprintf(fp, "dns { source: %u | dest: %u | checksum: %#04X }\n",
 		ntohs(udph->uh_sport), ntohs(udph->uh_dport),
 		ntohs(udph->uh_sum));
 	fprintf_ip_header(fp, iph);
 	fprintf_eth_header(fp, ethh);
-	fprintf(fp, "------------------------------------------------------\n");
+	fprintf(fp, PRINT_PACKET_SEP);
 }
 
 int dns_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
@@ -874,15 +874,16 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		// High level info
 		fs_add_string(fs, "classification", (char *)"dns", 0);
 		fs_add_bool(fs, "success", is_valid);
+		// TCP/UDP info
+		fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
+		fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
+		// ICMP info
+		fs_add_null_icmp(fs);
+		// additional UDP information
+		fs_add_uint64(fs, "udp_len", udp_len);
 		fs_add_bool(fs, "app_success",
 			    is_valid && (qr == DNS_QR_ANSWER) &&
 				(rcode == DNS_RCODE_NOERR));
-		// UDP info
-		fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
-		fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
-		fs_add_uint64(fs, "udp_len", udp_len);
-		// ICMP info
-		fs_add_null_icmp(fs);
 		// DNS data
 		if (!is_valid) {
 			// DNS header
@@ -986,28 +987,11 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		// Now the raw stuff.
 		fs_add_binary(fs, "raw_data", (udp_len - sizeof(struct udphdr)),
 			      (void *)&udp_hdr[1], 0);
-		return;
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
-
-		struct icmp *icmp =
-		    (struct icmp *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
-		struct ip *ip_inner =
-		    (struct ip *)((char *)icmp + ICMP_UNREACH_HEADER_SIZE);
-
-		// This is the packet we sent
-		struct udphdr *udp_hdr =
-		    (struct udphdr *)((char *)ip_inner + 4 * ip_inner->ip_hl);
-		uint16_t udp_len = ntohs(udp_hdr->uh_ulen);
-		// High level info
-		fs_add_string(fs, "classification", (char *)"icmp-unreach", 0);
-		fs_add_bool(fs, "success", 0);
-		fs_add_bool(fs, "app_success", 0);
-		// UDP info
-		fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
-		fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
-		fs_add_uint64(fs, "udp_len", udp_len);
-		// ICMP info
 		fs_populate_icmp_from_iphdr(ip_hdr, len, fs);
+		// ICMP info
+		fs_add_null(fs, "udp_len");
+		fs_add_bool(fs, "app_success", 0);
 		// XXX This is legacy. not well tested.
 		// DNS header
 		fs_add_null(fs, "dns_id");
@@ -1037,16 +1021,12 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		fs_add_uint64(fs, "dns_unconsumed_bytes", 0);
 		fs_add_uint64(fs, "dns_parse_err", 1);
 		fs_add_binary(fs, "raw_data", len, (char *)packet, 0);
-
-		return;
-
 	} else {
 		// This should not happen. Both the pcap filter and validate
 		// packet prevent this.
 		log_fatal("dns", "Die. This can only happen if you "
 				 "change the pcap filter and don't update the "
 				 "process function.");
-		return;
 	}
 }
 
@@ -1060,7 +1040,6 @@ static fielddef_t fields[] = {
      .desc = "Is the RA bit set with no error code?"},
     {.name = "sport", .type = "int", .desc = "UDP source port"},
     {.name = "dport", .type = "int", .desc = "UDP destination port"},
-    {.name = "udp_len", .type = "int", .desc = "UDP packet lenght"},
     {.name = "icmp_responder",
      .type = "string",
      .desc = "Source IP of ICMP_UNREACH message"},
@@ -1070,6 +1049,7 @@ static fielddef_t fields[] = {
      .type = "string",
      .desc = "for icmp_unreach responses, "
 	     "the string version of icmp_code (e.g. network-unreach)"},
+    {.name = "udp_len", .type = "int", .desc = "UDP packet lenght"},
     {.name = "dns_id", .type = "int", .desc = "DNS transaction ID"},
     {.name = "dns_rd", .type = "int", .desc = "DNS recursion desired"},
     {.name = "dns_tc", .type = "int", .desc = "DNS packet truncated"},

@@ -182,11 +182,22 @@ void fs_add_null_icmp(fieldset_t *fs)
 	fs_add_null(fs, "icmp_unreach_str");
 }
 
+void fs_add_failure_no_port(fieldset_t *fs)
+{
+	fs_add_null(fs, "icmp_responder");
+	fs_add_null(fs, "icmp_type");
+	fs_add_null(fs, "icmp_code");
+	fs_add_null(fs, "icmp_unreach_str");
+}
 
 void fs_populate_icmp_from_iphdr(struct ip *ip, size_t len, fieldset_t *fs)
 {
 	assert(ip && "no ip header provide to fs_populate_icmp_from_iphdr");
 	assert(fs && "no fieldset provided to fs_populate_icmp_from_iphdr");
+	fs_add_constchar(fs, "classification", "icmp-unreach");
+	fs_add_bool(fs, "success", 0);
+	fs_add_null(fs, "sport");
+	fs_add_null(fs, "dport");
 	struct icmp *icmp = get_icmp_header(ip, len);
 	assert(icmp);
 	// ICMP unreach comes from another server (not the one we sent a

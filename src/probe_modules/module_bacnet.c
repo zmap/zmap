@@ -97,7 +97,8 @@ int bacnet_make_packet(void *buf, UNUSED size_t *buf_len, ipaddr_n_t src_ip,
 int bacnet_validate_packet(const struct ip *ip_hdr, uint32_t len,
 			   uint32_t *src_ip, uint32_t *validation)
 {
-	// this will reject packets that aren't UDP or ICMP
+	// this will reject packets that aren't UDP or ICMP and fully process ICMP
+	// packets
 	if (udp_do_validate_packet(ip_hdr, len, src_ip, validation,
 				    num_ports, zconf.target_port) == PACKET_INVALID) {
 		return PACKET_INVALID;
@@ -111,7 +112,7 @@ int bacnet_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		if (udp->uh_ulen < min_len) {
 			return PACKET_INVALID;
 		}
-		struct bacnet_vlc *vlc = (struct bacnet_vlc *)&udp[1];
+		struct bacnet_vlc *vlc = (struct bacnet_vlc *) get_udp_payload(udp, len);
 		if (vlc->type != ZMAP_BACNET_TYPE_IP) {
 			return PACKET_INVALID;
 		}
@@ -120,57 +121,25 @@ int bacnet_validate_packet(const struct ip *ip_hdr, uint32_t len,
 }
 
 void bacnet_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
-			   __attribute__((unused)) uint32_t *validation)
+			   UNUSED uint32_t *validation)
 {
-	uint32_t ip_offset = sizeof(struct ether_header);
-	struct ip *ip_hdr = (struct ip *)&packet[ip_offset];
-
+	struct ip *ip_hdr = get_ip_header(packet, len);
+	assert(ip_hdr);
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
-		uint32_t udp_offset = ip_offset + ip_hdr->ip_hl * 4;
-		assert(udp_offset + sizeof(struct udphdr) < len);
-		struct udphdr *udp = (struct udphdr *)&packet[udp_offset];
-		fs_add_string(fs, "classification", (char *)"ntp", 0);
+		struct udphdr *udp = get_udp_header(ip_hdr, len);
+		assert(udp);
+		fs_add_constchar(fs, "classification", "bacnet");
 		fs_add_bool(fs, "success", 1);
 		fs_add_uint64(fs, "sport", ntohs(udp->uh_sport));
 		fs_add_uint64(fs, "dport", ntohs(udp->uh_dport));
-		fs_add_null(fs, "icmp_responder");
-		fs_add_null(fs, "icmp_type");
-		fs_add_null(fs, "icmp_code");
-		fs_add_null(fs, "icmp_unreach_str");
-
+		fs_add_null_icmp(fs);
 		uint32_t payload_offset = udp_offset + sizeof(struct udphdr);
 		assert(payload_offset < len);
-		const uint8_t *payload = &packet[payload_offset];
+		const unsigned char *payload = get_udp_payload(udp, len);
 		uint32_t payload_len = len - payload_offset;
-		fs_add_binary(fs, "udp_payload", payload_len, (void *)payload,
-			      0);
+		fs_add_binary(fs, "udp_payload", payload_len, (void *)payload, 0);
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
-		struct icmp *icmp =
-		    (struct icmp *)((char *)ip_hdr + ip_hdr->ip_hl * 4);
-		struct ip *ip_inner =
-		    (struct ip *)((char *)icmp + ICMP_UNREACH_HEADER_SIZE);
-
-		fs_modify_string(fs, "saddr",
-				 make_ip_str(ip_inner->ip_dst.s_addr), 1);
-		fs_add_string(fs, "classification", (char *)"icmp-unreach", 0);
-		fs_add_bool(fs, "success", 0);
-		fs_add_null(fs, "sport");
-		fs_add_null(fs, "dport");
-		fs_add_string(fs, "icmp_responder",
-			      make_ip_str(ip_hdr->ip_src.s_addr), 1);
-		fs_add_uint64(fs, "icmp_type", icmp->icmp_type);
-		fs_add_uint64(fs, "icmp_code", icmp->icmp_code);
-		fs_add_null(fs, "icmp_unreach_str");
-		fs_add_null(fs, "udp_payload");
-	} else {
-		fs_add_string(fs, "classification", (char *)"other", 0);
-		fs_add_bool(fs, "success", 0);
-		fs_add_null(fs, "sport");
-		fs_add_null(fs, "dport");
-		fs_add_null(fs, "icmp_responder");
-		fs_add_null(fs, "icmp_type");
-		fs_add_null(fs, "icmp_code");
-		fs_add_null(fs, "icmp_unreach_str");
+		fs_populate_icmp_from_iphdr(ip_hdr, len, fs);
 		fs_add_null(fs, "udp_payload");
 	}
 }
