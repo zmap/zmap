@@ -174,6 +174,41 @@ int icmp_helper_validate(const struct ip *ip_hdr, uint32_t len,
 	return PACKET_VALID;
 }
 
+void fs_add_null_icmp(fieldset_t *fs)
+{
+	fs_add_null(fs, "icmp_responder");
+	fs_add_null(fs, "icmp_type");
+	fs_add_null(fs, "icmp_code");
+	fs_add_null(fs, "icmp_unreach_str");
+}
+
+
+void fs_populate_icmp_from_iphdr(struct ip *ip, size_t len, fieldset_t *fs)
+{
+	assert(ip && "no ip header provide to fs_populate_icmp_from_iphdr");
+	assert(fs && "no fieldset provided to fs_populate_icmp_from_iphdr");
+	struct icmp *icmp = get_icmp_header(ip, len);
+	assert(icmp);
+	// ICMP unreach comes from another server (not the one we sent a
+	// probe to); But we will fix up saddr to be who we sent the
+	// probe to, in case you care.
+	struct ip *ip_inner =
+		    (struct ip *)((char *)icmp + ICMP_UNREACH_HEADER_SIZE);
+	fs_modify_string(fs, "saddr",
+				 make_ip_str(ip_inner->ip_dst.s_addr), 1);
+	// Add other ICMP fields from within the header
+	fs_add_string(fs, "icmp_responder", make_ip_str(ip->ip_src.s_addr), 1);
+	fs_add_uint64(fs, "icmp_type", icmp->icmp_type);
+	fs_add_uint64(fs, "icmp_code", icmp->icmp_code);
+	if (icmp->icmp_code <= ICMP_UNREACH_PRECEDENCE_CUTOFF) {
+		fs_add_constchar(fs, "icmp_unreach_str", icmp_unreach_strings[icmp->icmp_code]);
+	} else {
+		fs_add_string(fs, "icmp_unreach_str", (char *)"unknown",
+			      0);
+	}
+}
+
+
 // Note: caller must free return value
 char *make_ip_str(uint32_t ip)
 {

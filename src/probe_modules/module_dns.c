@@ -827,8 +827,8 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
-		struct udphdr *udp_hdr =
-		    (struct udphdr *)((char *)ip_hdr + ip_hdr->ip_hl * 4);
+		struct udphdr *udp_hdr = get_udp_header(ip_hdr, len);
+		assert(udp_hdr);
 		uint16_t udp_len = ntohs(udp_hdr->uh_ulen);
 
 		int match = 0;
@@ -882,10 +882,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
 		fs_add_uint64(fs, "udp_len", udp_len);
 		// ICMP info
-		fs_add_null(fs, "icmp_responder");
-		fs_add_null(fs, "icmp_type");
-		fs_add_null(fs, "icmp_code");
-		fs_add_null(fs, "icmp_unreach_str");
+		fs_add_null_icmp(fs);
 		// DNS data
 		if (!is_valid) {
 			// DNS header
@@ -991,6 +988,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 			      (void *)&udp_hdr[1], 0);
 		return;
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
+
 		struct icmp *icmp =
 		    (struct icmp *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
 		struct ip *ip_inner =
@@ -1009,19 +1007,8 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
 		fs_add_uint64(fs, "udp_len", udp_len);
 		// ICMP info
+		fs_populate_icmp_from_iphdr(ip_hdr, len, fs);
 		// XXX This is legacy. not well tested.
-		fs_add_string(fs, "icmp_responder",
-			      make_ip_str(ip_hdr->ip_src.s_addr), 1);
-		fs_add_uint64(fs, "icmp_type", icmp->icmp_type);
-		fs_add_uint64(fs, "icmp_code", icmp->icmp_code);
-		if (icmp->icmp_code <= ICMP_UNREACH_PRECEDENCE_CUTOFF) {
-			fs_add_string(
-			    fs, "icmp_unreach_str",
-			    (char *)icmp_unreach_strings[icmp->icmp_code], 0);
-		} else {
-			fs_add_string(fs, "icmp_unreach_str", (char *)"unknown",
-				      0);
-		}
 		// DNS header
 		fs_add_null(fs, "dns_id");
 		fs_add_null(fs, "dns_rd");

@@ -126,8 +126,6 @@ static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		if (!icmp_inner) {
 			return PACKET_INVALID;
 		}
-		// This following line seems very wrong.
-		//*src_ip = ip_inner->ip_dst.s_addr;
 		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
 			     (uint8_t *)validation);
 		// validate icmp id and seqnum

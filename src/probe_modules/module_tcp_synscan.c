@@ -22,11 +22,14 @@
 #include "validate.h"
 
 probe_module_t module_tcp_synscan;
-static uint32_t num_ports;
+
+static uint16_t num_ports;
+static port_h_t target_port;
 
 static int synscan_global_initialize(struct state_conf *state)
 {
 	num_ports = state->source_port_last - state->source_port_first + 1;
+	target_port = state->target_port;
 	return EXIT_SUCCESS;
 }
 
@@ -58,14 +61,14 @@ static int synscan_make_packet(void *buf, UNUSED size_t *buf_len,
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
 
-	tcp_header->th_sport =
-	    htons(get_src_port(num_ports, probe_num, validation));
+	port_h_t sport = get_src_port(num_ports, probe_num, validation);
+	tcp_header->th_sport = htons(sport);
 	tcp_header->th_seq = tcp_seq;
+	// checksum value must be zero when calculating packet's checksum
 	tcp_header->th_sum = 0;
-	tcp_header->th_sum =
-	    tcp_checksum(sizeof(struct tcphdr), ip_header->ip_src.s_addr,
-			 ip_header->ip_dst.s_addr, tcp_header);
-
+	tcp_header->th_sum = tcp_checksum(sizeof(struct tcphdr),
+			ip_header->ip_src.s_addr, ip_header->ip_dst.s_addr, tcp_header);
+	// checksum value must be zero when calculating packet's checksum
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
 
@@ -84,7 +87,7 @@ void synscan_print_packet(FILE *fp, void *packet)
 		ntohl(tcph->th_seq), ntohs(tcph->th_sum));
 	fprintf_ip_header(fp, iph);
 	fprintf_eth_header(fp, ethh);
-	fprintf(fp, "------------------------------------------------------\n");
+	fprintf(fp, PRINT_PACKET_SEP);
 }
 
 static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
@@ -96,10 +99,10 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		if (!tcp) {
 			return PACKET_INVALID;
 		}
-		uint16_t sport = ntohs(tcp->th_sport);
-		uint16_t dport = ntohs(tcp->th_dport);
+		port_h_t sport = ntohs(tcp->th_sport);
+		port_h_t dport = ntohs(tcp->th_dport);
 		// validate source port
-		if (sport != zconf.target_port) {
+		if (sport != target_port) {
 			return PACKET_INVALID;
 		}
 		// validate destination port
@@ -126,17 +129,20 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		struct ip *ip_inner;
 		size_t ip_inner_len;
-		if (icmp_helper_validate(ip_hdr, len, sizeof(struct udphdr),
+		if (icmp_helper_validate(ip_hdr, len, sizeof(struct tcphdr),
 			    &ip_inner, &ip_inner_len) == PACKET_INVALID) {
 			return PACKET_INVALID;
 		}
 		struct tcphdr *tcp = get_tcp_header(ip_inner, ip_inner_len);
+		if (!tcp) {
+			return PACKET_INVALID;
+		}
 		// we can always check the destination port because this is the
 		// original packet and wouldn't have been altered by something
 		// responding on a different port
-		uint16_t sport = ntohs(tcp->th_sport);
-		uint16_t dport = ntohs(tcp->th_dport);
-		if (dport != zconf.target_port) {
+		port_h_t sport = ntohs(tcp->th_sport);
+		port_h_t dport = ntohs(tcp->th_dport);
+		if (dport != target_port) {
 			return PACKET_INVALID;
 		}
 		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
@@ -155,22 +161,36 @@ static void synscan_process_packet(const u_char *packet,
 				   fieldset_t *fs,
 				   __attribute__((unused)) uint32_t *validation)
 {
-	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
-	struct tcphdr *tcp =
-	    (struct tcphdr *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
-
-	fs_add_uint64(fs, "sport", (uint64_t)ntohs(tcp->th_sport));
-	fs_add_uint64(fs, "dport", (uint64_t)ntohs(tcp->th_dport));
-	fs_add_uint64(fs, "seqnum", (uint64_t)ntohl(tcp->th_seq));
-	fs_add_uint64(fs, "acknum", (uint64_t)ntohl(tcp->th_ack));
-	fs_add_uint64(fs, "window", (uint64_t)ntohs(tcp->th_win));
-
-	if (tcp->th_flags & TH_RST) { // RST packet
-		fs_add_string(fs, "classification", (char *)"rst", 0);
+	struct ip *ip_hdr = get_ip_header(packet, len);
+	assert(ip_hdr);
+	if (ip_hdr->ip_p == IPPROTO_TCP) {
+		struct tcphdr *tcp = get_tcp_header(ip_hdr, len);
+		assert(tcp);
+		fs_add_uint64(fs, "sport", (uint64_t)ntohs(tcp->th_sport));
+		fs_add_uint64(fs, "dport", (uint64_t)ntohs(tcp->th_dport));
+		fs_add_uint64(fs, "seqnum", (uint64_t)ntohl(tcp->th_seq));
+		fs_add_uint64(fs, "acknum", (uint64_t)ntohl(tcp->th_ack));
+		fs_add_uint64(fs, "window", (uint64_t)ntohs(tcp->th_win));
+		if (tcp->th_flags & TH_RST) { // RST packet
+			fs_add_string(fs, "classification", (char *)"rst", 0);
+			fs_add_bool(fs, "success", 0);
+		} else { // SYNACK packet
+			fs_add_string(fs, "classification", (char *)"synack", 0);
+			fs_add_bool(fs, "success", 1);
+		}
+		fs_add_null_icmp(fs);
+	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
+		// tcp
+		fs_add_null(fs, "sport");
+		fs_add_null(fs, "dport");
+		fs_add_null(fs, "seqnum");
+		fs_add_null(fs, "acknum");
+		fs_add_null(fs, "window");
+		// global
+		fs_add_string(fs, "classification", (char *)"icmp", 0);
 		fs_add_bool(fs, "success", 0);
-	} else { // SYNACK packet
-		fs_add_string(fs, "classification", (char *)"synack", 0);
-		fs_add_bool(fs, "success", 1);
+		// icmp
+		fs_populate_icmp_from_iphdr(ip_hdr, len, fs);
 	}
 }
 
@@ -185,7 +205,13 @@ static fielddef_t fields[] = {
      .desc = "packet classification"},
     {.name = "success",
      .type = "bool",
-     .desc = "is response considered success"}};
+     .desc = "is response considered success"},
+    {.name = "icmp_type", .type = "int", .desc = "icmp message type"},
+    {.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
+    {.name = "icmp_unreach_str",
+     .type = "string",
+     .desc = "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"}
+};
 
 probe_module_t module_tcp_synscan = {
     .name = "tcp_synscan",
@@ -206,4 +232,4 @@ probe_module_t module_tcp_synscan = {
 		"is considered a failed response.",
     .output_type = OUTPUT_TYPE_STATIC,
     .fields = fields,
-    .numfields = 7};
+    .numfields = 10};

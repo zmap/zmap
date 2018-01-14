@@ -7,10 +7,14 @@
 
 #define MAX_PACKET_SIZE 4096
 
+#define ICMP_UNREACH_HEADER_SIZE 8
+
 #define PACKET_VALID 1
 #define PACKET_INVALID 0
 
 #define ICMP_HEADER_SIZE 8
+
+#define PRINT_PACKET_SEP "------------------------------------------------------\n"
 
 typedef unsigned short __attribute__((__may_alias__)) alias_unsigned_short;
 
@@ -105,6 +109,14 @@ get_src_port(int num_ports, int probe_num, uint32_t *validation)
 	       ((validation[1] + probe_num) % num_ports);
 }
 
+static inline struct ip *get_ip_header(const u_char *packet, uint32_t len) {
+	// buf not large enough to contain expected udp header
+	if (len < sizeof(struct ether_header)) {
+		return NULL;
+	}
+	return (struct ip *)&packet[sizeof(struct ether_header)];
+}
+
 static inline struct tcphdr *get_tcp_header(const struct ip *ip_hdr, uint32_t len) {
 	// buf not large enough to contain expected udp header
 	if ((4 * ip_hdr->ip_hl + sizeof(struct tcphdr)) > len) {
@@ -137,6 +149,10 @@ extern const char *icmp_unreach_strings[];
 
 int icmp_helper_validate(const struct ip *ip_hdr, uint32_t len,
 	size_t min_l4_len, struct ip **probe_pkt, size_t *probe_len);
+
+void fs_add_null_icmp(fieldset_t *fs);
+
+void fs_populate_icmp_from_iphdr(struct ip *ip, size_t len, fieldset_t *fs);
 
 
 #endif
