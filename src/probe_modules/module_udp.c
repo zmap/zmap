@@ -38,14 +38,12 @@ static udp_payload_template_t *udp_template = NULL;
 static const char *udp_send_msg_default = "GET / HTTP/1.1\r\nHost: www\r\n\r\n";
 
 
-const char *udp_usage_error =
-	"unknown UDP probe specification (expected file:/path or text:STRING or hex:01020304 or template:/path or template-fields)";
+const char *udp_usage_error = "unknown UDP probe specification (expected "
+		"file:/path or text:STRING or hex:01020304 or "
+		"template:/path or template-fields)";
 
-const unsigned char *charset_alphanum =
-	(unsigned char
-	 *)"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-const unsigned char *charset_alpha =
-	(unsigned char *)"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const unsigned char *charset_alphanum = (unsigned char *)"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+const unsigned char *charset_alpha = (unsigned char *)"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const unsigned char *charset_digit = (unsigned char *)"0123456789";
 const unsigned char charset_all[257] = {
 	0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c,
@@ -261,7 +259,6 @@ int udp_make_packet(void *buf, UNUSED size_t *buf_len, ipaddr_n_t src_ip,
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
 	struct udphdr *udp_header = (struct udphdr *)&ip_header[1];
-	// struct = (struct udphdr*) (&ip_header[1]);
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
@@ -269,9 +266,7 @@ int udp_make_packet(void *buf, UNUSED size_t *buf_len, ipaddr_n_t src_ip,
 		htons(get_src_port(num_ports, probe_num, validation));
 
 	if (udp_send_substitutions) {
-		char *payload = (char *)&udp_header[1];
-		int payload_len = 0;
-
+		char *payload = get_udp_payload(udp_header, buf_len);
 		memset(payload, 0, MAX_UDP_PAYLOAD_LEN);
 
 		// Grab our random number generator
@@ -279,20 +274,20 @@ int udp_make_packet(void *buf, UNUSED size_t *buf_len, ipaddr_n_t src_ip,
 
 		// The buf is a stack var of our caller of size MAX_PACKET_SIZE
 		// Recalculate the payload using the loaded template
-		payload_len = udp_template_build(udp_template, payload,
+		int payload_len = udp_template_build(udp_template, payload,
 						 MAX_UDP_PAYLOAD_LEN, ip_header,
 						 udp_header, aes);
 		// Recalculate the total length of the packet
-		module_udp.packet_length = sizeof(struct ether_header) +
-					   sizeof(struct ip) +
-					   sizeof(struct udphdr) + payload_len;
+		module_udp.packet_length =
+					sizeof(struct ether_header) +
+					sizeof(struct ip) +
+					sizeof(struct udphdr) + payload_len;
 
 		// If success is zero, the template output was truncated
 		if (payload_len <= 0) {
 			log_fatal(
 				"udp",
 				"UDP payload template generated an empty payload");
-			exit(1);
 		}
 
 		// Update the IP and UDP headers to match the new payload length

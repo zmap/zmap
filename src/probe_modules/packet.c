@@ -192,8 +192,7 @@ void fs_populate_icmp_from_iphdr(struct ip *ip, size_t len, fieldset_t *fs)
 	// ICMP unreach comes from another server (not the one we sent a
 	// probe to); But we will fix up saddr to be who we sent the
 	// probe to, in case you care.
-	struct ip *ip_inner =
-		    (struct ip *)((char *)icmp + ICMP_UNREACH_HEADER_SIZE);
+	struct ip *ip_inner = get_inner_ip_header(icmp, len);
 	fs_modify_string(fs, "saddr",
 				 make_ip_str(ip_inner->ip_dst.s_addr), 1);
 	// Add other ICMP fields from within the header
@@ -203,8 +202,7 @@ void fs_populate_icmp_from_iphdr(struct ip *ip, size_t len, fieldset_t *fs)
 	if (icmp->icmp_code <= ICMP_UNREACH_PRECEDENCE_CUTOFF) {
 		fs_add_constchar(fs, "icmp_unreach_str", icmp_unreach_strings[icmp->icmp_code]);
 	} else {
-		fs_add_string(fs, "icmp_unreach_str", (char *)"unknown",
-			      0);
+		fs_add_constchar(fs, "icmp_unreach_str", "unknown");
 	}
 }
 

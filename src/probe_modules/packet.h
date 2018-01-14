@@ -141,6 +141,17 @@ static inline struct icmp *get_icmp_header(const struct ip *ip_hdr, uint32_t len
 	return (struct icmp *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
 }
 
+static inline char *get_udp_payload(const struct udphdr *udp, UNUSED uint32_t len) {
+	return (char *)(&udp[1]);
+}
+
+static inline struct ip* get_inner_ip_header(const struct icmp *icmp, uint32_t len) {
+	if (len < (ICMP_UNREACH_HEADER_SIZE + sizeof(struct ip))) {
+		return NULL;
+	}
+	return (struct ip *)((char *)icmp + ICMP_UNREACH_HEADER_SIZE);
+}
+
 
 // Note: caller must free return value
 char *make_ip_str(uint32_t ip);
