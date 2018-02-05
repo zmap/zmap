@@ -135,6 +135,11 @@ iterator_t *send_init(void)
 			    "global initialization for probe module failed.");
 		}
 	}
+
+	// only allow bandwidth or rate
+	if (zconf.bandwidth > 0 && zconf.rate > 0) {
+		log_fatal("send", "Must specify rate or bandwidth, or neither, not both.");
+	}
 	// convert specified bandwidth to packet rate
 	if (zconf.bandwidth > 0) {
 		size_t pkt_len = zconf.probe_module->packet_length;
