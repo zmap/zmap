@@ -168,6 +168,13 @@ iterator_t *send_init(void)
 			  "using bandwidth %lu bits/s for %zu byte probe, rate set to %d pkt/s",
 			  zconf.bandwidth, pkt_len/8, zconf.rate);
 	}
+	// handle rate, if specified
+	if (zconf.rate <= 0) {
+		log_fatal("send", "rate impossibly slow");
+	}
+	if (zconf.rate > 0) {
+		log_debug("send", "rate set to %d pkt/s", zconf.rate);
+	}
 	// Get the source hardware address, and give it to the probe
 	// module
 	if (!zconf.hw_mac_set) {
