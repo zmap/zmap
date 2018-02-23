@@ -69,6 +69,11 @@ void handle_packet(uint32_t buflen, const u_char *bytes)
 	assert(success_index < fs->len);
 	int is_success = fs_get_uint64_by_index(fs, success_index);
 
+	fieldset_t *o = NULL;
+	if (!evaluate_expression(zconf.filter.expression, fs)) {
+		goto cleanup;
+	}
+
 	if (is_success) {
 		zrecv.success_total++;
 		if (!is_repeat) {
@@ -96,16 +101,12 @@ void handle_packet(uint32_t buflen, const u_char *bytes)
 		}
 	}
 
-	fieldset_t *o = NULL;
 	// we need to translate the data provided by the probe module
 	// into a fieldset that can be used by the output module
 	if (!is_success && zconf.filter_unsuccessful) {
 		goto cleanup;
 	}
 	if (is_repeat && zconf.filter_duplicates) {
-		goto cleanup;
-	}
-	if (!evaluate_expression(zconf.filter.expression, fs)) {
 		goto cleanup;
 	}
 	o = translate_fieldset(fs, &zconf.fsconf.translation);
