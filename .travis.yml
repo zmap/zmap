@@ -18,6 +18,7 @@ addons:
       - python-dev
       - python-pip
       - libhiredis-dev
+      - clang-format-5.0
 before_install:
   - pip install --user sh
   - export PATH=/opt/bin:$PATH
@@ -28,6 +29,7 @@ script:
   - make
   - cd $TRAVIS_BUILD_DIR
   - python ./scripts/check_manfile.py
+  - ./checkFormat.sh
 compiler: clang
 notifications:
   email:

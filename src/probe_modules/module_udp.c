@@ -585,7 +585,7 @@ int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len,
 
 		switch (c->ftype) {
 
-		// These fields have a specified output length value
+			// These fields have a specified output length value
 
 		case UDP_DATA:
 			if (!(c->data && c->length))

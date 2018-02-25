@@ -144,9 +144,11 @@ iterator_t *send_init(void)
 	if (zconf.bandwidth > 0) {
 		size_t pkt_len = zconf.probe_module->packet_length;
 		pkt_len *= 8;
-		// 7 byte MAC preamble, 1 byte Start frame, 4 byte CRC, 12 byte inter-frame gap
+		// 7 byte MAC preamble, 1 byte Start frame, 4 byte CRC, 12 byte
+		// inter-frame gap
 		pkt_len += 8 * 24;
-		// adjust calculated length if less than the minimum size of an ethernet frame
+		// adjust calculated length if less than the minimum size of an
+		// ethernet frame
 		if (pkt_len < 84 * 8) {
 			pkt_len = 84 * 8;
 		}
@@ -164,9 +166,10 @@ iterator_t *send_init(void)
 				zconf.rate = 1;
 			}
 		}
-		log_debug("send",
-			  "using bandwidth %lu bits/s for %zu byte probe, rate set to %d pkt/s",
-			  zconf.bandwidth, pkt_len/8, zconf.rate);
+		log_debug(
+		    "send",
+		    "using bandwidth %lu bits/s for %zu byte probe, rate set to %d pkt/s",
+		    zconf.bandwidth, pkt_len / 8, zconf.rate);
 	}
 	// log rate, if explicitly specified
 	if (zconf.rate <= 0) {
@@ -332,6 +335,7 @@ int send_run(sock_t st, shard_t *s)
 					double multiplier = (double)(count - last_count) /
 						 (t - last_time) /
 						 (zconf.rate / zconf.senders);
+<<<<<<< HEAD
 					uint32_t old_delay = delay;
 					delay *= multiplier;
 					if (delay == old_delay) {
@@ -341,6 +345,12 @@ int send_run(sock_t st, shard_t *s)
 							delay *= 0.5;
 						}
 					}
+=======
+					if (delay < 1)
+						log_fatal(
+						    "send",
+						    "send rate exceeds system capabilities");
+>>>>>>> Add format checking to travis, run format.sh based upon style file, rerun format.sh
 					last_count = count;
 					last_time = t;
 				}
