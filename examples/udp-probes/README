@@ -24,6 +24,7 @@ dns_53_queryAwww.google.it.pkt     This probe queries for the domain www.google.
 dns_53_queryAwww.google.com.pkt    This probe queries for the domain www.google.com A record over UDP port 53
 ipmi_623.pkt            This probe triggers a Get Channel Authentication reply from IPMI endpoints on UDP port 623
 mdns_5353.pkt           This probe triggers a response from mDNS/Avahi/Bonjour discovery services on UDP port 5353
+memcache_11211.pkt      This probe triggers a response from memcached on UDP port 11211 (stats items).
 mssql_1434.pkt          This probe triggers a response from Microsoft SQL Server discovery services on UDP port 1434
 natpmp_5351.pkt         This probe triggers a response from NATPMP-enabled devices on UDP port 5351
 netbios_137.pkt         This probe triggers a status reply from NetBIOS services on UDP port 137
