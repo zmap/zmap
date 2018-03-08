@@ -135,6 +135,11 @@ iterator_t *send_init(void)
 			    "global initialization for probe module failed.");
 		}
 	}
+
+	// only allow bandwidth or rate
+	if (zconf.bandwidth > 0 && zconf.rate > 0) {
+		log_fatal("send", "Must specify rate or bandwidth, or neither, not both.");
+	}
 	// convert specified bandwidth to packet rate
 	if (zconf.bandwidth > 0) {
 		size_t pkt_len = zconf.probe_module->packet_length;
@@ -162,6 +167,13 @@ iterator_t *send_init(void)
 		log_debug("send",
 			  "using bandwidth %lu bits/s for %zu byte probe, rate set to %d pkt/s",
 			  zconf.bandwidth, pkt_len/8, zconf.rate);
+	}
+	// log rate, if explicitly specified
+	if (zconf.rate <= 0) {
+		log_fatal("send", "rate impossibly slow");
+	}
+	if (zconf.rate > 0 && zconf.bandwidth <= 0) {
+		log_debug("send", "rate set to %d pkt/s", zconf.rate);
 	}
 	// Get the source hardware address, and give it to the probe
 	// module
