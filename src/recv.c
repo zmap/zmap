@@ -108,6 +108,7 @@ void handle_packet(uint32_t buflen, const u_char *bytes)
 	if (!evaluate_expression(zconf.filter.expression, fs)) {
 		goto cleanup;
 	}
+	zrecv.filter_success++;
 	o = translate_fieldset(fs, &zconf.fsconf.translation);
 	if (zconf.output_module && zconf.output_module->process_ip) {
 		zconf.output_module->process_ip(o);
@@ -161,7 +162,7 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 		} else {
 			recv_packets();
 			if (zconf.max_results &&
-			    zrecv.success_unique >= zconf.max_results) {
+			    zrecv.filter_success >= zconf.max_results) {
 				break;
 			}
 		}
