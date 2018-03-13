@@ -457,7 +457,7 @@ int main(int argc, char *argv[])
 		print_probe_modules();
 		exit(EXIT_SUCCESS);
 	}
-	if (args.vpn_given) {
+	if (args.iplayer_given) {
 		zconf.send_ip_pkts = 1;
 		zconf.gw_mac_set = 1;
 		memset(zconf.gw_mac, 0, MAC_ADDR_LEN);

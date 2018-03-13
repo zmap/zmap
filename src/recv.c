@@ -26,20 +26,17 @@
 #include "output_modules/output_modules.h"
 
 static u_char fake_eth_hdr[65535];
-
 // bitmap of observed IP addresses
 static uint8_t **seen = NULL;
 
 void handle_packet(uint32_t buflen, const u_char *bytes)
 {
-	if ((sizeof(struct ip) +
-	     (zconf.send_ip_pkts ? 0 : sizeof(struct ether_header))) > buflen) {
+	if ((sizeof(struct ip) + zconf.data_link_size) > buflen) {
 		// buffer not large enough to contain ethernet
 		// and ip headers. further action would overrun buf
 		return;
 	}
-	struct ip *ip_hdr = (struct ip *)&bytes[(
-	    zconf.send_ip_pkts ? 0 : sizeof(struct ether_header))];
+	struct ip *ip_hdr = (struct ip *)&bytes[zconf.data_link_size];
 
 	uint32_t src_ip = ip_hdr->ip_src.s_addr;
 

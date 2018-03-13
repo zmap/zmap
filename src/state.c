@@ -61,7 +61,8 @@ struct state_conf zconf = {.log_level = LOG_INFO,
 			   .metadata_filename = NULL,
 			   .notes = NULL,
 			   .custom_metadata_str = NULL,
-			   .recv_ready = 0};
+			   .recv_ready = 0,
+			   .data_link_size = 0};
 
 // global sender stats and defaults
 struct state_send zsend = {
