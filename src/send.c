@@ -386,7 +386,9 @@ int send_run(sock_t st, shard_t *s)
 				zconf.probe_module->print_packet(stdout, buf);
 				unlock_file(stdout);
 			} else {
-				void *contents = buf;
+				void *contents =
+				    buf + zconf.send_ip_pkts *
+					      sizeof(struct ether_header);
 				int any_sends_successful = 0;
 				for (int i = 0; i < attempts; ++i) {
 					int rc = send_packet(st, contents,
