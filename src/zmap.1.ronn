@@ -110,8 +110,8 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
    * `-i`, `--interface=name`:
      Network interface to use
 
-   * `-X`, `--vpn`:
-     Send IP layer packets instead of ethernet packets (for non-Ethernet VPNs)
+   * `-X`, `--iplayer`:
+     Send IP layer packets instead of ethernet packets (for non-Ethernet interface)
 
 ### PROBE OPTIONS ###
 
