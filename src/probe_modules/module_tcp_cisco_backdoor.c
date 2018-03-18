@@ -44,16 +44,16 @@ static int synscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	return EXIT_SUCCESS;
 }
 
-        // instead of settings sequence number to be random for validation
-        // let's instead set to something static so that we can easily
-        // set acknowledgement number. I don't know how integer overflow
-        // is going to act in this.
-        // uint32_t tcp_seq = validation[0];
-        // From Mandiant
-        // 1. To initiate the process, a uniquely crafted TCP SYN packet is sent
-        //	to port 80 of the “implanted” router. It is important to note that
-        //	the difference between the sequence and acknowledgment numbers must
-        //	be set to 0xC123D. Also the ACK number doesn’t need to be zero.
+	// instead of settings sequence number to be random for validation
+	// let's instead set to something static so that we can easily
+	// set acknowledgement number. I don't know how integer overflow
+	// is going to act in this.
+	// uint32_t tcp_seq = validation[0];
+	// From Mandiant
+	// 1. To initiate the process, a uniquely crafted TCP SYN packet is sent
+	//	to port 80 of the “implanted” router. It is important to note
+	//that 	the difference between the sequence and acknowledgment numbers
+	//must 	be set to 0xC123D. Also the ACK number doesn’t need to be zero.
 
 #define BACKDOOR_SEQ 0x3D120C00
 //#define BACKDOOR_SEQ 0x000C123D // wrong byte order
