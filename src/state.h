@@ -169,6 +169,8 @@ struct state_recv {
 	uint32_t cooldown_unique;
 	// valid responses NOT classified as "success"
 	uint32_t failure_total;
+	// valid responses that passed the filter
+	uint32_t filter_success;
 	// how many packets did we receive that were marked as being the first
 	// fragment in a stream
 	uint32_t ip_fragments;
