@@ -27,6 +27,14 @@
 
 probe_module_t module_icmp6_echoscan;
 
+int icmp6_echo_global_initialize(struct state_conf *conf)
+{
+	// Only look at received packets destined to the specified scanning address (useful for parallel zmap scans)
+	asprintf(&module_icmp6_echoscan.pcap_filter, "%s && ip6 dst host %s", module_icmp6_echoscan.pcap_filter, conf->ipv6_source_ip);
+
+	return EXIT_SUCCESS;
+}
+
 static int icmp6_echo_init_perthread(void* buf, macaddr_t *src,
 		macaddr_t *gw, __attribute__((unused)) port_h_t dst_port,
 		__attribute__((unused)) void **arg_ptr)
@@ -228,6 +236,7 @@ probe_module_t module_icmp6_echoscan = {
 	.pcap_filter = "icmp6 && (ip6[40] == 129 || ip6[40] == 3 || ip6[40] == 1 || ip6[40] == 2 || ip6[40] == 4)", // and icmp6[0]=!8",
 	.pcap_snaplen =  118, // 14 ethernet header + 40 IPv6 header + 8 ICMPv6 header + 40 inner IPv6 header + 8 inner ICMPv6 header + 8 payload
 	.port_args = 0,
+	.global_initialize = &icmp6_echo_global_initialize,
 	.thread_initialize = &icmp6_echo_init_perthread,
 	.make_packet = &icmp6_echo_make_packet,
 	.print_packet = &icmp6_echo_print_packet,
