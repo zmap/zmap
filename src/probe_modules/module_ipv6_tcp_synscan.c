@@ -9,6 +9,11 @@
 
 // probe module for performing TCP SYN scans over IPv6
 
+// Needed for asprintf
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE 1
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -29,7 +34,9 @@ int ipv6_synscan_global_initialize(struct state_conf *state)
 	num_ports = state->source_port_last - state->source_port_first + 1;
 
 	// Only look at received packets destined to the specified scanning address (useful for parallel zmap scans)
-	asprintf(&module_ipv6_tcp_synscan.pcap_filter, "%s && ip6 dst host %s", module_ipv6_tcp_synscan.pcap_filter, state->ipv6_source_ip);
+	if (asprintf((char ** restrict) &module_ipv6_tcp_synscan.pcap_filter, "%s && ip6 dst host %s", module_ipv6_tcp_synscan.pcap_filter, state->ipv6_source_ip) == -1) {
+		return 1;
+	}
 
 	return EXIT_SUCCESS;
 }

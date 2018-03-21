@@ -9,6 +9,11 @@
 
 // probe module for performing arbitrary UDP scans over IPv6
 
+// Needed for asprintf
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE 1
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -121,7 +126,9 @@ int ipv6_udp_global_initialize(struct state_conf *conf) {
 	udp_send_msg_len = strlen(udp_send_msg);
 
 	// Only look at received packets destined to the specified scanning address (useful for parallel zmap scans)
-	asprintf(&module_ipv6_udp.pcap_filter, "%s && ip6 dst host %s", module_ipv6_udp.pcap_filter, conf->ipv6_source_ip);
+	if (asprintf((char ** restrict) &module_ipv6_udp.pcap_filter, "%s && ip6 dst host %s", module_ipv6_udp.pcap_filter, conf->ipv6_source_ip) == -1) {
+		return 1;
+	}
 
 	if (!(conf->probe_args && strlen(conf->probe_args) > 0))
 		return(0);

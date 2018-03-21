@@ -9,6 +9,10 @@
 // probe module for performing TCP SYN OPT scans over IPv6
 // based on TCP SYN module, with changes by Quirin Scheitle and Markus Sosnowski
 
+// Needed for asprintf
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE 1
+#endif
 
 
 #include <stdlib.h>
@@ -46,7 +50,9 @@ int ipv6_tcp_synopt_global_initialize(struct state_conf *conf)
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
 
 	// Only look at received packets destined to the specified scanning address (useful for parallel zmap scans)
-	asprintf(&module_ipv6_tcp_synopt.pcap_filter, "%s && ip6 dst host %s", module_ipv6_tcp_synopt.pcap_filter, conf->ipv6_source_ip);
+	if (asprintf((char ** restrict) &module_ipv6_tcp_synopt.pcap_filter, "%s && ip6 dst host %s", module_ipv6_tcp_synopt.pcap_filter, conf->ipv6_source_ip) == -1) {
+		return 1;
+	}
 
 	if (!(conf->probe_args && strlen(conf->probe_args) > 0)){
 		printf("no args, using empty tcp options\n");
