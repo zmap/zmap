@@ -73,7 +73,7 @@ void handle_packet(uint32_t buflen, const u_char *bytes)
 		if (buflen > sizeof(fake_eth_hdr)) {
 			buflen = sizeof(fake_eth_hdr);
 		}
-		memcpy(&fake_eth_hdr[sizeof(struct ether_header)], bytes,
+		memcpy(&fake_eth_hdr[sizeof(struct ether_header)], bytes+zconf.data_link_size,
 		       buflen);
 		bytes = fake_eth_hdr;
 	}
