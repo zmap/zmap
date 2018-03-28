@@ -88,6 +88,7 @@ struct state_recv zrecv = {
     .cooldown_unique = 0,
     .cooldown_total = 0,
     .failure_total = 0,
+    .filter_success = 0,
     .ip_fragments = 0,
     .complete = 0,
     .pcap_recv = 0,

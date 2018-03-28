@@ -135,12 +135,18 @@ iterator_t *send_init(void)
 			    "global initialization for probe module failed.");
 		}
 	}
-	// concert specified bandwidth to packet rate
+
+	// only allow bandwidth or rate
+	if (zconf.bandwidth > 0 && zconf.rate > 0) {
+		log_fatal("send", "Must specify rate or bandwidth, or neither, not both.");
+	}
+	// convert specified bandwidth to packet rate
 	if (zconf.bandwidth > 0) {
 		size_t pkt_len = zconf.probe_module->packet_length;
 		pkt_len *= 8;
-		pkt_len += 8 * 24; // 7 byte MAC preamble, 1 byte Start frame,
-		// 4 byte CRC, 12 byte inter-frame gap
+		// 7 byte MAC preamble, 1 byte Start frame, 4 byte CRC, 12 byte inter-frame gap
+		pkt_len += 8 * 24;
+		// adjust calculated length if less than the minimum size of an ethernet frame
 		if (pkt_len < 84 * 8) {
 			pkt_len = 84 * 8;
 		}
@@ -159,8 +165,15 @@ iterator_t *send_init(void)
 			}
 		}
 		log_debug("send",
-			  "using bandwidth %lu bits/s, rate set to %d pkt/s",
-			  zconf.bandwidth, zconf.rate);
+			  "using bandwidth %lu bits/s for %zu byte probe, rate set to %d pkt/s",
+			  zconf.bandwidth, pkt_len/8, zconf.rate);
+	}
+	// log rate, if explicitly specified
+	if (zconf.rate <= 0) {
+		log_fatal("send", "rate impossibly slow");
+	}
+	if (zconf.rate > 0 && zconf.bandwidth <= 0) {
+		log_debug("send", "rate set to %d pkt/s", zconf.rate);
 	}
 	// Get the source hardware address, and give it to the probe
 	// module

@@ -77,6 +77,8 @@ void json_metadata(FILE *file)
 			       json_object_new_int(zconf.max_runtime));
 	json_object_object_add(obj, "max_results",
 			       json_object_new_int(zconf.max_results));
+	json_object_object_add(obj, "output_results",
+			       json_object_new_int(zrecv.filter_success));
 	if (zconf.iface) {
 		json_object_object_add(obj, "iface",
 				       json_object_new_string(zconf.iface));
