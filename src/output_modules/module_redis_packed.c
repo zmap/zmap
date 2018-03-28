@@ -36,14 +36,14 @@ int redismodule_init(struct state_conf *conf, char **fields, int fieldlens)
 	buffer = xcalloc(BUFFER_SIZE, sizeof(uint32_t));
 	buffer_fill = 0;
 	for (int i = 0; i < fieldlens; i++) {
-		if (!strcmp(fields[i], "saddr-raw")) {
+		if (!strcmp(fields[i], "saddr_raw")) {
 			field_index = i;
 			break;
 		}
 	}
 	if (field_index < 0) {
 		log_fatal("redis-module",
-			  "saddr-raw not included in output-fields");
+			  "saddr_raw not included in output-fields");
 	}
 
 	redisconf_t rconf;
