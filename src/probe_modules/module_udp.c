@@ -226,6 +226,12 @@ int udp_global_initialize(struct state_conf *conf)
 			 MAX_UDP_PAYLOAD_LEN, udp_send_msg_len);
 		udp_send_msg_len = MAX_UDP_PAYLOAD_LEN;
 	}
+
+	module_udp.packet_length = sizeof(struct ether_header) +
+				   sizeof(struct ip) + sizeof(struct udphdr) +
+				   udp_send_msg_len;
+	assert(module_udp.packet_length <= MAX_PACKET_SIZE);
+
 	free(args);
 	return EXIT_SUCCESS;
 }
@@ -264,10 +270,6 @@ int udp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 
 	char *payload = (char *)(&udp_header[1]);
 
-	module_udp.packet_length = sizeof(struct ether_header) +
-				   sizeof(struct ip) + sizeof(struct udphdr) +
-				   udp_send_msg_len;
-	assert(module_udp.packet_length <= MAX_PACKET_SIZE);
 	memcpy(payload, udp_send_msg, udp_send_msg_len);
 
 	// Seed our random number generator with the global generator
@@ -874,7 +876,8 @@ static fielddef_t fields[] = {
 
 probe_module_t module_udp = {
     .name = "udp",
-    .packet_length = 1,
+    .packet_length = sizeof(struct ether_header) + sizeof(struct ip) +
+                     sizeof(struct udphdr) + MAX_UDP_PAYLOAD_LEN,
     .pcap_filter = "udp || icmp",
     .pcap_snaplen = 1500,
     .port_args = 1,
