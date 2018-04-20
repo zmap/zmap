@@ -63,7 +63,6 @@ int tcpsynopt_global_initialize(struct state_conf *conf)
 	*c++ = 0;
 
 	if (strcmp(args, "hex") == 0) {
-		printf("parsing hex options: %s \n", c);
 		tcp_send_opts_len = strlen(c) / 2;
 		if(strlen(c)/2 %4 != 0){
 			printf("tcp options are not multiple of 4, please pad with NOPs (0x01)!\n");
