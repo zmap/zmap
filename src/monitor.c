@@ -121,8 +121,10 @@ double compute_remaining_time(double age, uint64_t tried_sent)
 	if (!zsend.complete) {
 		double remaining[] = {INFINITY, INFINITY, INFINITY, INFINITY};
 		if (zsend.max_targets) {
-			double done = (double)tried_sent /
-				      (zsend.max_targets * zconf.packet_streams / zconf.total_shards);
+			double done =
+			    (double)tried_sent /
+			    (zsend.max_targets * zconf.packet_streams /
+			     zconf.total_shards);
 			remaining[0] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;
 		}
@@ -137,7 +139,8 @@ double compute_remaining_time(double age, uint64_t tried_sent)
 		}
 		if (zsend.max_index) {
 			double done = (double)tried_sent /
-				      (zsend.max_index*zconf.packet_streams / zconf.total_shards);
+				      (zsend.max_index * zconf.packet_streams /
+				       zconf.total_shards);
 			remaining[3] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;
 		}
@@ -184,7 +187,8 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 	time_string((int)age, 0, exp->time_past_str, NUMBER_STR_LEN);
 
 	// export recv statistics
-	exp->recv_rate = ceil((recv_success - intrnl->last_recv_net_success) / delta);
+	exp->recv_rate =
+	    ceil((recv_success - intrnl->last_recv_net_success) / delta);
 	number_string(exp->recv_rate, exp->recv_rate_str, NUMBER_STR_LEN);
 	exp->recv_avg = recv_success / age;
 	number_string(exp->recv_avg, exp->recv_avg_str, NUMBER_STR_LEN);
