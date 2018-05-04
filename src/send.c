@@ -311,26 +311,12 @@ int send_run(sock_t st, shard_t *s)
 	int attempts = zconf.num_retries + 1;
 	uint32_t idx = 0;
 	while (1) {
-		// Adaptive timing delay
-		send_rate = (double)zconf.rate / zconf.senders;
-		if (count && delay > 0) {
-			if (send_rate < slow_rate) {
-				double t = now();
-				double last_rate = (1.0 / (t - last_time));
+		for (int i = 0; i < zconf.packet_streams; i++) {
 
-				sleep_time *= ((last_rate / send_rate) + 1) / 2;
-				ts.tv_sec = sleep_time / nsec_per_sec;
-				ts.tv_nsec = sleep_time % nsec_per_sec;
-				log_debug("sleep",
-					  "sleep for %d sec, %ld nanoseconds",
-					  ts.tv_sec, ts.tv_nsec);
-				while (nanosleep(&ts, &rem) == -1) {
-				}
-				last_time = t;
-			} else {
-				for (vi = delay; vi--;)
-					;
-				if (!interval || (count % interval == 0)) {
+			// Adaptive timing delay
+			send_rate = (double)zconf.rate / zconf.senders;
+			if (count && delay > 0) {
+				if (send_rate < slow_rate) {
 					double t = now();
 					assert(count > last_count);
 					assert(t > last_time);
@@ -347,39 +333,65 @@ int send_run(sock_t st, shard_t *s)
 							delay *= 0.5;
 						}
 					}
-					last_count = count;
 					last_time = t;
+				} else {
+					for (vi = delay; vi--;)
+						;
+					if (!interval ||
+					    (count % interval == 0)) {
+						double t = now();
+						assert(count > last_count);
+						assert(t > last_time);
+						double multiplier =
+						    (double)(count -
+							     last_count) /
+						    (t - last_time) /
+						    (zconf.rate /
+						     zconf.senders);
+						uint32_t old_delay = delay;
+						delay *= multiplier;
+						if (delay == old_delay) {
+							if (multiplier > 1.0) {
+								delay *= 2;
+							} else if (multiplier <
+								   1.0) {
+								delay *= 0.5;
+							}
+						}
+						last_count = count;
+						last_time = t;
+					}
 				}
 			}
-		}
 
-		// Check all the ways a send thread could finish and break out
-		// of the send loop.
-		if (zrecv.complete) {
-			break;
-		}
-		if (s->state.max_targets &&
-		    (s->state.sent >= s->state.max_targets ||
-		     s->state.tried_sent >= s->state.max_targets)) {
-			log_debug(
-			    "send",
-			    "send thread %hhu finished (max targets of %u reached)",
-			    s->thread_id, s->state.max_targets);
-			break;
-		}
-		if (zconf.max_runtime &&
-		    zconf.max_runtime <= now() - zsend.start) {
-			break;
-		}
-		if (current_ip == ZMAP_SHARD_DONE) {
-			log_debug("send",
-				  "send thread %hhu finished, shard depleted",
-				  s->thread_id);
-			break;
-		}
+			// Check all the ways a send thread could finish and
+			// break out of the send loop.
+			if (zrecv.complete) {
+				goto cleanup;
+			}
+			if (s->state.max_targets &&
+			    (s->state.sent >= s->state.max_targets ||
+			     s->state.tried_sent >= s->state.max_targets)) {
+				log_debug(
+				    "send",
+				    "send thread %hhu finished (max targets of %u reached)",
+				    s->thread_id, s->state.max_targets);
+				goto cleanup;
+			}
+			if (zconf.max_runtime &&
+			    zconf.max_runtime <= now() - zsend.start) {
+				goto cleanup;
+			}
+			if (current_ip == ZMAP_SHARD_DONE) {
+				log_debug(
+				    "send",
+				    "send thread %hhu finished, shard depleted",
+				    s->thread_id);
+				goto cleanup;
+			}
 
-		// Actually send a packet.
-		for (int i = 0; i < zconf.packet_streams; i++) {
+			// Actually send a packet.
+
 			count++;
 			uint32_t src_ip = get_src_ip(current_ip, i);
 			uint32_t validation[VALIDATE_BYTES / sizeof(uint32_t)];
@@ -431,10 +443,10 @@ int send_run(sock_t st, shard_t *s)
 				idx++;
 				idx &= 0xFF;
 			}
+			// Track the number of hosts we actually scanned.
+			s->state.sent++;
+			s->state.tried_sent++;
 		}
-		// Track the number of hosts we actually scanned.
-		s->state.sent++;
-		s->state.tried_sent++;
 
 		// Get the next IP to scan
 		current_ip = shard_get_next_ip(s);

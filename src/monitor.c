@@ -122,7 +122,7 @@ double compute_remaining_time(double age, uint64_t tried_sent)
 		double remaining[] = {INFINITY, INFINITY, INFINITY, INFINITY};
 		if (zsend.max_targets) {
 			double done = (double)tried_sent /
-				      (zsend.max_targets / zconf.total_shards);
+				      (zsend.max_targets * zconf.packet_streams / zconf.total_shards);
 			remaining[0] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;
 		}
@@ -137,7 +137,7 @@ double compute_remaining_time(double age, uint64_t tried_sent)
 		}
 		if (zsend.max_index) {
 			double done = (double)tried_sent /
-				      (zsend.max_index / zconf.total_shards);
+				      (zsend.max_index*zconf.packet_streams / zconf.total_shards);
 			remaining[3] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;
 		}
@@ -162,7 +162,7 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 	uint32_t total_tried_sent = iterator_get_tried_sent(it);
 	uint32_t total_fail = iterator_get_fail(it);
 	uint32_t total_recv = zrecv.pcap_recv;
-	uint32_t recv_success = zrecv.success_unique;
+	uint32_t recv_success = zrecv.filter_success;
 	uint32_t app_success = zrecv.app_success_unique;
 	double cur_time = now();
 	double age = cur_time - zsend.start; // time of entire scan
@@ -184,7 +184,7 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 	time_string((int)age, 0, exp->time_past_str, NUMBER_STR_LEN);
 
 	// export recv statistics
-	exp->recv_rate = (recv_success - intrnl->last_recv_net_success) / delta;
+	exp->recv_rate = ceil((recv_success - intrnl->last_recv_net_success) / delta);
 	number_string(exp->recv_rate, exp->recv_rate_str, NUMBER_STR_LEN);
 	exp->recv_avg = recv_success / age;
 	number_string(exp->recv_avg, exp->recv_avg_str, NUMBER_STR_LEN);
@@ -224,7 +224,7 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 		    cur_time - intrnl->min_hitrate_start;
 	}
 	if (!zsend.complete) {
-		exp->send_rate = (total_sent - intrnl->last_sent) / delta;
+		exp->send_rate = ceil((total_sent - intrnl->last_sent) / delta);
 		number_string(exp->send_rate, exp->send_rate_str,
 			      NUMBER_STR_LEN);
 		exp->send_rate_avg = total_sent / age;
