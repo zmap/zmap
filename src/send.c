@@ -334,9 +334,10 @@ int send_run(sock_t st, shard_t *s)
 					double t = now();
 					assert(count > last_count);
 					assert(t > last_time);
-					double multiplier = (double)(count - last_count) /
-						 (t - last_time) /
-						 (zconf.rate / zconf.senders);
+					double multiplier =
+					    (double)(count - last_count) /
+					    (t - last_time) /
+					    (zconf.rate / zconf.senders);
 <<<<<<< HEAD
 					uint32_t old_delay = delay;
 					delay *= multiplier;
