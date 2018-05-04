@@ -18,6 +18,8 @@ addons:
       - python-dev
       - python-pip
       - libhiredis-dev
+      - libllvm6.0
+      - libstdc++6
 before_install:
   - pip install --user sh
   - export PATH=/opt/bin:$PATH
