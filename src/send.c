@@ -138,9 +138,7 @@ iterator_t *send_init(void)
 
 	// only allow bandwidth or rate
 	if (zconf.bandwidth > 0 && zconf.rate > 0) {
-		log_fatal(
-		    "send",
-		    "Must specify rate or bandwidth, or neither, not both.");
+		log_fatal("send", "Must specify rate or bandwidth, or neither, not both.");
 	}
 	// convert specified bandwidth to packet rate
 	if (zconf.bandwidth > 0) {
@@ -334,11 +332,9 @@ int send_run(sock_t st, shard_t *s)
 					double t = now();
 					assert(count > last_count);
 					assert(t > last_time);
-					double multiplier =
-					    (double)(count - last_count) /
-					    (t - last_time) /
-					    (zconf.rate / zconf.senders);
-<<<<<<< HEAD
+					double multiplier = (double)(count - last_count) /
+						 (t - last_time) /
+						 (zconf.rate / zconf.senders);
 					uint32_t old_delay = delay;
 					delay *= multiplier;
 					if (delay == old_delay) {
@@ -348,12 +344,6 @@ int send_run(sock_t st, shard_t *s)
 							delay *= 0.5;
 						}
 					}
-=======
-					if (delay < 1)
-						log_fatal(
-						    "send",
-						    "send rate exceeds system capabilities");
->>>>>>> Add format checking to travis, run format.sh based upon style file, rerun format.sh
 					last_count = count;
 					last_time = t;
 				}
