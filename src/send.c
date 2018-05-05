@@ -138,7 +138,9 @@ iterator_t *send_init(void)
 
 	// only allow bandwidth or rate
 	if (zconf.bandwidth > 0 && zconf.rate > 0) {
-		log_fatal("send", "Must specify rate or bandwidth, or neither, not both.");
+		log_fatal(
+		    "send",
+		    "Must specify rate or bandwidth, or neither, not both.");
 	}
 	// convert specified bandwidth to packet rate
 	if (zconf.bandwidth > 0) {
@@ -332,9 +334,10 @@ int send_run(sock_t st, shard_t *s)
 					double t = now();
 					assert(count > last_count);
 					assert(t > last_time);
-					double multiplier = (double)(count - last_count) /
-						 (t - last_time) /
-						 (zconf.rate / zconf.senders);
+					double multiplier =
+					    (double)(count - last_count) /
+					    (t - last_time) /
+					    (zconf.rate / zconf.senders);
 					uint32_t old_delay = delay;
 					delay *= multiplier;
 					if (delay == old_delay) {
