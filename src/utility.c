@@ -29,7 +29,7 @@ void add_to_array(char* to_add) {
         //log fatal here
         log_fatal("parse", "over 256 source IP addresses provided");
     }
-
+    log_debug("SEND", "ipaddress: %s\n", to_add);
     zconf.source_ip_addresses[zconf.number_source_ips] = string_to_ip_address(to_add);
     zconf.number_source_ips++;
 }
@@ -53,7 +53,9 @@ void parse_source_ip_addresses(char given_string[]) {
         }
     } else if(dash) {
         *dash = '\0';
-        in_addr_t start = ntohl(string_to_ip_address(dash));
+        log_debug("SEND", "address: %s\n", given_string);
+        log_debug("SEND", "address: %s\n", dash+1);
+        in_addr_t start = ntohl(string_to_ip_address(given_string));
         in_addr_t end = ntohl(string_to_ip_address(dash+1)) + 1;
         while(start != end) {
             struct in_addr temp;

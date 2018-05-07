@@ -130,13 +130,12 @@ static void start_zmap(void)
 				  " Try specifying a source address (-S).",
 				  zconf.iface);
 		}
-		inet_ntop(AF_INET, &default_ip, zconf.source_ip_addresses[0],
-			  INET_ADDRSTRLEN);
+		zconf.source_ip_addresses[0] = htonl(default_ip.s_addr);
 		zconf.number_source_ips++;
 		log_debug(
 		    "zmap",
 		    "no source IP address given. will use default address: %s.",
-		    zconf.source_ip_addresses[0]);
+		    inet_ntoa(default_ip));
 	}
 	if (!zconf.gw_mac_set) {
 		struct in_addr gw_ip;

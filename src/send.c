@@ -186,18 +186,17 @@ iterator_t *send_init(void)
 	// setup signal handlers for changing scan speed
 	signal(SIGUSR1, sig_handler_increase_speed);
 	signal(SIGUSR2, sig_handler_decrease_speed);
-
 	zsend.start = now();
 	return it;
 }
 
 static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
 {
-	if (zconf.number_source_ips == 1) {
-		return htonl(zconf.source_ip_addresses[0]);
+  if (zconf.number_source_ips == 1) {
+		return zconf.source_ip_addresses[0];
 	}
-	return htonl(zconf.source_ip_addresses[ntohl(dst) + srcip_offset + local_offset] %
-		      zconf.number_source_ips);
+	return zconf.source_ip_addresses[(ntohl(dst) + srcip_offset + local_offset) %
+		      zconf.number_source_ips];
 }
 
 // one sender thread
