@@ -695,7 +695,7 @@ int main(int argc, char *argv[])
 		zconf.target_port = args.target_port_arg;
 	}
 	if (args.source_ip_given) {
-			parse_source_ip_addresses(args.source_ip_arg);
+		parse_source_ip_addresses(args.source_ip_arg);
 	}
 	if (args.gateway_mac_given) {
 		if (!parse_mac(zconf.gw_mac, args.gateway_mac_arg)) {

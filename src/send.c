@@ -92,7 +92,8 @@ iterator_t *send_init(void)
 	it = iterator_init(zconf.senders, zconf.shard_num, zconf.total_shards);
 	// determine the source address offset from which we'll send packets
 	log_debug("send", "srcip_first: %u", zconf.source_ip_addresses[0]);
-	log_debug("send", "srcip_last: %u", zconf.source_ip_addresses[zconf.number_source_ips]);
+	log_debug("send", "srcip_last: %u",
+		  zconf.source_ip_addresses[zconf.number_source_ips]);
 	if (zconf.number_source_ips == 1) {
 		srcip_offset = 0;
 	} else {
@@ -104,8 +105,8 @@ iterator_t *send_init(void)
 	// process the source port range that ZMap is allowed to use
 	num_src_ports = zconf.source_port_last - zconf.source_port_first + 1;
 	log_debug("send", "will send from %i address%s on %u source ports",
-		  zconf.number_source_ips, ((zconf.number_source_ips == 1) ? "" : "es"),
-		  num_src_ports);
+		  zconf.number_source_ips,
+		  ((zconf.number_source_ips == 1) ? "" : "es"), num_src_ports);
 	// global initialization for send module
 	assert(zconf.probe_module);
 	if (zconf.probe_module->global_initialize) {
@@ -118,15 +119,19 @@ iterator_t *send_init(void)
 
 	// only allow bandwidth or rate
 	if (zconf.bandwidth > 0 && zconf.rate > 0) {
-		log_fatal("send", "Must specify rate or bandwidth, or neither, not both.");
+		log_fatal(
+		    "send",
+		    "Must specify rate or bandwidth, or neither, not both.");
 	}
 	// convert specified bandwidth to packet rate
 	if (zconf.bandwidth > 0) {
 		size_t pkt_len = zconf.probe_module->packet_length;
 		pkt_len *= 8;
-		// 7 byte MAC preamble, 1 byte Start frame, 4 byte CRC, 12 byte inter-frame gap
+		// 7 byte MAC preamble, 1 byte Start frame, 4 byte CRC, 12 byte
+		// inter-frame gap
 		pkt_len += 8 * 24;
-		// adjust calculated length if less than the minimum size of an ethernet frame
+		// adjust calculated length if less than the minimum size of an
+		// ethernet frame
 		if (pkt_len < 84 * 8) {
 			pkt_len = 84 * 8;
 		}
@@ -144,9 +149,10 @@ iterator_t *send_init(void)
 				zconf.rate = 1;
 			}
 		}
-		log_debug("send",
-			  "using bandwidth %lu bits/s for %zu byte probe, rate set to %d pkt/s",
-			  zconf.bandwidth, pkt_len/8, zconf.rate);
+		log_debug(
+		    "send",
+		    "using bandwidth %lu bits/s for %zu byte probe, rate set to %d pkt/s",
+		    zconf.bandwidth, pkt_len / 8, zconf.rate);
 	}
 	// log rate, if explicitly specified
 	if (zconf.rate <= 0) {
@@ -192,11 +198,12 @@ iterator_t *send_init(void)
 
 static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
 {
-  if (zconf.number_source_ips == 1) {
+	if (zconf.number_source_ips == 1) {
 		return zconf.source_ip_addresses[0];
 	}
-	return zconf.source_ip_addresses[(ntohl(dst) + srcip_offset + local_offset) %
-		      zconf.number_source_ips];
+	return zconf
+	    .source_ip_addresses[(ntohl(dst) + srcip_offset + local_offset) %
+				 zconf.number_source_ips];
 }
 
 // one sender thread
@@ -307,9 +314,10 @@ int send_run(sock_t st, shard_t *s)
 					double t = now();
 					assert(count > last_count);
 					assert(t > last_time);
-					double multiplier = (double)(count - last_count) /
-						 (t - last_time) /
-						 (zconf.rate / zconf.senders);
+					double multiplier =
+					    (double)(count - last_count) /
+					    (t - last_time) /
+					    (zconf.rate / zconf.senders);
 					uint32_t old_delay = delay;
 					delay *= multiplier;
 					if (delay == old_delay) {
