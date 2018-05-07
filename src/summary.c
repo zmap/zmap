@@ -253,9 +253,9 @@ void json_metadata(FILE *file)
 				       json_object_new_string(mac_buf));
 	}
 	json_object_object_add(obj, "source_ip_first",
-			       json_object_new_string(zconf.source_ip_first));
+			       json_object_new_string(zconf.source_ip_addresses[0]));
 	json_object_object_add(obj, "source_ip_last",
-			       json_object_new_string(zconf.source_ip_last));
+			       json_object_new_string(zconf.source_ip_addresses[zconf.number_source_ips]));
 	if (zconf.output_filename) {
 		json_object_object_add(
 		    obj, "output_filename",

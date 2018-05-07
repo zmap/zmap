@@ -88,8 +88,8 @@ struct state_conf {
 	uint32_t gw_ip;
 	int gw_mac_set;
 	int hw_mac_set;
-	char *source_ip_first;
-	char *source_ip_last;
+	in_addr_t source_ip_addresses[256];
+	uint32_t number_source_ips;
 	char *output_filename;
 	char *blacklist_filename;
 	char *whitelist_filename;

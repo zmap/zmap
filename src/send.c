@@ -54,11 +54,8 @@ static inline int send_run_init(sock_t sock);
 // Lock for send run
 static pthread_mutex_t send_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-// Source IP address for outgoing packets
-static in_addr_t srcip_first;
-static in_addr_t srcip_last;
+// Source IP address offset for outgoing packets
 static uint32_t srcip_offset;
-static uint32_t num_src_addrs;
 
 // Source ports for outgoing packets
 static uint16_t num_src_ports;
@@ -93,38 +90,21 @@ iterator_t *send_init(void)
 		log_fatal("send", "senders * shards > max targets");
 	}
 	it = iterator_init(zconf.senders, zconf.shard_num, zconf.total_shards);
-	// process the dotted-notation addresses passed to ZMAP and determine
-	// the source addresses from which we'll send packets;
-	srcip_first = inet_addr(zconf.source_ip_first);
-	if (srcip_first == INADDR_NONE) {
-		log_fatal("send", "invalid begin source ip address: `%s'",
-			  zconf.source_ip_first);
-	}
-	srcip_last = inet_addr(zconf.source_ip_last);
-	if (srcip_last == INADDR_NONE) {
-		log_fatal("send", "invalid end source ip address: `%s'",
-			  zconf.source_ip_last);
-	}
-	log_debug("send", "srcip_first: %u", srcip_first);
-	log_debug("send", "srcip_last: %u", srcip_last);
-	if (srcip_first == srcip_last) {
+	// determine the source address offset from which we'll send packets
+	log_debug("send", "srcip_first: %u", zconf.source_ip_addresses[0]);
+	log_debug("send", "srcip_last: %u", zconf.source_ip_addresses[zconf.number_source_ips]);
+	if (zconf.number_source_ips == 1) {
 		srcip_offset = 0;
-		num_src_addrs = 1;
 	} else {
-		uint32_t ip_first = ntohl(srcip_first);
-		uint32_t ip_last = ntohl(srcip_last);
-		assert(ip_first && ip_last);
-		assert(ip_last > ip_first);
 		uint32_t offset =
 		    (uint32_t)(aesrand_getword(zconf.aes) & 0xFFFFFFFF);
-		srcip_offset = offset % (srcip_last - srcip_first);
-		num_src_addrs = ip_last - ip_first + 1;
+		srcip_offset = offset % (zconf.number_source_ips);
 	}
 
 	// process the source port range that ZMap is allowed to use
 	num_src_ports = zconf.source_port_last - zconf.source_port_first + 1;
 	log_debug("send", "will send from %i address%s on %u source ports",
-		  num_src_addrs, ((num_src_addrs == 1) ? "" : "es"),
+		  zconf.number_source_ips, ((zconf.number_source_ips == 1) ? "" : "es"),
 		  num_src_ports);
 	// global initialization for send module
 	assert(zconf.probe_module);
@@ -213,12 +193,11 @@ iterator_t *send_init(void)
 
 static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
 {
-	if (srcip_first == srcip_last) {
-		return srcip_first;
+	if (zconf.number_source_ips == 1) {
+		return htonl(zconf.source_ip_addresses[0]);
 	}
-	return htonl(((ntohl(dst) + srcip_offset + local_offset) %
-		      num_src_addrs)) +
-	       srcip_first;
+	return htonl(zconf.source_ip_addresses[ntohl(dst) + srcip_offset + local_offset] %
+		      zconf.number_source_ips);
 }
 
 // one sender thread
