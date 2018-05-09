@@ -201,6 +201,12 @@ int udp_global_initialize(struct state_conf *conf)
 			 MAX_UDP_PAYLOAD_LEN, udp_send_msg_len);
 		udp_send_msg_len = MAX_UDP_PAYLOAD_LEN;
 	}
+
+	module_udp.packet_length = sizeof(struct ether_header) +
+				   sizeof(struct ip) + sizeof(struct udphdr) +
+				   udp_send_msg_len;
+	assert(module_udp.packet_length <= MAX_PACKET_SIZE);
+
 	free(args);
 	return EXIT_SUCCESS;
 }
@@ -238,10 +244,6 @@ int udp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 
 	char *payload = (char *)(&udp_header[1]);
 
-	module_udp.packet_length = sizeof(struct ether_header) +
-				   sizeof(struct ip) + sizeof(struct udphdr) +
-				   udp_send_msg_len;
-	assert(module_udp.packet_length <= MAX_PACKET_SIZE);
 	memcpy(payload, udp_send_msg, udp_send_msg_len);
 
 	// Seed our random number generator with the global generator
@@ -806,19 +808,20 @@ static fielddef_t fields[] = {
 	{.name = "data", .type = "binary", .desc = "UDP payload"}};
 
 probe_module_t module_udp = {
-	.name = "udp",
-	.packet_length = 1,
-	.pcap_filter = "udp || icmp",
-	.pcap_snaplen = 1500,
-	.port_args = 1,
-	.thread_initialize = &udp_init_perthread,
-	.global_initialize = &udp_global_initialize,
-	.make_packet = &udp_make_packet,
-	.print_packet = &udp_print_packet,
-	.validate_packet = &udp_validate_packet,
-	.process_packet = &udp_process_packet,
-	.close = &udp_global_cleanup,
-	.helptext = "Probe module that sends UDP packets to hosts. Packets can "
+    .name = "udp",
+    .packet_length = sizeof(struct ether_header) + sizeof(struct ip) +
+                     sizeof(struct udphdr) + MAX_UDP_PAYLOAD_LEN,
+    .pcap_filter = "udp || icmp",
+    .pcap_snaplen = 1500,
+    .port_args = 1,
+    .thread_initialize = &udp_init_perthread,
+    .global_initialize = &udp_global_initialize,
+    .make_packet = &udp_make_packet,
+    .print_packet = &udp_print_packet,
+    .validate_packet = &udp_validate_packet,
+    .process_packet = &udp_process_packet,
+    .close = &udp_global_cleanup,
+    .helptext = "Probe module that sends UDP packets to hosts. Packets can "
 		"optionally be templated based on destination host. Specify"
 		" packet file with --probe-args=file:/path_to_packet_file "
 		"and templates with template:/path_to_template_file.",
