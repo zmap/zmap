@@ -132,7 +132,7 @@ double compute_remaining_time(double age, uint64_t tried_sent)
 		}
 		if (zconf.max_results) {
 			double done =
-			    (double)zrecv.success_unique / zconf.max_results;
+			    (double)zrecv.filter_success / zconf.max_results;
 			remaining[2] = (1. - done) * (age / done);
 		}
 		if (zsend.max_index) {
