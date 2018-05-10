@@ -8,4 +8,4 @@ DerivePointerAlignment: false
 PointerAlignment: Right
 BreakStringLiterals: false
 SortIncludes: false
-
+ReflowComments: false
