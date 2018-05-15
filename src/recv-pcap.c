@@ -65,38 +65,39 @@ void recv_init()
 		log_fatal("recv", "could not open device %s: %s", zconf.iface,
 			  errbuf);
 	}
-	switch(pcap_datalink(pc)) {
-		case DLT_EN10MB:
-			log_info("recv", "Data link layer Ethernet");
-			zconf.data_link_size = sizeof(struct ether_header);
-			break;
-		case DLT_RAW:
-			log_info("recv", "Data link RAW");
-			zconf.data_link_size = 0;
-			break;
+	switch (pcap_datalink(pc)) {
+	case DLT_EN10MB:
+		log_info("recv", "Data link layer Ethernet");
+		zconf.data_link_size = sizeof(struct ether_header);
+		break;
+	case DLT_RAW:
+		log_info("recv", "Data link RAW");
+		zconf.data_link_size = 0;
+		break;
 #if __linux__
-		case DLT_LINUX_SLL:
-			log_info("recv", "Data link cooked socket");
-			zconf.data_link_size = SLL_HDR_LEN;
-			break;
+	case DLT_LINUX_SLL:
+		log_info("recv", "Data link cooked socket");
+		zconf.data_link_size = SLL_HDR_LEN;
+		break;
 #endif
-		default:
-			log_error("recv", "unknown data link layer");
+	default:
+		log_error("recv", "unknown data link layer");
 	}
 
 	struct bpf_program bpf;
 
-	if(!zconf.send_ip_pkts) {
+	if (!zconf.send_ip_pkts) {
 		snprintf(bpftmp, sizeof(bpftmp) - 1,
-			 "not ether src %02x:%02x:%02x:%02x:%02x:%02x", zconf.hw_mac[0],
-			 zconf.hw_mac[1], zconf.hw_mac[2], zconf.hw_mac[3],
-			 zconf.hw_mac[4], zconf.hw_mac[5]);
-		assert(strlen(zconf.probe_module->pcap_filter) + 10 < (BPFLEN - strlen(bpftmp)));
+			 "not ether src %02x:%02x:%02x:%02x:%02x:%02x",
+			 zconf.hw_mac[0], zconf.hw_mac[1], zconf.hw_mac[2],
+			 zconf.hw_mac[3], zconf.hw_mac[4], zconf.hw_mac[5]);
+		assert(strlen(zconf.probe_module->pcap_filter) + 10 <
+		       (BPFLEN - strlen(bpftmp)));
 	} else {
 		bpftmp[0] = 0;
 	}
 	if (zconf.probe_module->pcap_filter) {
-		if(!zconf.send_ip_pkts) {
+		if (!zconf.send_ip_pkts) {
 			strcat(bpftmp, " and (");
 		} else {
 			strcat(bpftmp, "(");
@@ -104,7 +105,7 @@ void recv_init()
 		strcat(bpftmp, zconf.probe_module->pcap_filter);
 		strcat(bpftmp, ")");
 	}
-	if(strcmp(bpftmp,"")) {
+	if (strcmp(bpftmp, "")) {
 		if (pcap_compile(pc, &bpf, bpftmp, 1, 0) < 0) {
 			log_fatal("recv", "couldn't compile filter");
 		}

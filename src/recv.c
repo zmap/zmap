@@ -73,8 +73,8 @@ void handle_packet(uint32_t buflen, const u_char *bytes)
 		if (buflen > sizeof(fake_eth_hdr)) {
 			buflen = sizeof(fake_eth_hdr);
 		}
-		memcpy(&fake_eth_hdr[sizeof(struct ether_header)], bytes+zconf.data_link_size,
-		       buflen);
+		memcpy(&fake_eth_hdr[sizeof(struct ether_header)],
+		       bytes + zconf.data_link_size, buflen);
 		bytes = fake_eth_hdr;
 	}
 	zconf.probe_module->process_packet(bytes, buflen, fs, validation);
