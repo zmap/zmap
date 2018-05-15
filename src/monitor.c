@@ -123,7 +123,7 @@ double compute_remaining_time(double age, uint64_t tried_sent)
 		if (zsend.max_targets) {
 			double done =
 			    (double)tried_sent /
-			    (zsend.max_targets * zconf.packet_streams /
+			    ((uint64_t)zsend.max_targets * zconf.packet_streams /
 			     zconf.total_shards);
 			remaining[0] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;
