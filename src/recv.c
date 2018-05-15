@@ -65,7 +65,7 @@ void handle_packet(uint32_t buflen, const u_char *bytes)
 	fieldset_t *fs = fs_new_fieldset();
 	fs_add_ip_fields(fs, ip_hdr);
 	// HACK:
-	// probe modules (for whatever reason) expect the full ethernet frame
+	// probe modules expect the full ethernet frame
 	// in process_packet. For VPN, we only get back an IP frame.
 	// Here, we fake an ethernet frame (which is initialized to
 	// have ETH_P_IP proto and 00s for dest/src).
