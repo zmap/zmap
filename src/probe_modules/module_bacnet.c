@@ -99,8 +99,8 @@ int bacnet_validate_packet(const struct ip *ip_hdr, uint32_t len,
 {
 	// this will reject packets that aren't UDP or ICMP and fully process ICMP
 	// packets
-	if (udp_do_validate_packet(ip_hdr, len, src_ip, validation,
-				    num_ports, zconf.target_port) == PACKET_INVALID) {
+	if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports,
+				   zconf.target_port) == PACKET_INVALID) {
 		return PACKET_INVALID;
 	}
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
@@ -108,11 +108,13 @@ int bacnet_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		if (!udp) {
 			return PACKET_INVALID;
 		}
-		const size_t min_len = sizeof(struct udphdr) + sizeof(struct bacnet_vlc);
+		const size_t min_len =
+		    sizeof(struct udphdr) + sizeof(struct bacnet_vlc);
 		if (udp->uh_ulen < min_len) {
 			return PACKET_INVALID;
 		}
-		struct bacnet_vlc *vlc = (struct bacnet_vlc *) get_udp_payload(udp, len);
+		struct bacnet_vlc *vlc =
+		    (struct bacnet_vlc *)get_udp_payload(udp, len);
 		if (vlc->type != ZMAP_BACNET_TYPE_IP) {
 			return PACKET_INVALID;
 		}
@@ -137,7 +139,8 @@ void bacnet_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		assert(payload_offset < len);
 		const unsigned char *payload = get_udp_payload(udp, len);
 		uint32_t payload_len = len - payload_offset;
-		fs_add_binary(fs, "udp_payload", payload_len, (void *)payload, 0);
+		fs_add_binary(fs, "udp_payload", payload_len, (void *)payload,
+			      0);
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		fs_populate_icmp_from_iphdr(ip_hdr, len, fs);
 		fs_add_null(fs, "udp_payload");

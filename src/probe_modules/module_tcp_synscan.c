@@ -66,8 +66,9 @@ static int synscan_make_packet(void *buf, UNUSED size_t *buf_len,
 	tcp_header->th_seq = tcp_seq;
 	// checksum value must be zero when calculating packet's checksum
 	tcp_header->th_sum = 0;
-	tcp_header->th_sum = tcp_checksum(sizeof(struct tcphdr),
-			ip_header->ip_src.s_addr, ip_header->ip_dst.s_addr, tcp_header);
+	tcp_header->th_sum =
+	    tcp_checksum(sizeof(struct tcphdr), ip_header->ip_src.s_addr,
+			 ip_header->ip_dst.s_addr, tcp_header);
 	// checksum value must be zero when calculating packet's checksum
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
@@ -91,8 +92,7 @@ void synscan_print_packet(FILE *fp, void *packet)
 }
 
 static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
-				   uint32_t *src_ip,
-				   uint32_t *validation)
+				   uint32_t *src_ip, uint32_t *validation)
 {
 	if (ip_hdr->ip_p == IPPROTO_TCP) {
 		struct tcphdr *tcp = get_tcp_header(ip_hdr, len);
@@ -130,7 +130,8 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		struct ip *ip_inner;
 		size_t ip_inner_len;
 		if (icmp_helper_validate(ip_hdr, len, sizeof(struct tcphdr),
-			    &ip_inner, &ip_inner_len) == PACKET_INVALID) {
+					 &ip_inner,
+					 &ip_inner_len) == PACKET_INVALID) {
 			return PACKET_INVALID;
 		}
 		struct tcphdr *tcp = get_tcp_header(ip_inner, ip_inner_len);
@@ -146,7 +147,7 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 			return PACKET_INVALID;
 		}
 		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
-                  (uint8_t *)validation);
+			     (uint8_t *)validation);
 		if (!check_dst_port(sport, num_ports, validation)) {
 			return PACKET_INVALID;
 		}
@@ -175,7 +176,8 @@ static void synscan_process_packet(const u_char *packet,
 			fs_add_string(fs, "classification", (char *)"rst", 0);
 			fs_add_bool(fs, "success", 0);
 		} else { // SYNACK packet
-			fs_add_string(fs, "classification", (char *)"synack", 0);
+			fs_add_string(fs, "classification", (char *)"synack",
+				      0);
 			fs_add_bool(fs, "success", 1);
 		}
 		fs_add_null_icmp(fs);
@@ -210,8 +212,8 @@ static fielddef_t fields[] = {
     {.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
     {.name = "icmp_unreach_str",
      .type = "string",
-     .desc = "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"}
-};
+     .desc =
+	 "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"}};
 
 probe_module_t module_tcp_synscan = {
     .name = "tcp_synscan",

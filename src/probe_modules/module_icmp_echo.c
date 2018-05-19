@@ -89,8 +89,8 @@ static void icmp_echo_print_packet(FILE *fp, void *packet)
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
-static int imcp_validate_id_seq(struct icmp *icmp_h,
-		uint32_t *validation) {
+static int imcp_validate_id_seq(struct icmp *icmp_h, uint32_t *validation)
+{
 	if (icmp_h->icmp_id != (validation[1] & 0xFFFF)) {
 		return PACKET_INVALID;
 	}
@@ -99,7 +99,6 @@ static int imcp_validate_id_seq(struct icmp *icmp_h,
 	}
 	return PACKET_VALID;
 }
-
 
 static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 				UNUSED uint32_t *src_ip, uint32_t *validation)
@@ -117,12 +116,13 @@ static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		// handle unresearch/quench/redirect/timeout
 		struct ip *ip_inner;
 		size_t ip_inner_len;
-		int icmp_inner_valid = icmp_helper_validate(ip_hdr, len,
-				sizeof(struct icmp), &ip_inner, &ip_inner_len);
+		int icmp_inner_valid = icmp_helper_validate(
+		    ip_hdr, len, sizeof(struct icmp), &ip_inner, &ip_inner_len);
 		if (icmp_inner_valid == PACKET_INVALID) {
 			return PACKET_INVALID;
 		}
-		struct icmp *icmp_inner = get_icmp_header(ip_inner, ip_inner_len);
+		struct icmp *icmp_inner =
+		    get_icmp_header(ip_inner, ip_inner_len);
 		if (!icmp_inner) {
 			return PACKET_INVALID;
 		}

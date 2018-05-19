@@ -54,7 +54,7 @@ int ntp_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation)
 {
 	return udp_do_validate_packet(ip_hdr, len, src_ip, validation,
-				num_ports, zconf.target_port);
+				      num_ports, zconf.target_port);
 }
 
 void ntp_process_packet(const u_char *packet,

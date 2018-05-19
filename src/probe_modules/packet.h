@@ -14,7 +14,8 @@
 
 #define ICMP_HEADER_SIZE 8
 
-#define PRINT_PACKET_SEP "------------------------------------------------------\n"
+#define PRINT_PACKET_SEP                                                       \
+	"------------------------------------------------------\n"
 
 typedef unsigned short __attribute__((__may_alias__)) alias_unsigned_short;
 
@@ -109,7 +110,8 @@ get_src_port(int num_ports, int probe_num, uint32_t *validation)
 	       ((validation[1] + probe_num) % num_ports);
 }
 
-static inline struct ip *get_ip_header(const u_char *packet, uint32_t len) {
+static inline struct ip *get_ip_header(const u_char *packet, uint32_t len)
+{
 	// buf not large enough to contain expected udp header
 	if (len < sizeof(struct ether_header)) {
 		return NULL;
@@ -117,7 +119,9 @@ static inline struct ip *get_ip_header(const u_char *packet, uint32_t len) {
 	return (struct ip *)&packet[sizeof(struct ether_header)];
 }
 
-static inline struct tcphdr *get_tcp_header(const struct ip *ip_hdr, uint32_t len) {
+static inline struct tcphdr *get_tcp_header(const struct ip *ip_hdr,
+					    uint32_t len)
+{
 	// buf not large enough to contain expected udp header
 	if ((4 * ip_hdr->ip_hl + sizeof(struct tcphdr)) > len) {
 		return NULL;
@@ -125,7 +129,9 @@ static inline struct tcphdr *get_tcp_header(const struct ip *ip_hdr, uint32_t le
 	return (struct tcphdr *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
 }
 
-static inline struct udphdr *get_udp_header(const struct ip *ip_hdr, uint32_t len) {
+static inline struct udphdr *get_udp_header(const struct ip *ip_hdr,
+					    uint32_t len)
+{
 	// buf not large enough to contain expected udp header
 	if ((4 * ip_hdr->ip_hl + sizeof(struct udphdr)) > len) {
 		return NULL;
@@ -133,7 +139,9 @@ static inline struct udphdr *get_udp_header(const struct ip *ip_hdr, uint32_t le
 	return (struct udphdr *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
 }
 
-static inline struct icmp *get_icmp_header(const struct ip *ip_hdr, uint32_t len) {
+static inline struct icmp *get_icmp_header(const struct ip *ip_hdr,
+					   uint32_t len)
+{
 	// buf not large enough to contain expected udp header
 	if ((4 * ip_hdr->ip_hl + sizeof(struct icmp)) > len) {
 		return NULL;
@@ -141,17 +149,20 @@ static inline struct icmp *get_icmp_header(const struct ip *ip_hdr, uint32_t len
 	return (struct icmp *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
 }
 
-static inline char *get_udp_payload(const struct udphdr *udp, UNUSED uint32_t len) {
+static inline char *get_udp_payload(const struct udphdr *udp,
+				    UNUSED uint32_t len)
+{
 	return (char *)(&udp[1]);
 }
 
-static inline struct ip* get_inner_ip_header(const struct icmp *icmp, uint32_t len) {
+static inline struct ip *get_inner_ip_header(const struct icmp *icmp,
+					     uint32_t len)
+{
 	if (len < (ICMP_UNREACH_HEADER_SIZE + sizeof(struct ip))) {
 		return NULL;
 	}
 	return (struct ip *)((char *)icmp + ICMP_UNREACH_HEADER_SIZE);
 }
-
 
 // Note: caller must free return value
 char *make_ip_str(uint32_t ip);
@@ -159,12 +170,11 @@ char *make_ip_str(uint32_t ip);
 extern const char *icmp_unreach_strings[];
 
 int icmp_helper_validate(const struct ip *ip_hdr, uint32_t len,
-	size_t min_l4_len, struct ip **probe_pkt, size_t *probe_len);
+			 size_t min_l4_len, struct ip **probe_pkt,
+			 size_t *probe_len);
 
 void fs_add_null_icmp(fieldset_t *fs);
 
 void fs_populate_icmp_from_iphdr(struct ip *ip, size_t len, fieldset_t *fs);
 
-
 #endif
-

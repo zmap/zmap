@@ -274,7 +274,7 @@ static uint16_t get_name_helper(const char *data, uint16_t data_len,
 				log_trace(
 				    "dns",
 				    "_get_name_helper OUT. rec level %d success. "
-					"%d rec bytes consumed. %d bytes consumed.",
+				    "%d rec bytes consumed. %d bytes consumed.",
 				    recursion_level, rec_bytes_consumed,
 				    bytes_consumed);
 				return bytes_consumed;
@@ -573,7 +573,8 @@ static int dns_global_initialize(struct state_conf *conf)
 {
 	num_questions = conf->packet_streams;
 	if (num_questions < 1) {
-		log_fatal("dns", "Invalid number of probes for the DNS module: %i",
+		log_fatal("dns",
+			  "Invalid number of probes for the DNS module: %i",
 			  num_questions);
 	}
 
@@ -795,8 +796,8 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation)
 {
 	// this does the heavy lifting
-	if (udp_do_validate_packet(ip_hdr, len, src_ip, validation,
-				num_ports, zconf.target_port) == PACKET_INVALID) {
+	if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports,
+				   zconf.target_port) == PACKET_INVALID) {
 		return PACKET_INVALID;
 	}
 	if (ip_hdr->ip_p == IPPROTO_UDP) {

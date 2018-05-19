@@ -125,7 +125,8 @@ void make_udp_header(struct udphdr *udp_header, port_h_t dest_port,
 }
 
 int icmp_helper_validate(const struct ip *ip_hdr, uint32_t len,
-	size_t min_l4_len, struct ip **probe_pkt, size_t *probe_len)
+			 size_t min_l4_len, struct ip **probe_pkt,
+			 size_t *probe_len)
 {
 	// We're only equipped to handle ICMP packets at this point
 	assert(ip_hdr->ip_p == IPPROTO_ICMP);
@@ -141,17 +142,17 @@ int icmp_helper_validate(const struct ip *ip_hdr, uint32_t len,
 	// to understand where the probe packet was sent.
 
 	// Check if the response was large enough to contain an IP header
-	const uint32_t min_len = 4 * ip_hdr->ip_hl + ICMP_HEADER_SIZE
-	    + sizeof(struct ip) + min_l4_len;
+	const uint32_t min_len = 4 * ip_hdr->ip_hl + ICMP_HEADER_SIZE +
+				 sizeof(struct ip) + min_l4_len;
 	if (len < min_len) {
 		return PACKET_INVALID;
 	}
 	// Check that ICMP response is one of these four
 	struct icmp *icmp = (struct icmp *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
-	if (!(icmp->icmp_type == ICMP_UNREACH
-		    || icmp->icmp_type == ICMP_SOURCEQUENCH
-		    || icmp->icmp_type == ICMP_REDIRECT
-		    || icmp->icmp_type == ICMP_TIMXCEED)) {
+	if (!(icmp->icmp_type == ICMP_UNREACH ||
+	      icmp->icmp_type == ICMP_SOURCEQUENCH ||
+	      icmp->icmp_type == ICMP_REDIRECT ||
+	      icmp->icmp_type == ICMP_TIMXCEED)) {
 		return PACKET_INVALID;
 	}
 	struct ip *ip_inner = (struct ip *)((char *)icmp + ICMP_HEADER_SIZE);
@@ -204,19 +205,18 @@ void fs_populate_icmp_from_iphdr(struct ip *ip, size_t len, fieldset_t *fs)
 	// probe to); But we will fix up saddr to be who we sent the
 	// probe to, in case you care.
 	struct ip *ip_inner = get_inner_ip_header(icmp, len);
-	fs_modify_string(fs, "saddr",
-				 make_ip_str(ip_inner->ip_dst.s_addr), 1);
+	fs_modify_string(fs, "saddr", make_ip_str(ip_inner->ip_dst.s_addr), 1);
 	// Add other ICMP fields from within the header
 	fs_add_string(fs, "icmp_responder", make_ip_str(ip->ip_src.s_addr), 1);
 	fs_add_uint64(fs, "icmp_type", icmp->icmp_type);
 	fs_add_uint64(fs, "icmp_code", icmp->icmp_code);
 	if (icmp->icmp_code <= ICMP_UNREACH_PRECEDENCE_CUTOFF) {
-		fs_add_constchar(fs, "icmp_unreach_str", icmp_unreach_strings[icmp->icmp_code]);
+		fs_add_constchar(fs, "icmp_unreach_str",
+				 icmp_unreach_strings[icmp->icmp_code]);
 	} else {
 		fs_add_constchar(fs, "icmp_unreach_str", "unknown");
 	}
 }
-
 
 // Note: caller must free return value
 char *make_ip_str(uint32_t ip)
@@ -238,4 +238,3 @@ const char *icmp_unreach_strings[] = {
     "host admin. prohibited",   "network unreachable TOS",
     "host unreachable TOS",     "communication admin. prohibited",
     "host presdence violation", "precedence cutoff"};
-

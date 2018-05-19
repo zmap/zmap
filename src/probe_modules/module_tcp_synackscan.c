@@ -122,7 +122,8 @@ static int synackscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		struct ip *ip_inner;
 		size_t ip_inner_len;
 		if (icmp_helper_validate(ip_hdr, len, sizeof(struct udphdr),
-			    &ip_inner, &ip_inner_len) == PACKET_INVALID) {
+					 &ip_inner,
+					 &ip_inner_len) == PACKET_INVALID) {
 			return PACKET_INVALID;
 		}
 		struct tcphdr *tcp = get_tcp_header(ip_inner, ip_inner_len);
@@ -135,7 +136,7 @@ static int synackscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 			return PACKET_INVALID;
 		}
 		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
-                  (uint8_t *)validation);
+			     (uint8_t *)validation);
 		if (!check_dst_port(sport, num_ports, validation)) {
 			return PACKET_INVALID;
 		}
