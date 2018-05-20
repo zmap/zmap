@@ -135,9 +135,10 @@ void bacnet_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		fs_add_uint64(fs, "sport", ntohs(udp->uh_sport));
 		fs_add_uint64(fs, "dport", ntohs(udp->uh_dport));
 		fs_add_null_icmp(fs);
+		uint32_t udp_offset = sizeof(struct ether_header) + ip_hdr->ip_hl * 4;
 		uint32_t payload_offset = udp_offset + sizeof(struct udphdr);
 		assert(payload_offset < len);
-		const unsigned char *payload = get_udp_payload(udp, len);
+		char *payload = get_udp_payload(udp, len);
 		uint32_t payload_len = len - payload_offset;
 		fs_add_binary(fs, "udp_payload", payload_len, (void *)payload,
 			      0);

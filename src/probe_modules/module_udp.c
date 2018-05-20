@@ -273,7 +273,7 @@ int udp_make_packet(void *buf, UNUSED size_t *buf_len, ipaddr_n_t src_ip,
 	    htons(get_src_port(num_ports, probe_num, validation));
 
 	if (udp_send_substitutions) {
-		char *payload = get_udp_payload(udp_header, buf_len);
+		char *payload = get_udp_payload(udp_header, *buf_len);
 		memset(payload, 0, MAX_UDP_PAYLOAD_LEN);
 
 		// Grab our random number generator
