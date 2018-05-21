@@ -28,7 +28,6 @@
 
 #define MAX_UDP_PAYLOAD_LEN 1472
 #define ICMP_HEADER_SIZE 8
-#define UNUSED __attribute__((unused))
 
 static char *udp_send_msg = NULL;
 static int udp_send_msg_len = 0;
@@ -216,9 +215,9 @@ int udp_global_initialize(struct state_conf *conf)
 	return EXIT_SUCCESS;
 }
 
-int udp_global_cleanup(__attribute__((unused)) struct state_conf *zconf,
-		       __attribute__((unused)) struct state_send *zsend,
-		       __attribute__((unused)) struct state_recv *zrecv)
+int udp_global_cleanup(UNUSED struct state_conf *zconf,
+		       UNUSED struct state_send *zsend,
+		       UNUSED struct state_recv *zrecv)
 {
 	if (udp_send_msg) {
 		free(udp_send_msg);
@@ -232,7 +231,7 @@ int udp_global_cleanup(__attribute__((unused)) struct state_conf *zconf,
 }
 
 int udp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-		       __attribute__((unused)) port_h_t dst_port,
+		       UNUSED port_h_t dst_port,
 		       void **arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
@@ -324,7 +323,7 @@ void udp_print_packet(FILE *fp, void *packet)
 
 void udp_process_packet(const u_char *packet, UNUSED uint32_t len,
 			fieldset_t *fs,
-			__attribute__((unused)) uint32_t *validation)
+			UNUSED uint32_t *validation)
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {

@@ -40,7 +40,7 @@ int upnp_global_initialize(struct state_conf *state)
 
 int upnp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 			port_h_t dst_port,
-			__attribute__((unused)) void **arg_ptr)
+			UNUSED void **arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -76,8 +76,8 @@ int upnp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 }
 
 void upnp_process_packet(const u_char *packet,
-			 __attribute__((unused)) uint32_t len, fieldset_t *fs,
-			 __attribute__((unused)) uint32_t *validation)
+			 UNUSED uint32_t len, fieldset_t *fs,
+			 UNUSED uint32_t *validation)
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {

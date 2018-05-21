@@ -27,8 +27,8 @@
 probe_module_t module_icmp_echo;
 
 static int icmp_echo_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-				    __attribute__((unused)) port_h_t dst_port,
-				    __attribute__((unused)) void **arg_ptr)
+				    UNUSED port_h_t dst_port,
+				    UNUSED void **arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 
@@ -86,7 +86,7 @@ static void icmp_echo_print_packet(FILE *fp, void *packet)
 		ntohs(icmp_header->icmp_seq));
 	fprintf_ip_header(fp, iph);
 	fprintf_eth_header(fp, ethh);
-	fprintf(fp, "------------------------------------------------------\n");
+	fprintf(fp, PRINT_PACKET_SEP);
 }
 
 static int imcp_validate_id_seq(struct icmp *icmp_h, uint32_t *validation)
@@ -134,9 +134,9 @@ static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 }
 
 static void icmp_echo_process_packet(const u_char *packet,
-				     __attribute__((unused)) uint32_t len,
+				     UNUSED uint32_t len,
 				     fieldset_t *fs,
-				     __attribute__((unused))
+				     UNUSED
 				     uint32_t *validation)
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];

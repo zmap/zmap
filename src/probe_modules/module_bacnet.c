@@ -34,7 +34,7 @@ static inline uint8_t get_invoke_id(uint32_t *validation)
 }
 
 int bacnet_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-			  __attribute__((unused)) port_h_t dst_port, void **arg)
+			  UNUSED port_h_t dst_port, void **arg)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 	struct ether_header *eth_header = (struct ether_header *)buf;

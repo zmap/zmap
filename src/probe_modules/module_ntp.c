@@ -22,7 +22,6 @@
 
 #define MAX_NTP_PAYLOAD_LEN 1472
 #define ICMP_UNREACH_HEADER_SIZE 8
-#define UNUSED __attribute__((unused))
 
 probe_module_t module_ntp;
 
@@ -58,8 +57,8 @@ int ntp_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 }
 
 void ntp_process_packet(const u_char *packet,
-			__attribute__((unused)) uint32_t len, fieldset_t *fs,
-			__attribute__((unused)) uint32_t *validation)
+			UNUSED uint32_t len, fieldset_t *fs,
+			UNUSED uint32_t *validation)
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
 	uint64_t temp64;
@@ -172,7 +171,7 @@ void ntp_process_packet(const u_char *packet,
 }
 
 int ntp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-		       __attribute__((unused)) port_h_t dst_port, void **arg)
+		       UNUSED port_h_t dst_port, void **arg)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -219,7 +218,7 @@ void ntp_print_packet(FILE *fp, void *packet)
 		ntohs(udph->uh_sum));
 	fprintf_ip_header(fp, iph);
 	fprintf_eth_header(fp, ethh);
-	fprintf(fp, "-------------------------------------------------\n");
+	fprintf(fp, PRINT_PACKET_SEP);
 }
 
 static fielddef_t fields[] = {

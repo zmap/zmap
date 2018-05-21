@@ -65,14 +65,14 @@ int udp_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 		    void *arg);
 
 int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
-			   __attribute__((unused)) uint32_t *src_ip,
+			   UNUSED uint32_t *src_ip,
 			   uint32_t *validation, int num_ports,
 			   int expected_port);
 
 int udp_global_initialize(struct state_conf *conf);
-int udp_global_cleanup(__attribute__((unused)) struct state_conf *zconf,
-		       __attribute__((unused)) struct state_send *zsend,
-		       __attribute__((unused)) struct state_recv *zrecv);
+int udp_global_cleanup(UNUSED struct state_conf *zconf,
+		       UNUSED struct state_send *zsend,
+		       UNUSED struct state_recv *zrecv);
 
 void udp_template_add_field(udp_payload_template_t *t,
 			    udp_payload_field_type_t ftype, unsigned int length,

@@ -57,7 +57,6 @@
 #define DNS_SEND_LEN 512 // This is arbitrary
 #define UDP_HEADER_LEN 8
 #define PCAP_SNAPLEN 1500 // This is even more arbitrary
-#define UNUSED __attribute__((unused))
 #define MAX_QTYPE 255
 #define ICMP_UNREACH_HEADER_SIZE 8
 #define BAD_QTYPE_STR "BAD QTYPE"
