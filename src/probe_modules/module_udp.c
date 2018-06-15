@@ -585,7 +585,7 @@ int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len,
 
 		switch (c->ftype) {
 
-		// These fields have a specified output length value
+			// These fields have a specified output length value
 
 		case UDP_DATA:
 			if (!(c->data && c->length))
@@ -877,7 +877,7 @@ static fielddef_t fields[] = {
 probe_module_t module_udp = {
     .name = "udp",
     .packet_length = sizeof(struct ether_header) + sizeof(struct ip) +
-                     sizeof(struct udphdr) + MAX_UDP_PAYLOAD_LEN,
+		     sizeof(struct udphdr) + MAX_UDP_PAYLOAD_LEN,
     .pcap_filter = "udp || icmp",
     .pcap_snaplen = 1500,
     .port_args = 1,

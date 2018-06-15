@@ -37,7 +37,7 @@ void packet_cb(u_char __attribute__((__unused__)) * user,
 	if (!p) {
 		return;
 	}
-	if (zrecv.success_unique >= zconf.max_results) {
+	if (zrecv.filter_success >= zconf.max_results) {
 		// Libpcap can process multiple packets per pcap_dispatch;
 		// we need to throw out results once we've
 		// gotten our --max-results worth.

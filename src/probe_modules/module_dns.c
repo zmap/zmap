@@ -584,7 +584,7 @@ static int dns_global_initialize(struct state_conf *conf)
 	qtypes = xmalloc(sizeof(uint16_t) * num_questions);
 
 	char *qtype_str = NULL;
-	char **domains = (char**) xmalloc(sizeof(char *) * num_questions);
+	char **domains = (char **)xmalloc(sizeof(char *) * num_questions);
 
 	for (int i = 0; i < num_questions; i++) {
 		domains[i] = (char *)default_domain;
