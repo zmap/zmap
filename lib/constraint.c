@@ -107,7 +107,7 @@ static void _convert_to_leaf(node_t *node)
 static void _set_recurse(node_t *node, uint32_t prefix, int len, value_t value)
 {
 	assert(node);
-	assert(0 <= len && len <= 32);
+	assert(0 <= len && len <= 256);
 
 	if (len == 0) {
 		// We're at the end of the prefix; make this a leaf and set the
