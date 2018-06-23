@@ -140,7 +140,7 @@ iterator_t *send_init(void)
 	if (zconf.bandwidth > 0 && zconf.rate > 0) {
 		log_fatal(
 		    "send",
-		    "Must specify rate or bandwidth, or neither, not both.");
+		    "must specify rate or bandwidth, or neither, not both.");
 	}
 	// convert specified bandwidth to packet rate
 	if (zconf.bandwidth > 0) {
@@ -174,7 +174,7 @@ iterator_t *send_init(void)
 		    zconf.bandwidth, pkt_len / 8, zconf.rate);
 	}
 	// log rate, if explicitly specified
-	if (zconf.rate <= 0) {
+	if (zconf.rate < 0) {
 		log_fatal("send", "rate impossibly slow");
 	}
 	if (zconf.rate > 0 && zconf.bandwidth <= 0) {
