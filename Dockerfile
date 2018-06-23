@@ -7,7 +7,7 @@
 #
 #        docker build -t zmap_ubuntu -f Dockerfile .
 #
-#   * If you wisht to build a specific commit, use the ZMAP_COMMIT build argument.
+#   * If you wish to build a specific commit, use the ZMAP_COMMIT build argument.
 #
 #        docker build -t zmap_ubuntu -f Dockerfile --build-arg ZMAP_COMMIT=<your commit> .
 #
