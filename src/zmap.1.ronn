@@ -110,6 +110,9 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
    * `-i`, `--interface=name`:
      Network interface to use
 
+   * `-X`, `--iplayer`:
+     Send IP layer packets instead of ethernet packets (for non-Ethernet interface)
+
 ### PROBE OPTIONS ###
 
 ZMap allows users to specify and write their own probe modules. Probe modules

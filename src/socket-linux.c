@@ -14,9 +14,16 @@
 #include "../lib/includes.h"
 #include "../lib/logger.h"
 
+#include "state.h"
+
 sock_t get_socket(UNUSED uint32_t id)
 {
-	int sock = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+	int sock;
+	if (zconf.send_ip_pkts) {
+		sock = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_ALL));
+	} else {
+		sock = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+	}
 	if (sock <= 0) {
 		log_fatal("send",
 			  "couldn't create socket. "
