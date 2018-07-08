@@ -44,8 +44,8 @@ struct zit_conf {
 	int disable_syslog;
 
 	// sharding options
-	uint8_t shard_num;
-	uint8_t total_shards;
+	uint16_t shard_num;
+	uint16_t total_shards;
 	uint64_t seed;
 	aesrand_t *aes;
 	uint32_t max_hosts;
@@ -180,11 +180,11 @@ int main(int argc, char **argv)
 		    "Need to specify both shard number and total number of shards");
 	}
 	if (args.shard_given) {
-		enforce_range("shard", args.shard_arg, 0, 254);
+		enforce_range("shard", args.shard_arg, 0, 65534);
 		conf.shard_num = args.shard_arg;
 	}
 	if (args.shards_given) {
-		enforce_range("shards", args.shards_arg, 1, 254);
+		enforce_range("shards", args.shards_arg, 1, 65535);
 		conf.total_shards = args.shards_arg;
 	}
 	if (conf.shard_num >= conf.total_shards) {
