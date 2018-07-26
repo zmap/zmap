@@ -83,18 +83,18 @@ iterator_t *iterator_init(uint8_t num_threads, uint16_t shard,
 	return it;
 }
 
-uint32_t iterator_get_sent(iterator_t *it)
+uint64_t iterator_get_sent(iterator_t *it)
 {
-	uint32_t sent = 0;
+	uint64_t sent = 0;
 	for (uint8_t i = 0; i < it->num_threads; ++i) {
 		sent += it->thread_shards[i].state.sent;
 	}
 	return sent;
 }
 
-uint32_t iterator_get_tried_sent(iterator_t *it)
+uint64_t iterator_get_tried_sent(iterator_t *it)
 {
-	uint32_t sent = 0;
+	uint64_t sent = 0;
 	for (uint8_t i = 0; i < it->num_threads; ++i) {
 		sent += it->thread_shards[i].state.tried_sent;
 	}

@@ -37,8 +37,8 @@
 // internal monitor status that is used to track deltas
 typedef struct internal_scan_status {
 	double last_now;
-	uint32_t last_sent;
-	uint32_t last_tried_sent;
+	uint64_t last_sent;
+	uint64_t last_tried_sent;
 	uint32_t last_send_failures;
 	uint32_t last_recv_net_success;
 	uint32_t last_recv_app_success;
@@ -49,11 +49,11 @@ typedef struct internal_scan_status {
 
 // exportable status information that can be printed to screen
 typedef struct export_scan_status {
-	uint32_t total_sent;
-	uint32_t total_tried_sent;
+	uint64_t total_sent;
+	uint64_t total_tried_sent;
 	uint32_t recv_success_unique;
 	uint32_t app_recv_success_unique;
-	uint32_t total_recv;
+	uint64_t total_recv;
 	uint32_t complete;
 	uint32_t send_threads;
 	double percent_complete;
@@ -161,11 +161,11 @@ static void update_pcap_stats(pthread_mutex_t *recv_ready_mutex)
 static void export_stats(int_status_t *intrnl, export_status_t *exp,
 			 iterator_t *it)
 {
-	uint32_t total_sent = iterator_get_sent(it);
-	uint32_t total_tried_sent = iterator_get_tried_sent(it);
+	uint64_t total_sent = iterator_get_sent(it);
+	uint64_t total_tried_sent = iterator_get_tried_sent(it);
 	uint32_t total_fail = iterator_get_fail(it);
-	uint32_t total_recv = zrecv.pcap_recv;
-	uint32_t recv_success = zrecv.filter_success;
+	uint64_t total_recv = zrecv.pcap_recv;
+	uint64_t recv_success = zrecv.filter_success;
 	uint32_t app_success = zrecv.app_success_unique;
 	double cur_time = now();
 	double age = cur_time - zsend.start; // time of entire scan
@@ -301,7 +301,7 @@ static void onscreen_appsuccess(export_status_t *exp)
 	// this when probe module handles application-level success rates
 	if (!exp->complete) {
 		fprintf(stderr,
-			"%5s %0.0f%%%s; sent: %u %sp/s (%sp/s avg); "
+			"%5s %0.0f%%%s; sent: %llu %sp/s (%sp/s avg); "
 			"recv: %u %sp/s (%sp/s avg); "
 			"app success: %u %sp/s (%sp/s avg); "
 			"drops: %sp/s (%sp/s avg); "
@@ -317,7 +317,7 @@ static void onscreen_appsuccess(export_status_t *exp)
 			exp->hitrate, exp->app_hitrate);
 	} else {
 		fprintf(stderr,
-			"%5s %0.0f%%%s; sent: %u done (%sp/s avg); "
+			"%5s %0.0f%%%s; sent: %llu done (%sp/s avg); "
 			"recv: %u %sp/s (%sp/s avg); "
 			"app success: %u %sp/s (%sp/s avg); "
 			"drops: %sp/s (%sp/s avg); "
@@ -337,7 +337,7 @@ static void onscreen_generic(export_status_t *exp)
 {
 	if (!exp->complete) {
 		fprintf(stderr,
-			"%5s %0.0f%%%s; send: %u %sp/s (%sp/s avg); "
+			"%5s %0.0f%%%s; send: %llu %sp/s (%sp/s avg); "
 			"recv: %u %sp/s (%sp/s avg); "
 			"drops: %sp/s (%sp/s avg); "
 			"hitrate: %0.2f%%\n",
@@ -349,7 +349,7 @@ static void onscreen_generic(export_status_t *exp)
 			exp->pcap_drop_avg_str, exp->hitrate);
 	} else {
 		fprintf(stderr,
-			"%5s %0.0f%%%s; send: %u done (%sp/s avg); "
+			"%5s %0.0f%%%s; send: %llu done (%sp/s avg); "
 			"recv: %u %sp/s (%sp/s avg); "
 			"drops: %sp/s (%sp/s avg); "
 			"hitrate: %0.2f%%\n",
@@ -397,9 +397,9 @@ static void update_status_updates_file(export_status_t *exp, FILE *f)
 	fprintf(f,
 		"%s,%u,%u,"
 		"%f,%f,%u,"
+		"%llu,%.0f,%.0f,"
 		"%u,%.0f,%.0f,"
-		"%u,%.0f,%.0f,"
-		"%u,%.0f,%.0f,"
+		"%llu,%.0f,%.0f,"
 		"%u,%.0f,%.0f,"
 		"%u,%.0f,%.0f\n",
 		timestamp, exp->time_past, exp->time_remaining,
