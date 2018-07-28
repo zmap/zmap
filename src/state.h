@@ -90,6 +90,7 @@ struct state_conf {
 	int hw_mac_set;
 	in_addr_t source_ip_addresses[256];
 	uint32_t number_source_ips;
+	int send_ip_pkts;
 	char *output_filename;
 	char *blacklist_filename;
 	char *whitelist_filename;
@@ -122,6 +123,7 @@ struct state_conf {
 	uint64_t total_disallowed;
 	int max_sendto_failures;
 	float min_hitrate;
+	int data_link_size;
 #ifdef PFRING
 	struct {
 		pfring_zc_cluster *cluster;

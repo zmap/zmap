@@ -52,7 +52,8 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
 
    * `-r`, `--rate=pps`:
      Set the send rate in packets/sec. Note: when combined with --probes,  this is
-     total packets per second, not IPs per second.
+     total packets per second, not IPs per second. Setting the rate to 0 will scan 
+     at full line rate. Default: 10000 pps. 
 
    * `-B`, `--bandwidth=bps`:
      Set the send rate in bits/second (supports suffixes G, M, and K (e.g. -B
@@ -108,6 +109,9 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
 
    * `-i`, `--interface=name`:
      Network interface to use
+
+   * `-X`, `--iplayer`:
+     Send IP layer packets instead of ethernet packets (for non-Ethernet interface)
 
 ### PROBE OPTIONS ###
 

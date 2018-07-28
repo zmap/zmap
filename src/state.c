@@ -24,7 +24,7 @@ struct state_conf zconf = {.log_level = LOG_INFO,
 			   .max_runtime = 0,
 			   .max_results = 0,
 			   .iface = NULL,
-			   .rate = 0,
+			   .rate = 10000,
 			   .bandwidth = 0,
 			   .cooldown_secs = 0,
 			   .senders = 1,
@@ -42,6 +42,7 @@ struct state_conf zconf = {.log_level = LOG_INFO,
 			   .hw_mac_set = 0,
 			   .source_ip_addresses = NULL,
 			   .number_source_ips = 0,
+			   .send_ip_pkts = 0,
 			   .raw_output_fields = NULL,
 			   .output_fields = NULL,
 			   .output_filter_str = NULL,
@@ -60,7 +61,8 @@ struct state_conf zconf = {.log_level = LOG_INFO,
 			   .metadata_filename = NULL,
 			   .notes = NULL,
 			   .custom_metadata_str = NULL,
-			   .recv_ready = 0};
+			   .recv_ready = 0,
+			   .data_link_size = 0};
 
 // global sender stats and defaults
 struct state_send zsend = {
