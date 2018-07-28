@@ -130,7 +130,7 @@ static void start_zmap(void)
 				  " Try specifying a source address (-S).",
 				  zconf.iface);
 		}
-		zconf.source_ip_addresses[0] = htonl(default_ip.s_addr);
+		zconf.source_ip_addresses[0] = default_ip.s_addr;
 		zconf.number_source_ips++;
 		log_debug(
 		    "zmap",

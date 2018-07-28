@@ -91,9 +91,11 @@ iterator_t *send_init(void)
 	}
 	it = iterator_init(zconf.senders, zconf.shard_num, zconf.total_shards);
 	// determine the source address offset from which we'll send packets
-	log_debug("send", "srcip_first: %u", zconf.source_ip_addresses[0]);
-	log_debug("send", "srcip_last: %u",
-		  zconf.source_ip_addresses[zconf.number_source_ips]);
+	struct in_addr temp;
+	temp.s_addr = zconf.source_ip_addresses[0];
+	log_debug("send", "srcip_first: %s", inet_ntoa(temp));
+	temp.s_addr = zconf.source_ip_addresses[zconf.number_source_ips - 1];
+	log_debug("send", "srcip_last: %s", inet_ntoa(temp));
 	if (zconf.number_source_ips == 1) {
 		srcip_offset = 0;
 	} else {
