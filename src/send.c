@@ -370,8 +370,8 @@ int send_run(sock_t st, shard_t *s)
 				goto cleanup;
 			}
 			if (s->state.max_targets &&
-			    (s->state.sent >= s->state.max_targets ||
-			     s->state.tried_sent >= s->state.max_targets)) {
+			    ((s->state.sent/zconf.packet_streams) >= s->state.max_targets ||
+			     (s->state.tried_sent/zconf.packet_streams) >= s->state.max_targets)) {
 				log_debug(
 				    "send",
 				    "send thread %hhu finished (max targets of %u reached)",
