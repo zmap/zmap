@@ -318,20 +318,18 @@ int send_run(sock_t st, shard_t *s)
 			if (count && delay > 0) {
 				if (send_rate < slow_rate) {
 					double t = now();
-					assert(count > last_count);
-					assert(t > last_time);
-					double multiplier =
-					    (double)(count - last_count) /
-					    (t - last_time) /
-					    (zconf.rate / zconf.senders);
-					uint32_t old_delay = delay;
-					delay *= multiplier;
-					if (delay == old_delay) {
-						if (multiplier > 1.0) {
-							delay *= 2;
-						} else if (multiplier < 1.0) {
-							delay *= 0.5;
-						}
+					double last_rate =
+					    (1.0 / (t - last_time));
+
+					sleep_time *=
+					    ((last_rate / send_rate) + 1) / 2;
+					ts.tv_sec = sleep_time / nsec_per_sec;
+					ts.tv_nsec = sleep_time % nsec_per_sec;
+					log_debug(
+					    "sleep",
+					    "sleep for %d sec, %ld nanoseconds",
+					    ts.tv_sec, ts.tv_nsec);
+					while (nanosleep(&ts, &rem) == -1) {
 					}
 					last_time = t;
 				} else {
@@ -370,8 +368,10 @@ int send_run(sock_t st, shard_t *s)
 				goto cleanup;
 			}
 			if (s->state.max_targets &&
-			    ((s->state.sent/zconf.packet_streams) >= s->state.max_targets ||
-			     (s->state.tried_sent/zconf.packet_streams) >= s->state.max_targets)) {
+			    ((s->state.sent / zconf.packet_streams) >=
+				 s->state.max_targets ||
+			     (s->state.tried_sent / zconf.packet_streams) >=
+				 s->state.max_targets)) {
 				log_debug(
 				    "send",
 				    "send thread %hhu finished (max targets of %u reached)",
