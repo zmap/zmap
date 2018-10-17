@@ -252,10 +252,14 @@ void json_metadata(FILE *file)
 		json_object_object_add(obj, "source_mac",
 				       json_object_new_string(mac_buf));
 	}
-	json_object_object_add(obj, "source_ip_first",
-			       json_object_new_string(zconf.source_ip_first));
-	json_object_object_add(obj, "source_ip_last",
-			       json_object_new_string(zconf.source_ip_last));
+	json_object *source_ips = json_object_new_array();
+	for (uint i = 0; i < zconf.number_source_ips; i++) {
+		struct in_addr temp;
+		temp.s_addr = zconf.source_ip_addresses[i];
+		json_object_array_add(source_ips, json_object_new_string(
+						      strdup(inet_ntoa(temp))));
+	}
+	json_object_object_add(obj, "source_ips", source_ips);
 	if (zconf.output_filename) {
 		json_object_object_add(
 		    obj, "output_filename",

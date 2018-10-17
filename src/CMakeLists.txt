@@ -55,6 +55,7 @@ set(SOURCES
     socket.c
     state.c
     summary.c
+    utility.c
     validate.c
     zmap.c
     zopt_compat.c
