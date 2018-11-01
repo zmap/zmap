@@ -75,9 +75,27 @@ int bitmap_process(fieldset_t *fs)
 		return EXIT_SUCCESS;
 	}
 
-	uint32_t ip = ntohl(fs->fields[0].value.num & 0xffffffff);
+	char * ip_address = NULL;
+	uint32_t raw_value = 0;
+	for (int i = 0; i < fs->len; i++) {
+		field_t *f = &(fs->fields[i]);
+		if (f->type == FS_STRING) {
+			ip_address = (char *)f->value.ptr;
+		} else if (f->type == FS_UINT64) {
+			raw_value = fs->fields[0].value.num;
+		} else {
+			log_fatal("bitmap", "received unknown output type");
+		}
+	}
 
-	bitmap_buffer[ip / 64] |= 1 << (ip % 64);
+	if (ip_address != NULL) {
+		printf("%s\n", ip_address);
+	}
+
+	uint32_t ip = ntohl(raw_value & 0xffffffff);
+
+	uint64_t l = 1ULL << (ip % 64);
+	bitmap_buffer[ip / 64] |= l;
 	check_and_log_file_error(file, "bitmap");
 	return EXIT_SUCCESS;
 }
