@@ -69,43 +69,15 @@ int bitmap_close(__attribute__((unused)) struct state_conf *c,
 	return EXIT_SUCCESS;
 }
 
-uint32_t get_ip_address(char * ip_address) {
-	uint32_t a = 0, b = 0, c = 0, d = 0;
-	sscanf(ip_address, "%u.%u.%u.%u", &a, &b, &c, &d);
-	return (a << 24 | b << 16 | c << 8 | d);
-}
-
 int bitmap_process(fieldset_t *fs)
 {
 	if (!file) {
 		return EXIT_SUCCESS;
 	}
-	char * ip_address = NULL;
-	for (int i = 0; i < fs->len; i++) {
-		field_t *f = &(fs->fields[i]);
-		if (f->type == FS_STRING) {
-			ip_address = (char *)f->value.ptr;
-		} else if (f->type == FS_UINT64) {
-			ip_address = NULL;
-		} else if (f->type == FS_BOOL) {
-			ip_address = NULL;
-		} else if (f->type == FS_BINARY) {
-			ip_address = NULL;
-		} else if (f->type == FS_NULL) {
-			// do nothing
-			ip_address = NULL;
-		} else {
-			log_fatal("bitmap", "received unknown output type");
-		}
-	}
-	if (ip_address != NULL) {
-		uint32_t ip = get_ip_address(ip_address);
-		if (ip >= bitmap_buffer_size * 8) {
-			log_error("bitmap", "unexpected ip address received: %x, %x.", bitmap_buffer_size, ip);
-			return EXIT_FAILURE;
-		}
-		bitmap_buffer[ip / 64] |= 1 << (ip % 64);
-	}
+
+	uint32_t ip = ntohl(fs->fields[0].value.num & 0xffffffff);
+
+	bitmap_buffer[ip / 64] |= 1 << (ip % 64);
 	check_and_log_file_error(file, "bitmap");
 	return EXIT_SUCCESS;
 }
