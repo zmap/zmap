@@ -13,6 +13,7 @@
 
 extern output_module_t module_csv_file;
 extern output_module_t module_json_file;
+extern output_module_t module_bitmap_file;
 
 #ifdef REDIS
 extern output_module_t module_redis;
@@ -33,6 +34,7 @@ output_module_t *output_modules[] = {
     &module_mongodb,
 #endif
     // ADD YOUR MODULE HERE
+    &module_bitmap_file,
 };
 
 output_module_t *get_output_module_by_name(const char *name)
