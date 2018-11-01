@@ -76,7 +76,7 @@ int bitmap_process(fieldset_t *fs)
 	}
 
 	char * ip_address = NULL;
-	uint64_t raw_value = 0;
+	uint32_t raw_value = 0;
 	for (int i = 0; i < fs->len; i++) {
 		field_t *f = &(fs->fields[i]);
 		if (f->type == FS_STRING) {
@@ -94,7 +94,8 @@ int bitmap_process(fieldset_t *fs)
 
 	uint32_t ip = ntohl(raw_value & 0xffffffff);
 
-	bitmap_buffer[ip / 64] |= 1 << (ip % 64);
+	uint64_t l = 1ULL << (ip % 64);
+	bitmap_buffer[ip / 64] |= l;
 	check_and_log_file_error(file, "bitmap");
 	return EXIT_SUCCESS;
 }
