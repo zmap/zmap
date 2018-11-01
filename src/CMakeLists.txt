@@ -17,6 +17,7 @@ set(EXTRA_OUTPUT_MODULES
 set(OUTPUT_MODULE_SOURCES
     output_modules/module_csv.c
     output_modules/module_json.c
+    output_modules/module_bitmap.c
     output_modules/output_modules.c
 )
 
