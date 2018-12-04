@@ -17,9 +17,9 @@
 #define AES_BLOCK_WORDS 4
 #define AES_KEY_BYTES 16
 
-static int inited = 0;
-static uint32_t aes_input[AES_BLOCK_WORDS];
-static uint32_t aes_sched[(AES_ROUNDS + 1) * 4];
+static __thread int inited = 0;
+static __thread uint32_t aes_input[AES_BLOCK_WORDS];
+static __thread uint32_t aes_sched[(AES_ROUNDS + 1) * 4];
 
 void validate_init()
 {
