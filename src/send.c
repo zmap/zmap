@@ -6,6 +6,13 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
+// TODO: Move this into send-linux after figuring out the build problem
+#define _GNU_SOURCE
+#include <sys/uio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+// ENDTODO
+
 #include "send.h"
 
 #include <stdlib.h>
