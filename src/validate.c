@@ -40,7 +40,9 @@ void validate_init()
 void validate_gen(const uint32_t src, const uint32_t dst,
 		  uint8_t output[VALIDATE_BYTES])
 {
-	assert(inited);
+	if (inited == 0 ){
+	    validate_init();
+	}
 	aes_input[0] = src;
 	aes_input[1] = dst;
 	rijndaelEncrypt(aes_sched, AES_ROUNDS, (uint8_t *)aes_input, output);
