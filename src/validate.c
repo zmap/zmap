@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 #include <assert.h>
+#include <string.h>
 #include "../lib/rijndael-alg-fst.h"
 #include "../lib/random.h"
 #include "../lib/logger.h"
@@ -18,17 +19,7 @@
 #define AES_KEY_BYTES 16
 
 static int inited = 0;
-static __thread  int aes_input_inited = 0;
-static __thread uint32_t aes_input[AES_BLOCK_WORDS];
 static uint32_t aes_sched[(AES_ROUNDS + 1) * 4];
-
-void aes_input_init()
-{
-	for (int i = 0; i < AES_BLOCK_WORDS; i++) {
-		aes_input[i] = 0;
-	}	
-        aes_input_inited=1;
-}
 
 void validate_init()
 {
@@ -46,10 +37,9 @@ void validate_init()
 void validate_gen(const uint32_t src, const uint32_t dst,
 		  uint8_t output[VALIDATE_BYTES])
 {
+	uint32_t aes_input[AES_BLOCK_WORDS];
+	memset(aes_input, 0, AES_BLOCK_WORDS*4);
 	assert(inited);
-	if (aes_input_inited==0){
-	   aes_input_init();
-	}
 	aes_input[0] = src;
 	aes_input[1] = dst;
 	rijndaelEncrypt(aes_sched, AES_ROUNDS, (uint8_t *)aes_input, output);
