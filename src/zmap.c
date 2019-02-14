@@ -874,7 +874,7 @@ int main(int argc, char *argv[])
 	uint32_t total_buffers =
 	    user_buffers + queue_buffers + card_buffers + 2;
 	uint32_t metadata_len = 0;
-	uint32_t numa_node = 0; // TODO
+	uint32_t numa_node = pfring_zc_numa_get_cpu_node(-1);
 	zconf.pf.cluster = pfring_zc_create_cluster(
 	    ZMAP_PF_ZC_CLUSTER_ID, ZMAP_PF_BUFFER_SIZE, metadata_len,
 	    total_buffers, numa_node, NULL);
@@ -900,7 +900,7 @@ int main(int argc, char *argv[])
 	}
 
 	zconf.pf.recv =
-	    pfring_zc_open_device(zconf.pf.cluster, zconf.iface, rx_only, 0);
+	    pfring_zc_open_device(zconf.pf.cluster, zconf.iface, rx_only, PF_RING_ZC_DEVICE_NOT_PROMISC);
 	if (zconf.pf.recv == NULL) {
 		log_fatal("zmap", "Could not open device %s for RX. [%s]",
 			  zconf.iface, strerror(errno));
