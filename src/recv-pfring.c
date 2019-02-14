@@ -31,6 +31,7 @@ void recv_init()
 		log_fatal("recv", "Could not get packet handle: %s",
 			  strerror(errno));
 	}
+	zconf.data_link_size = sizeof(struct ether_header);
 }
 
 void recv_cleanup()
