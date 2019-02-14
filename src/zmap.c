@@ -207,7 +207,7 @@ static void start_zmap(void)
 #ifdef PFRING
 	pfring_zc_worker *zw = pfring_zc_run_balancer(
 	    zconf.pf.queues, &zconf.pf.send, zconf.senders, 1,
-	    zconf.pf.prefetches, round_robin_bursts_policy, NULL, distrib_func,
+	    zconf.pf.prefetches, round_robin_bursts_policy, NULL, NULL,
 	    NULL, 0, zconf.pin_cores[cpu & zconf.pin_cores_len]);
 	cpu += 1;
 #endif
