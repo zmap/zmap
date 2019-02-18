@@ -88,10 +88,6 @@ int bitmap_process(fieldset_t *fs)
 		}
 	}
 
-	if (ip_address != NULL) {
-		printf("%s\n", ip_address);
-	}
-
 	uint32_t ip = ntohl(raw_value & 0xffffffff);
 
 	uint64_t l = 1ULL << (ip % 64);
@@ -110,7 +106,7 @@ output_module_t module_bitmap_file = {
     .update_interval = 0,
     .close = &bitmap_close,
     .process_ip = &bitmap_process,
-    .supports_dynamic_output = NO_DYNAMIC_SUPPORT,
+    .supports_dynamic_output = DYNAMIC_SUPPORT,
     .helptext =
 	"Outputs the bitmap of the whole ipv4 address space, each bit represents one \n"
 	"ip address, 1 indicating the existence corresponding ip address, 0 indicating \n"
