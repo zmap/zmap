@@ -42,11 +42,17 @@ IPv6 support
 
 We added IPv6 support to ZMap and include the following new probe modules:
 
-* ICMPv6 Echo Request
-* IPv6 TCP SYN (any port)
-* IPV6 UDP (any port and payload)
+* ICMPv6 Echo Request: `icmp6_echoscan`
+* IPv6 TCP SYN (any port): `ipv6_tcp_synscan` or `ipv6_tcp_synopt`
+* IPV6 UDP (any port and payload): `ipv6_udp`
 
-More information and access to our IPv6 hitlist is available on [our website](https://net.in.tum.de/pub/ipv6-hitlist/).
+You can specify the respective IPv6 probe module using the `-M` or `--probe-module` command line flag.
+
+In addition, you need to specify the source IPv6 address with the `--ipv6-source-ip` flag and a file containing IPv6 targets using the `--ipv6-target-file` flag.
+More information can be found using the `--help` flag.
+
+As targets for your IPv6 measurements you can e.g. use addresses from our [IPv6 Hitlist Service](https://ipv6hitlist.github.io/).
+
 
 License and Copyright
 ---------------------
