@@ -17,6 +17,7 @@
 #include <arpa/inet.h>
 #include <assert.h>
 #include <inttypes.h>
+#include <pthread.h>
 
 #include "../../lib/logger.h"
 #include "../fieldset.h"
@@ -26,6 +27,7 @@
 static FILE *file = NULL;
 static uint64_t bitmap_buffer_size = 0x100000000 / 8;
 static uint64_t * bitmap_buffer;
+static pthread_mutex_t bitmap_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 int bitmap_init(struct state_conf *conf, char **fields, int fieldlens)
 {
@@ -91,7 +93,9 @@ int bitmap_process(fieldset_t *fs)
 	uint32_t ip = ntohl(raw_value & 0xffffffff);
 
 	uint64_t l = 1ULL << (ip % 64);
+	pthread_mutex_lock(&bitmap_mutex);
 	bitmap_buffer[ip / 64] |= l;
+	pthread_mutex_unlock(&bitmap_mutex);
 	check_and_log_file_error(file, "bitmap");
 	return EXIT_SUCCESS;
 }
