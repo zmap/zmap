@@ -20,6 +20,7 @@
 #include <pthread.h>
 
 #include "../../lib/logger.h"
+#include "../../lib/pbm.h"
 #include "../fieldset.h"
 
 #include "output_modules.h"
@@ -27,9 +28,9 @@
 static FILE *file = NULL;
 static uint64_t bitmap_buffer_size = 0x100000000 / 8;
 static uint64_t * bitmap_buffer;
-static pthread_mutex_t bitmap_mutex = PTHREAD_MUTEX_INITIALIZER;
+extern uint8_t ** get_recv_pbm();
 
-int bitmap_init(struct state_conf *conf, char **fields, int fieldlens)
+int bitmap_init(struct state_conf *conf, UNUSED char **fields, UNUSED int fieldlens)
 {
 	assert(conf);
 	if (conf->output_filename) {
@@ -55,6 +56,7 @@ int bitmap_init(struct state_conf *conf, char **fields, int fieldlens)
 		return EXIT_FAILURE;
 	}
 	memset(bitmap_buffer, 0, bitmap_buffer_size);
+
 	return EXIT_SUCCESS;
 }
 
@@ -63,6 +65,8 @@ int bitmap_close(__attribute__((unused)) struct state_conf *c,
 	      __attribute__((unused)) struct state_recv *r)
 {
 	if (file) {
+		// reuse the recv pbm
+		pbm_copy(get_recv_pbm(), (uint8_t*)bitmap_buffer);
 		fwrite(bitmap_buffer, bitmap_buffer_size, 1, file);
 		fflush(file);
 		fclose(file);
@@ -71,32 +75,9 @@ int bitmap_close(__attribute__((unused)) struct state_conf *c,
 	return EXIT_SUCCESS;
 }
 
-int bitmap_process(fieldset_t *fs)
+int bitmap_process(UNUSED fieldset_t *fs)
 {
-	if (!file) {
-		return EXIT_SUCCESS;
-	}
-
-	char * ip_address = NULL;
-	uint32_t raw_value = 0;
-	for (int i = 0; i < fs->len; i++) {
-		field_t *f = &(fs->fields[i]);
-		if (f->type == FS_STRING) {
-			ip_address = (char *)f->value.ptr;
-		} else if (f->type == FS_UINT64) {
-			raw_value = fs->fields[0].value.num;
-		} else {
-			log_fatal("bitmap", "received unknown output type");
-		}
-	}
-
-	uint32_t ip = ntohl(raw_value & 0xffffffff);
-
-	uint64_t l = 1ULL << (ip % 64);
-	pthread_mutex_lock(&bitmap_mutex);
-	bitmap_buffer[ip / 64] |= l;
-	pthread_mutex_unlock(&bitmap_mutex);
-	check_and_log_file_error(file, "bitmap");
+	// do nothing here.
 	return EXIT_SUCCESS;
 }
 

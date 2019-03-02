@@ -18,6 +18,8 @@
 
 #include <pthread.h>
 #include <unistd.h>
+#include <sys/syscall.h>
+#include <sys/sysinfo.h>
 
 #include "recv-internal.h"
 #include "state.h"
@@ -31,7 +33,12 @@ static u_char fake_eth_hdr[65535];
 // bitmap of observed IP addresses
 static uint8_t **seen = NULL;
 
+void packet_buf_init();
 void wait_recv_handle_complete();
+
+uint8_t ** get_recv_pbm() {
+	return seen;
+}
 
 void do_handle_packet(uint32_t buflen, const u_char *bytes)
 {
@@ -54,20 +61,21 @@ void do_handle_packet(uint32_t buflen, const u_char *bytes)
 		ip_hdr,
 		buflen - (zconf.send_ip_pkts ? 0 : sizeof(struct ether_header)),
 		&src_ip, validation)) {
-		atomic_fetch_add(&zrecv.validation_failed, 1);
+		zrecv.validation_failed += 1;
 		return;
 	} else {
-		atomic_fetch_add(&zrecv.validation_passed, 1);
+		zrecv.validation_passed += 1;
 	}
 	// woo! We've validated that the packet is a response to our scan
 	int is_repeat = pbm_check(seen, ntohl(src_ip));
 	// track whether this is the first packet in an IP fragment.
 	if (ip_hdr->ip_off & IP_MF) {
-		atomic_fetch_add(&zrecv.ip_fragments, 1);
+		zrecv.ip_fragments += 1;
 	}
 
-	fieldset_t *fs = fs_new_fieldset();
-	fs_add_ip_fields(fs, ip_hdr);
+	fieldset_t fs;
+	fs_init_fieldset(&fs);
+	fs_add_ip_fields(&fs, ip_hdr);
 	// HACK:
 	// probe modules expect the full ethernet frame
 	// in process_packet. For VPN, we only get back an IP frame.
@@ -81,40 +89,41 @@ void do_handle_packet(uint32_t buflen, const u_char *bytes)
 		       bytes + zconf.data_link_size, buflen);
 		bytes = fake_eth_hdr;
 	}
-	zconf.probe_module->process_packet(bytes, buflen, fs, validation);
-	fs_add_system_fields(fs, is_repeat, zsend.complete);
+	zconf.probe_module->process_packet(bytes, buflen, &fs, validation);
+	fs_add_system_fields(&fs, is_repeat, zsend.complete);
 	int success_index = zconf.fsconf.success_index;
-	assert(success_index < fs->len);
-	int is_success = fs_get_uint64_by_index(fs, success_index);
+	assert(success_index < fs.len);
+	int is_success = fs_get_uint64_by_index(&fs, success_index);
 
 	if (is_success) {
-		atomic_fetch_add(&zrecv.success_total, 1);
+		zrecv.success_total += 1;
 		if (!is_repeat) {
-			atomic_fetch_add(&zrecv.success_unique, 1);
+			zrecv.success_unique += 1;
 			pbm_set(seen, ntohl(src_ip));
 		}
 		if (zsend.complete) {
-			atomic_fetch_add(&zrecv.cooldown_total, 1);
+			zrecv.cooldown_total += 1;
 			if (!is_repeat) {
-				atomic_fetch_add(&zrecv.cooldown_unique, 1);
+				zrecv.cooldown_unique += 1;
 			}
 		}
 	} else {
-		atomic_fetch_add(&zrecv.failure_total, 1);
+		zrecv.failure_total += 1;
 	}
 	// probe module includes app_success field
 	if (zconf.fsconf.app_success_index >= 0) {
 		int is_app_success =
-		    fs_get_uint64_by_index(fs, zconf.fsconf.app_success_index);
+		    fs_get_uint64_by_index(&fs, zconf.fsconf.app_success_index);
 		if (is_app_success) {
-			atomic_fetch_add(&zrecv.app_success_total, 1);
+			zrecv.app_success_total += 1;
 			if (!is_repeat) {
-				atomic_fetch_add(&zrecv.app_success_unique, 1);
+				zrecv.app_success_unique += 1;
 			}
 		}
 	}
 
-	fieldset_t *o = NULL;
+	fieldset_t o;
+	fs_init_fieldset(&o);
 	// we need to translate the data provided by the probe module
 	// into a fieldset that can be used by the output module
 	if (!is_success && zconf.filter_unsuccessful) {
@@ -123,17 +132,15 @@ void do_handle_packet(uint32_t buflen, const u_char *bytes)
 	if (is_repeat && zconf.filter_duplicates) {
 		goto cleanup;
 	}
-	if (!evaluate_expression(zconf.filter.expression, fs)) {
+	if (!evaluate_expression(zconf.filter.expression, &fs)) {
 		goto cleanup;
 	}
-	atomic_fetch_add(&zrecv.filter_success, 1);
-	o = translate_fieldset(fs, &zconf.fsconf.translation);
+	zrecv.filter_success += 1;
+	translate_fieldset(&fs, &zconf.fsconf.translation, &o);
 	if (zconf.output_module && zconf.output_module->process_ip) {
-		zconf.output_module->process_ip(o);
+		zconf.output_module->process_ip(&o);
 	}
 cleanup:
-	fs_free(fs);
-	free(o);
 	if (zconf.output_module && zconf.output_module->update &&
 	    !(zrecv.success_unique % zconf.output_module->update_interval)) {
 		zconf.output_module->update(&zconf, &zsend, &zrecv);
@@ -146,6 +153,7 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 	log_debug("recv", "capturing responses on %s", zconf.iface);
 	if (!zconf.dryrun) {
 		recv_init();
+		packet_buf_init();
 	}
 	if (zconf.send_ip_pkts) {
 		struct ether_header *eth = (struct ether_header *)fake_eth_hdr;
@@ -204,80 +212,116 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 	return 0;
 }
 
-static u_char* work_buf = NULL;
-static uint32_t work_buf_idx = 0;
-static uint32_t cpu_rotated = 0;
-#define UP_WORK_CPU_CORE 24
-#define LOW_WORK_CPU_CORE 8
-#define MAX_WORK_BUF_SIZE (1024 * 1024 * 256)
-#define MAX_WORK_THREADS 1024
+#define MAX_PACKET_BUF_POOL_SIZE 1024
+static u_char** packet_buf_pool = NULL;
+static uint32_t packet_buf_pool_idx = 0;
+static pthread_spinlock_t packet_buf_pool_spin;
+#define MAX_PACKET_BUF_SIZE (1024 * 1024 * 128)
+static u_char* packet_buf = NULL;
+static uint32_t packet_buf_idx = 0;
+static uint32_t current_packet_buf = 0;
+#define LOW_WORK_CPU_CORE 8 // leave the lower numbered cpu cores for tx/rx/mon threads.
+static uint32_t current_cpu = LOW_WORK_CPU_CORE;
 static pthread_t* thread_ids = NULL;
-static uint32_t current_threads = 0;
+
+u_char* get_next_packet_buf() {
+	u_char* ret = NULL;
+	pthread_spin_lock(&packet_buf_pool_spin);
+	if (current_packet_buf < packet_buf_pool_idx) {
+		ret = packet_buf_pool[current_packet_buf];
+		current_packet_buf++;
+	}
+	pthread_spin_unlock(&packet_buf_pool_spin);
+	return ret;
+}
 
 void* handle_packet_buf_thread(void* arg) {
-	log_debug("zmap", "handle_packet_buf_thread starting new thread");
-	if (cpu_rotated < LOW_WORK_CPU_CORE || cpu_rotated > UP_WORK_CPU_CORE) {
-		cpu_rotated = LOW_WORK_CPU_CORE;
+	log_debug("zmap", "handle_packet_buf_thread starting new thread(%d)", syscall(SYS_gettid));
+	set_cpu((uint32_t)(uint64_t)arg);
+
+	while (1) {
+		u_char* buf = get_next_packet_buf();
+		if (!buf) {
+			if (zsend.complete) {
+				break;
+			}
+			log_debug("zmap", "handle_packet_buf_thread waiting (%d)", syscall(SYS_gettid));
+			sleep(1);
+			continue;
+		}
+		uint32_t idx = 0;
+		uint32_t buflen = *((uint32_t*)(&buf[idx]));
+		uint32_t count = 0;
+		while (buflen > 0) {
+			idx += sizeof(uint32_t);
+			do_handle_packet(buflen, &buf[idx]);
+			idx += buflen;
+			buflen = *((uint32_t*)(&buf[idx]));
+			count++;
+		}
+		log_debug("zmap", "handle_packet_buf_thread processed %llu packets (%d)", count, syscall(SYS_gettid));
+		xfree(buf);
 	}
-	set_cpu(cpu_rotated++);
-	u_char* buf = (u_char*)arg;
-	uint32_t idx = 0;
-	uint32_t buflen = *((uint32_t*)(&buf[idx]));
-	while (buflen > 0) {
-		idx += sizeof(uint32_t);
-		do_handle_packet(buflen, &buf[idx]);
-		idx += buflen;
-		buflen = *((uint32_t*)(&buf[idx]));
-	}
-	xfree(buf);
-	log_debug("zmap", "handle_packet_buf_thread completed");
+	log_debug("zmap", "handle_packet_buf_thread completed(%d)", syscall(SYS_gettid));
 	return NULL;
 }
 
-void start_handle_thread() {
-	if (work_buf == NULL) {
-		return;
-	}
+void packet_buf_init() {
 	if (thread_ids == NULL) {
-		thread_ids = xmalloc(MAX_WORK_THREADS * sizeof(pthread_t));
+		thread_ids = xmalloc(get_nprocs() * sizeof(pthread_t));
+	}
+	if (packet_buf_pool == NULL) {
+		packet_buf_pool = xmalloc(MAX_PACKET_BUF_POOL_SIZE * sizeof(u_char*));
+		pthread_spin_init(&packet_buf_pool_spin, PTHREAD_PROCESS_PRIVATE);
 	}
 
-	if (current_threads >= MAX_WORK_THREADS) {
-		log_fatal("zmap", "too many work threads, try to increase MAX_WORK_BUF_SIZE for less threads.");
+	if (current_cpu - LOW_WORK_CPU_CORE < 1) {
+		int r = pthread_create(&thread_ids[current_cpu], NULL, handle_packet_buf_thread, (void*)(uint64_t)current_cpu);
+		if (r != 0) {
+			log_fatal("zmap", "unable to create packet handle thread");
+		}
+		current_cpu++;
 	}
-	int r = pthread_create(&thread_ids[current_threads++], NULL, handle_packet_buf_thread, work_buf);
-	if (r != 0) {
-		log_fatal("zmap", "unable to create packet handle thread");
+}
+
+void start_handle_thread() {
+	if (packet_buf == NULL) {
+		return;
 	}
+
+	pthread_spin_lock(&packet_buf_pool_spin);
+	packet_buf_pool[packet_buf_pool_idx++] = packet_buf;
+	pthread_spin_unlock(&packet_buf_pool_spin);
+	packet_buf = NULL;
+	packet_buf_idx = 0;
 }
 
 void handle_packet(uint32_t buflen, const u_char* bytes)
 {
-	if ((MAX_WORK_BUF_SIZE - work_buf_idx - 1) > (buflen + sizeof(buflen))) {
-		if (work_buf == NULL) {
-			work_buf = (u_char*)xmalloc(MAX_WORK_BUF_SIZE);
-			if (work_buf == NULL) {
-				log_fatal("handle_packet", "couldn't allocate work buffer.");  
-			}
-		}
-		*((uint32_t*)(&work_buf[work_buf_idx])) = buflen;
-		work_buf_idx += sizeof(buflen);
-		memmove(&work_buf[work_buf_idx], bytes, buflen);
-		work_buf_idx += buflen;
-	} else {
+	if ((MAX_PACKET_BUF_SIZE - packet_buf_idx - 1) < (buflen + sizeof(uint32_t))) {
 		start_handle_thread();
-		work_buf = NULL;
-		work_buf_idx = 0;
 	}
+	if (packet_buf == NULL) {
+		packet_buf = (u_char*)xmalloc(MAX_PACKET_BUF_SIZE);
+		if (packet_buf == NULL) {
+			log_fatal("zmap", "couldn't allocate work buffer.");
+		}
+	}
+	*((uint32_t*)(&packet_buf[packet_buf_idx])) = buflen;
+	packet_buf_idx += sizeof(uint32_t);
+	memcpy(&packet_buf[packet_buf_idx], bytes, buflen);
+	packet_buf_idx += buflen;
 }
 
 void wait_recv_handle_complete() {
 	// in case there are remainders
 	start_handle_thread();
 
-	for (uint32_t i = 0; i < current_threads; i++) {
+	for (uint32_t i = LOW_WORK_CPU_CORE; i < current_cpu; i++) {
 		pthread_join(thread_ids[i], NULL);
 	}
 	xfree(thread_ids);
+	xfree(packet_buf_pool);
+	pthread_spin_destroy(&packet_buf_pool_spin);
 	log_info("zmap", "recv handle complete");
 }

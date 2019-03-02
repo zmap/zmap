@@ -57,6 +57,14 @@ void pbm_set(uint8_t **b, uint32_t v)
 	bm_set(b[top], bottom);
 }
 
+void pbm_copy(uint8_t **b, uint8_t *out) {
+	for (uint32_t i = 0; i < NUM_PAGES; i++) {
+		if (b[i] != NULL) {
+			memmove(&out[i * PAGE_SIZE_IN_BYTES], b[i], PAGE_SIZE_IN_BYTES);
+		}
+	}
+}
+
 uint32_t pbm_load_from_file(uint8_t **b, char *file)
 {
 	if (!b) {

@@ -292,6 +292,11 @@ static void start_zmap(void)
 		zconf.probe_module->close(&zconf, &zsend, &zrecv);
 	}
 #ifdef PFRING
+	for (uint32_t i = 0; i < zconf.senders * 256; ++i) {
+		pfring_zc_release_packet_handle(zconf.pf.cluster, zconf.pf.buffers[i]);
+	}
+	log_info("zmap", "sleep to let pfring cooling down");
+	sleep(5);
 	pfring_zc_destroy_cluster(zconf.pf.cluster);
 #endif
 	log_info("zmap", "completed");
