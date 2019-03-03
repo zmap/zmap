@@ -27,11 +27,17 @@ void gen_fielddef_set(fielddefset_t *fds, fielddef_t fs[], int len)
 	fds->len += len;
 }
 
+void fs_init_fieldset(fieldset_t *f)
+{
+	memset(f, 0, sizeof(fieldset_t));
+	f->len = 0;
+	f->type = FS_FIELDSET;
+}
+
 fieldset_t *fs_new_fieldset(void)
 {
 	fieldset_t *f = xcalloc(1, sizeof(fieldset_t));
-	f->len = 0;
-	f->type = FS_FIELDSET;
+	fs_init_fieldset(f);
 	return f;
 }
 
@@ -372,17 +378,11 @@ void fs_generate_full_fieldset_translation(translation_t *t,
 	}
 }
 
-fieldset_t *translate_fieldset(fieldset_t *fs, translation_t *t)
+void translate_fieldset(fieldset_t *fs, translation_t *t, fieldset_t *retv)
 {
-	fieldset_t *retv = fs_new_fieldset();
-	if (!retv) {
-		log_fatal("fieldset",
-			  "unable to allocate space for translated field set");
-	}
 	for (int i = 0; i < t->len; i++) {
 		int o = t->translation[i];
 		memcpy(&(retv->fields[i]), &(fs->fields[o]), sizeof(field_t));
 	}
 	retv->len = t->len;
-	return retv;
 }

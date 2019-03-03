@@ -159,27 +159,27 @@ extern struct state_send zsend;
 // global receiver stats
 struct state_recv {
 	// valid responses classified as "success"
-	atomic_uint_fast32_t success_total;
+	uint32_t success_total;
 	// unique IPs that sent valid responses classified as "success"
-	atomic_uint_fast32_t success_unique;
+	uint32_t success_unique;
 	// valid responses classified as "success"
-	atomic_uint_fast32_t app_success_total;
+	uint32_t app_success_total;
 	// unique IPs that sent valid responses classified as "success"
-	atomic_uint_fast32_t app_success_unique;
+	uint32_t app_success_unique;
 	// valid responses classified as "success" received during cooldown
-	atomic_uint_fast32_t cooldown_total;
+	uint32_t cooldown_total;
 	// unique IPs that first sent valid "success"es during cooldown
-	atomic_uint_fast32_t cooldown_unique;
+	uint32_t cooldown_unique;
 	// valid responses NOT classified as "success"
-	atomic_uint_fast32_t failure_total;
+	uint32_t failure_total;
 	// valid responses that passed the filter
-	atomic_uint_fast32_t filter_success;
+	uint32_t filter_success;
 	// how many packets did we receive that were marked as being the first
 	// fragment in a stream
-	atomic_uint_fast32_t ip_fragments;
+	uint32_t ip_fragments;
 	// metrics about _only_ validate_packet
-	atomic_uint_fast32_t validation_passed;
-	atomic_uint_fast32_t validation_failed;
+	uint32_t validation_passed;
+	uint32_t validation_failed;
 
 	int complete;  // has the scanner finished sending?
 	double start;  // timestamp of when recv started
