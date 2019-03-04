@@ -301,9 +301,6 @@ void handle_packet(uint32_t buflen, const u_char* bytes)
 {
 	uint32_t remainder = MAX_PACKET_BUF_SIZE - packet_buf_idx - 1 - sizeof(uint32_t);
 	if (remainder < (buflen + sizeof(uint32_t))) {
-		if (remainder < 0) {
-			log_fatal("zmap", "buffer overflow, remainder %u", remainder);
-		}
 		start_handle_thread();
 	}
 	if (packet_buf == NULL) {
