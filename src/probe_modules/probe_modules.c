@@ -90,6 +90,11 @@ void fs_add_system_fields(fieldset_t *fs, int is_repeat, int in_cooldown)
 	fs_add_string(fs, "timestamp_str", timestr_ms, 1);
 	fs_add_uint64(fs, "timestamp_ts", (uint64_t)t.tv_sec);
 	fs_add_uint64(fs, "timestamp_us", (uint64_t)t.tv_usec);
+#else
+	char *timestr_ms = xmalloc(TIMESTR_LEN + 1);
+	fs_add_string(fs, "timestamp_str", timestr_ms, 1);
+	fs_add_uint64(fs, "timestamp_ts", 0);
+	fs_add_uint64(fs, "timestamp_us", 0);
 #endif
 }
 

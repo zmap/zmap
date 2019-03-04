@@ -80,7 +80,6 @@ typedef struct translation {
 	int translation[MAX_FIELDS];
 } translation_t;
 
-void fs_init_fieldset(fieldset_t *);
 fieldset_t *fs_new_fieldset(void);
 
 fieldset_t *fs_new_repeated_field(int type, int free_);
@@ -139,7 +138,7 @@ void fs_free(fieldset_t *fs);
 void fs_generate_fieldset_translation(translation_t *t, fielddefset_t *avail,
 				      char **req, int reqlen);
 
-void translate_fieldset(fieldset_t *fs, translation_t *t, fieldset_t *retv);
+fieldset_t *translate_fieldset(fieldset_t *fs, translation_t *t);
 
 void fs_generate_full_fieldset_translation(translation_t *t,
 					   fielddefset_t *avail);
