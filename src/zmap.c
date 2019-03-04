@@ -292,8 +292,8 @@ static void start_zmap(void)
 		zconf.probe_module->close(&zconf, &zsend, &zrecv);
 	}
 #ifdef PFRING
-	log_debug("zmap", "destroying zc cluster %p", zconf.pf.cluster);
-	pfring_zc_destroy_cluster(zconf.pf.cluster);
+	//log_debug("zmap", "destroying zc cluster %p", zconf.pf.cluster);
+	//pfring_zc_destroy_cluster(zconf.pf.cluster);
 #endif
 	log_info("zmap", "completed");
 }

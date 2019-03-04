@@ -220,8 +220,8 @@ static pthread_spinlock_t packet_buf_pool_spin;
 static u_char* packet_buf = NULL;
 static uint32_t packet_buf_idx = 0;
 static uint32_t current_packet_buf = 0;
-#define LOW_WORK_CPU_CORE 8 // leave the lower numbered cpu cores for tx/rx/mon threads.
-static uint32_t current_cpu = LOW_WORK_CPU_CORE;
+#define HIGH_WORK_CPU_CORE 24 // leave the lower numbered cpu cores for tx/rx/mon threads.
+static uint32_t current_cpu = HIGH_WORK_CPU_CORE;
 static pthread_t* thread_ids = NULL;
 
 u_char* get_next_packet_buf() {
@@ -275,7 +275,7 @@ void packet_buf_init() {
 		pthread_spin_init(&packet_buf_pool_spin, PTHREAD_PROCESS_PRIVATE);
 	}
 
-	if (current_cpu - LOW_WORK_CPU_CORE < 1) {
+	if (current_cpu - HIGH_WORK_CPU_CORE < 1) {
 		int r = pthread_create(&thread_ids[current_cpu], NULL, handle_packet_buf_thread, (void*)(uint64_t)current_cpu);
 		if (r != 0) {
 			log_fatal("zmap", "unable to create packet handle thread");
@@ -290,8 +290,11 @@ void start_handle_thread() {
 	}
 
 	pthread_spin_lock(&packet_buf_pool_spin);
-	packet_buf_pool[packet_buf_pool_idx++] = packet_buf;
+	if (packet_buf_pool_idx >= MAX_PACKET_BUF_POOL_SIZE) {
+		log_fatal("zmap", "packet buf pool overflow.");
+	}
 	*((uint32_t*)(&packet_buf[packet_buf_idx])) = 0;
+	packet_buf_pool[packet_buf_pool_idx++] = packet_buf;
 	pthread_spin_unlock(&packet_buf_pool_spin);
 	packet_buf = NULL;
 	packet_buf_idx = 0;
@@ -319,7 +322,7 @@ void wait_recv_handle_complete() {
 	// in case there are remainders
 	start_handle_thread();
 
-	for (uint32_t i = LOW_WORK_CPU_CORE; i < current_cpu; i++) {
+	for (uint32_t i = HIGH_WORK_CPU_CORE; i < current_cpu; i++) {
 		pthread_join(thread_ids[i], NULL);
 	}
 	xfree(thread_ids);
