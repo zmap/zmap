@@ -292,11 +292,7 @@ static void start_zmap(void)
 		zconf.probe_module->close(&zconf, &zsend, &zrecv);
 	}
 #ifdef PFRING
-	for (uint32_t i = 0; i < zconf.senders * 256; ++i) {
-		pfring_zc_release_packet_handle(zconf.pf.cluster, zconf.pf.buffers[i]);
-	}
-	log_info("zmap", "sleep to let pfring cooling down");
-	sleep(5);
+	log_debug("zmap", "destroying zc cluster %p", zconf.pf.cluster);
 	pfring_zc_destroy_cluster(zconf.pf.cluster);
 #endif
 	log_info("zmap", "completed");
@@ -887,6 +883,7 @@ int main(int argc, char *argv[])
 		log_fatal("zmap", "Could not create zc cluster: %s",
 			  strerror(errno));
 	}
+	log_debug("zmap", "created zc cluster %p", zconf.pf.cluster);
 
 	zconf.pf.buffers = xcalloc(user_buffers, sizeof(pfring_zc_pkt_buff *));
 	for (uint32_t i = 0; i < user_buffers; ++i) {

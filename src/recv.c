@@ -61,21 +61,20 @@ void do_handle_packet(uint32_t buflen, const u_char *bytes)
 		ip_hdr,
 		buflen - (zconf.send_ip_pkts ? 0 : sizeof(struct ether_header)),
 		&src_ip, validation)) {
-		zrecv.validation_failed += 1;
+		zrecv.validation_failed++;
 		return;
 	} else {
-		zrecv.validation_passed += 1;
+		zrecv.validation_passed++;
 	}
 	// woo! We've validated that the packet is a response to our scan
 	int is_repeat = pbm_check(seen, ntohl(src_ip));
 	// track whether this is the first packet in an IP fragment.
 	if (ip_hdr->ip_off & IP_MF) {
-		zrecv.ip_fragments += 1;
+		zrecv.ip_fragments++;
 	}
 
-	fieldset_t fs;
-	fs_init_fieldset(&fs);
-	fs_add_ip_fields(&fs, ip_hdr);
+	fieldset_t *fs = fs_new_fieldset();
+	fs_add_ip_fields(fs, ip_hdr);
 	// HACK:
 	// probe modules expect the full ethernet frame
 	// in process_packet. For VPN, we only get back an IP frame.
@@ -89,41 +88,40 @@ void do_handle_packet(uint32_t buflen, const u_char *bytes)
 		       bytes + zconf.data_link_size, buflen);
 		bytes = fake_eth_hdr;
 	}
-	zconf.probe_module->process_packet(bytes, buflen, &fs, validation);
-	fs_add_system_fields(&fs, is_repeat, zsend.complete);
+	zconf.probe_module->process_packet(bytes, buflen, fs, validation);
+	fs_add_system_fields(fs, is_repeat, zsend.complete);
 	int success_index = zconf.fsconf.success_index;
-	assert(success_index < fs.len);
-	int is_success = fs_get_uint64_by_index(&fs, success_index);
+	assert(success_index < fs->len);
+	int is_success = fs_get_uint64_by_index(fs, success_index);
 
 	if (is_success) {
-		zrecv.success_total += 1;
+		zrecv.success_total++;
 		if (!is_repeat) {
-			zrecv.success_unique += 1;
+			zrecv.success_unique++;
 			pbm_set(seen, ntohl(src_ip));
 		}
 		if (zsend.complete) {
-			zrecv.cooldown_total += 1;
+			zrecv.cooldown_total++;
 			if (!is_repeat) {
-				zrecv.cooldown_unique += 1;
+				zrecv.cooldown_unique++;
 			}
 		}
 	} else {
-		zrecv.failure_total += 1;
+		zrecv.failure_total++;
 	}
 	// probe module includes app_success field
 	if (zconf.fsconf.app_success_index >= 0) {
 		int is_app_success =
-		    fs_get_uint64_by_index(&fs, zconf.fsconf.app_success_index);
+		    fs_get_uint64_by_index(fs, zconf.fsconf.app_success_index);
 		if (is_app_success) {
-			zrecv.app_success_total += 1;
+			zrecv.app_success_total++;
 			if (!is_repeat) {
-				zrecv.app_success_unique += 1;
+				zrecv.app_success_unique++;
 			}
 		}
 	}
 
-	fieldset_t o;
-	fs_init_fieldset(&o);
+	fieldset_t *o = NULL;
 	// we need to translate the data provided by the probe module
 	// into a fieldset that can be used by the output module
 	if (!is_success && zconf.filter_unsuccessful) {
@@ -132,15 +130,17 @@ void do_handle_packet(uint32_t buflen, const u_char *bytes)
 	if (is_repeat && zconf.filter_duplicates) {
 		goto cleanup;
 	}
-	if (!evaluate_expression(zconf.filter.expression, &fs)) {
+	if (!evaluate_expression(zconf.filter.expression, fs)) {
 		goto cleanup;
 	}
-	zrecv.filter_success += 1;
-	translate_fieldset(&fs, &zconf.fsconf.translation, &o);
+	zrecv.filter_success++;
+	o = translate_fieldset(fs, &zconf.fsconf.translation);
 	if (zconf.output_module && zconf.output_module->process_ip) {
-		zconf.output_module->process_ip(&o);
+		zconf.output_module->process_ip(o);
 	}
 cleanup:
+	fs_free(fs);
+	free(o);
 	if (zconf.output_module && zconf.output_module->update &&
 	    !(zrecv.success_unique % zconf.output_module->update_interval)) {
 		zconf.output_module->update(&zconf, &zsend, &zrecv);
@@ -291,6 +291,7 @@ void start_handle_thread() {
 
 	pthread_spin_lock(&packet_buf_pool_spin);
 	packet_buf_pool[packet_buf_pool_idx++] = packet_buf;
+	*((uint32_t*)(&packet_buf[packet_buf_idx])) = 0;
 	pthread_spin_unlock(&packet_buf_pool_spin);
 	packet_buf = NULL;
 	packet_buf_idx = 0;
@@ -298,7 +299,11 @@ void start_handle_thread() {
 
 void handle_packet(uint32_t buflen, const u_char* bytes)
 {
-	if ((MAX_PACKET_BUF_SIZE - packet_buf_idx - 1) < (buflen + sizeof(uint32_t))) {
+	uint32_t remainder = MAX_PACKET_BUF_SIZE - packet_buf_idx - 1 - sizeof(uint32_t);
+	if (remainder < (buflen + sizeof(uint32_t))) {
+		if (remainder < 0) {
+			log_fatal("zmap", "buffer overflow, remainder %u", remainder);
+		}
 		start_handle_thread();
 	}
 	if (packet_buf == NULL) {

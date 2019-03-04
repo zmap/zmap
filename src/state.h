@@ -11,7 +11,6 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <stdatomic.h>
 
 #include "../lib/includes.h"
 

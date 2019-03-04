@@ -40,7 +40,6 @@ void recv_cleanup()
 		return;
 	}
 	pfring_zc_sync_queue(pf_recv, rx_only);
-	pfring_zc_release_packet_handle(zconf.pf.cluster, pf_buffer);
 }
 
 void recv_packets()
