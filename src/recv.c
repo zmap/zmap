@@ -220,6 +220,7 @@ static pthread_spinlock_t packet_buf_pool_spin;
 static u_char* packet_buf = NULL;
 static uint32_t packet_buf_idx = 0;
 static uint32_t current_packet_buf = 0;
+static uint32_t packet_buf_depleted = 0;
 static uint32_t current_cpu = 0;
 static pthread_t* thread_ids = NULL;
 
@@ -241,7 +242,7 @@ void* handle_packet_buf_thread(void* arg) {
 	while (1) {
 		u_char* buf = get_next_packet_buf();
 		if (!buf) {
-			if (zsend.complete) {
+			if (packet_buf_depleted) {
 				break;
 			}
 			log_debug("zmap", "handle_packet_buf_thread waiting (%d)", syscall(SYS_gettid));
@@ -320,6 +321,7 @@ void wait_recv_handle_complete() {
 	// in case there are remainders
 	start_handle_thread();
 
+	packet_buf_depleted = 1;
 	pthread_join(thread_ids[current_cpu], NULL);
 
 	xfree(thread_ids);
