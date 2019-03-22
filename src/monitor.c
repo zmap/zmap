@@ -458,7 +458,7 @@ void monitor_run(iterator_t *it, pthread_mutex_t *lock)
 		if (status_fd) {
 			update_status_updates_file(export_status, status_fd);
 		}
-		update_stats();
+		update_stats(it);
 		sleep(UPDATE_INTERVAL);
 	}
 	if (!zconf.quiet) {
