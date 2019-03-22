@@ -6,6 +6,11 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+
 #include "state.h"
 #include "../lib/logger.h"
 
@@ -97,3 +102,23 @@ struct state_recv zrecv = {
     .pcap_drop = 0,
     .pcap_ifdrop = 0,
 };
+
+static stats_t *stats;
+void init_stats() {
+	int stats_fd;
+	void *addr;
+	if ((stats_fd = open(STATS_NAME, O_RDWR, S_IRUSR | S_IWUSR)) == -1) {
+		perror("open");
+		exit(1);
+	}
+	if ((addr = mmap(NULL, sizeof(stats_t), PROT_WRITE, MAP_FILE | MAP_SHARED, stats_fd, 0)) == MAP_FAILED) {
+		perror("mmap");
+		exit(1);
+	}
+	stats = (stats_t*)addr;
+}
+
+void update_stats() {
+	atomic_store(&stats->sent, zsend.sent);
+	atomic_store(&stats->recv, zrecv.success_unique);
+}

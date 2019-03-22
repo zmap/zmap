@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdatomic.h>
 
 #include "../lib/includes.h"
 
@@ -194,5 +195,13 @@ struct state_recv {
 	uint32_t pcap_ifdrop;
 };
 extern struct state_recv zrecv;
+
+#define STATS_NAME "stats"
+typedef struct stats_st {
+	atomic_int_fast64_t sent;
+	atomic_int_fast64_t recv;
+} stats_t;
+void init_stats();
+void update_stats();
 
 #endif // _STATE_H
