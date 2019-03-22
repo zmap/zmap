@@ -118,7 +118,11 @@ void init_stats() {
 	stats = (stats_t*)addr;
 }
 
-void update_stats() {
-	atomic_store(&stats->sent, zsend.sent);
+void update_stats(iterator_t *it) {
+	uint64_t sent_total = 0;
+	for (uint8_t i = 0; i < zconf.senders; i++) {
+		sent_total += get_shard(it, i)->state.sent;
+	}
+	atomic_store(&stats->sent, sent_total);
 	atomic_store(&stats->recv, zrecv.success_unique);
 }
