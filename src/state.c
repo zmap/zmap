@@ -120,7 +120,7 @@ void init_stats() {
 
 void update_stats(iterator_t *it) {
 	for (uint8_t i = 0; i < zconf.senders; i++) {
-		sent += atomic_fetch_add(&stats->sent, get_shard(it, i)->state.sent);
+		atomic_fetch_add(&stats->sent, get_shard(it, i)->state.sent);
 	}
 	atomic_store(&stats->recv, zrecv.success_unique);
 }
