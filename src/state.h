@@ -23,6 +23,7 @@
 #include "fieldset.h"
 #include "filter.h"
 #include "types.h"
+#include "iterator.h"
 
 #define MAX_PACKET_SIZE 4096
 #define MAC_ADDR_LEN_BYTES 6
@@ -202,6 +203,6 @@ typedef struct stats_st {
 	atomic_int_fast64_t recv;
 } stats_t;
 void init_stats();
-void update_stats();
+void update_stats(iterator_t *it);
 
 #endif // _STATE_H
