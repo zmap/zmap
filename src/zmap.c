@@ -183,6 +183,8 @@ static void start_zmap(void)
 		zconf.output_module->start(&zconf, &zsend, &zrecv);
 	}
 
+	init_stats();
+
 	// start threads
 	uint32_t cpu = 0;
 	pthread_t *tsend, trecv, tmon;
