@@ -36,9 +36,9 @@ zmap_ip_checksum(unsigned short *buf)
 }
 
 __attribute__((unused)) static inline unsigned short
-icmp_checksum(unsigned short *buf)
+icmp_checksum(unsigned short *buf, size_t buflen)
 {
-	return in_checksum(buf, (int)sizeof(struct icmp));
+	return in_checksum(buf, buflen);
 }
 
 static __attribute__((unused)) uint16_t tcp_checksum(unsigned short len_tcp,
