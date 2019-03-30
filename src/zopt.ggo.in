@@ -100,6 +100,11 @@ option "probe-args"             - "Arguments to pass to probe module"
     typestr="args"
     optional string
 
+option "probe-ttl"              - "Set TTL value for probe IP packets"
+    typestr="n"
+    default="255"
+    optional int
+
 option "list-probe-modules"     - "List available probe modules"
         optional
 

@@ -128,6 +128,9 @@ from hosts.
    * `--probe-args=args`:
      Arguments to pass to probe module
 
+   * `--probe-ttl=hops`:
+     Set TTL value for probe IP packets
+
    * `--list-output-fields`:
      List the fields the selected probe module can send to the output module
 

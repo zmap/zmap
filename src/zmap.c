@@ -589,6 +589,7 @@ int main(int argc, char *argv[])
 	SET_IF_GIVEN(zconf.blacklist_filename, blacklist_file);
 	SET_IF_GIVEN(zconf.list_of_ips_filename, list_of_ips_file);
 	SET_IF_GIVEN(zconf.probe_args, probe_args);
+	SET_IF_GIVEN(zconf.probe_ttl, probe_ttl);
 	SET_IF_GIVEN(zconf.output_args, output_args);
 	SET_IF_GIVEN(zconf.iface, interface);
 	SET_IF_GIVEN(zconf.max_runtime, max_runtime);
