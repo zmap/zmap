@@ -82,6 +82,7 @@ struct state_conf {
 	char *output_module_name;
 	struct output_module *output_module;
 	char *probe_args;
+	uint8_t probe_ttl;
 	char *output_args;
 	macaddr_t gw_mac[MAC_ADDR_LEN_BYTES];
 	macaddr_t hw_mac[MAC_ADDR_LEN_BYTES];
