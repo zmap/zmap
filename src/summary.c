@@ -210,6 +210,11 @@ void json_metadata(FILE *file)
 		    obj, "probe_args",
 		    json_object_new_string(zconf.probe_args));
 	}
+	if (zconf.probe_ttl) {
+		json_object_object_add(
+		    obj, "probe_ttl",
+		    json_object_new_int(zconf.probe_ttl));
+	}
 	if (zconf.output_args) {
 		json_object_object_add(
 		    obj, "output_args",

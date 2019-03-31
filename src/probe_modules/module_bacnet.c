@@ -71,8 +71,9 @@ int bacnet_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	return EXIT_SUCCESS;
 }
 
-int bacnet_make_packet(void *buf, UNUSED size_t *buf_len, ipaddr_n_t src_ip,
-		       ipaddr_n_t dst_ip, uint32_t *validation, int probe_num,
+int bacnet_make_packet(void *buf, UNUSED size_t *buf_len,
+               ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
+			   uint32_t *validation, int probe_num,
 		       UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -82,6 +83,7 @@ int bacnet_make_packet(void *buf, UNUSED size_t *buf_len, ipaddr_n_t src_ip,
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
+	ip_header->ip_ttl = ttl;
 	ip_header->ip_sum = 0;
 
 	udp_header->uh_sport =
