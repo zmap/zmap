@@ -551,7 +551,7 @@ static bool process_response_answer(char **data, uint16_t *data_len,
 			fs_add_uint64(afs, "rdata_is_parsed", 1);
 			char *addr =
 			    strdup(inet_ntoa(*(struct in_addr *)rdata));
-			log_info("dns", "process_response_answer, received answer: %s", addr);
+			fprintf(stdout, "process_response_answer, received answer: %s\n", addr);
 			fs_add_unsafe_string(afs, "rdata", addr, 1);
 		}
 	} else if (type == DNS_QTYPE_AAAA) {
