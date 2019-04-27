@@ -92,23 +92,23 @@ static uint16_t *qtypes;
 static int num_questions = 0;
 
 void generate_default_domain() {
-	char digits[] = "01234567890";
-	char alphabets = "abcdefghijklmnopqrstuvwxyz";
-	// only generate domains of length 6
-	char domain[8];
-	memset(domain, 0, sizeof(domain));
-	time_t t;
-  srand((unsigned) time(&t));
-	for (int i = 0; i < 6; i++) {
-		char c;
-		if (rand() & 1) {
-			c = digits[rand() % strlen(digits)];
-		} else {
-			c = alphabets[rand() % strlen(alphabets)];
-		}
-		domain[i] = c;
-	}
-	memcpy(&default_domain[4], domain, 6);
+	// char digits[] = "01234567890";
+	// char alphabets = "abcdefghijklmnopqrstuvwxyz";
+	// // only generate domains of length 6
+	// char domain[8];
+	// memset(domain, 0, sizeof(domain));
+	// time_t t;
+  // srand((unsigned) time(&t));
+	// for (int i = 0; i < 6; i++) {
+	// 	char c;
+	// 	if (rand() & 1) {
+	// 		c = digits[rand() % strlen(digits)];
+	// 	} else {
+	// 		c = alphabets[rand() % strlen(alphabets)];
+	// 	}
+	// 	domain[i] = c;
+	// }
+	// memcpy(&default_domain[4], domain, 6);
 	log_info("dns", "generate_default_domain: %s", default_domain);
 }
 
@@ -551,6 +551,7 @@ static bool process_response_answer(char **data, uint16_t *data_len,
 			fs_add_uint64(afs, "rdata_is_parsed", 1);
 			char *addr =
 			    strdup(inet_ntoa(*(struct in_addr *)rdata));
+			log_info("dns", "process_response_answer, received answer: %s", addr);
 			fs_add_unsafe_string(afs, "rdata", addr, 1);
 		}
 	} else if (type == DNS_QTYPE_AAAA) {
