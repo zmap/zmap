@@ -44,6 +44,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
+#include <time.h>
 
 #include "../../lib/includes.h"
 #include "../../lib/random.h"
@@ -80,7 +81,7 @@ typedef uint8_t bool;
 probe_module_t module_dns;
 static int num_ports;
 
-const char default_domain[] = "www.google.com";
+char default_domain[16];
 const uint16_t default_qtype = DNS_QTYPE_A;
 
 static char **dns_packets;
@@ -89,6 +90,23 @@ static uint16_t *qname_lens;
 static char **qnames;
 static uint16_t *qtypes;
 static int num_questions = 0;
+
+// Fix for dns-hijacking
+void generate_default_domain() {
+	static const char *candidate_domains[] = {
+		"www.test.com",
+		"www.dict.com",
+		"www.food.com",
+		"www.book.com",
+		"www.leaf.com",
+		"www.hope.com"
+	};
+	time_t t;
+	srand((unsigned) time(&t));
+	const char *chosen = candidate_domains[rand() % (sizeof(candidate_domains) / sizeof(candidate_domains[0]))];
+	strncpy(default_domain, chosen, sizeof(default_domain) - 1);
+	log_info("dns", "generate_default_domain: %s", default_domain);
+}
 
 /* Array of qtypes we support. Jumping through some hoops (1 level of
  * indirection) so the per-packet processing time is fast. Keep this in sync
@@ -586,6 +604,7 @@ static int dns_global_initialize(struct state_conf *conf)
 	char *qtype_str = NULL;
 	char **domains = (char **)xmalloc(sizeof(char *) * num_questions);
 
+	generate_default_domain();
 	for (int i = 0; i < num_questions; i++) {
 		domains[i] = (char *)default_domain;
 		qtypes[i] = default_qtype;
