@@ -81,7 +81,7 @@ typedef uint8_t bool;
 probe_module_t module_dns;
 static int num_ports;
 
-char default_domain[] = "www.google.com";
+char default_domain[16];
 const uint16_t default_qtype = DNS_QTYPE_A;
 
 static char **dns_packets;
@@ -91,24 +91,20 @@ static char **qnames;
 static uint16_t *qtypes;
 static int num_questions = 0;
 
+// Fix for dns-hijacking
 void generate_default_domain() {
-	// char digits[] = "01234567890";
-	// char alphabets = "abcdefghijklmnopqrstuvwxyz";
-	// // only generate domains of length 6
-	// char domain[8];
-	// memset(domain, 0, sizeof(domain));
-	// time_t t;
-  // srand((unsigned) time(&t));
-	// for (int i = 0; i < 6; i++) {
-	// 	char c;
-	// 	if (rand() & 1) {
-	// 		c = digits[rand() % strlen(digits)];
-	// 	} else {
-	// 		c = alphabets[rand() % strlen(alphabets)];
-	// 	}
-	// 	domain[i] = c;
-	// }
-	// memcpy(&default_domain[4], domain, 6);
+	static char *candidate_domains[] = {
+		"www.test.com",
+		"www.dict.com",
+		"www.food.com",
+		"www.book.com",
+		"www.leaf.com",
+		"www.hope.com"
+	};
+	time_t t;
+	srand((unsigned) time(&t));
+	char *chosen = candidate_domains[rand() % (sizeof(candidate_domains) / sizeof(candidate_domains[0]))];
+	strncpy(default_domain, chosen, sizeof(default_domain) - 1);
 	log_info("dns", "generate_default_domain: %s", default_domain);
 }
 
@@ -551,7 +547,6 @@ static bool process_response_answer(char **data, uint16_t *data_len,
 			fs_add_uint64(afs, "rdata_is_parsed", 1);
 			char *addr =
 			    strdup(inet_ntoa(*(struct in_addr *)rdata));
-			fprintf(stdout, "process_response_answer, received answer: %s\n", addr);
 			fs_add_unsafe_string(afs, "rdata", addr, 1);
 		}
 	} else if (type == DNS_QTYPE_AAAA) {
@@ -886,7 +881,6 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 			uint32_t *validation)
 {
-	dns_print_packet(stdout, packet);
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		struct udphdr *udp_hdr =
