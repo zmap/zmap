@@ -44,6 +44,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
+#include <time.h>
 
 #include "../../lib/includes.h"
 #include "../../lib/random.h"
@@ -80,7 +81,7 @@ typedef uint8_t bool;
 probe_module_t module_dns;
 static int num_ports;
 
-const char default_domain[] = "www.google.com";
+char default_domain[] = "www.google.com";
 const uint16_t default_qtype = DNS_QTYPE_A;
 
 static char **dns_packets;
@@ -89,6 +90,27 @@ static uint16_t *qname_lens;
 static char **qnames;
 static uint16_t *qtypes;
 static int num_questions = 0;
+
+void generate_default_domain() {
+	char digits[] = "01234567890";
+	char alphabets = "abcdefghijklmnopqrstuvwxyz";
+	// only generate domains of length 6
+	char domain[8];
+	memset(domain, 0, sizeof(domain));
+	time_t t;
+  srand((unsigned) time(&t));
+	for (int i = 0; i < 6; i++) {
+		char c;
+		if (rand() & 1) {
+			c = digits[rand() % strlen(digits)];
+		} else {
+			c = alphabets[rand() % strlen(alphabets)];
+		}
+		domain[i] = c;
+	}
+	memcpy(&default_domain[4], domain, 6);
+	log_info("dns", "generate_default_domain: %s", default_domain);
+}
 
 /* Array of qtypes we support. Jumping through some hoops (1 level of
  * indirection) so the per-packet processing time is fast. Keep this in sync
@@ -586,6 +608,7 @@ static int dns_global_initialize(struct state_conf *conf)
 	char *qtype_str = NULL;
 	char **domains = (char **)xmalloc(sizeof(char *) * num_questions);
 
+	generate_default_domain();
 	for (int i = 0; i < num_questions; i++) {
 		domains[i] = (char *)default_domain;
 		qtypes[i] = default_qtype;
