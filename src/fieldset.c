@@ -306,6 +306,19 @@ char *fs_get_string_by_index(fieldset_t *fs, int index)
 	return (char *)fs->fields[index].value.ptr;
 }
 
+fieldset_t *fs_get_fieldset_by_index(fieldset_t *fs, int index) {
+	return (fieldset_t *)fs->fields[index].value.ptr;
+}
+
+int fs_get_index_by_name(fieldset_t *fs, char *name) {
+	for (int i = 0; i < fs->len; i++) {
+		if (!strcmp(fs->fields[i].name, name)) {
+			return i;
+		}
+	}
+	return -1;
+}
+
 int fds_get_index_by_name(fielddefset_t *fds, char *name)
 {
 	for (int i = 0; i < fds->len; i++) {

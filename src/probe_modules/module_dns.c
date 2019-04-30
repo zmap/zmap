@@ -81,7 +81,9 @@ typedef uint8_t bool;
 probe_module_t module_dns;
 static int num_ports;
 
-char default_domain[16];
+const char *default_domain = "loadbalancer-portal-public-01.horizon.netscout-dev.com";
+const char *default_ip = "52.37.99.50";
+
 const uint16_t default_qtype = DNS_QTYPE_A;
 
 static char **dns_packets;
@@ -92,21 +94,21 @@ static uint16_t *qtypes;
 static int num_questions = 0;
 
 // Fix for dns-hijacking
-void generate_default_domain() {
-	static const char *candidate_domains[] = {
-		"www.test.com",
-		"www.dict.com",
-		"www.food.com",
-		"www.book.com",
-		"www.leaf.com",
-		"www.hope.com"
-	};
-	time_t t;
-	srand((unsigned) time(&t));
-	const char *chosen = candidate_domains[rand() % (sizeof(candidate_domains) / sizeof(candidate_domains[0]))];
-	strncpy(default_domain, chosen, sizeof(default_domain) - 1);
-	log_info("dns", "generate_default_domain: %s", default_domain);
-}
+// void generate_default_domain() {
+// 	static const char *candidate_domains[] = {
+// 		"www.test.com",
+// 		"www.dict.com",
+// 		"www.food.com",
+// 		"www.book.com",
+// 		"www.leaf.com",
+// 		"www.hope.com"
+// 	};
+// 	time_t t;
+// 	srand((unsigned) time(&t));
+// 	const char *chosen = candidate_domains[rand() % (sizeof(candidate_domains) / sizeof(candidate_domains[0]))];
+// 	strncpy(default_domain, chosen, sizeof(default_domain) - 1);
+// 	log_info("dns", "generate_default_domain: %s", default_domain);
+// }
 
 /* Array of qtypes we support. Jumping through some hoops (1 level of
  * indirection) so the per-packet processing time is fast. Keep this in sync
@@ -571,7 +573,7 @@ static bool process_response_answer(char **data, uint16_t *data_len,
 		fs_add_binary(afs, "rdata", rdlength, rdata, 0);
 	}
 	// Now we're adding the new fs to the list.
-	fs_add_fieldset(list, NULL, afs);
+	fs_add_fieldset(list, "rdata_fs", afs);
 	// Now update the pointers.
 	*data = *data + bytes_consumed + sizeof(dns_answer_tail) + rdlength;
 	*data_len =
@@ -604,11 +606,11 @@ static int dns_global_initialize(struct state_conf *conf)
 	char *qtype_str = NULL;
 	char **domains = (char **)xmalloc(sizeof(char *) * num_questions);
 
-	generate_default_domain();
-	for (int i = 0; i < num_questions; i++) {
-		domains[i] = (char *)default_domain;
-		qtypes[i] = default_qtype;
-	}
+	// generate_default_domain();
+	// for (int i = 0; i < num_questions; i++) {
+	// 	domains[i] = (char *)default_domain;
+	// 	qtypes[i] = default_qtype;
+	// }
 
 	// This is zmap boilerplate. Why do I have to write this?
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
@@ -929,7 +931,6 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 
 		// High level info
 		fs_add_string(fs, "classification", (char *)"dns", 0);
-		fs_add_bool(fs, "success", is_valid);
 		fs_add_bool(fs, "app_success",
 			    is_valid && (qr == DNS_QR_ANSWER) &&
 				(rcode == DNS_RCODE_NOERR));
@@ -1041,7 +1042,23 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 			}
 			// Did we parse OK?
 			fs_add_uint64(fs, "dns_parse_err", err);
+
+			int idx = fs_get_index_by_name(fs, "dns_answers");
+			if (idx >= 0) {
+				list = fs_get_fieldset_by_index(fs, idx);
+				idx = fs_get_index_by_name(list, "rdata_fs");
+				if (idx >= 0) {
+					list = fs_get_fieldset_by_index(fs, idx);
+					idx = fs_get_index_by_name(list, "rdata");
+					if (idx >= 0) {
+						is_valid = strcmp(fs_get_string_by_index(list, idx), default_ip) == 0;
+					}
+				}
+			} else {
+				is_valid = 0;
+			}
 		}
+		fs_add_bool(fs, "success", is_valid);
 		// Now the raw stuff.
 		fs_add_binary(fs, "raw_data", (udp_len - sizeof(struct udphdr)),
 			      (void *)&udp_hdr[1], 0);

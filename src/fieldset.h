@@ -93,6 +93,10 @@ char *fs_get_string_by_index(fieldset_t *fs, int index);
 
 int fds_get_index_by_name(fielddefset_t *fds, char *name);
 
+int fs_get_index_by_name(fieldset_t *fs, char *name);
+
+fieldset_t *fs_get_fieldset_by_index(fieldset_t *fs, int index);
+
 void gen_fielddef_set(fielddefset_t *fds, fielddef_t fs[], int len);
 
 void fs_add_null(fieldset_t *fs, const char *name);
