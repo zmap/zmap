@@ -1043,7 +1043,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 			// Did we parse OK?
 			fs_add_uint64(fs, "dns_parse_err", err);
 
-			log_info("dns", "BOO");
+			fprintf(stdout, "the filedset is %p\n", fs);
 			int idx = fs_get_index_by_name(fs, "dns_answers");
 			if (idx >= 0) {
 				log_info("dns", "found dns_answer");
