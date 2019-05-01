@@ -1045,12 +1045,15 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 
 			int idx = fs_get_index_by_name(fs, "dns_answers");
 			if (idx >= 0) {
+				log_info("dns", "found dns_answer");
 				list = fs_get_fieldset_by_index(fs, idx);
 				idx = fs_get_index_by_name(list, "rdata_fs");
 				if (idx >= 0) {
+					log_info("dns", "rdata_fs");
 					list = fs_get_fieldset_by_index(fs, idx);
 					idx = fs_get_index_by_name(list, "rdata");
 					if (idx >= 0) {
+						log_info("dns", "rdata");
 						is_valid = strcmp(fs_get_string_by_index(list, idx), default_ip) == 0;
 					}
 				}
