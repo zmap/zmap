@@ -105,7 +105,7 @@ section "IPv6"
 option "ipv6-target-file"            - "File containing IPv6 addresses to be scanned, use '-' for stdin"
     typestr="filename"
     optional string
-option "ipv6-source-ip"              - "Source address(es) for scan packets"
+option "ipv6-source-ip"              - "Source IPv6 address for scan packets"
     typestr="name"
     optional string
 
