@@ -41,6 +41,7 @@ snmp3_161.pkt           This probe triggers a response from SNMP v3 services on 
 upnp_1900.pkt           This probe triggers a response from UPnP SSDP services on UDP port 1900
 wdbrpc_17185.pkt        This probe triggers a response from VxWorks WDBRPC services on UDP port 17185
 wsd_3702.pkt            This probe triggers a response from WSD/DPWS services on UDP port 3702
+coap_5683.pkt           This probe triggers a response from COAP services on UDP port 5683
 
 NOTES:
 -----
