@@ -20,6 +20,8 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <sys/sysinfo.h>
+#include <pcap/pcap.h>
+#include <linux/limits.h>
 
 #include "recv-internal.h"
 #include "state.h"
@@ -39,6 +41,9 @@ void wait_recv_handle_complete();
 uint8_t ** get_recv_pbm() {
 	return seen;
 }
+
+int recv_pcap_dump(uint32_t buflen, const u_char *bytes);
+int recv_pcap_close();
 
 void do_handle_packet(uint32_t buflen, const u_char *bytes)
 {
@@ -66,6 +71,7 @@ void do_handle_packet(uint32_t buflen, const u_char *bytes)
 	} else {
 		zrecv.validation_passed++;
 	}
+	recv_pcap_dump(buflen, bytes);
 	// woo! We've validated that the packet is a response to our scan
 	int is_repeat = pbm_check(seen, ntohl(src_ip));
 	// track whether this is the first packet in an IP fragment.
@@ -327,5 +333,39 @@ void wait_recv_handle_complete() {
 	xfree(thread_ids);
 	xfree(packet_buf_pool);
 	pthread_spin_destroy(&packet_buf_pool_spin);
+	recv_pcap_close();
 	log_info("zmap", "recv handle complete");
+}
+
+static pcap_t *pcap_handle = NULL;
+static pcap_dumper_t *pcap_dumper = NULL;
+static int pcap_file_opened = 0;
+int recv_pcap_dump(uint32_t buflen, const u_char *bytes) {
+	// Only when verbose set to 6 plus log_file set
+	if (zconf.log_level != 6 || !zconf.log_file) {
+		return 0;
+	}
+
+	if (!pcap_file_opened) {
+		char pcap_file[PATH_MAX + 1] = {0};
+		snprintf(pcap_file, PATH_MAX, "/tmp/%s.pcap", zconf.log_file);
+		pcap_handle = pcap_open_dead(DLT_EN10MB, 1 << 16);
+		pcap_dumper = pcap_dump_open(pcap_handle, pcap_file);
+		pcap_file_opened = 1;
+	}
+
+	struct pcap_pkthdr pcap_hdr;
+	pcap_hdr.caplen = buflen;
+	pcap_hdr.len = pcap_hdr.caplen;
+
+	pcap_dump((u_char *)pcap_dumper, &pcap_hdr, bytes);
+
+	return 0;
+}
+
+int recv_pcap_close() {
+	if (pcap_file_opened) {
+		pcap_dump_close(pcap_dumper);
+	}
+	return 0;
 }
