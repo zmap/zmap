@@ -77,6 +77,8 @@ void json_metadata(FILE *file)
 			       json_object_new_int(zconf.max_runtime));
 	json_object_object_add(obj, "max_results",
 			       json_object_new_int(zconf.max_results));
+	json_object_object_add(obj, "output_results",
+			       json_object_new_int(zrecv.filter_success));
 	if (zconf.iface) {
 		json_object_object_add(obj, "iface",
 				       json_object_new_string(zconf.iface));
@@ -208,6 +210,11 @@ void json_metadata(FILE *file)
 		    obj, "probe_args",
 		    json_object_new_string(zconf.probe_args));
 	}
+	if (zconf.probe_ttl) {
+		json_object_object_add(
+		    obj, "probe_ttl",
+		    json_object_new_int(zconf.probe_ttl));
+	}
 	if (zconf.output_args) {
 		json_object_object_add(
 		    obj, "output_args",
@@ -250,10 +257,14 @@ void json_metadata(FILE *file)
 		json_object_object_add(obj, "source_mac",
 				       json_object_new_string(mac_buf));
 	}
-	json_object_object_add(obj, "source_ip_first",
-			       json_object_new_string(zconf.source_ip_first));
-	json_object_object_add(obj, "source_ip_last",
-			       json_object_new_string(zconf.source_ip_last));
+	json_object *source_ips = json_object_new_array();
+	for (uint i = 0; i < zconf.number_source_ips; i++) {
+		struct in_addr temp;
+		temp.s_addr = zconf.source_ip_addresses[i];
+		json_object_array_add(source_ips, json_object_new_string(
+						      strdup(inet_ntoa(temp))));
+	}
+	json_object_object_add(obj, "source_ips", source_ips);
 	if (zconf.output_filename) {
 		json_object_object_add(
 		    obj, "output_filename",

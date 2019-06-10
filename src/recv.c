@@ -25,6 +25,7 @@
 #include "probe_modules/probe_modules.h"
 #include "output_modules/output_modules.h"
 
+static u_char fake_eth_hdr[65535];
 // bitmap of observed IP addresses
 static uint8_t **seen = NULL;
 
@@ -42,22 +43,22 @@ void handle_packet(uint32_t buflen, const u_char *bytes)
 
 	// IPv6
 	if (ipv6) {
-		if ((sizeof(struct ip6_hdr) + sizeof(struct ether_header)) > buflen) {
+		if ((sizeof(struct ip6_hdr) + zconf.data_link_size) > buflen) {
 			// buffer not large enough to contain ethernet
 			// and ip headers. further action would overrun buf
 			return;
 		}
-		ipv6_hdr = (struct ip6_hdr *) &bytes[sizeof(struct ether_header)];
+		ipv6_hdr = (struct ip6_hdr *)&bytes[zconf.data_link_size];
 
 		validate_gen_ipv6(&ipv6_hdr->ip6_dst, &(ipv6_hdr->ip6_src), (uint8_t *)validation);
 		ip_hdr = (struct ip *) ipv6_hdr;
 	} else {
-		if (sizeof(struct ip) + sizeof(struct ether_header) > buflen) {
+		if ((sizeof(struct ip) + zconf.data_link_size) > buflen) {
 			// buffer not large enough to contain ethernet
 			// and ip headers. further action would overrun buf
 			return;
 		}
-		ip_hdr = (struct ip *)&bytes[sizeof(struct ether_header)];
+		ip_hdr = (struct ip *)&bytes[zconf.data_link_size];
 
 		src_ip = ip_hdr->ip_src.s_addr;
 
@@ -68,8 +69,9 @@ void handle_packet(uint32_t buflen, const u_char *bytes)
 	}
 
 	if (!zconf.probe_module->validate_packet(
-		ip_hdr, buflen - sizeof(struct ether_header), &src_ip,
-		validation)) {
+		ip_hdr,
+		buflen - (zconf.send_ip_pkts ? 0 : sizeof(struct ether_header)),
+		&src_ip, validation)) {
 		zrecv.validation_failed++;
 		return;
 	} else {
@@ -97,6 +99,19 @@ void handle_packet(uint32_t buflen, const u_char *bytes)
 		fs_add_ip_fields(fs, ip_hdr);
 	}
 
+	// HACK:
+	// probe modules expect the full ethernet frame
+	// in process_packet. For VPN, we only get back an IP frame.
+	// Here, we fake an ethernet frame (which is initialized to
+	// have ETH_P_IP proto and 00s for dest/src).
+	if (zconf.send_ip_pkts) {
+		if (buflen > sizeof(fake_eth_hdr)) {
+			buflen = sizeof(fake_eth_hdr);
+		}
+		memcpy(&fake_eth_hdr[sizeof(struct ether_header)],
+		       bytes + zconf.data_link_size, buflen);
+		bytes = fake_eth_hdr;
+	}
 	zconf.probe_module->process_packet(bytes, buflen, fs, validation);
 	fs_add_system_fields(fs, is_repeat, zsend.complete);
 	int success_index = zconf.fsconf.success_index;
@@ -142,6 +157,7 @@ void handle_packet(uint32_t buflen, const u_char *bytes)
 	if (!evaluate_expression(zconf.filter.expression, fs)) {
 		goto cleanup;
 	}
+	zrecv.filter_success++;
 	o = translate_fieldset(fs, &zconf.fsconf.translation);
 	if (zconf.output_module && zconf.output_module->process_ip) {
 		zconf.output_module->process_ip(o);
@@ -167,7 +183,11 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 	if (!zconf.dryrun) {
 		recv_init();
 	}
-
+	if (zconf.send_ip_pkts) {
+		struct ether_header *eth = (struct ether_header *)fake_eth_hdr;
+		memset(fake_eth_hdr, 0, sizeof(fake_eth_hdr));
+		eth->ether_type = htons(ETHERTYPE_IP);
+	}
 	// initialize paged bitmap
 	seen = pbm_init();
 	if (zconf.filter_duplicates) {
@@ -200,7 +220,7 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 		} else {
 			recv_packets();
 			if (zconf.max_results &&
-			    zrecv.success_unique >= zconf.max_results) {
+			    zrecv.filter_success >= zconf.max_results) {
 				break;
 			}
 		}

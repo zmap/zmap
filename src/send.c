@@ -55,11 +55,8 @@ static inline int send_run_init(sock_t sock);
 // Lock for send run
 static pthread_mutex_t send_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-// Source IP address for outgoing packets
-static in_addr_t srcip_first;
-static in_addr_t srcip_last;
+// Source IP address offset for outgoing packets
 static uint32_t srcip_offset;
-static uint32_t num_src_addrs;
 
 // Source ports for outgoing packets
 static uint16_t num_src_ports;
@@ -109,39 +106,25 @@ iterator_t *send_init(void)
 		log_fatal("send", "senders * shards > max targets");
 	}
 	it = iterator_init(zconf.senders, zconf.shard_num, zconf.total_shards);
-	// process the dotted-notation addresses passed to ZMAP and determine
-	// the source addresses from which we'll send packets;
-	srcip_first = inet_addr(zconf.source_ip_first);
-	if (srcip_first == INADDR_NONE) {
-		log_fatal("send", "invalid begin source ip address: `%s'",
-			  zconf.source_ip_first);
-	}
-	srcip_last = inet_addr(zconf.source_ip_last);
-	if (srcip_last == INADDR_NONE) {
-		log_fatal("send", "invalid end source ip address: `%s'",
-			  zconf.source_ip_last);
-	}
-	log_debug("send", "srcip_first: %u", srcip_first);
-	log_debug("send", "srcip_last: %u", srcip_last);
-	if (srcip_first == srcip_last) {
+	// determine the source address offset from which we'll send packets
+	struct in_addr temp;
+	temp.s_addr = zconf.source_ip_addresses[0];
+	log_debug("send", "srcip_first: %s", inet_ntoa(temp));
+	temp.s_addr = zconf.source_ip_addresses[zconf.number_source_ips - 1];
+	log_debug("send", "srcip_last: %s", inet_ntoa(temp));
+	if (zconf.number_source_ips == 1) {
 		srcip_offset = 0;
-		num_src_addrs = 1;
 	} else {
-		uint32_t ip_first = ntohl(srcip_first);
-		uint32_t ip_last = ntohl(srcip_last);
-		assert(ip_first && ip_last);
-		assert(ip_last > ip_first);
 		uint32_t offset =
 		    (uint32_t)(aesrand_getword(zconf.aes) & 0xFFFFFFFF);
-		srcip_offset = offset % (srcip_last - srcip_first);
-		num_src_addrs = ip_last - ip_first + 1;
+		srcip_offset = offset % (zconf.number_source_ips);
 	}
 
 	// process the source port range that ZMap is allowed to use
 	num_src_ports = zconf.source_port_last - zconf.source_port_first + 1;
 	log_debug("send", "will send from %i address%s on %u source ports",
-		  num_src_addrs, ((num_src_addrs == 1) ? "" : "es"),
-		  num_src_ports);
+		  zconf.number_source_ips,
+		  ((zconf.number_source_ips == 1) ? "" : "es"), num_src_ports);
 	// global initialization for send module
 	assert(zconf.probe_module);
 	if (zconf.probe_module->global_initialize) {
@@ -151,12 +134,22 @@ iterator_t *send_init(void)
 			    "global initialization for probe module failed.");
 		}
 	}
-	// concert specified bandwidth to packet rate
+
+	// only allow bandwidth or rate
+	if (zconf.bandwidth > 0 && zconf.rate > 0) {
+		log_fatal(
+		    "send",
+		    "must specify rate or bandwidth, or neither, not both.");
+	}
+	// convert specified bandwidth to packet rate
 	if (zconf.bandwidth > 0) {
 		size_t pkt_len = zconf.probe_module->packet_length;
 		pkt_len *= 8;
-		pkt_len += 8 * 24; // 7 byte MAC preamble, 1 byte Start frame,
-		// 4 byte CRC, 12 byte inter-frame gap
+		// 7 byte MAC preamble, 1 byte Start frame, 4 byte CRC, 12 byte
+		// inter-frame gap
+		pkt_len += 8 * 24;
+		// adjust calculated length if less than the minimum size of an
+		// ethernet frame
 		if (pkt_len < 84 * 8) {
 			pkt_len = 84 * 8;
 		}
@@ -174,9 +167,22 @@ iterator_t *send_init(void)
 				zconf.rate = 1;
 			}
 		}
-		log_debug("send",
-			  "using bandwidth %lu bits/s, rate set to %d pkt/s",
-			  zconf.bandwidth, zconf.rate);
+		log_debug(
+		    "send",
+		    "using bandwidth %lu bits/s for %zu byte probe, rate set to %d pkt/s",
+		    zconf.bandwidth, pkt_len / 8, zconf.rate);
+	}
+	// convert default placeholder to default value
+	if (zconf.rate == -1) {
+		// default 10K pps
+		zconf.rate = 10000;
+	}
+	// log rate, if explicitly specified
+	if (zconf.rate < 0) {
+		log_fatal("send", "rate impossibly slow");
+	}
+	if (zconf.rate > 0 && zconf.bandwidth <= 0) {
+		log_debug("send", "rate set to %d pkt/s", zconf.rate);
 	}
 	// Get the source hardware address, and give it to the probe
 	// module
@@ -209,19 +215,18 @@ iterator_t *send_init(void)
 	// setup signal handlers for changing scan speed
 	signal(SIGUSR1, sig_handler_increase_speed);
 	signal(SIGUSR2, sig_handler_decrease_speed);
-
 	zsend.start = now();
 	return it;
 }
 
 static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
 {
-	if (srcip_first == srcip_last) {
-		return srcip_first;
+	if (zconf.number_source_ips == 1) {
+		return zconf.source_ip_addresses[0];
 	}
-	return htonl(((ntohl(dst) + srcip_offset + local_offset) %
-		      num_src_addrs)) +
-	       srcip_first;
+	return zconf
+	    .source_ip_addresses[(ntohl(dst) + srcip_offset + local_offset) %
+				 zconf.number_source_ips];
 }
 
 // one sender thread
@@ -340,11 +345,19 @@ int send_run(sock_t st, shard_t *s)
 					double t = now();
 					assert(count > last_count);
 					assert(t > last_time);
-					delay *= (double)(count - last_count) /
-						 (t - last_time) /
-						 (zconf.rate / zconf.senders);
-					if (delay < 1)
-						log_fatal("send", "send rate exceeds system capabilities");
+					double multiplier =
+					    (double)(count - last_count) /
+					    (t - last_time) /
+					    (zconf.rate / zconf.senders);
+					uint32_t old_delay = delay;
+					delay *= multiplier;
+					if (delay == old_delay) {
+						if (multiplier > 1.0) {
+							delay *= 2;
+						} else if (multiplier < 1.0) {
+							delay *= 0.5;
+						}
+					}
 					last_count = count;
 					last_time = t;
 				}
@@ -390,9 +403,10 @@ int send_run(sock_t st, shard_t *s)
 				src_ip = get_src_ip(current_ip, i);
 				validate_gen(src_ip, current_ip, (uint8_t *)validation);
 			}
+			uint8_t ttl = zconf.probe_ttl;
 			size_t length = zconf.probe_module->packet_length;
 			zconf.probe_module->make_packet(buf, &length, src_ip,
-							current_ip, validation,
+							current_ip, ttl, validation,
 							i, probe_data);
 			if (length > MAX_PACKET_SIZE) {
 				log_fatal(
@@ -405,7 +419,11 @@ int send_run(sock_t st, shard_t *s)
 				zconf.probe_module->print_packet(stdout, buf);
 				unlock_file(stdout);
 			} else {
-				void *contents = buf;
+				void *contents =
+				    buf + zconf.send_ip_pkts *
+					      sizeof(struct ether_header);
+				length -= (zconf.send_ip_pkts *
+					   sizeof(struct ether_header));
 				int any_sends_successful = 0;
 				for (int i = 0; i < attempts; ++i) {
 					int rc = send_packet(st, contents,

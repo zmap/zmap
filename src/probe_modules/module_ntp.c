@@ -28,7 +28,7 @@ probe_module_t module_ntp;
 
 static int num_ports;
 
-int ntp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
+int ntp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
 		    uint32_t *validation, int probe_num)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -38,6 +38,7 @@ int ntp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
+	ip_header->ip_ttl = ttl;
 	udp_header->uh_sport =
 	    htons(get_src_port(num_ports, probe_num, validation));
 	ip_header->ip_sum = 0;

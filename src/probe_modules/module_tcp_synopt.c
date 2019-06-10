@@ -113,7 +113,7 @@ int tcpsynopt_init_perthread(void* buf, macaddr_t *src,
 }
 
 int tcpsynopt_make_packet(void *buf, UNUSED size_t *buf_len, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
-		uint32_t *validation, int probe_num, __attribute__((unused)) void *arg)
+		uint8_t ttl, uint32_t *validation, int probe_num, __attribute__((unused)) void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip*)(&eth_header[1]);
@@ -123,6 +123,7 @@ int tcpsynopt_make_packet(void *buf, UNUSED size_t *buf_len, ipaddr_n_t src_ip, 
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
+	ip_header->ip_ttl = ttl;
 
 	tcp_header->th_sport = htons(get_src_port(num_ports,
 				probe_num, validation));

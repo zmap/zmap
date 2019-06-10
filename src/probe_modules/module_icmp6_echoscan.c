@@ -62,7 +62,7 @@ static int icmp6_echo_init_perthread(void* buf, macaddr_t *src,
 	return EXIT_SUCCESS;
 }
 
-static int icmp6_echo_make_packet(void *buf, UNUSED size_t *buf_len, UNUSED ipaddr_n_t src_ip,  UNUSED ipaddr_n_t dst_ip, uint32_t *validation, UNUSED int probe_num, UNUSED void *arg)
+static int icmp6_echo_make_packet(void *buf, UNUSED size_t *buf_len, UNUSED ipaddr_n_t src_ip,  UNUSED ipaddr_n_t dst_ip, uint8_t ttl, uint32_t *validation, UNUSED int probe_num, UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *) buf;
 	struct ip6_hdr *ip6_header = (struct ip6_hdr *)(&eth_header[1]);
@@ -75,6 +75,7 @@ static int icmp6_echo_make_packet(void *buf, UNUSED size_t *buf_len, UNUSED ipad
 
 	ip6_header->ip6_src = ((struct in6_addr *) arg)[0];
 	ip6_header->ip6_dst = ((struct in6_addr *) arg)[1];
+	ip6_header->ip6_ctlun.ip6_un1.ip6_un1_hlim = ttl;
 
 	icmp6_header->icmp6_id= icmp_idnum;
 	icmp6_header->icmp6_cksum = 0;

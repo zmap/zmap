@@ -57,7 +57,7 @@ int ipv6_synscan_init_perthread(void* buf, macaddr_t *src,
 }
 
 int ipv6_synscan_make_packet(void *buf, UNUSED size_t *buf_len, UNUSED ipaddr_n_t src_ip, UNUSED ipaddr_n_t dst_ip,
-        uint32_t *validation, int probe_num, void *arg)
+        uint8_t ttl, uint32_t *validation, int probe_num, void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *) buf;
 	struct ip6_hdr *ip6_header = (struct ip6_hdr*) (&eth_header[1]);
@@ -66,6 +66,7 @@ int ipv6_synscan_make_packet(void *buf, UNUSED size_t *buf_len, UNUSED ipaddr_n_
 
 	ip6_header->ip6_src = ((struct in6_addr *) arg)[0];
 	ip6_header->ip6_dst = ((struct in6_addr *) arg)[1];
+	ip6_header->ip6_ctlun.ip6_un1.ip6_un1_hlim = ttl;
 
 	tcp_header->th_sport = htons(get_src_port(num_ports,
 				probe_num, validation));

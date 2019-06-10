@@ -46,7 +46,7 @@ static int synackscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 }
 
 static int synackscan_make_packet(void *buf, UNUSED size_t *buf_len,
-				  ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
+				  ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
 				  uint32_t *validation, int probe_num,
 				  UNUSED void *arg)
 {
@@ -59,6 +59,7 @@ static int synackscan_make_packet(void *buf, UNUSED size_t *buf_len,
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
+	ip_header->ip_ttl = ttl;
 
 	tcp_header->th_sport =
 	    htons(get_src_port(num_ports, probe_num, validation));

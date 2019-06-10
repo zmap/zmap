@@ -82,14 +82,16 @@ struct state_conf {
 	char *output_module_name;
 	struct output_module *output_module;
 	char *probe_args;
+	uint8_t probe_ttl;
 	char *output_args;
 	macaddr_t gw_mac[MAC_ADDR_LEN_BYTES];
 	macaddr_t hw_mac[MAC_ADDR_LEN_BYTES];
 	uint32_t gw_ip;
 	int gw_mac_set;
 	int hw_mac_set;
-	char *source_ip_first;
-	char *source_ip_last;
+	in_addr_t source_ip_addresses[256];
+	uint32_t number_source_ips;
+	int send_ip_pkts;
 	char *output_filename;
 	char *blacklist_filename;
 	char *whitelist_filename;
@@ -124,6 +126,7 @@ struct state_conf {
 	float min_hitrate;
 	char *ipv6_source_ip;
 	char *ipv6_target_filename;
+	int data_link_size;
 #ifdef PFRING
 	struct {
 		pfring_zc_cluster *cluster;
@@ -171,6 +174,8 @@ struct state_recv {
 	uint32_t cooldown_unique;
 	// valid responses NOT classified as "success"
 	uint32_t failure_total;
+	// valid responses that passed the filter
+	uint32_t filter_success;
 	// how many packets did we receive that were marked as being the first
 	// fragment in a stream
 	uint32_t ip_fragments;

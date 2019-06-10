@@ -226,6 +226,12 @@ int udp_global_initialize(struct state_conf *conf)
 			 MAX_UDP_PAYLOAD_LEN, udp_send_msg_len);
 		udp_send_msg_len = MAX_UDP_PAYLOAD_LEN;
 	}
+
+	module_udp.packet_length = sizeof(struct ether_header) +
+				   sizeof(struct ip) + sizeof(struct udphdr) +
+				   udp_send_msg_len;
+	assert(module_udp.packet_length <= MAX_PACKET_SIZE);
+
 	free(args);
 	return EXIT_SUCCESS;
 }
@@ -264,10 +270,6 @@ int udp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 
 	char *payload = (char *)(&udp_header[1]);
 
-	module_udp.packet_length = sizeof(struct ether_header) +
-				   sizeof(struct ip) + sizeof(struct udphdr) +
-				   udp_send_msg_len;
-	assert(module_udp.packet_length <= MAX_PACKET_SIZE);
 	memcpy(payload, udp_send_msg, udp_send_msg_len);
 
 	// Seed our random number generator with the global generator
@@ -278,8 +280,9 @@ int udp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	return EXIT_SUCCESS;
 }
 
-int udp_make_packet(void *buf, UNUSED size_t *buf_len, ipaddr_n_t src_ip,
-		    ipaddr_n_t dst_ip, uint32_t *validation, int probe_num,
+int udp_make_packet(void *buf, UNUSED size_t *buf_len,
+            ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
+			uint32_t *validation, int probe_num,
 		    void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -289,6 +292,7 @@ int udp_make_packet(void *buf, UNUSED size_t *buf_len, ipaddr_n_t src_ip,
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
+	ip_header->ip_ttl = ttl;
 	udp_header->uh_sport =
 	    htons(get_src_port(num_ports, probe_num, validation));
 
@@ -638,7 +642,7 @@ int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len,
 
 		switch (c->ftype) {
 
-		// These fields have a specified output length value
+			// These fields have a specified output length value
 
 		case UDP_DATA:
 			if (!(c->data && c->length))
@@ -929,7 +933,8 @@ static fielddef_t fields[] = {
 
 probe_module_t module_udp = {
     .name = "udp",
-    .packet_length = 1,
+    .packet_length = sizeof(struct ether_header) + sizeof(struct ip) +
+		     sizeof(struct udphdr) + MAX_UDP_PAYLOAD_LEN,
     .pcap_filter = "udp || icmp",
     .pcap_snaplen = 1500,
     .port_args = 1,

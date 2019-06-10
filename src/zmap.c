@@ -40,6 +40,7 @@
 #include "get_gateway.h"
 #include "filter.h"
 #include "summary.h"
+#include "utility.h"
 
 #include "output_modules/output_modules.h"
 #include "probe_modules/probe_modules.h"
@@ -121,22 +122,20 @@ static void start_zmap(void)
 			  " interface (%s).",
 			  zconf.iface);
 	}
-	if (zconf.source_ip_first == NULL) {
+	if (zconf.number_source_ips == 0) {
 		struct in_addr default_ip;
-		zconf.source_ip_first = xmalloc(INET_ADDRSTRLEN);
-		zconf.source_ip_last = zconf.source_ip_first;
 		if (get_iface_ip(zconf.iface, &default_ip) < 0) {
 			log_fatal("zmap",
 				  "could not detect default IP address for %s."
 				  " Try specifying a source address (-S).",
 				  zconf.iface);
 		}
-		inet_ntop(AF_INET, &default_ip, zconf.source_ip_first,
-			  INET_ADDRSTRLEN);
+		zconf.source_ip_addresses[0] = default_ip.s_addr;
+		zconf.number_source_ips++;
 		log_debug(
 		    "zmap",
 		    "no source IP address given. will use default address: %s.",
-		    zconf.source_ip_first);
+		    inet_ntoa(default_ip));
 	}
 	if (!zconf.gw_mac_set) {
 		struct in_addr gw_ip;
@@ -457,6 +456,11 @@ int main(int argc, char *argv[])
 		print_probe_modules();
 		exit(EXIT_SUCCESS);
 	}
+	if (args.iplayer_given) {
+		zconf.send_ip_pkts = 1;
+		zconf.gw_mac_set = 1;
+		memset(zconf.gw_mac, 0, MAC_ADDR_LEN);
+	}
 	if (cmdline_parser_required(&args, CMDLINE_PARSER_PACKAGE) != 0) {
 		exit(EXIT_FAILURE);
 	}
@@ -585,6 +589,7 @@ int main(int argc, char *argv[])
 	SET_IF_GIVEN(zconf.blacklist_filename, blacklist_file);
 	SET_IF_GIVEN(zconf.list_of_ips_filename, list_of_ips_file);
 	SET_IF_GIVEN(zconf.probe_args, probe_args);
+	SET_IF_GIVEN(zconf.probe_ttl, probe_ttl);
 	SET_IF_GIVEN(zconf.output_args, output_args);
 	SET_IF_GIVEN(zconf.iface, interface);
 	SET_IF_GIVEN(zconf.max_runtime, max_runtime);
@@ -702,15 +707,7 @@ int main(int argc, char *argv[])
 		zconf.target_port = args.target_port_arg;
 	}
 	if (args.source_ip_given) {
-		char *dash = strchr(args.source_ip_arg, '-');
-		if (dash) { // range
-			*dash = '\0';
-			zconf.source_ip_first = args.source_ip_arg;
-			zconf.source_ip_last = dash + 1;
-		} else { // single address
-			zconf.source_ip_first = args.source_ip_arg;
-			zconf.source_ip_last = args.source_ip_arg;
-		}
+		parse_source_ip_addresses(args.source_ip_arg);
 	}
 	if (args.gateway_mac_given) {
 		if (!parse_mac(zconf.gw_mac, args.gateway_mac_arg)) {
