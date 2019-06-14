@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
+#include <stdbool.h>
 
 #include "../../lib/includes.h"
 #include "../../lib/logger.h"
@@ -25,12 +26,29 @@
 static const char *tftp_query = TFTP_QUERY;
 static const long unsigned int tftp_query_len = sizeof(TFTP_QUERY) - 1; // -1 for terminating zero
 
+static bool tftp_filter_out_get_not_supported_flag = false;
+
 probe_module_t module_tftp;
 
-int tftp_global_initialize(struct state_conf *state)
+int tftp_global_initialize(struct state_conf *conf)
 {
-    int num_ports = state->source_port_last - state->source_port_first + 1;
+    int num_ports = conf->source_port_last - conf->source_port_first + 1;
     udp_set_num_ports(num_ports);
+
+    if (!(conf->probe_args && strlen(conf->probe_args) > 0))
+        return EXIT_SUCCESS;
+
+    char *args;
+    args = strdup(conf->probe_args);
+
+    if (strcmp(args, "filter-out-get-not-supported") == 0) {
+        tftp_filter_out_get_not_supported_flag = true;
+    } else {
+        free(args);
+        log_fatal("tftp", "unknown UDP probe specification (expected filter-out-get-not-supported)");
+        exit(1);
+    }
+
     return EXIT_SUCCESS;
 }
 
@@ -67,9 +85,10 @@ int tftp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 int tftp_validate_packet(const struct ip *ip_hdr, uint32_t len,
              uint32_t *src_ip, uint32_t *validation)
 {
-    if ((ip_hdr->ip_p != IPPROTO_UDP) && (ip_hdr->ip_p != IPPROTO_ICMP)) {
+    if (!udp_validate_packet(ip_hdr, len, src_ip, validation)) {
         return PACKET_INVALID;
     }
+
     return PACKET_VALID;
 }
 
@@ -85,13 +104,21 @@ void tftp_process_packet(const u_char *packet,
 
     if (ip_hdr->ip_p == IPPROTO_UDP && plen > 1 && payload[0] == 0 && payload[1] == 5) {
         fs_add_string(fs, "classification", (char *)"TFTP", 0);
-        fs_add_bool(fs, "success", 1);
+        if (tftp_filter_out_get_not_supported_flag) {
+            fs_add_bool(fs, "success", (strcmp(payload, "Get not supported") > 0) ? 0 : 1);
+        } else {
+            fs_add_bool(fs, "success", 1);
+        }
+        fs_add_uint64(fs, "sport", ntohs(udp->uh_sport));
+        fs_add_uint64(fs, "dport", ntohs(udp->uh_dport));
         fs_add_binary(fs, "data",
                   (ntohs(udp->uh_ulen) - sizeof(struct udphdr)),
                   (void *)&udp[1], 0);
     } else {
         fs_add_string(fs, "classification", (char *)"other", 0);
         fs_add_bool(fs, "success", 0);
+        fs_add_null(fs, "sport");
+        fs_add_null(fs, "dport");
         fs_add_null(fs, "data");
     }
 }
@@ -103,6 +130,8 @@ static fielddef_t fields[] = {
     {.name = "success",
      .type = "bool",
      .desc = "is response considered success"},
+    {.name = "sport", .type = "int", .desc = "UDP source port"},
+    {.name = "dport", .type = "int", .desc = "UDP destination port"},
     {.name = "data", .type = "binary", .desc = "UDP payload"}};
 
 probe_module_t module_tftp = {
