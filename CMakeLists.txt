@@ -9,6 +9,8 @@ option(RESPECT_INSTALL_PREFIX_CONFIG "Respect CMAKE_INSTALL_PREFIX for /etc" OFF
 option(WITH_WERROR "Build with -Werror" OFF)
 option(WITH_PFRING "Build with PF_RING ZC for send (10 GigE)" OFF)
 option(FORCE_CONF_INSTALL "Overwrites existing configuration files at install" OFF)
+option(STATIC_LINK "Generate static linked binary" OFF)
+
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(USING_CLANG "YES")
@@ -85,6 +87,14 @@ if(WITH_PFRING)
     add_definitions("-DPFRING")
     set(PFRING_LIBRARIES pfring rt numa)
 endif()
+
+if(STATIC_LINK)
+    SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+    SET(BUILD_SHARED_LIBS OFF)
+    SET(CMAKE_EXE_LINKER_FLAGS "-static")
+    SET(CMAKE_EXE_LINKER_FLAGS "--enable-static-nss")
+endif()
+
 
 # Standard FLAGS
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
