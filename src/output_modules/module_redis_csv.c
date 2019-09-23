@@ -182,7 +182,7 @@ void make_csv_string(fieldset_t *fs, char *out, size_t len)
 				log_fatal("redis-csv",
 					  "out of memory---will overflow");
 			}
-			hex_encode_str(out, (unsigned char *)f->value.ptr,
+			hex_encode_str(dataloc, (unsigned char *)f->value.ptr,
 				       f->len);
 		} else if (f->type == FS_NULL) {
 			// do nothing
