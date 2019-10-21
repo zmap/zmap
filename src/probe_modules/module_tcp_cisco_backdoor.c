@@ -63,8 +63,8 @@ static int synscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 #define EXPECTED_RESPONSE_ACK 0x3E120C00
 
 static int synscan_make_packet(void *buf, UNUSED size_t *buf_len,
-			       ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
-			       uint32_t *validation, int probe_num,
+			       ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
+			       uint8_t ttl, uint32_t *validation, int probe_num,
 			       UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;

@@ -26,8 +26,8 @@ int synscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 			   port_h_t dst_port,
 			   __attribute__((unused)) void **arg_ptr);
 
-int synscan_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
-			uint32_t *validation, int probe_num,
+int synscan_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
+			uint8_t ttl, uint32_t *validation, int probe_num,
 			__attribute__((unused)) void *arg);
 
 void synscan_print_packet(FILE *fp, void *packet);

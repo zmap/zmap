@@ -28,8 +28,8 @@ probe_module_t module_ntp;
 
 static int num_ports;
 
-int ntp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
-		    uint32_t *validation, int probe_num)
+int ntp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
+		    uint8_t ttl, uint32_t *validation, int probe_num)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);

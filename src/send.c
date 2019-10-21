@@ -373,9 +373,9 @@ int send_run(sock_t st, shard_t *s)
 			validate_gen(src_ip, current_ip, (uint8_t *)validation);
 			uint8_t ttl = zconf.probe_ttl;
 			size_t length = zconf.probe_module->packet_length;
-			zconf.probe_module->make_packet(buf, &length, src_ip,
-							current_ip, ttl, validation,
-							i, probe_data);
+			zconf.probe_module->make_packet(
+			    buf, &length, src_ip, current_ip, ttl, validation,
+			    i, probe_data);
 			if (length > MAX_PACKET_SIZE) {
 				log_fatal(
 				    "send",

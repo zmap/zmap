@@ -54,9 +54,9 @@ static int icmp_echo_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 }
 
 static int icmp_echo_make_packet(void *buf, UNUSED size_t *buf_len,
-				 ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
-				 uint32_t *validation, UNUSED int probe_num,
-				 UNUSED void *arg)
+				 ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
+				 uint8_t ttl, uint32_t *validation,
+				 UNUSED int probe_num, UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
