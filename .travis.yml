@@ -18,6 +18,7 @@ addons:
       - python-dev
       - python-pip
       - libhiredis-dev
+      - libmongoc-dev
 before_install:
   - pip install --user sh
   - export PATH=/opt/bin:$PATH
