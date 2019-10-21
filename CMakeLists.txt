@@ -3,7 +3,7 @@ project(ZMAP C)
 set(ZMAP_VERSION DEVELOPMENT) # Change DEVELOPMENT to version number for release
 
 option(WITH_REDIS "Build with support for Redis DB" OFF)
-option(WITH_MONGO "Build with support for MongoDB" ON)
+option(WITH_MONGO "Build with support for MongoDB" OFF)
 option(ENABLE_DEVELOPMENT "Enable development specific compiler and linker flags" OFF)
 option(ENABLE_LOG_TRACE "Enable log trace messages" OFF)
 option(RESPECT_INSTALL_PREFIX_CONFIG "Respect CMAKE_INSTALL_PREFIX for /etc" OFF)
