@@ -25,6 +25,10 @@ if(WITH_REDIS)
     set(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_redis_packed.c output_modules/module_redis_csv.c)
 endif()
 
+if(WITH_MONGO)
+    set(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_mongodb.c)
+endif()
+
 set(PROBE_MODULE_SOURCES
     probe_modules/module_icmp_echo.c
     probe_modules/module_icmp_echo_time.c
@@ -224,6 +228,7 @@ target_link_libraries(
     pcap gmp m unistring
     ${DNET_LIBRARIES}
     ${REDIS_LIBS}
+    ${MONGO_LIBRARIES}
     ${JSON_LIBRARIES}
 )
 
@@ -253,6 +258,7 @@ target_link_libraries(
     pcap gmp m unistring
     ${DNET_LIBRARIES}
     ${REDIS_LIBS}
+    ${MONGO_LIBRARIES}
     ${JSON_LIBRARIES}
 )
 
