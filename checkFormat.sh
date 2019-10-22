@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CLANG_FORMAT=clang-format-6.0
+CLANG_FORMAT=clang-format
 
 files_to_lint=$(find ./src ./lib -type f -name '*.c' -or -name '*.h')
 
