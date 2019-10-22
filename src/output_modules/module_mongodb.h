@@ -1,4 +1,3 @@
-#include <bson-types.h>
 #include "output_modules.h"
 
 int mongodb_module_init(struct state_conf *conf, char **fields, int fieldlens);
