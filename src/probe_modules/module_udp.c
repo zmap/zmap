@@ -451,8 +451,13 @@ int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		}
 		struct udphdr *udp =
 		    (struct udphdr *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
-		uint16_t sport = ntohs(udp->uh_dport);
-		if (!check_dst_port(sport, num_ports, validation)) {
+		uint16_t dport = ntohs(udp->uh_dport);
+		uint16_t sport = ntohs(udp->uh_sport);
+		// validate source port
+		if (sport != zconf.target_port) {
+			return PACKET_INVALID;
+		}
+		if (!check_dst_port(dport, num_ports, validation)) {
 			return PACKET_INVALID;
 		}
 		if (!blacklist_is_allowed(*src_ip)) {
