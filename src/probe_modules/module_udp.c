@@ -347,7 +347,7 @@ void udp_print_packet(FILE *fp, void *packet)
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
-void udp_process_packet(const u_char *packet, UNUSED uint32_t len,
+void udp_process_packet(const u_char *packet, uint32_t len,
 			fieldset_t *fs,
 			__attribute__((unused)) uint32_t *validation)
 {
@@ -363,7 +363,6 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len,
 		fs_add_null(fs, "icmp_type");
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
-		fs_add_uint64(fs, "udp_pkt_size", ntohs(udp->uh_ulen));
 		// Verify that the UDP length is big enough for the header and
 		// at least one byte
 		uint16_t data_len = ntohs(udp->uh_ulen);
@@ -382,10 +381,14 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len,
 			if (data_len > max_ilen) {
 				data_len = max_ilen;
 			}
+			fs_add_uint64(fs, "udp_pkt_size", data_len + 8);
+			fs_add_uint64(fs, "udp_pkt_header_size", ntohs(udp->uh_ulen));
 			fs_add_binary(fs, "data", data_len, (void *)&udp[1], 0);
 			// Some devices reply with a zero UDP length but still
 			// return data, ignore the data
 		} else {
+			fs_add_uint64(fs, "udp_pkt_size", 8);
+			fs_add_uint64(fs, "udp_pkt_header_size", ntohs(udp->uh_ulen));
 			fs_add_null(fs, "data");
 		}
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
@@ -415,6 +418,7 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len,
 				      0);
 		}
 		fs_add_null(fs, "udp_pkt_size");
+		fs_add_null(fs, "udp_pkt_header_size");
 		fs_add_null(fs, "data");
 	} else {
 		fs_add_string(fs, "classification", (char *)"other", 0);
@@ -426,6 +430,7 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len,
 		fs_add_null(fs, "icmp_code");
 		fs_add_null(fs, "icmp_unreach_str");
 		fs_add_null(fs, "udp_pkt_size");
+		fs_add_null(fs, "udp_pkt_header_size");
 		fs_add_null(fs, "data");
 	}
 }
@@ -871,7 +876,9 @@ static fielddef_t fields[] = {
      .type = "string",
      .desc =
 	 "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"},
-    {.name = "udp_pkt_size", .type = "int", .desc = "UDP packet length"},
+    // some sources respond with mangled UDP packets that have big udp_pkt_header_size value, so we use actual recieved size
+    {.name = "udp_pkt_size", .type = "int", .desc = "UDP packet recieved length"}, // size of recieved data + 8(size of udp header)
+    {.name = "udp_pkt_header_size", .type = "int", .desc = "UDP packet length from header"}, // packet len from udp header
     {.name = "data", .type = "binary", .desc = "UDP payload"}};
 
 probe_module_t module_udp = {
