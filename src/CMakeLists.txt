@@ -30,6 +30,7 @@ set(PROBE_MODULE_SOURCES
     probe_modules/module_icmp_echo.c
     probe_modules/module_icmp_echo_time.c
     probe_modules/module_tcp_synscan.c
+    probe_modules/module_tcp_synscan_no_validation.c
     probe_modules/module_tcp_synackscan.c
 	#probe_modules/module_tcp_cisco_backdoor.c
     probe_modules/module_udp.c
