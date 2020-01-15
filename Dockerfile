@@ -30,10 +30,9 @@ RUN apt-get -qqy install build-essential cmake libgmp3-dev gengetopt libpcap-dev
 RUN apt-get -qqy install python-dev python-pip
 RUN pip install dumb-init
 #RUN wget -q https://github.com/zmap/zmap/archive/${ZMAP_COMMIT}.zip && unzip -q ${ZMAP_COMMIT}.zip && cd zmap-${ZMAP_COMMIT} && (cmake . && make -j4 && make install) 2>&1 > /dev/null
-ADD ./ /zmap
 
 # run
-# docker run --network=host --cap-add ALL -it <ID> /bin/bash
+# docker run -v `pwd`:/zmap --network=host --cap-add ALL -it <ID> /bin/bash
 # cd zmap
 # rm CMakeCache.txt
 # cmake .

@@ -31,6 +31,7 @@ extern probe_module_t module_upnp;
 extern probe_module_t module_dns;
 extern probe_module_t module_bacnet;
 extern probe_module_t module_tftp;
+extern probe_module_t module_dns_monlist;
 // ADD YOUR MODULE HERE
 
 probe_module_t *probe_modules[] = {
@@ -38,7 +39,8 @@ probe_module_t *probe_modules[] = {
     &module_icmp_echo_time, &module_udp, &module_ntp, &module_upnp, &module_dns,
     //&module_tcp_cisco_backdoor,
     &module_bacnet,
-    &module_tftp
+    &module_tftp,
+    &module_dns_monlist
     // ADD YOUR MODULE HERE
 };
 

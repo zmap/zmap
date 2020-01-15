@@ -25,6 +25,7 @@
 #include "aesrand.h"
 #include "state.h"
 #include "module_udp.h"
+#include "../murmur3.h"
 
 #define MAX_UDP_PAYLOAD_LEN 1472
 #define ICMP_UNREACH_HEADER_SIZE 8
@@ -384,12 +385,16 @@ void udp_process_packet(const u_char *packet, uint32_t len,
 			fs_add_uint64(fs, "udp_pkt_size", data_len + 8);
 			fs_add_uint64(fs, "udp_pkt_header_size", ntohs(udp->uh_ulen));
 			fs_add_binary(fs, "data", data_len, (void *)&udp[1], 0);
+			uint64_t hash[2];
+			MurmurHash3_x86_128((void *)&udp[1], data_len, 0, hash);
+			fs_add_uint64(fs, "payload_hash", hash[0]);
 			// Some devices reply with a zero UDP length but still
 			// return data, ignore the data
 		} else {
 			fs_add_uint64(fs, "udp_pkt_size", 8);
 			fs_add_uint64(fs, "udp_pkt_header_size", ntohs(udp->uh_ulen));
 			fs_add_null(fs, "data");
+			fs_add_null(fs, "payload_hash");
 		}
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		struct icmp *icmp =
@@ -420,6 +425,7 @@ void udp_process_packet(const u_char *packet, uint32_t len,
 		fs_add_null(fs, "udp_pkt_size");
 		fs_add_null(fs, "udp_pkt_header_size");
 		fs_add_null(fs, "data");
+		fs_add_null(fs, "payload_hash");
 	} else {
 		fs_add_string(fs, "classification", (char *)"other", 0);
 		fs_add_bool(fs, "success", 0);
@@ -432,6 +438,7 @@ void udp_process_packet(const u_char *packet, uint32_t len,
 		fs_add_null(fs, "udp_pkt_size");
 		fs_add_null(fs, "udp_pkt_header_size");
 		fs_add_null(fs, "data");
+		fs_add_null(fs, "payload_hash");
 	}
 }
 
@@ -879,7 +886,8 @@ static fielddef_t fields[] = {
     // some sources respond with mangled UDP packets that have big udp_pkt_header_size value, so we use actual recieved size
     {.name = "udp_pkt_size", .type = "int", .desc = "UDP packet recieved length"}, // size of recieved data + 8(size of udp header)
     {.name = "udp_pkt_header_size", .type = "int", .desc = "UDP packet length from header"}, // packet len from udp header
-    {.name = "data", .type = "binary", .desc = "UDP payload"}};
+    {.name = "data", .type = "binary", .desc = "UDP payload"},
+    {.name = "payload_hash", .type = "int", .desc = "Hash of payload"}};
 
 probe_module_t module_udp = {
     .name = "udp",

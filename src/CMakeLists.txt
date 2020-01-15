@@ -41,10 +41,12 @@ set(PROBE_MODULE_SOURCES
     probe_modules/module_dns.c
     probe_modules/module_bacnet.c
     probe_modules/module_tftp.c
+    probe_modules/module_dns_monlist.c
 )
 
 set(SOURCES
     aesrand.c
+    murmur3.c
     cyclic.c
     expression.c
     fieldset.c
@@ -73,6 +75,7 @@ set(SOURCES
 
 set(ZTESTSOURCES
     aesrand.c
+    murmur3.c
     cyclic.c
     expression.c
     fieldset.c
@@ -106,6 +109,7 @@ set(ZBLSOURCES
 
 set(ZITSOURCES
     aesrand.c
+    murmur3.c
     cyclic.c
     iterator.c
     shard.c
