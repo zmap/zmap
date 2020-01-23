@@ -1,3 +1,4 @@
+/* heavily copied from module_udp.c */
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -290,8 +291,79 @@ void ipip_process_packet(const u_char *packet, UNUSED uint32_t len,
 int ipip_validate_packet(const struct ip *ip_hdr, uint32_t len,
 			 uint32_t *src_ip, uint32_t *validation)
 {
-	return udp_do_validate_packet(ip_hdr, len, src_ip, validation,
-				      num_ports);
+	if (ip_hdr->ip_p == IPPROTO_UDP) {
+		if ((4 * ip_hdr->ip_hl + sizeof(struct udphdr)) > len) {
+			// buffer not large enough to contain expected udp
+			// header
+			return PACKET_INVALID;
+		}
+		struct udphdr *udp =
+		    (struct udphdr *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
+		uint16_t dport = ntohs(udp->uh_dport);
+		if (dport != zconf.target_port) {
+			return PACKET_INVALID;
+		}
+		uint16_t sport = ntohs(udp->uh_sport);
+		if (!check_dst_port(sport, num_ports, validation)) {
+			return PACKET_INVALID;
+		}
+		if (!blocklist_is_allowed(*src_ip)) {
+			return PACKET_INVALID;
+		}
+	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
+		// IPIP can return ICMP Destination unreach
+		// IP( ICMP( IP ( IP( UDP ) ) ) ) for a destination unreach
+		uint32_t min_len =
+		    4 * ip_hdr->ip_hl + ICMP_UNREACH_HEADER_SIZE +
+		    sizeof(struct ip) + sizeof(struct ip) + sizeof(struct udphdr);
+		if (len < min_len) {
+			return PACKET_INVALID;
+		}
+		struct icmp *icmp =
+		    (struct icmp *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
+		if (icmp->icmp_type != ICMP_UNREACH) {
+			return PACKET_INVALID;
+		}
+		struct ip *ip_inner1 =
+		    (struct ip *)((char *)icmp + ICMP_UNREACH_HEADER_SIZE);
+        // update min_len according to first internal IP packet
+        min_len = min_len - sizeof(struct ip) + 4 * ip_inner1->ip_hl;
+		if (len < min_len) {
+			return PACKET_INVALID;
+		}
+		uint32_t dest = ip_inner1->ip_dst.s_addr;
+		if (!blocklist_is_allowed(dest)) {
+			return PACKET_INVALID;
+		}
+        struct ip *ip_inner2 = 
+            (struct ip *)((char *)ip_inner1 + 4 * ip_inner1->ip_hl);
+        // update min_len according to second internal IP packet
+        min_len = min_len - sizeof(struct ip) + 4 * ip_inner2->ip_hl;
+		if (len < min_len) {
+			return PACKET_INVALID;
+		}
+        // ensure the internal dst addr is the outer src addr and vice versa
+        if (ip_inner1->ip_dst.s_addr != ip_inner2->ip_src.s_addr || 
+                ip_inner1->ip_src.s_addr != ip_inner2->ip_dst.s_addr) {
+            return PACKET_INVALID;
+        }
+		struct udphdr *udp =
+		    (struct udphdr *)((char *)ip_inner2 + 4 * ip_inner2->ip_hl);
+		// we can always check the destination port because this is the
+		// original packet and wouldn't have been altered by something
+		// responding on a different port
+		uint16_t dport = ntohs(udp->uh_dport);
+		if (dport != zconf.target_port) {
+			return PACKET_INVALID;
+		}
+		uint16_t sport = ntohs(udp->uh_sport);
+		if (!check_dst_port(sport, num_ports, validation)) {
+			return PACKET_INVALID;
+		}
+	} else {
+		return PACKET_INVALID;
+	}
+	return PACKET_VALID;
 }
 
 static fielddef_t fields[] = {
