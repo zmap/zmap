@@ -32,7 +32,7 @@
 // We use REQ_MON_GETLIST_1 because it gets more responses than REQ_MON_GETLIST
 // and servers that respond to former almost always respond to latter.
 
-// 12 is header size, see rfc1035 4.1.1
+// 12 is header size, see rfc1035 4.1.1 https://tools.ietf.org/html/rfc1035
 #define DNS_HEADER_SIZE 12
 
 // see https://github.com/packetloop/zgrab2/blob/master/modules/dns/scanner.go#L103
@@ -48,6 +48,7 @@ void dns_monlist_set_num_ports(int x) { num_ports = x; }
 int dns_monlist_global_initialize(struct state_conf *conf)
 {
     int num_ports = conf->source_port_last - conf->source_port_first + 1;
+    udp_set_num_ports(num_ports);
     dns_monlist_set_num_ports(num_ports);
 
     return EXIT_SUCCESS;
@@ -98,8 +99,9 @@ int dns_monlist_make_packet(void *buf, UNUSED size_t *buf_len, ipaddr_n_t src_ip
 
     // make random transaction id(first 2 bytes)
     uint16_t *transaction_id = (uint16_t *)&udp_header[1];
-    *transaction_id = probe_num; // much faster than AES random number generator, just as good for this
+    *transaction_id = probe_num ^ dst_ip; // much faster than AES random number generator, just as good for this
 
+    ip_header->ip_sum = 0;
     ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
 
     return EXIT_SUCCESS;
@@ -120,41 +122,51 @@ void dns_monlist_process_packet(const u_char *packet,
              __attribute__((unused)) uint32_t *validation)
 {
     struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
-    struct udphdr *udp =
-            (struct udphdr *)((char *)ip_hdr + ip_hdr->ip_hl * 4);
-    char *payload = (char *)(&udp[1]);
-    uint16_t data_len = ntohs(udp->uh_ulen);
-    uint32_t overhead = (sizeof(struct udphdr) + (ip_hdr->ip_hl * 4));
-    uint32_t max_rlen = len - overhead;
-    uint32_t max_ilen = ntohs(ip_hdr->ip_len) - overhead;
-    // Verify that the UDP length is inside of our received
-    // buffer
-    if (data_len > max_rlen) {
-        data_len = max_rlen;
-    }
-    // Verify that the UDP length is inside of our IP packet
-    if (data_len > max_ilen) {
-        data_len = max_ilen;
-    }
 
-    if (ip_hdr->ip_p == IPPROTO_UDP && data_len >= DNS_HEADER_SIZE) {
-        // QR == 1 and RA == 1 and RCODE == 0 - is response and recursion available and no error, see rfc1035 4.1.1(page 26)
-        if (((payload[2] & 0x80) == 0x80) && ((payload[3] & 0x85) == 0x80)) {
-            fs_add_string(fs, "classification", (char *)"monlist", 0);
-            fs_add_bool(fs, "success", 1);
-        } else {
-            fs_add_string(fs, "classification", (char *)"dns", 0);
-            fs_add_bool(fs, "success", 0);
+    if (ip_hdr->ip_p == IPPROTO_UDP) {
+        struct udphdr *udp =
+                (struct udphdr *)((char *)ip_hdr + ip_hdr->ip_hl * 4);
+        char *payload = (char *)(&udp[1]);
+        uint16_t data_len = ntohs(udp->uh_ulen);
+        uint32_t overhead = (sizeof(struct udphdr) + (ip_hdr->ip_hl * 4));
+        uint32_t max_rlen = len - overhead;
+        uint32_t max_ilen = ntohs(ip_hdr->ip_len) - overhead;
+        // Verify that the UDP length is inside of our received
+        // buffer
+        if (data_len > max_rlen) {
+            data_len = max_rlen;
         }
-        fs_add_uint64(fs, "udp_pkt_size", data_len + 8);
-        uint64_t hash[2];
-        MurmurHash3_x86_128(payload + 2, data_len - 2, 0, hash); // we skip transaction_id
-        fs_add_uint64(fs, "payload_hash", hash[0]);
-        fs_add_uint64(fs, "sport", ntohs(udp->uh_sport));
-        fs_add_uint64(fs, "dport", ntohs(udp->uh_dport));
-        //fs_add_binary(fs, "data",
-        //          (ntohs(udp->uh_ulen) - sizeof(struct udphdr)),
-        //          (void *)&udp[1], 0);
+        // Verify that the UDP length is inside of our IP packet
+        if (data_len > max_ilen) {
+            data_len = max_ilen;
+        }
+        if (data_len >= DNS_HEADER_SIZE) {
+            // QR == 1 and RA == 1 and RCODE == 0 - is response and recursion available and no error, see rfc1035 4.1.1(page 26)
+            if (((payload[2] & 0x80) == 0x80) && ((payload[3] & 0x85) == 0x80)) {
+                fs_add_string(fs, "classification", (char *)"monlist", 0);
+                fs_add_bool(fs, "success", 1);
+            } else {
+                fs_add_string(fs, "classification", (char *)"dns", 0);
+                fs_add_bool(fs, "success", 0);
+            }
+            fs_add_uint64(fs, "udp_pkt_size", data_len + 8);
+        if ((data_len - 2) > 0) {
+                uint64_t hash[2];
+                MurmurHash3_x86_128(payload + 2, data_len - 2, 0, hash); // we skip transaction_id
+                fs_add_uint64(fs, "payload_hash", hash[0]);
+        } else {
+                fs_add_uint64(fs, "payload_hash", 0);
+            }
+            fs_add_uint64(fs, "sport", ntohs(udp->uh_sport));
+            fs_add_uint64(fs, "dport", ntohs(udp->uh_dport));
+        } else {
+            fs_add_string(fs, "classification", (char *)"other", 0);
+            fs_add_bool(fs, "success", 0);
+            fs_add_null(fs, "udp_pkt_size");
+            fs_add_null(fs, "payload_hash");
+            fs_add_null(fs, "sport");
+            fs_add_null(fs, "dport");
+        }
     } else {
         fs_add_string(fs, "classification", (char *)"other", 0);
         fs_add_bool(fs, "success", 0);
@@ -179,7 +191,7 @@ static fielddef_t fields[] = {
 
 probe_module_t module_dns_monlist = {
     .name = "dns_monlist",
-    .packet_length = 1024,
+    .packet_length = 256,
     .pcap_filter = "udp || icmp",
     .pcap_snaplen = 8 * 1024,
     .port_args = 1,
