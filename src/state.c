@@ -108,7 +108,7 @@ void init_stats() {
 	int stats_fd;
 	void *addr;
 	if ((stats_fd = open(STATS_NAME, O_RDWR, S_IRUSR | S_IWUSR)) == -1) {
-		perror("open");
+		perror("Run 'dd if=/dev/zero of=stats count=1024 bs=1' to create stats file in current dir.");
 		exit(1);
 	}
 	if ((addr = mmap(NULL, sizeof(stats_t), PROT_WRITE, MAP_FILE | MAP_SHARED, stats_fd, 0)) == MAP_FAILED) {

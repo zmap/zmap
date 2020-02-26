@@ -150,11 +150,11 @@ void dns_monlist_process_packet(const u_char *packet,
                 fs_add_bool(fs, "success", 0);
             }
             fs_add_uint64(fs, "udp_pkt_size", data_len + 8);
-        if ((data_len - 2) > 0) {
+            if ((data_len - 2) > 0) {
                 uint64_t hash[2];
                 MurmurHash3_x86_128(payload + 2, data_len - 2, 0, hash); // we skip transaction_id
                 fs_add_uint64(fs, "payload_hash", hash[0]);
-        } else {
+            } else {
                 fs_add_uint64(fs, "payload_hash", 0);
             }
             fs_add_uint64(fs, "sport", ntohs(udp->uh_sport));
@@ -191,7 +191,7 @@ static fielddef_t fields[] = {
 
 probe_module_t module_dns_monlist = {
     .name = "dns_monlist",
-    .packet_length = 256,
+    .packet_length = 512,
     .pcap_filter = "udp || icmp",
     .pcap_snaplen = 8 * 1024,
     .port_args = 1,

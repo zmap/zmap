@@ -385,9 +385,13 @@ void udp_process_packet(const u_char *packet, uint32_t len,
 			fs_add_uint64(fs, "udp_pkt_size", data_len + 8);
 			fs_add_uint64(fs, "udp_pkt_header_size", ntohs(udp->uh_ulen));
 			fs_add_binary(fs, "data", data_len, (void *)&udp[1], 0);
-			uint64_t hash[2];
-			MurmurHash3_x86_128((void *)&udp[1], data_len, 0, hash);
-			fs_add_uint64(fs, "payload_hash", hash[0]);
+                        if (data_len > 0) {
+				uint64_t hash[2];
+				MurmurHash3_x86_128((void *)&udp[1], data_len, 0, hash);
+				fs_add_uint64(fs, "payload_hash", hash[0]);
+			} else {
+				fs_add_uint64(fs, "payload_hash", 0);
+                        }
 			// Some devices reply with a zero UDP length but still
 			// return data, ignore the data
 		} else {
