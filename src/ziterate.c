@@ -34,7 +34,6 @@
 #include "validate.h"
 #include "zitopt.h"
 
-
 struct zit_conf {
 	char *blacklist_filename;
 	char *whitelist_filename;
@@ -55,21 +54,18 @@ struct zit_conf {
 	uint32_t max_hosts;
 };
 
-struct node 
-{
+struct node {
 	uint32_t key;
 	uint32_t value;
 	struct node *next;
 };
 
-struct arrayitem 
-{
-struct node *head;
-struct node *tail;
+struct arrayitem {
+	struct node *head;
+	struct node *tail;
 };
 
 struct arrayitem *array;
-
 
 #define SET_BOOL(DST, ARG)                                                     \
 	{                                                                      \
@@ -78,26 +74,25 @@ struct arrayitem *array;
 		};                                                             \
 	}
 
-uint32_t hash(uint32_t x) {
-    x = ((x >> 16) ^ x) * 0x45d9f3b;
-    x = ((x >> 16) ^ x) * 0x45d9f3b;
-    x = (x >> 16) ^ x;
-    return x;
+uint32_t hash(uint32_t x)
+{
+	x = ((x >> 16) ^ x) * 0x45d9f3b;
+	x = ((x >> 16) ^ x) * 0x45d9f3b;
+	x = (x >> 16) ^ x;
+	return x;
 }
-
 
 int is_prime(uint32_t n)
 {
-   uint32_t c;
-   if (n % 2 == 0 || n % 3 == 0) {
-        return 0;
-    }
-   for (c = 5;c <= (uint32_t) sqrt(n); c+=6)
-   {
-      if (n%c == 0 || n % (c+2)==0){
-     return 0;
-	  }
-   }
+	uint32_t c;
+	if (n % 2 == 0 || n % 3 == 0) {
+		return 0;
+	}
+	for (c = 5; c <= (uint32_t)sqrt(n); c += 6) {
+		if (n % c == 0 || n % (c + 2) == 0) {
+			return 0;
+		}
+	}
 	return 1;
 }
 
@@ -172,7 +167,7 @@ int main(int argc, char **argv)
 	// max targets
 	if (args.max_targets_given) {
 		conf.max_hosts = parse_max_hosts(args.max_targets_arg);
-	}	
+	}
 
 	// sanity check blacklist file
 	if (conf.blacklist_filename) {
@@ -261,63 +256,65 @@ int main(int argc, char **argv)
 		uint32_t prefix_len = 256;
 		char *slash = strchr(args.cidr_bucket_arg, '/');
 		if (slash) { // split apart network and prefix length
-		*slash = '\0';
-		char *end;
-		char *len = slash + 1;
-		prefix_len = strtol(len, &end, 10);
+			*slash = '\0';
+			char *end;
+			char *len = slash + 1;
+			prefix_len = strtol(len, &end, 10);
 		}
 		if (prefix_len > 32) {
-        return EXIT_FAILURE; /* Invalid bit count */
-    }
-		uint32_t mask = (0xFFFFFFFFUL << (32 - prefix_len)) & 0xFFFFFFFFUL;
+			return EXIT_FAILURE; /* Invalid bit count */
+		}
+		uint32_t mask =
+		    (0xFFFFFFFFUL << (32 - prefix_len)) & 0xFFFFFFFFUL;
 		assert(mask);
 
-		log_info("ziterate", "using CIDR bucket of %u",prefix_len);
+		log_info("ziterate", "using CIDR bucket of %u", prefix_len);
 
 		// create hashmap. using hashmap instead of tree because of insertion speed is almost constant.
-		uint32_t hashmap_size = pow(2,prefix_len);
-		while (is_prime(hashmap_size)!=1){
+		uint32_t hashmap_size = pow(2, prefix_len);
+		while (is_prime(hashmap_size) != 1) {
 			hashmap_size += 1;
 		}
-		log_debug("ziterate", "using hashmap size of: %u",hashmap_size);
+		log_debug("ziterate", "using hashmap size of: %u",
+			  hashmap_size);
 		uint32_t network_addr;
-		struct arrayitem *hashmap = xcalloc( hashmap_size, sizeof(struct arrayitem));
+		struct arrayitem *hashmap =
+		    xcalloc(hashmap_size, sizeof(struct arrayitem));
 		log_info("ziterate", "hashmap malloc complete");
 		for (uint32_t count = 0; next_int; ++count) {
 			if (conf.max_hosts && count >= conf.max_hosts) {
 				break;
 			}
-			network_addr= next_int & htonl(mask);
+			network_addr = next_int & htonl(mask);
 			//log_debug("ziterate", "ip: %u, prefix: %u, output: %u",next_int,mask,network_addr);
 			// Create new bucket from network address
 			uint32_t index = hash(network_addr) % hashmap_size;
 			struct node *list = hashmap[index].head;
 			//log_debug("ziterate", "index: %u",index);
 			struct node *item = xmalloc(sizeof(struct node));
-			item->key=network_addr;
-			item->value=1;
+			item->key = network_addr;
+			item->value = 1;
 			item->next = NULL;
-			if(list == NULL){
+			if (list == NULL) {
 				//log_debug("ziterate", "creating new list at: %u",index);
-				hashmap[index].head=item;
-				hashmap[index].tail=item;
-			}
-			else{
+				hashmap[index].head = item;
+				hashmap[index].tail = item;
+			} else {
 				struct node *current = list;
 				int found_key = 0;
-				while (current!=NULL){
+				while (current != NULL) {
 					//log_debug("ziterate", "current: %u", current->key);
-					if(current->key == network_addr){
+					if (current->key == network_addr) {
 						current->value += 1;
-						found_key=1;
+						found_key = 1;
 						//log_debug("ziterate", "found key: %u",network_addr);
 						break;
 					}
-					current=current->next;
+					current = current->next;
 				}
-				if(found_key == 0){
-					hashmap[index].tail->next=item;
-					hashmap[index].tail=item;
+				if (found_key == 0) {
+					hashmap[index].tail->next = item;
+					hashmap[index].tail = item;
 					//log_debug("ziterate", "new key: %u at %u",network_addr, index);
 				}
 			}
@@ -329,26 +326,29 @@ int main(int argc, char **argv)
 		log_info("ziterate", "done");
 		uint32_t max_size, total_overlaps;
 
-		for(i = 0; i < hashmap_size; i++){
+		for (i = 0; i < hashmap_size; i++) {
 			struct node *list = hashmap[i].head;
-			if(list==NULL){
+			if (list == NULL) {
 				continue;
 			}
-			while(list!=NULL){
-				if(list->value > 1){
-				if(list->value > max_size){
-					max_size=list->value;
+			while (list != NULL) {
+				if (list->value > 1) {
+					if (list->value > max_size) {
+						max_size = list->value;
+					}
+					total_overlaps += 1;
+					if (!args.bucket_summary_given) {
+						next_ip.s_addr = list->key;
+						printf("%s,%u\n",
+						       inet_ntoa(next_ip),
+						       list->value);
+					}
 				}
-				total_overlaps+=1;
-				if(!args.bucket_summary_given){
-				next_ip.s_addr=list->key;	
-				printf("%s,%u\n", inet_ntoa(next_ip),list->value);
-				}
-				}
-				list=list->next;
+				list = list->next;
 			}
 		}
-		printf("total_overlaps: %u, max_size: %u\n",total_overlaps, max_size);
+		printf("total_overlaps: %u, max_size: %u\n", total_overlaps,
+		       max_size);
 		return EXIT_SUCCESS;
 	}
 
