@@ -104,7 +104,7 @@ void whitelist_prefix(char *ip, int prefix_len)
 
 static int init_from_string(char *ip, int value)
 {
-	int prefix_len = 256;
+	int prefix_len = 32;
 	char *slash = strchr(ip, '/');
 	if (slash) { // split apart network and prefix length
 		*slash = '\0';
@@ -113,7 +113,7 @@ static int init_from_string(char *ip, int value)
 		errno = 0;
 		prefix_len = strtol(len, &end, 10);
 		if (end == len || errno != 0 || prefix_len < 0 ||
-		    prefix_len > 256) {
+		    prefix_len > 32) {
 			log_fatal("constraint",
 				  "'%s' is not a valid prefix length", len);
 			return -1;
