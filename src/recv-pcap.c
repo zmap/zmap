@@ -37,6 +37,7 @@ static pcap_t *pc = NULL;
 void packet_cb(u_char __attribute__((__unused__)) * user,
 	       const struct pcap_pkthdr *p, const u_char *bytes)
 {
+	struct timespec ts;
 	if (!p) {
 		return;
 	}
@@ -49,7 +50,9 @@ void packet_cb(u_char __attribute__((__unused__)) * user,
 
 	// length of entire packet captured by libpcap
 	uint32_t buflen = (uint32_t)p->caplen;
-	handle_packet(buflen, bytes);
+	ts.tv_sec = p->ts.tv_sec;
+	ts.tv_nsec = p->ts.tv_usec * 1000;
+	handle_packet(buflen, bytes, ts);
 }
 
 #define BPFLEN 1024

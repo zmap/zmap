@@ -32,7 +32,7 @@ typedef int (*probe_validate_packet_cb)(const struct ip *ip_hdr, uint32_t len,
 					uint32_t *src_ip, uint32_t *validation);
 
 typedef void (*probe_classify_packet_cb)(const u_char *packetbuf, uint32_t len,
-					 fieldset_t *, uint32_t *validation);
+					 fieldset_t *, uint32_t *validation, const struct timespec ts);
 
 typedef struct probe_module {
 	const char *name;
