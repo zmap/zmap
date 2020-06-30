@@ -340,33 +340,33 @@ int send_run(sock_t st, shard_t *s)
 			}
 		}
 
-		// Check all the ways a send thread could finish and break out
-		// of the send loop.
+		// Check if the program has otherwise completed and break out of the send loop.
 		if (zrecv.complete) {
-			break;
-		}
-		if (s->state.max_targets &&
-		    (s->state.sent >= s->state.max_targets ||
-		     s->state.tried_sent >= s->state.max_targets)) {
-			log_debug(
-			    "send",
-			    "send thread %hhu finished (max targets of %u reached)",
-			    s->thread_id, s->state.max_targets);
-			break;
+			goto cleanup;
 		}
 		if (zconf.max_runtime &&
-		    zconf.max_runtime <= now() - zsend.start) {
-			break;
-		}
-		if (current_ip == ZMAP_SHARD_DONE) {
-			log_debug("send",
-				  "send thread %hhu finished, shard depleted",
-				  s->thread_id);
-			break;
+			zconf.max_runtime <= now() - zsend.start) {
+			goto cleanup;
 		}
 
 		// Actually send a packet.
 		for(int b = 0; b < zconf.batch; b++){
+			// Check if we've finished this shard or thread before sending each
+			// packet, regardless of batch size.
+			if (s->state.max_targets &&
+				(s->state.sent >= s->state.max_targets ||
+				 s->state.tried_sent >= s->state.max_targets)) {
+				log_debug(
+					"send",
+					"send thread %hhu finished (max targets of %u reached)",
+					s->thread_id, s->state.max_targets);
+			}
+			if (current_ip == ZMAP_SHARD_DONE) {
+				log_debug("send",
+					  "send thread %hhu finished, shard depleted",
+					  s->thread_id);
+				goto cleanup;
+			}
 			for (int i = 0; i < zconf.packet_streams; i++) {
 				count++;
 				uint32_t src_ip = get_src_ip(current_ip, i);
