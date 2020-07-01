@@ -86,6 +86,9 @@ static cyclic_group_t groups[] = {{// 2^8 + 1
 // Check whether an integer is coprime with (p - 1)
 static int check_coprime(uint64_t check, const cyclic_group_t *group)
 {
+	if (check == 0 || check == 1) {
+		return NOT_COPRIME;
+	}
 	for (unsigned i = 0; i < group->num_prime_factors; i++) {
 		if (group->prime_factors[i] > check &&
 		    !(group->prime_factors[i] % check)) {
@@ -106,17 +109,25 @@ static uint32_t find_primroot(const cyclic_group_t *group, aesrand_t *aes)
 {
 	uint32_t candidate =
 	    (uint32_t)((aesrand_getword(aes) & 0xFFFFFFFF) % group->prime);
-	if (candidate == 0) {
-		++candidate;
-	}
-	while (check_coprime(candidate, group) != COPRIME) {
-		++candidate;
-		// special case where we need to restart check from begin
-		if (candidate >= group->prime) {
-			candidate = 1;
+	uint64_t retv = 0;
+
+	// The maximum primitive root we can return needs to be small enough such
+	// that there is no overflow when multiplied by any element in the largest
+	// group in ZMap, which currently has p = 2^{32} + 15.
+	const uint64_t max_root = (UINT64_C(1) << 32) - 14;
+
+	// Repeatedly find a generator until we hit one that is small enough. For
+	// the largest group, we have a very low probability of ever executing this
+	// loop more than once, and for small groups it will only execute once.
+	do {
+		// Find an element that is coprime in the additive group
+		while (check_coprime(candidate, group) != COPRIME) {
+			candidate += 1;
+			candidate %= group->prime;
 		}
-	}
-	uint64_t retv = isomorphism(candidate, group);
+		// Given a coprime element, apply the isomorphism.
+		retv = isomorphism(candidate, group);
+	} while (retv > max_root);
 	return retv;
 }
 
