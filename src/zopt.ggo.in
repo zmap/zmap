@@ -35,6 +35,9 @@ option "rate"                   r "Set send rate in packets/sec"
 option "bandwidth"              B "Set send rate in bits/second (supports suffixes G, M and K)"
     typestr="bps"
     optional string
+option "batch"                  - "Set the number of packets to send per iteration"
+    typestr="pps"
+    optional int
 option "max-targets"            n "Cap number of targets to probe (as a number or a percentage of the address space)"
     typestr="n"
     optional string

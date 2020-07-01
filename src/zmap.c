@@ -797,6 +797,9 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
+	if(args.batch_given){
+		zconf.batch = args.batch_arg;
+	}
 	if (args.max_targets_given) {
 		zconf.max_targets = parse_max_hosts(args.max_targets_arg);
 	}
