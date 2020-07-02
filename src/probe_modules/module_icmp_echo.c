@@ -34,91 +34,82 @@ const char *icmp_usage_error =
 		"unknown ICMP probe specification (expected file:/path or text:STRING or hex:01020304)";
 
 static size_t icmp_payload_len = 0;
-static const char *icmp_payload_default = "ABCDEF";
+static const size_t icmp_payload_default_len = 20;
 static char *icmp_payload = NULL;
 
 int icmp_global_initialize(struct state_conf *conf)
 {
-	char *args, *c;
-	unsigned int i;
-	unsigned int n;
-
-	FILE *inp;
-
-	icmp_payload = strdup(icmp_payload_default);
-	icmp_payload_len = strlen(icmp_payload);
-
-	if (!(conf->probe_args && strlen(conf->probe_args) > 0))
-		return (0);
-
-	args = strdup(conf->probe_args);
-	if (!args)
-		exit(1);
-
-	c = strchr(args, ':');
-	if (!c) {
-		free(args);
-		free(icmp_payload);
-		log_fatal("udp", icmp_usage_error);
-		exit(1);
+	if (!(conf->probe_args && strlen(conf->probe_args) > 0)) {
+		icmp_payload = xmalloc(icmp_payload_default_len);
+		icmp_payload_len = icmp_payload_default_len;
+		return EXIT_SUCCESS;
 	}
 
-	*c++ = 0;
+	char *c = strchr(conf->probe_args, ':');
+	if (!c) {
+		log_error("icmp", icmp_usage_error);
+		return EXIT_FAILURE;
+	}
+	++c;
 
-	if (strcmp(args, "text") == 0) {
-		free(icmp_payload);
+	if (strncmp(conf->probe_args, "text", 4) == 0) {
 		icmp_payload = strdup(c);
 		icmp_payload_len = strlen(icmp_payload);
-
-	} else if (strcmp(args, "file") == 0) {
-		inp = fopen(c, "rb");
+	} else if (strncmp(conf->probe_args, "file", 4) == 0) {
+		FILE *inp = fopen(c, "rb");
 		if (!inp) {
-			free(args);
-			free(icmp_payload);
-			log_fatal("icmp", "could not open ICMP data file '%s'\n", c);
-			exit(1);
+			log_error("icmp", "could not open ICMP data file '%s'", c);
+			return EXIT_FAILURE;
 		}
-		free(icmp_payload);
+		if (fseek(inp, 0, SEEK_END)) {
+			log_error("icmp", "unable to get size of ICMP data file '%s'", c);
+			return EXIT_FAILURE;
+		}
+		size_t input_size = ftell(inp);
+		if (input_size > ICMP_MAX_PAYLOAD_LEN) {
+			log_error("icmp", "input file larger than %d bytes and will not fit on the wire (%llu bytes provided)",
+					ICMP_MAX_PAYLOAD_LEN, input_size);
+			return EXIT_FAILURE;
+		}
+		if (fseek(inp, 0, SEEK_SET)) {
+			log_error("icmp", "unable to read ICMP data file '%s'", c);
+			return EXIT_FAILURE;
+		}
 		icmp_payload = xmalloc(ICMP_MAX_PAYLOAD_LEN);
 		icmp_payload_len =
 				fread(icmp_payload, 1, ICMP_MAX_PAYLOAD_LEN, inp);
 		fclose(inp);
-
-	} else if (strcmp(args, "hex") == 0) {
+	} else if (strcmp(c, "hex") == 0) {
+		if (strlen(c) % 2 != 0) {
+			log_error("icmp", "invalid hex input (length must be a multiple of 2)");
+			return EXIT_FAILURE;
+		}
 		icmp_payload_len = strlen(c) / 2;
-		free(icmp_payload);
 		icmp_payload = xmalloc(icmp_payload_len);
 
-		for (i = 0; i < icmp_payload_len; i++) {
+		unsigned int n;
+		for (size_t i = 0; i < icmp_payload_len; i++) {
 			if (sscanf(c + (i * 2), "%2x", &n) != 1) {
-				free(args);
 				free(icmp_payload);
-				log_fatal("icmp", "non-hex character: '%c'",
-						  c[i * 2]);
-				exit(1);
+				log_error("icmp", "non-hex character: '%c'", c[i * 2]);
+				return EXIT_FAILURE;
 			}
-			icmp_payload[i] = (char)(n & 0xff);
+			icmp_payload[i] = (char) (n & 0xff);
 		}
 	} else {
-		free(icmp_payload);
-		free(args);
-		log_fatal("icmp", icmp_usage_error);
-		exit(1);
+		log_error("icmp", icmp_usage_error);
+		return EXIT_FAILURE;
 	}
 
 	if (icmp_payload_len > ICMP_MAX_PAYLOAD_LEN) {
-		log_warn("icmp",
-				 "warning: reducing ICMP payload to %d "
-				 "bytes (from %d) to fit on the wire\n",
+		log_error("icmp", "reducing ICMP payload must be at most %d bytes to fit on the wire (%d were provided)\n",
 				 ICMP_MAX_PAYLOAD_LEN, icmp_payload_len);
-		icmp_payload_len = ICMP_MAX_PAYLOAD_LEN;
+		return EXIT_FAILURE;
 	}
 
 	module_icmp_echo.packet_length = sizeof(struct ether_header) +
-							   sizeof(struct ip) + 8 + icmp_payload_len;
-	assert(module_icmp_echo.packet_length <= ICMP_MAX_PAYLOAD_LEN);
-
-	free(args);
+							   sizeof(struct ip) + ICMP_MINLEN + icmp_payload_len;
+	assert(module_icmp_echo.packet_length <= 1500);
 	return EXIT_SUCCESS;
 }
 
@@ -146,13 +137,13 @@ static int icmp_echo_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	make_eth_header(eth_header, src, gw);
 
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
-	uint16_t len = htons(sizeof(struct ip) + sizeof(struct icmp) - 8);
+	uint16_t len = htons(sizeof(struct ip) + ICMP_MINLEN + icmp_payload_len);
 	make_ip_header(ip_header, IPPROTO_ICMP, len);
 
 	struct icmp *icmp_header = (struct icmp *)(&ip_header[1]);
 	make_icmp_header(icmp_header);
 
-	char *payload = (char *)icmp_header + 8;
+	char *payload = (char *)icmp_header + ICMP_MINLEN;
 
 	memcpy(payload, icmp_payload, icmp_payload_len);
 
@@ -178,17 +169,17 @@ static int icmp_echo_make_packet(void *buf, UNUSED size_t *buf_len,
 	icmp_header->icmp_id = icmp_idnum;
 	icmp_header->icmp_seq = icmp_seqnum;
 
+	log_error("icmp", "%d", icmp_payload_len);
 	icmp_header->icmp_cksum = 0;
-	//icmp_header->icmp_cksum = icmp_checksum((unsigned short *)icmp_header);
-	icmp_header->icmp_cksum = icmp_checksum((unsigned short *)icmp_header,
-			icmp_payload_len + 8);
+	icmp_header->icmp_cksum = icmp_checksum((unsigned short *)icmp_header, ICMP_MINLEN + icmp_payload_len);
 
 	// Update the IP and UDP headers to match the new payload length
-	ip_header->ip_len = htons(sizeof(struct ip) +
-                              8 + icmp_payload_len);
+	size_t ip_len = sizeof(struct ip) + ICMP_MINLEN + icmp_payload_len;
+	ip_header->ip_len = htons(ip_len);
 
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
+	*buf_len = ip_len + sizeof(struct ether_header);
 
 	return EXIT_SUCCESS;
 }
