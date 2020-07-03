@@ -22,7 +22,7 @@
 #include "../lib/includes.h"
 #include "../lib/logger.h"
 #include "../lib/random.h"
-#include "../lib/blacklist.h"
+#include "../lib/blocklist.h"
 #include "../lib/lockfd.h"
 #include "../lib/pbm.h"
 
@@ -83,7 +83,7 @@ iterator_t *send_init(void)
 	iterator_t *it;
 	uint32_t num_subshards =
 	    (uint32_t)zconf.senders * (uint32_t)zconf.total_shards;
-	if (num_subshards > blacklist_count_allowed()) {
+	if (num_subshards > blocklist_count_allowed()) {
 		log_fatal("send", "senders * shards > allowed probes");
 	}
 	if (zsend.max_targets && (num_subshards > zsend.max_targets)) {

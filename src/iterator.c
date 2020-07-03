@@ -12,7 +12,7 @@
 #include <time.h>
 
 #include "../lib/includes.h"
-#include "../lib/blacklist.h"
+#include "../lib/blocklist.h"
 #include "../lib/logger.h"
 #include "../lib/xalloc.h"
 
@@ -41,8 +41,8 @@ void shard_complete(uint8_t thread_id, void *arg)
 	shard_t *s = &it->thread_shards[thread_id];
 	zsend.sent += s->state.sent;
 	zsend.tried_sent += s->state.tried_sent;
-	zsend.blacklisted += s->state.blacklisted;
-	zsend.whitelisted += s->state.whitelisted;
+	zsend.blocklisted += s->state.blocklisted;
+	zsend.allowlisted += s->state.allowlisted;
 	zsend.sendto_failures += s->state.failures;
 	uint8_t done = 1;
 	for (uint8_t i = 0; done && (i < it->num_threads); ++i) {
@@ -59,7 +59,7 @@ void shard_complete(uint8_t thread_id, void *arg)
 iterator_t *iterator_init(uint8_t num_threads, uint16_t shard,
 			  uint16_t num_shards)
 {
-	uint64_t num_addrs = blacklist_count_allowed();
+	uint64_t num_addrs = blocklist_count_allowed();
 	iterator_t *it = xmalloc(sizeof(struct iterator));
 	const cyclic_group_t *group = get_group(num_addrs);
 	if (num_addrs > (1LL << 32)) {

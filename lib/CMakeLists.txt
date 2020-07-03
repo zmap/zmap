@@ -1,5 +1,5 @@
 SET(LIB_SOURCES
-    blacklist.c
+    blocklist.c
     constraint.c
     logger.c
     pbm.c

@@ -50,7 +50,7 @@ DO NOT TAKE THIS LIGHTLY!
 
 Running ZMap at 10Gbps hits every /16 on the Internet over 200 times a second.
 Even if you have a large source IP range to scan from, it's very obvious that
-you're scanning. As always, follow scanning best practices, honor blacklist
+you're scanning. As always, follow scanning best practices, honor blocklist
 requests, and signal benign/research intent via domain names and websites on
 your scan IPs.
 

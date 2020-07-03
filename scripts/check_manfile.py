@@ -10,7 +10,7 @@ import sys
 
 checks = [
     ("zopt.ggo.in", "zmap.1.ronn"),
-    ("zbopt.ggo.in", "zblacklist.1.ronn"),
+    ("zbopt.ggo.in", "zblocklist.1.ronn"),
     ("zitopt.ggo.in", "ziterate.1.ronn"),
     ("ztopt.ggo.in", "ztee.1.ronn")
 ]

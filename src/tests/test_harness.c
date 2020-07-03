@@ -24,7 +24,7 @@
 #include <pthread.h>
 
 #include "../lib/includes.h"
-#include "../lib/blacklist.h"
+#include "../lib/blocklist.h"
 #include "../lib/logger.h"
 #include "../lib/random.h"
 #include "../lib/util.h"

@@ -50,7 +50,7 @@
 #include "../lib/logger.h"
 
 // We will pick the first cyclic group from this list that is
-// larger than the number of IPs in our whitelist. E.g. for an
+// larger than the number of IPs in our allowlist. E.g. for an
 // entire Internet scan, this would be cyclic32
 // Note: this list should remain ordered by size (primes) ascending.
 

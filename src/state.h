@@ -94,8 +94,8 @@ struct state_conf {
 	uint32_t number_source_ips;
 	int send_ip_pkts;
 	char *output_filename;
-	char *blacklist_filename;
-	char *whitelist_filename;
+	char *blocklist_filename;
+	char *allowlist_filename;
 	char *list_of_ips_filename;
 	uint32_t list_of_ips_count;
 	char *metadata_filename;
@@ -145,8 +145,8 @@ struct state_send {
 	double finish;
 	uint32_t sent;
 	uint32_t tried_sent;
-	uint32_t blacklisted;
-	uint32_t whitelisted;
+	uint32_t blocklisted;
+	uint32_t allowlisted;
 	int warmup;
 	int complete;
 	uint32_t first_scanned;
