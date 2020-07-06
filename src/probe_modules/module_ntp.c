@@ -70,7 +70,8 @@ int ntp_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 
 void ntp_process_packet(const u_char *packet,
 			__attribute__((unused)) uint32_t len, fieldset_t *fs,
-			__attribute__((unused)) uint32_t *validation)
+			__attribute__((unused)) uint32_t *validation,
+			__attribute__((unused)) struct timespec ts)
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
 	uint64_t temp64;
