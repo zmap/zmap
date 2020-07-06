@@ -143,6 +143,8 @@ void json_metadata(FILE *file)
 			       json_object_new_int64(zsend.packets_sent));
 	json_object_object_add(obj, "hosts_scanned",
 			       json_object_new_int64(zsend.hosts_scanned));
+	json_object_object_add(obj, "total_tried_send",
+			       json_object_new_int64(total_iterations));
 	json_object_object_add(obj, "success_total",
 			       json_object_new_int64(zrecv.success_total));
 	json_object_object_add(obj, "success_unique",
