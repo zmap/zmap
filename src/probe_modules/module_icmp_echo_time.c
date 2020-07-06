@@ -81,7 +81,8 @@ static int icmp_echo_make_packet(void *buf, UNUSED size_t *buf_len,
 	payload->dst = dst_ip;
 
 	icmp_header->icmp_cksum = 0;
-	icmp_header->icmp_cksum = icmp_checksum((unsigned short *)icmp_header);
+	icmp_header->icmp_cksum = icmp_checksum((unsigned short *)icmp_header,
+											sizeof(struct icmp));
 
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
