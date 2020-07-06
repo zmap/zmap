@@ -143,8 +143,8 @@ extern struct state_conf zconf;
 struct state_send {
 	double start;
 	double finish;
-	uint64_t sent;
-	uint64_t tried_sent;
+	uint64_t packets_sent;
+	uint64_t hosts_scanned;
 	uint64_t blocklisted;
 	uint64_t allowlisted;
 	int warmup;

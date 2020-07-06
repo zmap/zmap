@@ -116,13 +116,20 @@ static double min_d(double array[], int n)
 }
 
 // estimate time remaining time based on config and state
-double compute_remaining_time(double age, uint64_t tried_sent)
+double compute_remaining_time(double age, uint64_t packets_sent, uint64_t iterations)
 {
 	if (!zsend.complete) {
 		double remaining[] = {INFINITY, INFINITY, INFINITY, INFINITY};
+		if (zsend.list_of_ips_pbm) {
+			double done = (double) iterations /
+					((uint64_t)zsend.max_targets /
+					zconf.total_shards);
+			remaining[0] =
+				(1. - done) * (age / done) + zconf.cooldown_secs;
+		}
 		if (zsend.max_targets) {
 			double done =
-			    (double)tried_sent /
+			    (double)packets_sent /
 			    ((uint64_t)zsend.max_targets * zconf.packet_streams /
 			     zconf.total_shards);
 			remaining[0] =
@@ -138,7 +145,7 @@ double compute_remaining_time(double age, uint64_t tried_sent)
 			remaining[2] = (1. - done) * (age / done);
 		}
 		if (zsend.max_index) {
-			double done = (double)tried_sent /
+			double done = (double)packets_sent /
 				      (zsend.max_index * zconf.packet_streams /
 				       zconf.total_shards);
 			remaining[3] =
@@ -162,7 +169,7 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 			 iterator_t *it)
 {
 	uint64_t total_sent = iterator_get_sent(it);
-	uint64_t total_tried_sent = iterator_get_tried_sent(it);
+	uint64_t total_iterations = iterator_get_iterations(it);
 	uint32_t total_fail = iterator_get_fail(it);
 	uint64_t total_recv = zrecv.pcap_recv;
 	uint64_t recv_success = zrecv.filter_success;
@@ -171,7 +178,7 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 	double age = cur_time - zsend.start; // time of entire scan
 	// time since the last time we updated
 	double delta = cur_time - intrnl->last_now;
-	double remaining_secs = compute_remaining_time(age, total_tried_sent);
+	double remaining_secs = compute_remaining_time(age, total_sent, total_iterations);
 
 	// export amount of time the scan has been running
 	if (age < WARMUP_PERIOD) {
@@ -241,7 +248,7 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 	}
 	// export other pre-calculated values
 	exp->total_sent = total_sent;
-	exp->total_tried_sent = total_tried_sent;
+	exp->total_tried_sent = total_iterations;
 	exp->percent_complete = 100. * age / (age + remaining_secs);
 	exp->recv_success_unique = recv_success;
 	exp->app_recv_success_unique = app_success;
