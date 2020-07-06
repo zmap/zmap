@@ -21,8 +21,8 @@ typedef struct shard {
 	struct shard_state {
 		uint64_t sent;
 		uint64_t tried_sent;
-		uint32_t blacklisted;
-		uint32_t whitelisted;
+		uint64_t blocklisted;
+		uint64_t allowlisted;
 		uint32_t failures;
 		uint32_t first_scanned;
 		uint32_t max_targets;

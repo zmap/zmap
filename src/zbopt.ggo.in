@@ -4,17 +4,17 @@
 # use this file except in compliance with the License. You may obtain a copy of
 # the License at http://www.apache.org/licenses/LICENSE-2.0
 
-# zblacklist option description to be processed by gengetopt
+# zblocklist option description to be processed by gengetopt
 
-package "zblacklist"
+package "zblocklist"
 version "@ZMAP_VERSION@"
 purpose "A tool for limiting and deduplicating a list of IP addresses"
 
 section "Basic arguments"
 
-option "blacklist-file"           b "File of subnets to exclude, in CIDR notation, one-per line."
+option "blocklist-file"           b "File of subnets to exclude, in CIDR notation, one-per line."
     optional string
-option "whitelist-file"           w "File of subnets to include, in CIDR notation, one-per line."
+option "allowlist-file"           w "File of subnets to include, in CIDR notation, one-per line."
     optional string
 option "log-file"                 l "File to log to"
     optional string
@@ -23,7 +23,7 @@ option "verbosity"                v "Set log level verbosity (0-5, default 3)"
     optional int
 option "no-duplicate-checking"    - "Don't deduplicate IP addresses (default false)"
     optional
-option "ignore-blacklist-errors"  - "Ignore invalid entires in the blacklist/whitelist (default false)"
+option "ignore-blocklist-errors"  - "Ignore invalid entires in the blocklist/allowlist (default false)"
     optional
 option "ignore-input-errors"      - "Don't print invalid entires in the input (default false)"
     optional
@@ -40,4 +40,4 @@ option "version"                V "Print version and exit"
 section "Notes"
 
 text
-    "At least one of --whitelist-file or --blacklist-file must be specified. Blacklist files take precedence over whitelist files when both are specified. This results in an output of {whitelist - blacklist}."
+    "At least one of --allowlist-file or --blocklist-file must be specified. Blacklist files take precedence over allowlist files when both are specified. This results in an output of {allowlist - blocklist}."

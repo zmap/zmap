@@ -15,7 +15,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "../../lib/blacklist.h"
+#include "../../lib/blocklist.h"
 #include "../../lib/includes.h"
 #include "../../lib/xalloc.h"
 #include "../../lib/lockfd.h"
@@ -280,8 +280,9 @@ int udp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	return EXIT_SUCCESS;
 }
 
-int udp_make_packet(void *buf, UNUSED size_t *buf_len, ipaddr_n_t src_ip,
-		    ipaddr_n_t dst_ip, uint32_t *validation, int probe_num,
+int udp_make_packet(void *buf, UNUSED size_t *buf_len,
+            ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
+			uint32_t *validation, int probe_num,
 		    void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -291,6 +292,7 @@ int udp_make_packet(void *buf, UNUSED size_t *buf_len, ipaddr_n_t src_ip,
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
+	ip_header->ip_ttl = ttl;
 	udp_header->uh_sport =
 	    htons(get_src_port(num_ports, probe_num, validation));
 
@@ -349,7 +351,8 @@ void udp_print_packet(FILE *fp, void *packet)
 
 void udp_process_packet(const u_char *packet, UNUSED uint32_t len,
 			fieldset_t *fs,
-			__attribute__((unused)) uint32_t *validation)
+			__attribute__((unused)) uint32_t *validation,
+			__attribute__((unused)) struct timespec ts)
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
@@ -453,7 +456,7 @@ int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		if (!check_dst_port(sport, num_ports, validation)) {
 			return PACKET_INVALID;
 		}
-		if (!blacklist_is_allowed(*src_ip)) {
+		if (!blocklist_is_allowed(*src_ip)) {
 			return PACKET_INVALID;
 		}
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
@@ -481,7 +484,7 @@ int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		// find original destination IP and check that we sent a packet
 		// to that IP address
 		uint32_t dest = ip_inner->ip_dst.s_addr;
-		if (!blacklist_is_allowed(dest)) {
+		if (!blocklist_is_allowed(dest)) {
 			return PACKET_INVALID;
 		}
 		// This is the UDP packet we sent

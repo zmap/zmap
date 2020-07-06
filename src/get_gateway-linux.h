@@ -211,9 +211,12 @@ int _get_default_gw(struct in_addr *gw, char *iface)
 
 		rt_msg = (struct rtmsg *)NLMSG_DATA(nlhdr);
 
+		// There could be multiple routing tables. Loop until we find the
+		// correct one.
 		if ((rt_msg->rtm_family != AF_INET) ||
 		    (rt_msg->rtm_table != RT_TABLE_MAIN)) {
-			return -1;
+			nlhdr = NLMSG_NEXT(nlhdr, nl_len);
+			continue;
 		}
 
 		rt_attr = (struct rtattr *)RTM_RTA(rt_msg);

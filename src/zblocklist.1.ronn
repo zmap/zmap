@@ -1,26 +1,26 @@
-zblacklist(1) - zmap IP blacklist tool
+zblocklist(1) - zmap IP blocklist tool
 ======================================
 
 ## SYNOPSIS
 
-zblacklist [ -b &lt;blacklist&gt; ] [ -w &lt;whitelist&gt; ] [ OPTIONS... ]
+zblocklist [ -b &lt;blocklist&gt; ] [ -w &lt;allowlist&gt; ] [ OPTIONS... ]
 
 ## DESCRIPTION
 
 *ZBlacklist* is a network tool for limiting and deduplicating a list of
-IP addresses using a blacklist or whitelist.
+IP addresses using a blocklist or allowlist.
 
 ## OPTIONS
 
 ### BASIC OPTIONS ###
 
-   * `-b`, `--blacklist-file=path`:
+   * `-b`, `--blocklist-file=path`:
      File of subnets to exclude, in CIDR notation, one-per line. It is
      recommended you use this to exclude RFC 1918 addresses, multicast, IANA
      reserved space, and other IANA special-purpose addresses. An example
-     blacklist file **blacklist.conf** for this purpose.
+     blocklist file **blocklist.conf** for this purpose.
 
-  * `-w`, `--whitelist-file=name`:
+  * `-w`, `--allowlist-file=name`:
     File of subnets to include, in CIDR notation, one-per line. All other
     subnets will be excluded.
 
@@ -36,9 +36,9 @@ IP addresses using a blacklist or whitelist.
   * `--no-duplicate-checking`:
     Don't deduplicate input addresses. Default is false.
 
-  * `--ignore-blacklist-errors`:
+  * `--ignore-blocklist-errors`:
     Ignore invalid, malformed, or unresolvable entries in the
-    blacklist/whitelist. Default is false.
+    blocklist/allowlist. Default is false.
 
   * `--ignore-input-errors`:
     Don't print invalid entries in the input. Default is false.

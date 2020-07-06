@@ -7,7 +7,7 @@
 \fBziterate\fR \- ZMap IP permutation generation file
 .
 .SH "SYNOPSIS"
-ziterate [ \-b <blacklist> ] [ \-w <whitelist> ] [ OPTIONS\.\.\. ]
+ziterate [ \-b <blocklist> ] [ \-w <allowlist> ] [ OPTIONS\.\.\. ]
 .
 .SH "DESCRIPTION"
 \fIZIterate\fR is a network tool that will produce IPv4 addresses in a psuedorandom order similar to how ZMap generates random addresses to be scanned\.
@@ -17,11 +17,11 @@ ziterate [ \-b <blacklist> ] [ \-w <whitelist> ] [ OPTIONS\.\.\. ]
 .SS "BASIC OPTIONS"
 .
 .TP
-\fB\-b\fR, \fB\-\-blacklist\-file=path\fR
-File of subnets to exclude, in CIDR notation, one\-per line\. It is recommended you use this to exclude RFC 1918 addresses, multicast, IANA reserved space, and other IANA special\-purpose addresses\. An example blacklist file \fBblacklist\.conf\fR for this purpose\.
+\fB\-b\fR, \fB\-\-blocklist\-file=path\fR
+File of subnets to exclude, in CIDR notation, one\-per line\. It is recommended you use this to exclude RFC 1918 addresses, multicast, IANA reserved space, and other IANA special\-purpose addresses\. An example blocklist file \fBblacklist\.conf\fR for this purpose\.
 .
 .TP
-\fB\-w\fR, \fB\-\-whitelist\-file=name\fR
+\fB\-w\fR, \fB\-\-allowlist\-file=name\fR
 File of subnets to include, in CIDR notation, one\-per line\. All other subnets will be excluded\.
 .
 .TP
@@ -37,8 +37,8 @@ Disable logging messages to syslog\.
 Level of log detail (0\-5, default=3)
 .
 .TP
-\fB\-\-ignore\-blacklist\-errors\fR
-Ignore invalid entries in the blacklist\. Default is false\.
+\fB\-\-ignore\-blocklist\-errors\fR
+Ignore invalid entries in the blocklist\. Default is false\.
 .
 .TP
 \fB\-\-seed=n\fR

@@ -12,7 +12,7 @@
 #include <gmp.h>
 
 #include "../lib/includes.h"
-#include "../lib/blacklist.h"
+#include "../lib/blocklist.h"
 #include "shard.h"
 #include "state.h"
 
@@ -113,7 +113,7 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 	shard->arg = arg;
 
 	// If the beginning of a shard isn't pointing to a valid index in the
-	// blacklist, find the first element that is.
+	// blocklist, find the first element that is.
 	shard_roll_to_valid(shard);
 
 	// Clear everything
@@ -127,7 +127,7 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 
 uint32_t shard_get_cur_ip(shard_t *shard)
 {
-	return (uint32_t)blacklist_lookup_index(shard->current - 1);
+	return (uint32_t)blocklist_lookup_index(shard->current - 1);
 }
 
 static inline uint32_t shard_get_next_elem(shard_t *shard)
@@ -151,9 +151,9 @@ uint32_t shard_get_next_ip(shard_t *shard)
 			return ZMAP_SHARD_DONE;
 		}
 		if (candidate - 1 < zsend.max_index) {
-			shard->state.whitelisted++;
-			return blacklist_lookup_index(candidate - 1);
+			shard->state.allowlisted++;
+			return blocklist_lookup_index(candidate - 1);
 		}
-		shard->state.blacklisted++;
+		shard->state.blocklisted++;
 	}
 }

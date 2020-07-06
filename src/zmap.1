@@ -29,16 +29,16 @@ TCP or UDP port number to scan (for SYN scans and basic UDP scans)
 When using an output module that uses a file, write results to this file\. Use \- for stdout\.
 .
 .TP
-\fB\-b\fR, \fB\-\-blacklist\-file=path\fR
-File of subnets to exclude, in CIDR notation, one\-per line\. It is recommended you use this to exclude RFC 1918 addresses, multicast, IANA reserved space, and other IANA special\-purpose addresses\. An example blacklist file \fBblacklist\.conf\fR for this purpose\.
+\fB\-b\fR, \fB\-\-blocklist\-file=path\fR
+File of subnets to exclude, in CIDR notation, one\-per line\. It is recommended you use this to exclude RFC 1918 addresses, multicast, IANA reserved space, and other IANA special\-purpose addresses\. An example blocklist file \fBblocklist\.conf\fR for this purpose\.
 .
 .TP
-\fB\-w\fR, \fB\-\-whitelist\-file=path\fR
-File of subnets to scan, in CIDR notation, one\-per line\. Specifying a whitelist file is equivalent to specifying to ranges directly on the command line interface, but allows specifying a large number of subnets\. Note: if you are specifying a large number of individual IP addresses (more than 10 million), you should instead use \fB\-\-list\-of\-ips\-file\fR\.
+\fB\-w\fR, \fB\-\-allowlist\-file=path\fR
+File of subnets to scan, in CIDR notation, one\-per line\. Specifying a allowlist file is equivalent to specifying to ranges directly on the command line interface, but allows specifying a large number of subnets\. Note: if you are specifying a large number of individual IP addresses (more than 10 million), you should instead use \fB\-\-list\-of\-ips\-file\fR\.
 .
 .TP
 \fB\-I\fR, \fB\-\-list\-of\-ips\-file=path\fR
-File of individual IP addresses to scan, one\-per line\. This feature allows you to scan a large number of unrelated addresses\. If you have a small number of IPs, it is faster to specify these on the command line or by using \fB\-\-whitelist\-file\fR\. This should only be used when scanning more than 10 million addresses\. When used in with \-\-whitelist\-path, only hosts in the intersection of both sets will be scanned\. Hosts specified here, but included in the blacklist will be excluded\.
+File of individual IP addresses to scan, one\-per line\. This feature allows you to scan a large number of unrelated addresses\. If you have a small number of IPs, it is faster to specify these on the command line or by using \fB\-\-allowlist\-file\fR\. This should only be used when scanning more than 10 million addresses\. When used in with \-\-allowlist\-path, only hosts in the intersection of both sets will be scanned\. Hosts specified here, but included in the blocklist will be excluded\.
 .
 .SS "SCAN OPTIONS"
 .
@@ -52,7 +52,7 @@ Set the send rate in bits/second (supports suffixes G, M, and K (e\.g\. \-B 10M 
 .
 .TP
 \fB\-n\fR, \fB\-\-max\-targets=n\fR
-Cap the number of targets to probe\. This can either be a number (e\.g\. \-n 1000) or a percentage (e\.g\. \-n 0\.1%) of the scannable address space (after excluding blacklist)
+Cap the number of targets to probe\. This can either be a number (e\.g\. \-n 1000) or a percentage (e\.g\. \-n 0\.1%) of the scannable address space (after excluding blocklist)
 .
 .TP
 \fB\-N\fR, \fB\-\-max\-results=n\fR
@@ -219,8 +219,8 @@ Minimum hitrate that scan can hit before scan is aborted
 Comma\-separated list of cores to pin to
 .
 .TP
-\fB\-\-ignore\-blacklist\-errors\fR
-Ignore invalid, malformed, or unresolvable entries in whitelist/blacklist file\. Replaces the pre\-v3\.x \fB\-\-ignore\-invalid\-hosts\fR option\.
+\fB\-\-ignore\-blocklist\-errors\fR
+Ignore invalid, malformed, or unresolvable entries in allowlist/blocklist file\. Replaces the pre\-v3\.x \fB\-\-ignore\-invalid\-hosts\fR option\.
 .
 .TP
 \fB\-h\fR, \fB\-\-help\fR

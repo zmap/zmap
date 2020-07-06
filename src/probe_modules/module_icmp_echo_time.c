@@ -54,7 +54,7 @@ static int icmp_echo_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 }
 
 static int icmp_echo_make_packet(void *buf, UNUSED size_t *buf_len,
-				 ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
+				 ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
 				 uint32_t *validation, UNUSED int probe_num,
 				 UNUSED void *arg)
 {
@@ -70,6 +70,7 @@ static int icmp_echo_make_packet(void *buf, UNUSED size_t *buf_len,
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
+	ip_header->ip_ttl = ttl;
 
 	icmp_header->icmp_id = icmp_idnum;
 	icmp_header->icmp_seq = icmp_seqnum;
@@ -80,7 +81,8 @@ static int icmp_echo_make_packet(void *buf, UNUSED size_t *buf_len,
 	payload->dst = dst_ip;
 
 	icmp_header->icmp_cksum = 0;
-	icmp_header->icmp_cksum = icmp_checksum((unsigned short *)icmp_header);
+	icmp_header->icmp_cksum = icmp_checksum((unsigned short *)icmp_header,
+											sizeof(struct icmp));
 
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
@@ -159,7 +161,8 @@ static void icmp_echo_process_packet(const u_char *packet,
 				     __attribute__((unused)) uint32_t len,
 				     fieldset_t *fs,
 				     __attribute__((unused))
-				     uint32_t *validation)
+				     uint32_t *validation,
+				     __attribute__((unused)) struct timespec ts)
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
 	struct icmp *icmp_hdr =

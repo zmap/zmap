@@ -74,6 +74,7 @@ if(JSON_FOUND)
 else()
     message(FATAL_ERROR "Did not find libjson")
 endif()
+string(REPLACE ";" " " JSON_CFLAGS "${JSON_CFLAGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${JSON_CFLAGS}")
 
 if(WITH_REDIS)

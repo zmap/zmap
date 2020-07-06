@@ -72,7 +72,7 @@
 
 ## FEATURE
 * Autodetect number of sender threads.
-* Add ignore-invalid-hosts option for blacklist.
+* Add ignore-invalid-hosts option for blocklist.
 
 # 2.1.0	2015-09-02
 ## BUGFIX
@@ -80,7 +80,7 @@
 * ZMap would sometimes segfault if the number of threads was greater than the number of destination hosts.
 * ZMap did not crash when it was unable to write to the output file. This would cause ZMap to continue running when it was piped into another application and that application died. We not log_fatal if the output is no longer accessible per ferror.
 * Pcap filter captures outgoing packets.
-* Install overwrites blacklist file.
+* Install overwrites blocklist file.
 * Output is sometimes colored.
 * Use correct email for Zakir in AUTHORS.
 * Random-number generator is now thread safe.
@@ -94,7 +94,7 @@
 * Output to `stdout` by default.
 * Remove space in csv output header.
 * Build with JSON support by default.
-* Don't print blacklisted CIDR blocks to log. These are available in `--metadata-file` and end up flooding the log with a ton of metadata.
+* Don't print blocklisted CIDR blocks to log. These are available in `--metadata-file` and end up flooding the log with a ton of metadata.
 * Remove type field from JSON output module and get rid of header.
 * Remove `--summary`. This has been replaced by `--metadata-file`.
 * JSON metadata now uses ISO-8601 compatible timestamps instead of proprietary log format.
@@ -102,7 +102,7 @@
 * Add icmp-echo-time probe module for measuring RTT MongoDB output module.
 
 ## FEATURE
-* zblacklist (a standalone utility that allows you to efficiently check IP addresses against a ZMap compatible whitelist and blacklist. This is helpful if you are doing something like ```cat list-of-ips | zgrab``` and to make sure that you're still following your blacklist.
+* zblocklist (a standalone utility that allows you to efficiently check IP addresses against a ZMap compatible whitelist and blocklist. This is helpful if you are doing something like ```cat list-of-ips | zgrab``` and to make sure that you're still following your blocklist.
 * ztee (a standalone utility that buffers between ZMap and ZGrab) and allows extracting just IP address from a larger ZMap output in order to complete follow up handshakes without losing any data.
 * NTP probe module.
 * Status-updates-file (monitor output as a csv).

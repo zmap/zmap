@@ -58,8 +58,9 @@ typedef struct udp_payload_output {
 
 void udp_print_packet(FILE *fp, void *packet);
 
-int udp_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
-		    ipaddr_n_t dst_ip, uint32_t *validation, int probe_num,
+int udp_make_packet(void *buf, size_t *buf_len,
+            ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
+			uint32_t *validation, int probe_num,
 		    void *arg);
 
 int udp_validate_packet(const struct ip *ip_hdr, uint32_t len,

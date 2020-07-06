@@ -63,7 +63,7 @@ static int synscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 #define EXPECTED_RESPONSE_ACK 0x3E120C00
 
 static int synscan_make_packet(void *buf, UNUSED size_t *buf_len,
-			       ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
+			       ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
 			       uint32_t *validation, int probe_num,
 			       UNUSED void *arg)
 {
@@ -73,6 +73,7 @@ static int synscan_make_packet(void *buf, UNUSED size_t *buf_len,
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
+	ip_header->ip_ttl = ttl;
 
 	tcp_header->th_sport =
 	    htons(get_src_port(num_ports, probe_num, validation));
@@ -136,7 +137,8 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 
 static void synscan_process_packet(const u_char *packet, uint32_t len,
 				   fieldset_t *fs,
-				   __attribute__((unused)) uint32_t *validation)
+				   __attribute__((unused)) uint32_t *validation,
+				   __attribute__((unused)) struct timespec ts)
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
 	struct tcphdr *tcp =
