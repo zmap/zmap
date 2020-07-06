@@ -18,10 +18,10 @@ option "target-port"            p "port number to scan (for TCP and UDP scans)"
 option "output-file"            o "Output file"
     typestr="name"
     optional string
-option "blacklist-file"         b "File of subnets to exclude, in CIDR notation, e.g. 192.168.0.0/16"
+option "blocklist-file"         b "File of subnets to exclude, in CIDR notation, e.g. 192.168.0.0/16"
     typestr="path"
     optional string
-option "whitelist-file"         w "File of subnets to constrain scan to, in CIDR notation, e.g. 192.168.0.0/16"
+option "allowlist-file"         w "File of subnets to constrain scan to, in CIDR notation, e.g. 192.168.0.0/16"
     typestr="path"
     optional string
 option "list-of-ips-file"		I "List of individual addresses to scan in random order. Use --white-list file unless >1 million IPs"
@@ -181,9 +181,9 @@ option "sender-threads"         T "Threads used to send packets"
 
 option "cores"                  - "Comma-separated list of cores to pin to"
     optional string
-option "ignore-invalid-hosts"   - "Deprecated; use --ignore-blacklist-errors instead"
+option "ignore-invalid-hosts"   - "Deprecated; use --ignore-blocklist-errors instead"
     optional
-option "ignore-blacklist-errors" - "Ignore invalid entries in whitelist/blacklist file. Equivalent to --ignore-invalid-hosts"
+option "ignore-blocklist-errors" - "Ignore invalid entries in allowlist/blocklist file. Equivalent to --ignore-invalid-hosts"
     optional
 option "help"                   h "Print help and exit"
     optional

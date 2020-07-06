@@ -3,7 +3,7 @@ ziterate(1) - ZMap IP permutation generation file
 
 ## SYNOPSIS
 
-ziterate [ -b &lt;blacklist&gt; ] [ -w &lt;whitelist&gt; ] [ OPTIONS... ]
+ziterate [ -b &lt;blocklist&gt; ] [ -w &lt;allowlist&gt; ] [ OPTIONS... ]
 
 ## DESCRIPTION
 
@@ -14,13 +14,13 @@ order similar to how ZMap generates random addresses to be scanned.
 
 ### BASIC OPTIONS ###
 
-   * `-b`, `--blacklist-file=path`:
+   * `-b`, `--blocklist-file=path`:
      File of subnets to exclude, in CIDR notation, one-per line. It is
      recommended you use this to exclude RFC 1918 addresses, multicast, IANA
      reserved space, and other IANA special-purpose addresses. An example
-     blacklist file **blacklist.conf** for this purpose.
+     blocklist file **blocklist.conf** for this purpose.
 
-  * `-w`, `--whitelist-file=name`:
+  * `-w`, `--allowlist-file=name`:
     File of subnets to include, in CIDR notation, one-per line. All other
     subnets will be excluded.
 
@@ -33,8 +33,8 @@ order similar to how ZMap generates random addresses to be scanned.
   * `-v`, `--verbosity`:
     Level of log detail (0-5, default=3)
 
-  * `--ignore-blacklist-errors`:
-    Ignore invalid entries in the blacklist. Default is false.
+  * `--ignore-blocklist-errors`:
+    Ignore invalid entries in the blocklist. Default is false.
 
   * `--seed=n`:
     Seed used to select address permutation.

@@ -5,15 +5,16 @@ import sys
 
 executable_path = None
 
-class ZBlacklistTest(unittest.TestCase):
-    BLACKLIST = [
+class ZBlocklistTest(unittest.TestCase):
+
+    BLOCKLIST = [
         "10.0.0.0/8         # private subnet",
         "192.168.0.0/16     # private subnet",
         "128.255.0.0/16     # university of iowa",
         "141.212.120.0/24   # halderman lab"
     ]
-    
-    WHITELIST = [
+
+    ALLOWLIST = [
         "141.212.0.0/16    # university of michigan",
     ]
 
@@ -34,7 +35,7 @@ class ZBlacklistTest(unittest.TestCase):
         "141.212.120.10",
         "141.212.12.6"
     ]
-    
+
     IPS_MINUS_BL = [
         "61.193.80.24",
         "195.19.1.6",
@@ -48,12 +49,12 @@ class ZBlacklistTest(unittest.TestCase):
         "170.114.52.252",
         "141.212.12.6"
     ]
-    
+
     WL_IPS = [
         "141.212.120.10",
         "141.212.12.6"
     ]
-    
+
     WL_IPS_MINUS_BL = [
         "141.212.12.6"
     ]
@@ -63,16 +64,16 @@ class ZBlacklistTest(unittest.TestCase):
         " # some comment here",
         ",google.com,data",
         "\t#some comment here"
-    ] 
+    ]
 
     def setUp(self):
         global executable_path
         self.path = executable_path
-        with open("/tmp/blacklist", "w") as fd:
-            for line in self.BLACKLIST:
+        with open("/tmp/blocklist", "w") as fd:
+            for line in self.BLOCKLIST:
                 fd.write("%s\n" % line)
-        with open("/tmp/whitelist", "w") as fd:
-            for line in self.WHITELIST:
+        with open("/tmp/allowlist", "w") as fd:
+            for line in self.ALLOWLIST:
                 fd.write("%s\n" % line)
         with open("/tmp/ips", "w") as fd:
             for line in self.IPS:
@@ -83,54 +84,54 @@ class ZBlacklistTest(unittest.TestCase):
                     fd.write("%s%s\n" % (line, comment))
 
     def tearDown(self):
-        if os.path.exists("/tmp/blacklist"):
-            os.remove("/tmp/blacklist")
-        if os.path.exists("/tmp/whitelist"):
-            os.remove("/tmp/whitelist")
+        if os.path.exists("/tmp/blocklist"):
+            os.remove("/tmp/blocklist")
+        if os.path.exists("/tmp/allowlist"):
+            os.remove("/tmp/allowlist")
         if os.path.exists("/tmp/ips"):
             os.remove("/tmp/ips")
         if os.path.exists("/tmp/ips-commented"):
             os.remove("/tmp/ips-commented")
 
 
-    def execute(self, whitelist, blacklist, ipsfile="/tmp/ips", numtimestocat=1):
+    def execute(self, allowlist, blocklist, ipsfile="/tmp/ips", numtimestocat=1):
         cmd = "cat"
         for _ in range(0, numtimestocat):
             cmd += " %s" % ipsfile
         cmd += " | %s" % self.path
-        if whitelist:
-            cmd = cmd + " -w %s" % whitelist
-        if blacklist:
-            cmd = cmd + " -b %s" % blacklist
+        if allowlist:
+            cmd = cmd + " -w %s" % allowlist
+        if blocklist:
+            cmd = cmd + " -b %s" % blocklist
         results = subprocess.check_output(cmd, shell=True)
         ips = results.rstrip().split("\n")
         return ips
 
-    def testValidBlacklist(self):
-        res = self.execute(None, "/tmp/blacklist")
+    def testValidBlocklist(self):
+        res = self.execute(None, "/tmp/blocklist")
         self.assertEqual(set(res), set(self.IPS_MINUS_BL))
-        
-    def testValidWhitelist(self):
-        res = self.execute("/tmp/whitelist", None)
+
+    def testValidAllowlist(self):
+        res = self.execute("/tmp/allowlist", None)
         self.assertEqual(set(res), set(self.WL_IPS))
-        
-    def testValidWhiteAndBlackList(self):
-        res = self.execute("/tmp/whitelist", "/tmp/blacklist")
+
+    def testValidAllowAndBlockList(self):
+        res = self.execute("/tmp/allowlist", "/tmp/blocklist")
         self.assertEqual(set(res), set(self.WL_IPS_MINUS_BL))
 
     def testDuplicateChecking(self):
-        res = self.execute(None, "/tmp/blacklist", numtimestocat=5)
+        res = self.execute(None, "/tmp/blocklist", numtimestocat=5)
         self.assertEqual(len(res), len(self.IPS_MINUS_BL))
         self.assertEqual(set(res), set(self.IPS_MINUS_BL))
 
     def testCommentCharacters(self):
-        res = self.execute(None, "/tmp/blacklist", ipsfile="/tmp/ips-commented")
+        res = self.execute(None, "/tmp/blocklist", ipsfile="/tmp/ips-commented")
         self.assertEqual(set(res), set(self.IPS_MINUS_BL))
 
-        
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print "USAGE: %s zblacklist" % sys.argv[0]
+        print "USAGE: %s zblocklist" % sys.argv[0]
         sys.exit(1)
     executable_path = sys.argv[1]
     assert(os.path.exists(executable_path))

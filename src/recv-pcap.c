@@ -20,7 +20,7 @@
 
 #include <pcap.h>
 #include <pcap/pcap.h>
-#if __linux__
+#if defined __linux__ && __linux__
 #include <pcap/sll.h>
 #endif
 
@@ -77,7 +77,7 @@ void recv_init()
 		log_info("recv", "Data link RAW");
 		zconf.data_link_size = 0;
 		break;
-#if __linux__
+#if defined __linux__ && __linux__
 	case DLT_LINUX_SLL:
 		log_info("recv", "Data link cooked socket");
 		zconf.data_link_size = SLL_HDR_LEN;

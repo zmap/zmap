@@ -17,7 +17,7 @@
 
 #include "../lib/includes.h"
 #include "../lib/logger.h"
-#include "../lib/blacklist.h"
+#include "../lib/blocklist.h"
 
 #include "state.h"
 #include "probe_modules/probe_modules.h"
@@ -122,19 +122,19 @@ void json_metadata(FILE *file)
 
 	json_object_object_add(obj, "ip_fragments",
 			       json_object_new_int(zrecv.ip_fragments));
-	json_object_object_add(obj, "blacklist_total_allowed",
+	json_object_object_add(obj, "blocklist_total_allowed",
 			       json_object_new_int64(zconf.total_allowed));
-	json_object_object_add(obj, "blacklist_total_not_allowed",
+	json_object_object_add(obj, "blocklist_total_not_allowed",
 			       json_object_new_int64(zconf.total_disallowed));
 	json_object_object_add(obj, "validation_passed",
 			       json_object_new_int(zrecv.validation_passed));
 	json_object_object_add(obj, "validation_failed",
 			       json_object_new_int(zrecv.validation_failed));
 
-	//	json_object_object_add(obj, "blacklisted",
-	//            json_object_new_int64(zsend.blacklisted));
-	//	json_object_object_add(obj, "whitelisted",
-	//            json_object_new_int64(zsend.whitelisted));
+	//	json_object_object_add(obj, "blocklisted",
+	//            json_object_new_int64(zsend.blocklisted));
+	//	json_object_object_add(obj, "allowlisted",
+	//            json_object_new_int64(zsend.allowlisted));
 	json_object_object_add(obj, "first_scanned",
 			       json_object_new_int64(zsend.first_scanned));
 	json_object_object_add(obj, "send_to_failures",
@@ -270,15 +270,15 @@ void json_metadata(FILE *file)
 		    obj, "output_filename",
 		    json_object_new_string(zconf.output_filename));
 	}
-	if (zconf.blacklist_filename) {
+	if (zconf.blocklist_filename) {
 		json_object_object_add(
-		    obj, "blacklist_filename",
-		    json_object_new_string(zconf.blacklist_filename));
+		    obj, "blocklist_filename",
+		    json_object_new_string(zconf.blocklist_filename));
 	}
-	if (zconf.whitelist_filename) {
+	if (zconf.allowlist_filename) {
 		json_object_object_add(
-		    obj, "whitelist_filename",
-		    json_object_new_string(zconf.whitelist_filename));
+		    obj, "allowlist_filename",
+		    json_object_new_string(zconf.allowlist_filename));
 	}
 	if (zconf.list_of_ips_filename) {
 		json_object_object_add(
@@ -313,35 +313,35 @@ void json_metadata(FILE *file)
 				       json_object_new_string(zconf.notes));
 	}
 
-	// add blacklisted and whitelisted CIDR blocks
-	bl_cidr_node_t *b = get_blacklisted_cidrs();
+	// add blocklisted and allowlisted CIDR blocks
+	bl_cidr_node_t *b = get_blocklisted_cidrs();
 	if (b) {
-		json_object *blacklisted_cidrs = json_object_new_array();
+		json_object *blocklisted_cidrs = json_object_new_array();
 		do {
 			char cidr[50];
 			struct in_addr addr;
 			addr.s_addr = b->ip_address;
 			sprintf(cidr, "%s/%i", inet_ntoa(addr), b->prefix_len);
-			json_object_array_add(blacklisted_cidrs,
+			json_object_array_add(blocklisted_cidrs,
 					      json_object_new_string(cidr));
 		} while (b && (b = b->next));
-		json_object_object_add(obj, "blacklisted_networks",
-				       blacklisted_cidrs);
+		json_object_object_add(obj, "blocklisted_networks",
+				       blocklisted_cidrs);
 	}
 
-	b = get_whitelisted_cidrs();
+	b = get_allowlisted_cidrs();
 	if (b) {
-		json_object *whitelisted_cidrs = json_object_new_array();
+		json_object *allowlisted_cidrs = json_object_new_array();
 		do {
 			char cidr[50];
 			struct in_addr addr;
 			addr.s_addr = b->ip_address;
 			sprintf(cidr, "%s/%i", inet_ntoa(addr), b->prefix_len);
-			json_object_array_add(whitelisted_cidrs,
+			json_object_array_add(allowlisted_cidrs,
 					      json_object_new_string(cidr));
 		} while (b && (b = b->next));
-		json_object_object_add(obj, "whitelisted_networks",
-				       whitelisted_cidrs);
+		json_object_object_add(obj, "allowlisted_networks",
+				       allowlisted_cidrs);
 	}
 
 	fprintf(file, "%s\n", json_object_to_json_string(obj));
