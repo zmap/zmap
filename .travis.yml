@@ -1,6 +1,6 @@
 language: c
 os: linux
-dist: trusty
+dist: xenial
 addons:
   apt:
     packages:
@@ -18,12 +18,6 @@ addons:
       - python-dev
       - python-pip
       - libhiredis-dev
-jobs:
-  include:
-    - dist: trusty
-    - dist: xenial
-    - dist: bionic
-    - dist: focal
 before_install:
   - pip install --user sh
   - export PATH=/opt/bin:$PATH
