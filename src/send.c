@@ -285,7 +285,6 @@ int send_run(sock_t st, shard_t *s)
 	if (zconf.list_of_ips_filename) {
 		while (!pbm_check(zsend.list_of_ips_pbm, current_ip)) {
 			current_ip = shard_get_next_ip(s);
-			s->state.tried_sent++;
 			if (current_ip == ZMAP_SHARD_DONE) {
 				log_debug(
 				    "send",
@@ -353,13 +352,21 @@ int send_run(sock_t st, shard_t *s)
 		for(int b = 0; b < zconf.batch; b++){
 			// Check if we've finished this shard or thread before sending each
 			// packet, regardless of batch size.
-			if (s->state.max_targets &&
-				(s->state.sent >= s->state.max_targets ||
-				 s->state.tried_sent >= s->state.max_targets)) {
+			if (s->state.max_hosts &&
+					s->state.hosts_scanned >= s->state.max_hosts) {
 				log_debug(
 					"send",
 					"send thread %hhu finished (max targets of %u reached)",
-					s->thread_id, s->state.max_targets);
+					s->thread_id, s->state.max_hosts);
+				goto cleanup;
+			}
+			if (s->state.max_packets &&
+					s->state.packets_sent >= s->state.max_packets) {
+				log_debug(
+					"send",
+					"send thread %hhu finished (max packets of %u reached)",
+					s->thread_id, s->state.max_packets);
+				goto cleanup;
 			}
 			if (current_ip == ZMAP_SHARD_DONE) {
 				log_debug("send",
@@ -419,15 +426,15 @@ int send_run(sock_t st, shard_t *s)
 						}
 					}
 					if (!any_sends_successful) {
-						s->state.failures++;
+						s->state.packets_failed++;
 					}
 					idx++;
 					idx &= 0xFF;
 				}
+				s->state.packets_sent++;
 			}
 			// Track the number of hosts we actually scanned.
-			s->state.sent++;
-			s->state.tried_sent++;
+			s->state.hosts_scanned++;
 
 			// Get the next IP to scan
 			current_ip = shard_get_next_ip(s);
@@ -437,7 +444,6 @@ int send_run(sock_t st, shard_t *s)
 				// to scan is on the list.
 				while (!pbm_check(zsend.list_of_ips_pbm, current_ip)) {
 					current_ip = shard_get_next_ip(s);
-					s->state.tried_sent++;
 					if (current_ip == ZMAP_SHARD_DONE) {
 						log_debug(
 							"send",

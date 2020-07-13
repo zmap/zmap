@@ -143,10 +143,10 @@ extern struct state_conf zconf;
 struct state_send {
 	double start;
 	double finish;
-	uint32_t sent;
-	uint32_t tried_sent;
-	uint32_t blocklisted;
-	uint32_t allowlisted;
+	uint64_t packets_sent;
+	uint64_t hosts_scanned;
+	uint64_t blocklisted;
+	uint64_t allowlisted;
 	int warmup;
 	int complete;
 	uint32_t first_scanned;
@@ -174,7 +174,7 @@ struct state_recv {
 	// valid responses NOT classified as "success"
 	uint32_t failure_total;
 	// valid responses that passed the filter
-	uint32_t filter_success;
+	uint64_t filter_success;
 	// how many packets did we receive that were marked as being the first
 	// fragment in a stream
 	uint32_t ip_fragments;
