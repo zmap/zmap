@@ -131,7 +131,7 @@ class ZBlocklistTest(unittest.TestCase):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print "USAGE: %s zblocklist" % sys.argv[0]
+        print("USAGE: %s zblocklist" % sys.argv[0])
         sys.exit(1)
     executable_path = sys.argv[1]
     assert(os.path.exists(executable_path))
