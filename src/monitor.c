@@ -119,10 +119,11 @@ static double min_d(double array[], int n)
 double compute_remaining_time(double age, uint64_t packets_sent, uint64_t iterations)
 {
 	if (!zsend.complete) {
-		double remaining[] = {INFINITY, INFINITY, INFINITY, INFINITY};
+		double remaining[] = {INFINITY, INFINITY, INFINITY, INFINITY, INFINITY};
 		if (zsend.list_of_ips_pbm) {
+			// Estimate progress using group iterations
 			double done = (double) iterations /
-					((uint64_t)zsend.max_targets /
+					((uint64_t)0xFFFFFFFFU /
 					zconf.total_shards);
 			remaining[0] =
 				(1. - done) * (age / done) + zconf.cooldown_secs;
@@ -132,23 +133,23 @@ double compute_remaining_time(double age, uint64_t packets_sent, uint64_t iterat
 			    (double)packets_sent /
 			    ((uint64_t)zsend.max_targets * zconf.packet_streams /
 			     zconf.total_shards);
-			remaining[0] =
+			remaining[1] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;
 		}
 		if (zconf.max_runtime) {
-			remaining[1] =
+			remaining[2] =
 			    (zconf.max_runtime - age) + zconf.cooldown_secs;
 		}
 		if (zconf.max_results) {
 			double done =
 			    (double)zrecv.filter_success / zconf.max_results;
-			remaining[2] = (1. - done) * (age / done);
+			remaining[3] = (1. - done) * (age / done);
 		}
 		if (zsend.max_index) {
 			double done = (double)packets_sent /
 				      (zsend.max_index * zconf.packet_streams /
 				       zconf.total_shards);
-			remaining[3] =
+			remaining[4] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;
 		}
 		return min_d(remaining, sizeof(remaining) / sizeof(double));
