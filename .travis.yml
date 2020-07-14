@@ -1,6 +1,6 @@
 language: c
 os: linux
-dist: trusty
+dist: xenial
 addons:
   apt:
     packages:
