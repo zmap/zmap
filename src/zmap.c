@@ -827,8 +827,7 @@ int main(int argc, char *argv[])
 		log_fatal("zmap", "zero eligible addresses to scan");
 	}
 	if (zconf.list_of_ips_count > 0 && 0xFFFFFFFFU / zconf.list_of_ips_count > 100000) {
-		log_warn("zmap", "list of IPs is small compared to address space, performance will suffer");
-		log_warn("zmap", "consider using an allowlist instead");
+		log_warn("zmap", "list of IPs is small compared to address space performance will suffer, consider using an allowlist instead");
 	}
 	if (zconf.max_targets) {
 		zsend.max_targets = zconf.max_targets;
