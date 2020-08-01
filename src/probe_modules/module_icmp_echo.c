@@ -169,7 +169,6 @@ static int icmp_echo_make_packet(void *buf, UNUSED size_t *buf_len,
 	icmp_header->icmp_id = icmp_idnum;
 	icmp_header->icmp_seq = icmp_seqnum;
 
-	log_error("icmp", "%d", icmp_payload_len);
 	icmp_header->icmp_cksum = 0;
 	icmp_header->icmp_cksum = icmp_checksum((unsigned short *)icmp_header, ICMP_MINLEN + icmp_payload_len);
 
