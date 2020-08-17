@@ -44,7 +44,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
-#include <time.h>
 
 #include "../../lib/includes.h"
 #include "../../lib/random.h"
@@ -81,7 +80,7 @@ typedef uint8_t bool;
 probe_module_t module_dns;
 static int num_ports;
 
-char default_domain[16];
+const char default_domain[] = "FFEEFFEE.asert-dns-research.com";
 const uint16_t default_qtype = DNS_QTYPE_A;
 
 static char **dns_packets;
@@ -90,23 +89,6 @@ static uint16_t *qname_lens;
 static char **qnames;
 static uint16_t *qtypes;
 static int num_questions = 0;
-
-// Fix for dns-hijacking
-void generate_default_domain() {
-	static const char *candidate_domains[] = {
-		"www.test.com",
-		"www.dict.com",
-		"www.food.com",
-		"www.book.com",
-		"www.leaf.com",
-		"www.hope.com"
-	};
-	time_t t;
-	srand((unsigned) time(&t));
-	const char *chosen = candidate_domains[rand() % (sizeof(candidate_domains) / sizeof(candidate_domains[0]))];
-	strncpy(default_domain, chosen, sizeof(default_domain) - 1);
-	log_info("dns", "generate_default_domain: %s", default_domain);
-}
 
 /* Array of qtypes we support. Jumping through some hoops (1 level of
  * indirection) so the per-packet processing time is fast. Keep this in sync
@@ -529,6 +511,10 @@ static bool process_response_answer(char **data, uint16_t *data_len,
 			    "TXT record with wrong TXT len. Not processing.");
 			fs_add_uint64(afs, "rdata_is_parsed", 0);
 			fs_add_binary(afs, "rdata", rdlength, rdata, 0);
+		} else if (rdlength == 0) {
+		  log_warn("dns",
+			   "TXT record with no length. Not Processing");
+		  fs_add_uint64(afs, "rdata_is_parsed", 0);
 		} else {
 			fs_add_uint64(afs, "rdata_is_parsed", 1);
 			char *txt = xmalloc(rdlength);
@@ -604,7 +590,6 @@ static int dns_global_initialize(struct state_conf *conf)
 	char *qtype_str = NULL;
 	char **domains = (char **)xmalloc(sizeof(char *) * num_questions);
 
-	generate_default_domain();
 	for (int i = 0; i < num_questions; i++) {
 		domains[i] = (char *)default_domain;
 		qtypes[i] = default_qtype;
@@ -748,8 +733,9 @@ int dns_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	return EXIT_SUCCESS;
 }
 
-int dns_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
-		    ipaddr_n_t dst_ip, uint32_t *validation, int probe_num,
+int dns_make_packet(void *buf, size_t *buf_len,
+            ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
+			uint32_t *validation, int probe_num,
 		    UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -782,6 +768,7 @@ int dns_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
+	ip_header->ip_ttl = ttl;
 	udp_header->uh_sport =
 	    htons(get_src_port(num_ports, probe_num, validation));
 
@@ -789,6 +776,20 @@ int dns_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 
 	dns_header_p->id = validation[2] & 0xFFFF;
 
+	// This is what changed
+	unsigned char bytes[4];
+	char subdomain[9];
+
+	bytes[0] = (dst_ip >> 24) & 0xFF;
+	bytes[1] = (dst_ip >> 16) & 0xFF;
+	bytes[2] = (dst_ip >> 8) & 0xFF;
+	bytes[3] = dst_ip & 0xFF;
+	sprintf(subdomain, "%.2x%.2x%.2x%.2x", bytes[3], bytes[2], bytes[1], bytes[0]);
+
+	char *qname_p = NULL;
+	qname_p = (char *)dns_header_p + sizeof(dns_header);
+	strncpy(qname_p +1, subdomain, 8);
+	
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
 
@@ -879,7 +880,8 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 }
 
 void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
-			uint32_t *validation)
+			uint32_t *validation,
+			__attribute__((unused)) struct timespec ts)
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
@@ -908,14 +910,16 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 							  sizeof(dns_header) +
 							  qname_lens[i]);
 				// Verify our qname
+				/*
 				if (strcmp(qnames[i], qname_p) == 0) {
 					// Verify the qtype and qclass.
 					if (tail_p->qtype == htons(qtypes[i]) &&
 					    tail_p->qclass == htons(0x01)) {
 						is_valid = 1;
 						break;
-					}
-				}
+					}} */
+				is_valid = 1;
+
 			}
 		}
 		assert(match > 0);
