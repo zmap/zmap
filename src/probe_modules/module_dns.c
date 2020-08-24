@@ -91,23 +91,6 @@ static char **qnames;
 static uint16_t *qtypes;
 static int num_questions = 0;
 
-// Fix for dns-hijacking
-/* void generate_default_domain() { */
-/* 	static const char *candidate_domains[] = { */
-/* 		"www.test.com", */
-/* 		"www.dict.com", */
-/* 		"www.food.com", */
-/* 		"www.book.com", */
-/* 		"www.leaf.com", */
-/* 		"www.hope.com" */
-/* 	}; */
-/* 	time_t t; */
-/* 	srand((unsigned) time(&t)); */
-/* 	const char *chosen = candidate_domains[rand() % (sizeof(candidate_domains) / sizeof(candidate_domains[0]))]; */
-/* 	strncpy(default_domain, chosen, sizeof(default_domain) - 1); */
-/* 	log_info("dns", "generate_default_domain: %s", default_domain); */
-/* } */
-
 /* Array of qtypes we support. Jumping through some hoops (1 level of
  * indirection) so the per-packet processing time is fast. Keep this in sync
  * with: dns_qtype (.h) qtype_strid_to_qtype (below) qtype_qtype_to_strid
@@ -928,15 +911,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 				    (dns_question_tail *)(dns_packets[i] +
 							  sizeof(dns_header) +
 							  qname_lens[i]);
-				// Verify our qname
-				/* if (strcmp(qnames[i], qname_p) == 0) { */
-				/* 	// Verify the qtype and qclass. */
-				/* 	if (tail_p->qtype == htons(qtypes[i]) && */
-				/* 	    tail_p->qclass == htons(0x01)) { */
-				/* 		is_valid = 1; */
-				/* 		break; */
-				/* 	} */
-				/* } */
+
 				is_valid = 1;
 			}
 		}
