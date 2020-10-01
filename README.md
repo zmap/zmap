@@ -1,4 +1,4 @@
-ZMap: The Internet Scanner
+ZMap: The fastest Internet Scanner
 ==========================
 
 [![Build Status](https://travis-ci.org/zmap/zmap.svg?branch=travis-configuration)](https://travis-ci.org/zmap/zmap)
