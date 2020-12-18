@@ -62,7 +62,12 @@ void recv_init()
 	char bpftmp[BPFLEN];
 	char errbuf[PCAP_ERRBUF_SIZE];
 
-	pc = pcap_open_live(zconf.iface, zconf.probe_module->pcap_snaplen,
+	char *iface = NULL;
+	if (!zconf.listen_all_interfaces) {
+		iface = zconf.iface;
+	}
+
+	pc = pcap_open_live(iface, zconf.probe_module->pcap_snaplen,
 			    PCAP_PROMISC, PCAP_TIMEOUT, errbuf);
 	if (pc == NULL) {
 		log_fatal("recv", "could not open device %s: %s", zconf.iface,

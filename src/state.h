@@ -93,6 +93,7 @@ struct state_conf {
 	in_addr_t source_ip_addresses[256];
 	uint32_t number_source_ips;
 	int send_ip_pkts;
+	int listen_all_interfaces;
 	char *output_filename;
 	char *blocklist_filename;
 	char *allowlist_filename;
