@@ -461,7 +461,7 @@ int main(int argc, char *argv[])
 		zconf.gw_mac_set = 1;
 		memset(zconf.gw_mac, 0, MAC_ADDR_LEN);
 	}
-	if (args.listen_all_interfaces) {
+	if (args.listen_all_interfaces_given) {
 		zconf.listen_all_interfaces = 1;
 	}
 	if (cmdline_parser_required(&args, CMDLINE_PARSER_PACKAGE) != 0) {
