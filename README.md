@@ -20,16 +20,7 @@ Installation
 ------------
 
 The latest stable release of ZMap is version 2.1.1 and supports Linux, macOS, and
-BSD. It can be installed through the built-in package managers on the following
-operating systems:
-
-| OS                                        |                             |
-| ----------------------------------------- | --------------------------- |
-| Debian and Ubuntu                         | `sudo apt install zmap`     |
-| Fedora, CentOS, and RHEL                  | `sudo yum install zmap`     |
-| Gentoo                                    | `sudo emerge zmap`          |
-| macOS (using [Homebrew](https://brew.sh)) | `brew install zmap`         |
-| Arch Linux                                | `sudo pacman -S zmap`       |
+BSD. We recommend installing ZMap from HEAD rather than using a distro package manager.
 
 **Instructions on building ZMap from source** can be found in [INSTALL](INSTALL.md).
 
