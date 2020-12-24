@@ -884,7 +884,7 @@ int main(int argc, char *argv[])
 	uint32_t numa_node = 0; // TODO
 	zconf.pf.cluster = pfring_zc_create_cluster(
 	    ZMAP_PF_ZC_CLUSTER_ID, ZMAP_PF_BUFFER_SIZE, metadata_len,
-	    total_buffers, numa_node, NULL);
+	    total_buffers, numa_node, NULL, NULL);
 	if (zconf.pf.cluster == NULL) {
 		log_fatal("zmap", "Could not create zc cluster: %s",
 			  strerror(errno));
