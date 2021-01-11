@@ -79,7 +79,7 @@ int icmp_global_initialize(struct state_conf *conf)
 		icmp_payload_len =
 				fread(icmp_payload, 1, ICMP_MAX_PAYLOAD_LEN, inp);
 		fclose(inp);
-	} else if (strcmp(c, "hex") == 0) {
+	} else if (strncmp(conf->probe_args, "hex", 3) == 0) {
 		if (strlen(c) % 2 != 0) {
 			log_error("icmp", "invalid hex input (length must be a multiple of 2)");
 			return EXIT_FAILURE;
