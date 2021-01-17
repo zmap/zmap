@@ -89,6 +89,7 @@ if(WITH_PFRING)
 endif()
 
 if(STATIC_LINK)
+    add_definitions("-DSTATIC_LINK")
     SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
     SET(BUILD_SHARED_LIBS OFF)
     SET(CMAKE_EXE_LINKER_FLAGS "-static")
