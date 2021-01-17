@@ -12,7 +12,7 @@
 #include <time.h>
 
 #include "../lib/includes.h"
-#include "../lib/blacklist.h"
+#include "../lib/blocklist.h"
 #include "../lib/logger.h"
 #include "../lib/xalloc.h"
 
@@ -39,11 +39,11 @@ void shard_complete(uint8_t thread_id, void *arg)
 	it->complete[thread_id] = 1;
 	it->curr_threads--;
 	shard_t *s = &it->thread_shards[thread_id];
-	zsend.sent += s->state.sent;
-	zsend.tried_sent += s->state.tried_sent;
-	zsend.blacklisted += s->state.blacklisted;
-	zsend.whitelisted += s->state.whitelisted;
-	zsend.sendto_failures += s->state.failures;
+	zsend.packets_sent += s->state.packets_sent;
+	zsend.hosts_scanned += s->state.hosts_scanned;
+	zsend.blocklisted += s->state.hosts_blocklisted;
+	zsend.allowlisted += s->state.hosts_allowlisted;
+	zsend.sendto_failures += s->state.packets_failed;
 	uint8_t done = 1;
 	for (uint8_t i = 0; done && (i < it->num_threads); ++i) {
 		done = done && it->complete[i];
@@ -59,9 +59,14 @@ void shard_complete(uint8_t thread_id, void *arg)
 iterator_t *iterator_init(uint8_t num_threads, uint16_t shard,
 			  uint16_t num_shards)
 {
-	uint64_t num_addrs = blacklist_count_allowed();
+	uint64_t num_addrs = blocklist_count_allowed();
+	uint64_t group_min_size = num_addrs;
+	if (zconf.list_of_ips_filename) {
+		log_debug("send", "forcing max group size for compatibility with -I");
+		group_min_size = 0xFFFFFFFF;
+	}
 	iterator_t *it = xmalloc(sizeof(struct iterator));
-	const cyclic_group_t *group = get_group(num_addrs);
+	const cyclic_group_t *group = get_group(group_min_size);
 	if (num_addrs > (1LL << 32)) {
 		zsend.max_index = 0xFFFFFFFF;
 	} else {
@@ -83,29 +88,29 @@ iterator_t *iterator_init(uint8_t num_threads, uint16_t shard,
 	return it;
 }
 
-uint32_t iterator_get_sent(iterator_t *it)
+uint64_t iterator_get_sent(iterator_t *it)
 {
-	uint32_t sent = 0;
+	uint64_t sent = 0;
 	for (uint8_t i = 0; i < it->num_threads; ++i) {
-		sent += it->thread_shards[i].state.sent;
+		sent += it->thread_shards[i].state.packets_sent;
 	}
 	return sent;
 }
 
-uint32_t iterator_get_tried_sent(iterator_t *it)
+uint64_t iterator_get_iterations(iterator_t *it)
 {
-	uint32_t sent = 0;
+	uint64_t iterations = 0;
 	for (uint8_t i = 0; i < it->num_threads; ++i) {
-		sent += it->thread_shards[i].state.tried_sent;
+		iterations += it->thread_shards[i].iterations;
 	}
-	return sent;
+	return iterations;
 }
 
 uint32_t iterator_get_fail(iterator_t *it)
 {
 	uint32_t fails = 0;
 	for (uint8_t i = 0; i < it->num_threads; ++i) {
-		fails += it->thread_shards[i].state.failures;
+		fails += it->thread_shards[i].state.packets_failed;
 	}
 	return fails;
 }

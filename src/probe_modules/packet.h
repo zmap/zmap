@@ -24,8 +24,23 @@ static inline unsigned short in_checksum(unsigned short *ip_pkt, int len)
 	for (int nwords = len / 2; nwords > 0; nwords--) {
 		sum += *ip_pkt++;
 	}
+	if (len % 2 == 1) {
+		sum += *((unsigned char *) ip_pkt);
+	}
 	sum = (sum >> 16) + (sum & 0xffff);
-	sum += (sum >> 16);
+	return (unsigned short)(~sum);
+}
+
+static inline unsigned short in_icmp_checksum(unsigned short *ip_pkt, int len)
+{
+	unsigned long sum = 0;
+	for (int nwords = len / 2; nwords > 0; nwords--) {
+		sum += *ip_pkt++;
+	}
+	if (len % 2 == 1) {
+		sum += *((unsigned char *) ip_pkt);
+	}
+	sum = (sum >> 16) + (sum & 0xffff);
 	return (unsigned short)(~sum);
 }
 
@@ -36,9 +51,9 @@ zmap_ip_checksum(unsigned short *buf)
 }
 
 __attribute__((unused)) static inline unsigned short
-icmp_checksum(unsigned short *buf)
+icmp_checksum(unsigned short *buf, size_t buflen)
 {
-	return in_checksum(buf, (int)sizeof(struct icmp));
+	return in_icmp_checksum(buf, buflen);
 }
 
 static __attribute__((unused)) uint16_t tcp_checksum(unsigned short len_tcp,

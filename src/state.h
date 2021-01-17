@@ -64,6 +64,7 @@ struct state_conf {
 	int cooldown_secs;
 	// number of sending threads
 	uint8_t senders;
+	uint8_t batch;
 	uint32_t pin_cores_len;
 	uint32_t *pin_cores;
 	// should use CLI provided randomization seed instead of generating
@@ -93,8 +94,8 @@ struct state_conf {
 	uint32_t number_source_ips;
 	int send_ip_pkts;
 	char *output_filename;
-	char *blacklist_filename;
-	char *whitelist_filename;
+	char *blocklist_filename;
+	char *allowlist_filename;
 	char *list_of_ips_filename;
 	uint32_t list_of_ips_count;
 	char *metadata_filename;
@@ -142,10 +143,10 @@ extern struct state_conf zconf;
 struct state_send {
 	double start;
 	double finish;
-	uint32_t sent;
-	uint32_t tried_sent;
-	uint32_t blacklisted;
-	uint32_t whitelisted;
+	uint64_t packets_sent;
+	uint64_t hosts_scanned;
+	uint64_t blocklisted;
+	uint64_t allowlisted;
 	int warmup;
 	int complete;
 	uint32_t first_scanned;
@@ -173,7 +174,7 @@ struct state_recv {
 	// valid responses NOT classified as "success"
 	uint32_t failure_total;
 	// valid responses that passed the filter
-	uint32_t filter_success;
+	uint64_t filter_success;
 	// how many packets did we receive that were marked as being the first
 	// fragment in a stream
 	uint32_t ip_fragments;

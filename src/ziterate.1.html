@@ -72,7 +72,7 @@
 
 <h2 id="SYNOPSIS">SYNOPSIS</h2>
 
-<p>ziterate [ -b &lt;blacklist&gt; ] [ -w &lt;whitelist&gt; ] [ OPTIONS... ]</p>
+<p>ziterate [ -b &lt;blocklist&gt; ] [ -w &lt;allowlist&gt; ] [ OPTIONS... ]</p>
 
 <h2 id="DESCRIPTION">DESCRIPTION</h2>
 
@@ -84,16 +84,16 @@ order similar to how ZMap generates random addresses to be scanned.</p>
 <h3 id="BASIC-OPTIONS">BASIC OPTIONS</h3>
 
 <dl>
-<dt> <code>-b</code>, <code>--blacklist-file=path</code></dt><dd><p> File of subnets to exclude, in CIDR notation, one-per line. It is
+<dt> <code>-b</code>, <code>--blocklist-file=path</code></dt><dd><p> File of subnets to exclude, in CIDR notation, one-per line. It is
  recommended you use this to exclude RFC 1918 addresses, multicast, IANA
  reserved space, and other IANA special-purpose addresses. An example
- blacklist file <strong>blacklist.conf</strong> for this purpose.</p></dd>
-<dt><code>-w</code>, <code>--whitelist-file=name</code></dt><dd><p>File of subnets to include, in CIDR notation, one-per line. All other
+ blocklist file <strong>blocklist.conf</strong> for this purpose.</p></dd>
+<dt><code>-w</code>, <code>--allowlist-file=name</code></dt><dd><p>File of subnets to include, in CIDR notation, one-per line. All other
 subnets will be excluded.</p></dd>
 <dt><code>-l</code>, <code>--log-file=name</code></dt><dd><p>File to log to.</p></dd>
 <dt><code>--disable-syslog</code></dt><dd><p>Disable logging messages to syslog.</p></dd>
 <dt><code>-v</code>, <code>--verbosity</code></dt><dd><p>Level of log detail (0-5, default=3)</p></dd>
-<dt><code>--ignore-blacklist-errors</code></dt><dd><p>Ignore invalid entries in the blacklist. Default is false.</p></dd>
+<dt><code>--ignore-blocklist-errors</code></dt><dd><p>Ignore invalid entries in the blocklist. Default is false.</p></dd>
 <dt><code>--seed=n</code></dt><dd><p>Seed used to select address permutation.</p></dd>
 <dt><code>-n</code>, <code>--max-targets=n</code></dt><dd><p>Cap number of IPs to generate (as a number or a percentage of the address space)</p></dd>
 </dl>

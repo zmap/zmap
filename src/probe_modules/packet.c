@@ -97,6 +97,7 @@ void make_ip_header(struct ip *iph, uint8_t protocol, uint16_t len)
 
 void make_icmp_header(struct icmp *buf)
 {
+	memset(buf, 0, sizeof(struct icmp));
 	buf->icmp_type = ICMP_ECHO;
 	buf->icmp_code = 0;
 	buf->icmp_seq = 0;

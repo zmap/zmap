@@ -137,7 +137,8 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 
 static void synscan_process_packet(const u_char *packet, uint32_t len,
 				   fieldset_t *fs,
-				   __attribute__((unused)) uint32_t *validation)
+				   __attribute__((unused)) uint32_t *validation,
+				   __attribute__((unused)) struct timespec ts)
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
 	struct tcphdr *tcp =

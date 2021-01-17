@@ -21,7 +21,7 @@
 // values are applied by setting them for network prefixes.  Order
 // matters: setting a value replaces any existing value for that
 // prefix or subsets of it.  We use this to implement network
-// whitelisting and blacklisting.
+// allowlisting and blocklisting.
 //
 // Think of setting values in this structure like painting
 // subnets with different colors.  We can paint subnets black to

@@ -11,10 +11,10 @@
 #include <assert.h>
 #include <string.h>
 
-#include "rijndael-alg-fst.h"
-#include "random.h"
-#include "logger.h"
-#include "xalloc.h"
+#include "../lib/logger.h"
+#include "../lib/rijndael-alg-fst.h"
+#include "../lib/random.h"
+#include "../lib/xalloc.h"
 
 #include "aesrand.h"
 
