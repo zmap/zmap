@@ -1,5 +1,6 @@
 #include "../state.h"
 #include "../fieldset.h"
+#include <netinet/ip6.h>
 
 #ifndef PROBE_MODULES_H
 #define PROBE_MODULES_H
@@ -61,6 +62,7 @@ typedef struct probe_module {
 probe_module_t *get_probe_module_by_name(const char *);
 
 void fs_add_ip_fields(fieldset_t *fs, struct ip *ip);
+void fs_add_ipv6_fields(fieldset_t *fs, struct ip6_hdr *ipv6_hdr);
 void fs_add_system_fields(fieldset_t *fs, int is_repeat, int in_cooldown);
 void print_probe_modules(void);
 

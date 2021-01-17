@@ -111,6 +111,14 @@ option "probe-ttl"              - "Set TTL value for probe IP packets"
 option "list-probe-modules"     - "List available probe modules"
         optional
 
+section "IPv6"
+option "ipv6-target-file"            - "File containing IPv6 addresses to be scanned, use '-' for stdin"
+    typestr="filename"
+    optional string
+option "ipv6-source-ip"              - "Source IPv6 address for scan packets"
+    typestr="name"
+    optional string
+
 section "Data Output"
 option "output-fields"          f "Fields that should be output in result set"
     typestr="fields"

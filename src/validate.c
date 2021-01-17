@@ -44,3 +44,14 @@ void validate_gen(const uint32_t src, const uint32_t dst,
 	aes_input[3] = 0;
 	rijndaelEncrypt(aes_sched, AES_ROUNDS, (uint8_t *)aes_input, output);
 }
+
+void validate_gen_ipv6(const struct in6_addr *src, const struct in6_addr *dst,
+				uint8_t output[VALIDATE_BYTES])
+{
+	assert(inited);
+	for (int i = 0; i < AES_BLOCK_WORDS; i++) {
+		// XOR IPv6 src and dst
+		aes_input[i] = ((uint32_t *) src)[i] ^ ((uint32_t *) dst)[i];
+	}
+	rijndaelEncrypt(aes_sched, AES_ROUNDS, (uint8_t *)aes_input, output);
+}

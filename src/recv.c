@@ -29,22 +29,44 @@ static u_char fake_eth_hdr[65535];
 // bitmap of observed IP addresses
 static uint8_t **seen = NULL;
 
+// IPv6
+static int ipv6 = 0;
+
 void handle_packet(uint32_t buflen, const u_char *bytes, const struct timespec ts)
 {
-	if ((sizeof(struct ip) + zconf.data_link_size) > buflen) {
-		// buffer not large enough to contain ethernet
-		// and ip headers. further action would overrun buf
-		return;
-	}
-	struct ip *ip_hdr = (struct ip *)&bytes[zconf.data_link_size];
-
-	uint32_t src_ip = ip_hdr->ip_src.s_addr;
-
+	struct ip *ip_hdr;
+	uint32_t src_ip;
 	uint32_t validation[VALIDATE_BYTES / sizeof(uint8_t)];
-	// TODO: for TTL exceeded messages, ip_hdr->saddr is going to be
-	// different and we must calculate off potential payload message instead
-	validate_gen(ip_hdr->ip_dst.s_addr, ip_hdr->ip_src.s_addr,
-		     (uint8_t *)validation);
+
+	// IPv6
+	struct ip6_hdr *ipv6_hdr;
+
+	// IPv6
+	if (ipv6) {
+		if ((sizeof(struct ip6_hdr) + zconf.data_link_size) > buflen) {
+			// buffer not large enough to contain ethernet
+			// and ip headers. further action would overrun buf
+			return;
+		}
+		ipv6_hdr = (struct ip6_hdr *)&bytes[zconf.data_link_size];
+
+		validate_gen_ipv6(&ipv6_hdr->ip6_dst, &(ipv6_hdr->ip6_src), (uint8_t *)validation);
+		ip_hdr = (struct ip *) ipv6_hdr;
+	} else {
+		if ((sizeof(struct ip) + zconf.data_link_size) > buflen) {
+			// buffer not large enough to contain ethernet
+			// and ip headers. further action would overrun buf
+			return;
+		}
+		ip_hdr = (struct ip *)&bytes[zconf.data_link_size];
+
+		src_ip = ip_hdr->ip_src.s_addr;
+
+		// TODO: for TTL exceeded messages, ip_hdr->saddr is going to be
+		// different and we must calculate off potential payload message instead
+		validate_gen(ip_hdr->ip_dst.s_addr, ip_hdr->ip_src.s_addr,
+				 (uint8_t *)validation);
+	}
 
 	if (!zconf.probe_module->validate_packet(
 		ip_hdr,
@@ -55,15 +77,28 @@ void handle_packet(uint32_t buflen, const u_char *bytes, const struct timespec t
 	} else {
 		zrecv.validation_passed++;
 	}
-	// woo! We've validated that the packet is a response to our scan
-	int is_repeat = pbm_check(seen, ntohl(src_ip));
-	// track whether this is the first packet in an IP fragment.
-	if (ip_hdr->ip_off & IP_MF) {
-		zrecv.ip_fragments++;
+
+	// IPv6
+	int is_repeat;
+	if (ipv6) {
+		is_repeat = 0;
+	} else {
+		// woo! We've validated that the packet is a response to our scan
+		is_repeat = pbm_check(seen, ntohl(src_ip));
+		// track whether this is the first packet in an IP fragment.
+		if (ip_hdr->ip_off & IP_MF) {
+			zrecv.ip_fragments++;
+		}
 	}
 
 	fieldset_t *fs = fs_new_fieldset();
-	fs_add_ip_fields(fs, ip_hdr);
+	// IPv6
+	if (ipv6) {
+		fs_add_ipv6_fields(fs, ipv6_hdr);
+	} else {
+		fs_add_ip_fields(fs, ip_hdr);
+	}
+
 	// HACK:
 	// probe modules expect the full ethernet frame
 	// in process_packet. For VPN, we only get back an IP frame.
@@ -138,6 +173,11 @@ cleanup:
 
 int recv_run(pthread_mutex_t *recv_ready_mutex)
 {
+	// IPv6
+	if (zconf.ipv6_target_filename) {
+		ipv6 = 1;
+	}
+
 	log_trace("recv", "recv thread started");
 	log_debug("recv", "capturing responses on %s", zconf.iface);
 	if (!zconf.dryrun) {

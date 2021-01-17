@@ -600,6 +600,12 @@ int main(int argc, char *argv[])
 	SET_IF_GIVEN(zconf.num_retries, retries);
 	SET_IF_GIVEN(zconf.max_sendto_failures, max_sendto_failures);
 	SET_IF_GIVEN(zconf.min_hitrate, min_hitrate);
+	SET_IF_GIVEN(zconf.ipv6_target_filename, ipv6_target_file);
+	SET_IF_GIVEN(zconf.ipv6_source_ip, ipv6_source_ip);
+
+	if (zconf.ipv6_target_filename && !zconf.ipv6_source_ip) {
+		log_fatal("ipv6", "No IPv6 source address specified");
+	}
 
 	if (zconf.num_retries < 0) {
 		log_fatal("zmap", "Invalid retry count");

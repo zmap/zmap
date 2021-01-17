@@ -507,6 +507,61 @@ int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	return PACKET_VALID;
 }
 
+int ipv6_udp_validate_packet(const struct ip6_hdr *ipv6_hdr, uint32_t len,
+		__attribute__((unused))uint32_t *src_ip, uint32_t *validation)
+{
+	uint16_t dport, sport;
+	struct udphdr *udp;
+
+	if (ipv6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_UDP) {
+		if (ntohs(ipv6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen) > len) {
+			// buffer not large enough to contain expected UDP header, i.e. IPv6 payload
+			return 0;
+		}
+		udp = (struct udphdr *) &ipv6_hdr[1];
+		sport = ntohs(udp->uh_dport);
+		dport = ntohs(udp->uh_sport);
+
+	} else if (ipv6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt == IPPROTO_ICMPV6) {
+		// UDP can return ICMP6 Destination unreach
+		// IP6( ICMP6( IP6( UDP ) ) ) for a destination unreach
+		uint32_t min_len = sizeof(struct ip6_hdr) + ICMP_UNREACH_HEADER_SIZE +
+			+ sizeof(struct ip6_hdr) + sizeof(struct udphdr);
+		if (len < min_len) {
+			// Not enough information for us to validate
+			return 0;
+		}
+
+		struct icmp6_hdr *icmp6_h = (struct icmp6_hdr *) (&ipv6_hdr[1]);
+
+		if (icmp6_h->icmp6_type == ICMP6_TIME_EXCEEDED || icmp6_h->icmp6_type == ICMP6_DST_UNREACH
+			|| icmp6_h->icmp6_type == ICMP6_PACKET_TOO_BIG || icmp6_h->icmp6_type == ICMP6_PARAM_PROB) {
+
+
+			// Use inner headers for validation
+			ipv6_hdr = (struct ip6_hdr *) &icmp6_h[1];
+			udp = (struct udphdr *) &ipv6_hdr[1];
+			sport = ntohs(udp->uh_sport);
+			dport = ntohs(udp->uh_dport);
+		} else {
+			return 0;
+		}
+
+	} else {
+		return 0;
+	}
+
+	if (dport != zconf.target_port) {
+		return 0;
+	}
+
+	if (!check_dst_port(sport, num_ports, validation)) {
+		return 0;
+	}
+
+	return 1;
+}
+
 // Add a new field to the template
 void udp_template_add_field(udp_payload_template_t *t,
 			    udp_payload_field_type_t ftype, unsigned int length,

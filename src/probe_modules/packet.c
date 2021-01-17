@@ -52,6 +52,28 @@ void fprintf_ip_header(FILE *fp, struct ip *iph)
 		dstip, ntohs(iph->ip_sum));
 }
 
+void fprintf_ipv6_header(FILE *fp, struct ip6_hdr *iph)
+{
+	struct in6_addr *s = (struct in6_addr *) &(iph->ip6_src);
+	struct in6_addr *d = (struct in6_addr *) &(iph->ip6_dst);
+
+	char srcip[INET6_ADDRSTRLEN+1];
+	char dstip[INET6_ADDRSTRLEN+1];
+	unsigned char next = (unsigned char) (iph->ip6_nxt);
+
+	// TODO: Is restrict correct here?
+	inet_ntop(AF_INET6, s, (char * restrict) &srcip, INET6_ADDRSTRLEN);
+	inet_ntop(AF_INET6, d, (char * restrict) &dstip, INET6_ADDRSTRLEN);
+
+	srcip[INET6_ADDRSTRLEN] = '\0';
+	dstip[INET6_ADDRSTRLEN] = '\0';
+
+	fprintf(fp, "ip6 { saddr: %s | daddr: %s | nxthdr: %u }\n",
+			srcip,
+			dstip,
+			next);
+}
+
 void fprintf_eth_header(FILE *fp, struct ether_header *ethh)
 {
 	if (!zconf.send_ip_pkts) {
@@ -75,9 +97,15 @@ void fprintf_eth_header(FILE *fp, struct ether_header *ethh)
 
 void make_eth_header(struct ether_header *ethh, macaddr_t *src, macaddr_t *dst)
 {
+	// Create a frame with IPv4 ethertype by default
+	make_eth_header_ethertype(ethh, src, dst, ETHERTYPE_IP);
+}
+
+void make_eth_header_ethertype(struct ether_header *ethh, macaddr_t *src, macaddr_t *dst, uint16_t ethertype)
+{
 	memcpy(ethh->ether_shost, src, ETHER_ADDR_LEN);
 	memcpy(ethh->ether_dhost, dst, ETHER_ADDR_LEN);
-	ethh->ether_type = htons(ETHERTYPE_IP);
+	ethh->ether_type = htons(ethertype);
 }
 
 void make_ip_header(struct ip *iph, uint8_t protocol, uint16_t len)
@@ -93,6 +121,22 @@ void make_ip_header(struct ip *iph, uint8_t protocol, uint16_t len)
 	// we set the checksum = 0 for now because that's
 	// what it needs to be when we run the IP checksum
 	iph->ip_sum = 0;
+}
+
+void make_ip6_header(struct ip6_hdr *iph, uint8_t protocol, uint16_t len)
+{
+	iph->ip6_ctlun.ip6_un2_vfc = 0x60; // 4 bits version, top 4 bits class
+	iph->ip6_ctlun.ip6_un1.ip6_un1_plen = htons(len); // payload length
+	iph->ip6_ctlun.ip6_un1.ip6_un1_nxt = protocol; // next header
+	iph->ip6_ctlun.ip6_un1.ip6_un1_hlim = MAXTTL; // hop limit
+}
+void make_icmp6_header(struct icmp6_hdr *buf)
+{
+    buf->icmp6_type = ICMP6_ECHO_REQUEST;
+    buf->icmp6_code = 0;
+    buf->icmp6_cksum = 0;
+    // buf->icmp_seq = 0;
+    // TODO: Set ICMP ECHO REQ specific fields
 }
 
 void make_icmp_header(struct icmp *buf)
@@ -135,5 +179,13 @@ char *make_ip_str(uint32_t ip)
 	const char *temp = inet_ntoa(t);
 	char *retv = xmalloc(strlen(temp) + 1);
 	strcpy(retv, temp);
+	return retv;
+}
+
+// Note: caller must free return value
+char *make_ipv6_str(struct in6_addr *ipv6)
+{
+	char *retv = xmalloc(INET6_ADDRSTRLEN + 1);
+	inet_ntop(AF_INET6, ipv6, retv, INET6_ADDRSTRLEN);
 	return retv;
 }

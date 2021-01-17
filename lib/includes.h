@@ -15,6 +15,12 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
+
+#ifndef __APPLE__
+#include <netinet/ip6.h>
+#endif
+
+#include <netinet/icmp6.h>
 #include <netinet/udp.h>
 #include <netinet/tcp.h>
 
