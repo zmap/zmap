@@ -42,6 +42,7 @@ set(PROBE_MODULE_SOURCES
     probe_modules/module_bacnet.c
     probe_modules/module_tftp.c
     probe_modules/module_dns_monlist.c
+    probe_modules/module_quic_chlo.c
 )
 
 set(SOURCES

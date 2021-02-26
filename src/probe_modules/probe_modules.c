@@ -32,6 +32,7 @@ extern probe_module_t module_dns;
 extern probe_module_t module_bacnet;
 extern probe_module_t module_tftp;
 extern probe_module_t module_dns_monlist;
+extern probe_module_t module_quic_chlo;
 // ADD YOUR MODULE HERE
 
 probe_module_t *probe_modules[] = {
@@ -40,6 +41,7 @@ probe_module_t *probe_modules[] = {
     //&module_tcp_cisco_backdoor,
     &module_bacnet,
     &module_tftp,
+    &module_quic_chlo,
     &module_dns_monlist
     // ADD YOUR MODULE HERE
 };
