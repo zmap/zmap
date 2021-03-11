@@ -1,13 +1,12 @@
 /*
- * Jan Rüth 2018
+ * ZMap Copyright 2013 Regents of the University of Michigan
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
- *
  */
 
-/* module to perform gQUIC enumeration */
+/* send module for performing arbitrary UDP scans */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -42,12 +41,20 @@ static inline uint32_t MakeQuicTag(char a, char b, char c, char d) {
 		(uint32_t)(d) << 24;
 }
 
+static void GetQuicTag(uint32_t* tag, char out[4]) {
+	memcpy(&out[0], (char*)tag+3, 1);
+	memcpy(&out[1], (char*)tag+2, 1);
+	memcpy(&out[2], (char*)tag+1, 1);
+	memcpy(&out[3], (char*)tag, 1);
+}
+
+
 #define QUIC_HDR_LEN_HASH 27
 typedef struct {
 	uint8_t public_flags;   // should be 0x01 | 0x0C  during sending and should not contain version on recv.
 #define PUBLIC_FLAG_HAS_VERS 0x01
 #define PUBLIC_FLAG_HAS_RST 0x02
-#define PUBLIC_FLAG_8BYTE_CONN_ID 0x0C
+#define PUBLIC_FLAG_8BYTE_CONN_ID 0x08 | 0x00
 	uint64_t connection_id; // unique!
 	uint32_t quic_version; // should be MakeQuicTag('Q', '0', '2', '5') but server may provide list
 	uint8_t seq_num;		// must start with 1, increases strictly monotonic by one
@@ -56,7 +63,7 @@ typedef struct {
 #define PRIVATE_FLAG_HAS_ENTROPY 0x01
 #define PRIVATE_FLAG_HAS_FEC_GROUP 0x02
 #define PRIVATE_FLAG_IS_FEC 0x04
-	uint8_t private_flags;  // 0 or 1
+	//uint8_t private_flags;  // 0 or 1
 } __attribute__ ((__packed__)) quic_common_hdr;
 
 
@@ -100,7 +107,7 @@ typedef struct {
 } quic_stream_frame_packet;
 
 
-#define CLIENTHELLO_MIN_SIZE (1024 - INCHOATE_CHLO_LEN)
+#define CLIENTHELLO_MIN_SIZE (1200 - INCHOATE_CHLO_LEN)
 
 
 static int num_ports;
@@ -147,15 +154,15 @@ int chlo_quic_init_perthread(void* buf, macaddr_t *src,
 		macaddr_t *gw, __attribute__((unused)) port_h_t dst_port,\
 		__attribute__((unused)) void **arg_ptr)
 {
-	int udp_send_msg_len = QUIC_HDR_LEN_HASH + STREAM_FRAME_LEN + INCHOATE_CHLO_LEN + CLIENTHELLO_MIN_SIZE;
-    //log_debug("prepare", "UDP PAYLOAD LEN: %d", udp_send_msg_len);
+	int udp_send_msg_len = sizeof(quic_common_hdr) + STREAM_FRAME_LEN + INCHOATE_CHLO_LEN + CLIENTHELLO_MIN_SIZE;
+	log_debug("prepare", "UDP PAYLOAD LEN: %d", udp_send_msg_len);
 
 	memset(buf, 0, MAX_PACKET_SIZE);
 	struct ether_header *eth_header = (struct ether_header *) buf;
 	make_eth_header(eth_header, src, gw);
 	struct ip *ip_header = (struct ip*)(&eth_header[1]);
 	uint16_t len = htons(sizeof(struct ip) + sizeof(struct udphdr) + udp_send_msg_len);
-	//log_debug("prepare", "IP LEN IN HEX %h", len);
+	log_debug("prepare", "IP LEN IN HEX %h", len);
 	make_ip_header(ip_header, IPPROTO_UDP, len);
 
 	struct udphdr *udp_header = (struct udphdr*)(&ip_header[1]);
@@ -209,7 +216,7 @@ void serializeHash(__uint128_t hash, uint8_t out_hash[12]) {
 }
 
 
-int chlo_quic_make_packet(void *buf, UNUSED size_t *buf_len, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
+int chlo_quic_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 		uint32_t *validation, int probe_num, UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *) buf;
@@ -232,12 +239,12 @@ int chlo_quic_make_packet(void *buf, UNUSED size_t *buf_len, ipaddr_n_t src_ip, 
 	common_hdr->public_flags = PUBLIC_FLAG_HAS_VERS | PUBLIC_FLAG_8BYTE_CONN_ID;
 	// this should be unique
 	common_hdr->connection_id = connection_id;
-	common_hdr->quic_version = MakeQuicTag('Q', '0', '0', '1');
+    common_hdr->quic_version = 0x0A0A0A0A;//MakeQuicTag('Q', '0', '4', '1');
 	common_hdr->seq_num = 1;
 	// Fill the hash later, but don't hash the hash itself
 	memset(common_hdr->fnv1a_hash, 0, sizeof(common_hdr->fnv1a_hash));
-	common_hdr->private_flags = PRIVATE_FLAG_HAS_ENTROPY; // has entropy ...
-	payload_len += QUIC_HDR_LEN_HASH;
+	//common_hdr->private_flags = PRIVATE_FLAG_HAS_ENTROPY; // has entropy ...
+	payload_len += sizeof(quic_common_hdr);
 	
 	
 	// hash the public header
@@ -271,7 +278,7 @@ int chlo_quic_make_packet(void *buf, UNUSED size_t *buf_len, ipaddr_n_t src_ip, 
 //	printf("PADDING LENGTH: %d\n", pad_len);
 	payload_len += pad_len;
 	value_data += pad_len;
-	*((uint32_t*)value_data) = MakeQuicTag('Q', '0', '0', '1');
+    *((uint32_t*)value_data) = 0x0A0A0A0A;//MakeQuicTag('Q', '0', '4', '1');
 	payload_len += sizeof(uint32_t);
 	
 
@@ -338,7 +345,7 @@ void chlo_quic_process_packet(const u_char *packet, UNUSED uint32_t len, fieldse
 
                             // create a list of the versions
                             // 4 bytes each + , + [SPACE] + \0
-                            char* versions = malloc(num_versions * sizeof(uint32_t) + (num_versions-1)*2 + 1);
+                            char* versions = malloc(num_versions * 8 + (num_versions-1) + 1);
                             int next_ver = 0;
                             
                             if (*((uint32_t*)&vers->versions[0]) == MakeQuicTag('Q', '0', '0', '1')) {
@@ -348,12 +355,18 @@ void chlo_quic_process_packet(const u_char *packet, UNUSED uint32_t len, fieldse
                                 free(versions);
                                 return;
                             }
+                            fs_add_bool(fs, "has_reserved_vers", 0);
                             for (int i = 0; i < num_versions; i++) {
-                                memcpy(&versions[next_ver], &vers->versions[i], sizeof(uint32_t));
-                                next_ver += 4;
+                                if ((vers->versions[i] & 0x0f0f0f0f) == 0x0a0a0a0a) {
+                                    fs_modify_bool(fs, "has_reserved_vers", 1);
+                                    //continue;
+                                }
+                                uint8_t* v = (uint8_t*)&vers->versions[i];
+                                sprintf(&versions[next_ver], "%02X%02X%02X%02X", v[0], v[1], v[2], v[3]);
+                                //memcpy(&versions[next_ver], &vers->versions[i], sizeof(uint32_t));
+                                next_ver += 8;
                                 if(i != num_versions-1) {
                                     versions[next_ver++] = ',';
-                                    versions[next_ver++] = ' ';
                                 }
                             }
                             versions[next_ver] = '\0';
@@ -397,20 +410,34 @@ int chlo_quic_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	return 0;
 }
 
+int quic_chlo_pcap_filter(char* out_filter, size_t max_len) {
+    unsigned int len = snprintf(out_filter, 0, "udp src port %d", zconf.target_port);
+    
+    if (len <= max_len) {
+        snprintf(out_filter, max_len, "udp src port %d", zconf.target_port);
+        log_info("quic_chlo", "Using Filter %s", out_filter);
+        return 0;
+    }
+    
+    return -1;
+}
+
 
 static fielddef_t fields[] = {
 	{.name = "classification", .type="string", .desc = "packet classification"},
 	{.name = "success", .type="int", .desc = "is response considered success"},
 	{.name = "versions", .type="string", .desc = "versions if reported"},
+    {.name = "has_reserved_vers", .type="bool", .desc = "versions included reserved ones"},
     {.name = "info", .type="string", .desc = "info"}
 };
 
 probe_module_t module_quic_chlo = {
 	.name = "quic_chlo",
 	// we are resetting the actual packet length during initialization of the module
-	.packet_length = sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr) + QUIC_HDR_LEN_HASH + STREAM_FRAME_LEN + INCHOATE_CHLO_LEN + CLIENTHELLO_MIN_SIZE,
+	.packet_length = sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr) + sizeof(quic_common_hdr) + STREAM_FRAME_LEN + INCHOATE_CHLO_LEN + CLIENTHELLO_MIN_SIZE,
 	// this gets replaced by the actual port during global init
-	.pcap_filter = "udp",
+	.pcap_filter = "udp src port 443",
+    //.pcap_filter_func = &quic_chlo_pcap_filter,
 	// this gets replaced by the actual payload we expect to get back
 	.pcap_snaplen = 1500,
 	.port_args = 1,
