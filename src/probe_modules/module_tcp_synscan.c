@@ -23,6 +23,18 @@
 probe_module_t module_tcp_synscan;
 static uint32_t num_ports;
 
+#define MP_CAPABLE 30
+
+struct __attribute__((__packed__)) tcp_options {
+	uint8_t kind;
+	uint8_t size;
+	uint8_t subtype_version;
+	uint8_t flags;
+	uint64_t send_key;
+//	uint64_t recv_key;
+};
+
+
 static int synscan_global_initialize(struct state_conf *state)
 {
 	num_ports = state->source_port_last - state->source_port_first + 1;
@@ -33,14 +45,26 @@ static int synscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 				  port_h_t dst_port,
 				  __attribute__((unused)) void **arg_ptr)
 {
+	log_info("haa", "mek 2 %d %d %d %d ", sizeof(struct tcp_options ), sizeof(uint32_t), sizeof(uint64_t), sizeof(struct ether_header));
 	memset(buf, 0, MAX_PACKET_SIZE);
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	make_eth_header(eth_header, src, gw);
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
-	uint16_t len = htons(sizeof(struct ip) + sizeof(struct tcphdr));
+	uint16_t len = htons(sizeof(struct ip) + sizeof(struct tcphdr) + sizeof(struct tcp_options));
 	make_ip_header(ip_header, IPPROTO_TCP, len);
 	struct tcphdr *tcp_header = (struct tcphdr *)(&ip_header[1]);
 	make_tcp_header(tcp_header, dst_port, TH_SYN);
+	// https://stackoverflow.com/questions/42750552/read-tcp-options-fields
+	// fill in options
+	struct tcp_options *opts = (struct tcp_options*)(&tcp_header[1]);
+	opts->kind = MP_CAPABLE;
+	opts->size = sizeof(struct tcp_options);
+	opts->subtype_version = 0;
+	opts->flags =  1<<7 | 1;
+	opts->send_key = htonl(0xdead);
+	//opts->recv_key = htonl(0xbeef);
+	//opts[1].kind = 1;
+
 	return EXIT_SUCCESS;
 }
 
@@ -63,12 +87,13 @@ static int synscan_make_packet(void *buf, UNUSED size_t *buf_len,
 	tcp_header->th_seq = tcp_seq;
 	tcp_header->th_sum = 0;
 	tcp_header->th_sum =
-	    tcp_checksum(sizeof(struct tcphdr), ip_header->ip_src.s_addr,
+	    tcp_checksum(sizeof(struct tcphdr) + sizeof(struct tcp_options), ip_header->ip_src.s_addr,
 			 ip_header->ip_dst.s_addr, tcp_header);
 
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
 
+	log_info("haa", "mek 3 %d", *buf_len );
 	return EXIT_SUCCESS;
 }
 
@@ -125,6 +150,15 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		}
 	}
 
+	if ((4 * ip_hdr->ip_hl + sizeof(struct tcphdr) + sizeof(struct tcp_options)) > len) {
+		log_info("hha", "NO OPTIONS!!");
+		// buffer not large enough to contain expected tcp header
+		return 0;
+	}
+	//log_info("haha", "lens: %d %d", 4 * ip_hdr->ip_hl + sizeof(struct tcphdr) + sizeof(struct tcp_options), len);
+	struct tcp_options* opts = (struct tcp_options*)((char*)&tcp[1]+4);
+	log_info("meh", "code %lx %lx", ntohl(opts->send_key), ntohl(opts->send_key >> 32));
+
 	return 1;
 }
 
@@ -168,7 +202,7 @@ static fielddef_t fields[] = {
 
 probe_module_t module_tcp_synscan = {
     .name = "tcp_synscan",
-    .packet_length = 54,
+    .packet_length = sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct tcphdr) + sizeof(struct tcp_options),
     .pcap_filter = "tcp && tcp[13] & 4 != 0 || tcp[13] == 18",
     .pcap_snaplen = 96,
     .port_args = 1,
