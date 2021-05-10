@@ -23,7 +23,18 @@
 probe_module_t module_tcp_synscan;
 static uint32_t num_ports;
 
+#define htonll(x) ((((uint64_t)htonl(x)) << 32) + htonl((x) >> 32))
+#define ntohll(x) ((((uint64_t)ntohl(x)) << 32) + ntohl((x) >> 32))
+// todo::
+// #define HTONLL(x) ((1==htonl(1)) ? (x) : (((uint64_t)htonl((x) & 0xFFFFFFFFUL)) << 32) | htonl((uint32_t)((x) >> 32)))
+// #define NTOHLL(x) ((1==ntohl(1)) ? (x) : (((uint64_t)ntohl((x) & 0xFFFFFFFFUL)) << 32) | ntohl((uint32_t)((x) >> 32)))
+// // ^^ https://stackoverflow.com/questions/16375340/c-htonll-and-back
+
 #define MP_CAPABLE 30
+//#define MP_SEND_KEY 0xdeadcafe
+#define MP_SEND_KEY htonll(4242424242)
+#define MP_KEY_RESET 4444
+#define MP_KEY_EMPTY 33
 
 struct __attribute__((__packed__)) tcp_options {
 	uint8_t kind;
@@ -45,7 +56,7 @@ static int synscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 				  port_h_t dst_port,
 				  __attribute__((unused)) void **arg_ptr)
 {
-	log_info("haa", "mek 2 %d %d %d %d ", sizeof(struct tcp_options ), sizeof(uint32_t), sizeof(uint64_t), sizeof(struct ether_header));
+	//log_info("haa", "mek 2 %d", sizeof(struct tcp_options ));
 	memset(buf, 0, MAX_PACKET_SIZE);
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	make_eth_header(eth_header, src, gw);
@@ -61,7 +72,7 @@ static int synscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	opts->size = sizeof(struct tcp_options);
 	opts->subtype_version = 0;
 	opts->flags =  1<<7 | 1;
-	opts->send_key = htonl(0xdead);
+	opts->send_key = MP_SEND_KEY;
 	//opts->recv_key = htonl(0xbeef);
 	//opts[1].kind = 1;
 
@@ -93,7 +104,6 @@ static int synscan_make_packet(void *buf, UNUSED size_t *buf_len,
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
 
-	log_info("haa", "mek 3 %d", *buf_len );
 	return EXIT_SUCCESS;
 }
 
@@ -150,16 +160,36 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		}
 	}
 
-	if ((4 * ip_hdr->ip_hl + sizeof(struct tcphdr) + sizeof(struct tcp_options)) > len) {
-		log_info("hha", "NO OPTIONS!!");
-		// buffer not large enough to contain expected tcp header
-		return 0;
-	}
-	//log_info("haha", "lens: %d %d", 4 * ip_hdr->ip_hl + sizeof(struct tcphdr) + sizeof(struct tcp_options), len);
-	struct tcp_options* opts = (struct tcp_options*)((char*)&tcp[1]+4);
-	log_info("meh", "code %lx %lx", ntohl(opts->send_key), ntohl(opts->send_key >> 32));
-
 	return 1;
+}
+
+
+static inline struct tcp_options *get_mptcp(struct tcphdr *tcp) {
+
+		int length = (tcp->doff * 4) - sizeof(struct tcphdr);
+		const unsigned char *ptr = (const unsigned char *)&tcp[1];
+
+		while (length > 0) {
+			int opcode = *ptr++;
+			int opsize;
+			switch(opcode) {
+				case TCPOPT_EOL:
+					return NULL;
+				case TCPOPT_NOP:
+					length--;
+					continue;
+				case MP_CAPABLE:
+					return (struct tcp_options*)(ptr - 1);
+				default:
+					if (length< 2) break;
+					opsize = *ptr++;
+					if (opsize < 2) break; // linux does so..
+					if (opsize > length) break;
+					ptr += opsize -2;
+					length -= opsize;
+			}
+		}
+		return NULL;
 }
 
 static void synscan_process_packet(const u_char *packet,
@@ -179,9 +209,19 @@ static void synscan_process_packet(const u_char *packet,
 	fs_add_uint64(fs, "window", (uint64_t)ntohs(tcp->th_win));
 
 	if (tcp->th_flags & TH_RST) { // RST packet
+		fs_add_uint64(fs, "mptcp", MP_KEY_RESET);
 		fs_add_string(fs, "classification", (char *)"rst", 0);
 		fs_add_bool(fs, "success", 0);
 	} else { // SYNACK packet
+
+		struct tcp_options *opts = get_mptcp(tcp);
+		if (opts != NULL)
+		{
+			fs_add_uint64(fs, "mptcp", ntohll(opts->send_key));
+		} else {
+			fs_add_uint64(fs, "mptcp", MP_KEY_EMPTY);
+		}
+
 		fs_add_string(fs, "classification", (char *)"synack", 0);
 		fs_add_bool(fs, "success", 1);
 	}
@@ -193,6 +233,7 @@ static fielddef_t fields[] = {
     {.name = "seqnum", .type = "int", .desc = "TCP sequence number"},
     {.name = "acknum", .type = "int", .desc = "TCP acknowledgement number"},
     {.name = "window", .type = "int", .desc = "TCP window"},
+    {.name = "mptcp", .type = "int", .desc = "MPTCP key"},
     {.name = "classification",
      .type = "string",
      .desc = "packet classification"},
@@ -219,4 +260,4 @@ probe_module_t module_tcp_synscan = {
 		"is considered a failed response.",
     .output_type = OUTPUT_TYPE_STATIC,
     .fields = fields,
-    .numfields = 7};
+    .numfields = 8};
