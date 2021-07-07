@@ -13,7 +13,7 @@ ZMap operates on GNU/Linux, Mac OS, and BSD. ZMap currently has fully implemente
 probe modules for TCP SYN scans, ICMP, DNS queries, UPnP, BACNET, and can send a
 large number of [UDP probes](https://github.com/zmap/zmap/blob/master/examples/udp-probes/README).
 If you are looking to do more involved scans, e.g.,
-banner grab or TLS handshake, take a look at [ZGrab](https://github.com/zmap/zgrab),
+banner grab or TLS handshake, take a look at [ZGrab 2](https://github.com/zmap/zgrab2),
 ZMap's sister project that performs stateful application-layer handshakes.
 
 Installation
