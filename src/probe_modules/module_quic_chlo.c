@@ -162,7 +162,7 @@ int chlo_quic_init_perthread(void* buf, macaddr_t *src,
 	make_eth_header(eth_header, src, gw);
 	struct ip *ip_header = (struct ip*)(&eth_header[1]);
 	uint16_t len = htons(sizeof(struct ip) + sizeof(struct udphdr) + udp_send_msg_len);
-	log_debug("prepare", "IP LEN IN HEX %h", len);
+	log_debug("prepare", "IP LEN IN HEX %#010x", len);
 	make_ip_header(ip_header, IPPROTO_UDP, len);
 
 	struct udphdr *udp_header = (struct udphdr*)(&ip_header[1]);
