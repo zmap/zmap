@@ -109,7 +109,7 @@ void make_tcp_header(struct tcphdr *tcp_header, port_h_t dest_port,
 	tcp_header->th_seq = random();
 	tcp_header->th_ack = 0;
 	tcp_header->th_x2 = 0;
-	tcp_header->th_off = 5; // data offset
+	tcp_header->th_off = 8; // data offset 5(tcp_header size) + 3 (12 byte mptcp option)
 	tcp_header->th_flags = 0;
 	tcp_header->th_flags |= th_flags;
 	tcp_header->th_win = htons(65535); // largest possible window
