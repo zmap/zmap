@@ -8,6 +8,12 @@
 
 // probe module for performing TCP SYN scans
 
+// When executed with "--probe-args=rotate_dport", the module will
+// increment the destination port after transmitting each packet.
+// This allows ZMap to perform a SYN scan against all TCP ports, e.g.:
+//
+//  zmap -p0 --probe-args=rotate_dport --output-module=csv --output-fields=saddr,sport
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -23,9 +29,18 @@
 probe_module_t module_tcp_synscan;
 static uint32_t num_ports;
 
+static int rotate_dport_enabled = 0;
+static uint16_t rotate_dport_next_dport = 0;
+
 static int synscan_global_initialize(struct state_conf *state)
 {
 	num_ports = state->source_port_last - state->source_port_first + 1;
+
+	// destination port rotation option
+	if (zconf.probe_args && !strcmp(zconf.probe_args, "rotate_dport")) {
+		rotate_dport_enabled = 1;
+	    rotate_dport_next_dport = zconf.target_port;
+	}
 	return EXIT_SUCCESS;
 }
 
@@ -60,6 +75,9 @@ static int synscan_make_packet(void *buf, UNUSED size_t *buf_len,
 
 	tcp_header->th_sport =
 	    htons(get_src_port(num_ports, probe_num, validation));
+	if (rotate_dport_enabled) {
+	    tcp_header->th_dport = rotate_dport_next_dport++;
+	}
 	tcp_header->th_seq = tcp_seq;
 	tcp_header->th_sum = 0;
 	tcp_header->th_sum =
@@ -103,8 +121,10 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	uint16_t sport = tcp->th_sport;
 	uint16_t dport = tcp->th_dport;
 	// validate source port
-	if (ntohs(sport) != zconf.target_port) {
-		return 0;
+	if (!rotate_dport_enabled) {
+	    if (ntohs(sport) != zconf.target_port) {
+	        return 0;
+	    }
 	}
 	// validate destination port
 	if (!check_dst_port(ntohs(dport), num_ports, validation)) {
