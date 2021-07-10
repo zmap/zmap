@@ -35,12 +35,19 @@ void validate_init()
 void validate_gen(const uint32_t src, const uint32_t dst,
 		  uint8_t output[VALIDATE_BYTES])
 {
+	validate_gen_ex(src, dst, 0, 0, output);
+}
+
+void validate_gen_ex(const uint32_t input0, const uint32_t input1,
+		     const uint32_t input2, const uint32_t input3,
+		     uint8_t output[VALIDATE_BYTES])
+{
 	assert(inited);
 
 	uint32_t aes_input[AES_BLOCK_WORDS];
-	aes_input[0] = src;
-	aes_input[1] = dst;
-	aes_input[2] = 0;
-	aes_input[3] = 0;
+	aes_input[0] = input0;
+	aes_input[1] = input1;
+	aes_input[2] = input2;
+	aes_input[3] = input3;
 	rijndaelEncrypt(aes_sched, AES_ROUNDS, (uint8_t *)aes_input, output);
 }
