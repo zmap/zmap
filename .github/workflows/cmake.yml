@@ -1,0 +1,39 @@
+name: CMake
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  ENABLE_DEVELOPMENT: ON
+  ENABLE_LOG_TRACE: ON
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    container:
+      image: zmap/builder:2021-07-31
+      volumes:
+        - ${{github.workspace}}:/zmap
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Make build directory
+        run: mkdir -p /zmap/build
+
+      - name: Configure CMake
+        working-directory: /zmap/build
+        # Configure CMake in a 'build' subdirectory.
+        run: cmake -DENABLE_DEVELOPMENT=${{env.ENABLE_DEVELOPMENT}} -DENABLE_LOG_TRACE=${{env.ENABLE_LOG_TRACE}} /zmap
+
+      - name: Build
+        working-directory: /zmap/build
+        # Build your program with the given configuration
+        run: make
+
+      - name: Check Manpages
+        working-directory: /zmap
+        run: python3 ./scripts/check_manfile.py
+
