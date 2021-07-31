@@ -10,7 +10,7 @@ package "zmap"
 version "@ZMAP_VERSION@"
 purpose "A fast Internet-wide scanner."
 
-section "Basic arguments"
+section "Basic Arguments"
 
 option "target-port"            p "port number to scan (for TCP and UDP scans)"
     typestr="port"
@@ -28,7 +28,7 @@ option "list-of-ips-file"		I "List of individual addresses to scan in random ord
     typestr="path"
     optional string
 
-section "Scan options"
+section "Scan Options"
 option "rate"                   r "Set send rate in packets/sec"
     typestr="pps"
     optional int
@@ -64,6 +64,9 @@ option "retries"                - "Max number of times to try to send packet if 
     optional int
 option "dryrun"                 d "Don't actually send packets"
     optional
+
+section "Scan Sharding"
+
 option "shards"                 - "Set the total number of shards"
     typestr="N"
     optional int
@@ -73,7 +76,7 @@ option "shard"                  - "Set which shard this scan is (0 indexed)"
     optional int
     default="0"
 
-section "Network options"
+section "Network Options"
 
 option "source-port"            s "Source port(s) for scan packets"
     typestr="port|range"
@@ -111,7 +114,7 @@ option "probe-ttl"              - "Set TTL value for probe IP packets"
 option "list-probe-modules"     - "List available probe modules"
         optional
 
-section "Data Output"
+section "Results Output"
 option "output-fields"          f "Fields that should be output in result set"
     typestr="fields"
     optional string
@@ -158,7 +161,7 @@ option "user-metadata"          - "Inject user-specified JSON metadata into scan
     typestr="json"
     optional string
 
-section "Additional options"
+section "Additional Options"
 option "config"                 C "Read a configuration file, which can specify any of these options"
     typestr="filename"
     default="/etc/zmap/zmap.conf"

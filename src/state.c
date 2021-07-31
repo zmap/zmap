@@ -12,8 +12,7 @@
 // global configuration and defaults
 struct state_conf zconf = {.log_level = LOG_INFO,
 			   .source_port_first = 32768, // (these are the default
-			   .source_port_last =
-			       61000, //	 ephemeral range on Linux)
+			   .source_port_last = 61000, //   ephemeral range on Linux)
 			   .output_filename = NULL,
 			   .blocklist_filename = NULL,
 			   .allowlist_filename = NULL,
