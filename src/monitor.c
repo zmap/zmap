@@ -10,6 +10,9 @@
 
 #include "monitor.h"
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
 #include <assert.h>
 #include <errno.h>
 #include <math.h>
@@ -309,7 +312,7 @@ static void onscreen_appsuccess(export_status_t *exp)
 	// this when probe module handles application-level success rates
 	if (!exp->complete) {
 		fprintf(stderr,
-			"%5s %0.0f%%%s; sent: %llu %sp/s (%sp/s avg); "
+			"%5s %0.0f%%%s; sent: %"PRIu64" %sp/s (%sp/s avg); "
 			"recv: %u %sp/s (%sp/s avg); "
 			"app success: %u %sp/s (%sp/s avg); "
 			"drops: %sp/s (%sp/s avg); "
@@ -325,7 +328,7 @@ static void onscreen_appsuccess(export_status_t *exp)
 			exp->hitrate, exp->app_hitrate);
 	} else {
 		fprintf(stderr,
-			"%5s %0.0f%%%s; sent: %llu done (%sp/s avg); "
+			"%5s %0.0f%%%s; sent: %"PRIu64" done (%sp/s avg); "
 			"recv: %u %sp/s (%sp/s avg); "
 			"app success: %u %sp/s (%sp/s avg); "
 			"drops: %sp/s (%sp/s avg); "
@@ -345,7 +348,7 @@ static void onscreen_generic(export_status_t *exp)
 {
 	if (!exp->complete) {
 		fprintf(stderr,
-			"%5s %0.0f%%%s; send: %llu %sp/s (%sp/s avg); "
+			"%5s %0.0f%%%s; send: %"PRIu64" %sp/s (%sp/s avg); "
 			"recv: %u %sp/s (%sp/s avg); "
 			"drops: %sp/s (%sp/s avg); "
 			"hitrate: %0.2f%%\n",
@@ -357,7 +360,7 @@ static void onscreen_generic(export_status_t *exp)
 			exp->pcap_drop_avg_str, exp->hitrate);
 	} else {
 		fprintf(stderr,
-			"%5s %0.0f%%%s; send: %llu done (%sp/s avg); "
+			"%5s %0.0f%%%s; send: %"PRIu64" done (%sp/s avg); "
 			"recv: %u %sp/s (%sp/s avg); "
 			"drops: %sp/s (%sp/s avg); "
 			"hitrate: %0.2f%%\n",
@@ -405,9 +408,9 @@ static void update_status_updates_file(export_status_t *exp, FILE *f)
 	fprintf(f,
 		"%s,%u,%u,"
 		"%f,%f,%u,"
-		"%llu,%.0f,%.0f,"
+		"%"PRIu64",%.0f,%.0f,"
 		"%u,%.0f,%.0f,"
-		"%llu,%.0f,%.0f,"
+		"%"PRIu64",%.0f,%.0f,"
 		"%u,%.0f,%.0f,"
 		"%u,%.0f,%.0f\n",
 		timestamp, exp->time_past, exp->time_remaining,
