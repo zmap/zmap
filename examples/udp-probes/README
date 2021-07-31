@@ -36,10 +36,12 @@ portmap_111.pkt         This probe triggers a response from SunRPC portmapper se
 ripv1_520.pkt       	This probe triggers a response from the RIPv1 enabled routers/devices on UDP port 520
 sentinel_5093.pkt       This probe triggers a response from the Sentinel license manager service on UDP port 5093
 snmp1_161.pkt           This probe queries for the system description field of SNMP v1 services using community string public over UDP port 161
-snmp2_161.pkt           This probe queries for the system description field of aNMP v2 services using community string public over UDP port 161
+snmp2_161.pkt           This probe queries for the system description field of SNMP v2 services using community string public over UDP port 161
+snmp3_161.pkt           This probe triggers a response from SNMP v3 services on UDP port 161
 upnp_1900.pkt           This probe triggers a response from UPnP SSDP services on UDP port 1900
 wdbrpc_17185.pkt        This probe triggers a response from VxWorks WDBRPC services on UDP port 17185
 wsd_3702.pkt            This probe triggers a response from WSD/DPWS services on UDP port 3702
+coap_5683.pkt           This probe triggers a response from COAP services on UDP port 5683
 
 NOTES:
 -----

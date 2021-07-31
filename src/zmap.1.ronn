@@ -26,15 +26,15 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
      When using an output module that uses a file, write results to this file.
      Use - for stdout.
 
-   * `-b`, `--blacklist-file=path`:
+   * `-b`, `--blocklist-file=path`:
      File of subnets to exclude, in CIDR notation, one-per line. It is
      recommended you use this to exclude RFC 1918 addresses, multicast, IANA
      reserved space, and other IANA special-purpose addresses. An example
-     blacklist file **blacklist.conf** for this purpose.
+     blocklist file **blocklist.conf** for this purpose.
 
-   * `-w`, `--whitelist-file=path`:
+   * `-w`, `--allowlist-file=path`:
 	File of subnets to scan, in CIDR notation, one-per line. Specifying a
-	whitelist file is equivalent to specifying to ranges directly on the command
+	allowlist file is equivalent to specifying to ranges directly on the command
     line interface, but allows specifying a large number of subnets. Note:
 	if you are specifying a large number of individual IP addresses (more than
 	10 million), you should instead use `--list-of-ips-file`.
@@ -43,16 +43,17 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
 	File of individual IP addresses to scan, one-per line. This feature allows you
 	to scan a large number of unrelated addresses. If you have a small number of IPs,
 	it is faster to specify these on the command
-	line or by using `--whitelist-file`. This should only be used when scanning more than
-	10 million addresses. When used in with --whitelist-path, only hosts in the intersection
-	of both sets will be scanned. Hosts specified here, but included in the blacklist will
+	line or by using `--allowlist-file`. This should only be used when scanning more than
+	10 million addresses. When used in with --allowlist-path, only hosts in the intersection
+	of both sets will be scanned. Hosts specified here, but included in the blocklist will
 	be excluded.
 
 ### SCAN OPTIONS ###
 
    * `-r`, `--rate=pps`:
      Set the send rate in packets/sec. Note: when combined with --probes,  this is
-     total packets per second, not IPs per second.
+     total packets per second, not IPs per second. Setting the rate to 0 will scan 
+     at full line rate. Default: 10000 pps. 
 
    * `-B`, `--bandwidth=bps`:
      Set the send rate in bits/second (supports suffixes G, M, and K (e.g. -B
@@ -61,7 +62,7 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
    * `-n`, `--max-targets=n`:
      Cap the number of targets to probe. This can either be a number (e.g. -n
      1000) or a percentage (e.g. -n 0.1%) of the scannable address space
-     (after excluding blacklist)
+     (after excluding blocklist)
 
    * `-N`, `--max-results=n`:
      Exit after receiving this many results
@@ -91,6 +92,13 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
    * `--retries=n`:
      Number of times to try resending a packet if the sendto call fails (default=10)
 
+   * `--batch=n`:
+     Number of packets to send in a burst between checks to the ratelimit. A
+     batch size above 1 allows the sleep-based rate-limiter to be used with
+     proportionally higher rates. This can reduce CPU usage, in exchange for a
+     bursty send rate. (default=1)
+
+
 ### NETWORK OPTIONS ###
 
    * `-s`, `--source-port=port|range`:
@@ -109,6 +117,9 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
    * `-i`, `--interface=name`:
      Network interface to use
 
+   * `-X`, `--iplayer`:
+     Send IP layer packets instead of ethernet packets (for non-Ethernet interface)
+
 ### PROBE OPTIONS ###
 
 ZMap allows users to specify and write their own probe modules. Probe modules
@@ -124,6 +135,9 @@ from hosts.
    * `--probe-args=args`:
      Arguments to pass to probe module
 
+   * `--probe-ttl=hops`:
+     Set TTL value for probe IP packets
+
    * `--list-output-fields`:
      List the fields the selected probe module can send to the output module
 
@@ -135,7 +149,7 @@ the probe module, and outputting them to the user. Users can specify output
 fields, and write filters over the output fields.
 
    * `--list-output-modules`:
-     List available output modules (e.g. tcp_synscan)
+     List available output modules (e.g. csv)
 
    * `-O`, `--output-module=name`:
      Select output module (default=csv)
@@ -201,8 +215,8 @@ fields, and write filters over the output fields.
    * `--cores`:
      Comma-separated list of cores to pin to
 
-   * `--ignore-blacklist-errors`:
-      Ignore invalid, malformed, or unresolvable entries in whitelist/blacklist file.
+   * `--ignore-blocklist-errors`:
+      Ignore invalid, malformed, or unresolvable entries in allowlist/blocklist file.
       Replaces the pre-v3.x `--ignore-invalid-hosts` option.
 
    * `-h`, `--help`:

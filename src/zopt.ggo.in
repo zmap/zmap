@@ -18,10 +18,10 @@ option "target-port"            p "port number to scan (for TCP and UDP scans)"
 option "output-file"            o "Output file"
     typestr="name"
     optional string
-option "blacklist-file"         b "File of subnets to exclude, in CIDR notation, e.g. 192.168.0.0/16"
+option "blocklist-file"         b "File of subnets to exclude, in CIDR notation, e.g. 192.168.0.0/16"
     typestr="path"
     optional string
-option "whitelist-file"         w "File of subnets to constrain scan to, in CIDR notation, e.g. 192.168.0.0/16"
+option "allowlist-file"         w "File of subnets to constrain scan to, in CIDR notation, e.g. 192.168.0.0/16"
     typestr="path"
     optional string
 option "list-of-ips-file"		I "List of individual addresses to scan in random order. Use --white-list file unless >1 million IPs"
@@ -35,6 +35,9 @@ option "rate"                   r "Set send rate in packets/sec"
 option "bandwidth"              B "Set send rate in bits/second (supports suffixes G, M and K)"
     typestr="bps"
     optional string
+option "batch"                  - "Set the number of packets to send per iteration"
+    typestr="pps"
+    optional int
 option "max-targets"            n "Cap number of targets to probe (as a number or a percentage of the address space)"
     typestr="n"
     optional string
@@ -87,6 +90,8 @@ option "source-mac"             - "Source MAC address"
 option "interface"              i "Specify network interface to use"
     typestr="name"
     optional string
+option "iplayer"                X "Sends IP packets instead of Ethernet (for VPNs)"
+    optional
 
 section "Probe Modules"
 option "probe-module"           M "Select probe module"
@@ -97,6 +102,11 @@ option "probe-module"           M "Select probe module"
 option "probe-args"             - "Arguments to pass to probe module"
     typestr="args"
     optional string
+
+option "probe-ttl"              - "Set TTL value for probe IP packets"
+    typestr="n"
+    default="255"
+    optional int
 
 option "list-probe-modules"     - "List available probe modules"
         optional
@@ -171,9 +181,7 @@ option "sender-threads"         T "Threads used to send packets"
 
 option "cores"                  - "Comma-separated list of cores to pin to"
     optional string
-option "ignore-invalid-hosts"   - "Deprecated; use --ignore-blacklist-errors instead"
-    optional
-option "ignore-blacklist-errors" - "Ignore invalid entries in whitelist/blacklist file. Equivalent to --ignore-invalid-hosts"
+option "ignore-blocklist-errors" - "Ignore invalid entries in allowlist/blocklist file."
     optional
 option "help"                   h "Print help and exit"
     optional

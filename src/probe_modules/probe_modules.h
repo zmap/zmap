@@ -18,7 +18,7 @@ typedef int (*probe_thread_init_cb)(void *packetbuf, macaddr_t *src_mac,
 				    void **arg_ptr);
 
 typedef int (*probe_make_packet_cb)(void *packetbuf, size_t *buf_len,
-				    ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
+				    ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
 				    uint32_t *validation, int probe_num,
 				    void *arg);
 
@@ -29,7 +29,7 @@ typedef int (*probe_validate_packet_cb)(const struct ip *ip_hdr, uint32_t len,
 					uint32_t *src_ip, uint32_t *validation);
 
 typedef void (*probe_classify_packet_cb)(const u_char *packetbuf, uint32_t len,
-					 fieldset_t *, uint32_t *validation);
+					 fieldset_t *, uint32_t *validation, const struct timespec ts);
 
 typedef struct probe_module {
 	const char *name;

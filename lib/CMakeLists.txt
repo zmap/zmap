@@ -1,5 +1,5 @@
 SET(LIB_SOURCES
-    blacklist.c
+    blocklist.c
     constraint.c
     logger.c
     pbm.c
@@ -11,10 +11,6 @@ SET(LIB_SOURCES
     queue.c
     csv.c
 )
-
-if (WITH_REDIS)
-    SET(LIB_SOURCES ${LIB_SOURCES} redis.c)
-endif()
 
 add_library(zmaplib STATIC ${LIB_SOURCES})
 

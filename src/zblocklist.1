@@ -1,27 +1,27 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "ZBLACKLIST" "1" "June 2017" "ZMap" "zblacklist"
+.TH "ZBLACKLIST" "1" "June 2017" "ZMap" "zblocklist"
 .
 .SH "NAME"
-\fBzblacklist\fR \- zmap IP blacklist tool
+\fBzblocklist\fR \- zmap IP blacklist tool
 .
 .SH "SYNOPSIS"
-zblacklist [ \-b <blacklist> ] [ \-w <whitelist> ] [ OPTIONS\.\.\. ]
+zblocklist [ \-b <blacklist> ] [ \-w <allowlist> ] [ OPTIONS\.\.\. ]
 .
 .SH "DESCRIPTION"
-\fIZBlacklist\fR is a network tool for limiting and deduplicating a list of IP addresses using a blacklist or whitelist\.
+\fIZBlacklist\fR is a network tool for limiting and deduplicating a list of IP addresses using a blocklist or allowlist\.
 .
 .SH "OPTIONS"
 .
 .SS "BASIC OPTIONS"
 .
 .TP
-\fB\-b\fR, \fB\-\-blacklist\-file=path\fR
-File of subnets to exclude, in CIDR notation, one\-per line\. It is recommended you use this to exclude RFC 1918 addresses, multicast, IANA reserved space, and other IANA special\-purpose addresses\. An example blacklist file \fBblacklist\.conf\fR for this purpose\.
+\fB\-b\fR, \fB\-\-blocklist\-file=path\fR
+File of subnets to exclude, in CIDR notation, one\-per line\. It is recommended you use this to exclude RFC 1918 addresses, multicast, IANA reserved space, and other IANA special\-purpose addresses\. An example blocklist file \fBblacklist\.conf\fR for this purpose\.
 .
 .TP
-\fB\-w\fR, \fB\-\-whitelist\-file=name\fR
+\fB\-w\fR, \fB\-\-allowlist\-file=name\fR
 File of subnets to include, in CIDR notation, one\-per line\. All other subnets will be excluded\.
 .
 .TP
@@ -41,8 +41,8 @@ Level of log detail (0\-5, default=3)
 Don\'t deduplicate input addresses\. Default is false\.
 .
 .TP
-\fB\-\-ignore\-blacklist\-errors\fR
-Ignore invalid, malformed, or unresolvable entries in the blacklist/whitelist\. Default is false\.
+\fB\-\-ignore\-blocklist\-errors\fR
+Ignore invalid, malformed, or unresolvable entries in the blocklist/allowlist\. Default is false\.
 .
 .TP
 \fB\-\-ignore\-input\-errors\fR

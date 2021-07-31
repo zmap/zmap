@@ -57,8 +57,12 @@ void recv_packets()
 		return;
 	}
 	// Successfully got a packet, now handle it
+	struct timespec ts;
+	ts.tv_sec = pf_buffer->ts.tv_sec;
+	ts.tv_nsec = pf_buffer->ts.tv_nsec; //* 1000;
+
 	uint8_t *pkt_buf = pfring_zc_pkt_buff_data(pf_buffer, pf_recv);
-	handle_packet(pf_buffer->len, pkt_buf);
+	handle_packet(pf_buffer->len, pkt_buf, ts);
 }
 
 int recv_update_stats(void)

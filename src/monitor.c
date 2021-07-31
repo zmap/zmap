@@ -37,8 +37,8 @@
 // internal monitor status that is used to track deltas
 typedef struct internal_scan_status {
 	double last_now;
-	uint32_t last_sent;
-	uint32_t last_tried_sent;
+	uint64_t last_sent;
+	uint64_t last_tried_sent;
 	uint32_t last_send_failures;
 	uint32_t last_recv_net_success;
 	uint32_t last_recv_app_success;
@@ -49,11 +49,11 @@ typedef struct internal_scan_status {
 
 // exportable status information that can be printed to screen
 typedef struct export_scan_status {
-	uint32_t total_sent;
-	uint32_t total_tried_sent;
+	uint64_t total_sent;
+	uint64_t total_tried_sent;
 	uint32_t recv_success_unique;
 	uint32_t app_recv_success_unique;
-	uint32_t total_recv;
+	uint64_t total_recv;
 	uint32_t complete;
 	uint32_t send_threads;
 	double percent_complete;
@@ -116,29 +116,40 @@ static double min_d(double array[], int n)
 }
 
 // estimate time remaining time based on config and state
-double compute_remaining_time(double age, uint64_t tried_sent)
+double compute_remaining_time(double age, uint64_t packets_sent, uint64_t iterations)
 {
 	if (!zsend.complete) {
-		double remaining[] = {INFINITY, INFINITY, INFINITY, INFINITY};
-		if (zsend.max_targets) {
-			double done = (double)tried_sent /
-				      (zsend.max_targets / zconf.total_shards);
+		double remaining[] = {INFINITY, INFINITY, INFINITY, INFINITY, INFINITY};
+		if (zsend.list_of_ips_pbm) {
+			// Estimate progress using group iterations
+			double done = (double) iterations /
+					((uint64_t)0xFFFFFFFFU /
+					zconf.total_shards);
 			remaining[0] =
+				(1. - done) * (age / done) + zconf.cooldown_secs;
+		}
+		if (zsend.max_targets) {
+			double done =
+			    (double)packets_sent /
+			    ((uint64_t)zsend.max_targets * zconf.packet_streams /
+			     zconf.total_shards);
+			remaining[1] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;
 		}
 		if (zconf.max_runtime) {
-			remaining[1] =
+			remaining[2] =
 			    (zconf.max_runtime - age) + zconf.cooldown_secs;
 		}
 		if (zconf.max_results) {
 			double done =
 			    (double)zrecv.filter_success / zconf.max_results;
-			remaining[2] = (1. - done) * (age / done);
+			remaining[3] = (1. - done) * (age / done);
 		}
 		if (zsend.max_index) {
-			double done = (double)tried_sent /
-				      (zsend.max_index / zconf.total_shards);
-			remaining[3] =
+			double done = (double)packets_sent /
+				      (zsend.max_index * zconf.packet_streams /
+				       zconf.total_shards);
+			remaining[4] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;
 		}
 		return min_d(remaining, sizeof(remaining) / sizeof(double));
@@ -158,17 +169,17 @@ static void update_pcap_stats(pthread_mutex_t *recv_ready_mutex)
 static void export_stats(int_status_t *intrnl, export_status_t *exp,
 			 iterator_t *it)
 {
-	uint32_t total_sent = iterator_get_sent(it);
-	uint32_t total_tried_sent = iterator_get_tried_sent(it);
+	uint64_t total_sent = iterator_get_sent(it);
+	uint64_t total_iterations = iterator_get_iterations(it);
 	uint32_t total_fail = iterator_get_fail(it);
-	uint32_t total_recv = zrecv.pcap_recv;
-	uint32_t recv_success = zrecv.success_unique;
+	uint64_t total_recv = zrecv.pcap_recv;
+	uint64_t recv_success = zrecv.filter_success;
 	uint32_t app_success = zrecv.app_success_unique;
 	double cur_time = now();
 	double age = cur_time - zsend.start; // time of entire scan
 	// time since the last time we updated
 	double delta = cur_time - intrnl->last_now;
-	double remaining_secs = compute_remaining_time(age, total_tried_sent);
+	double remaining_secs = compute_remaining_time(age, total_sent, total_iterations);
 
 	// export amount of time the scan has been running
 	if (age < WARMUP_PERIOD) {
@@ -184,7 +195,8 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 	time_string((int)age, 0, exp->time_past_str, NUMBER_STR_LEN);
 
 	// export recv statistics
-	exp->recv_rate = (recv_success - intrnl->last_recv_net_success) / delta;
+	exp->recv_rate =
+	    ceil((recv_success - intrnl->last_recv_net_success) / delta);
 	number_string(exp->recv_rate, exp->recv_rate_str, NUMBER_STR_LEN);
 	exp->recv_avg = recv_success / age;
 	number_string(exp->recv_avg, exp->recv_avg_str, NUMBER_STR_LEN);
@@ -224,7 +236,7 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 		    cur_time - intrnl->min_hitrate_start;
 	}
 	if (!zsend.complete) {
-		exp->send_rate = (total_sent - intrnl->last_sent) / delta;
+		exp->send_rate = ceil((total_sent - intrnl->last_sent) / delta);
 		number_string(exp->send_rate, exp->send_rate_str,
 			      NUMBER_STR_LEN);
 		exp->send_rate_avg = total_sent / age;
@@ -237,7 +249,7 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 	}
 	// export other pre-calculated values
 	exp->total_sent = total_sent;
-	exp->total_tried_sent = total_tried_sent;
+	exp->total_tried_sent = total_iterations;
 	exp->percent_complete = 100. * age / (age + remaining_secs);
 	exp->recv_success_unique = recv_success;
 	exp->app_recv_success_unique = app_success;
@@ -297,7 +309,7 @@ static void onscreen_appsuccess(export_status_t *exp)
 	// this when probe module handles application-level success rates
 	if (!exp->complete) {
 		fprintf(stderr,
-			"%5s %0.0f%%%s; sent: %u %sp/s (%sp/s avg); "
+			"%5s %0.0f%%%s; sent: %llu %sp/s (%sp/s avg); "
 			"recv: %u %sp/s (%sp/s avg); "
 			"app success: %u %sp/s (%sp/s avg); "
 			"drops: %sp/s (%sp/s avg); "
@@ -313,7 +325,7 @@ static void onscreen_appsuccess(export_status_t *exp)
 			exp->hitrate, exp->app_hitrate);
 	} else {
 		fprintf(stderr,
-			"%5s %0.0f%%%s; sent: %u done (%sp/s avg); "
+			"%5s %0.0f%%%s; sent: %llu done (%sp/s avg); "
 			"recv: %u %sp/s (%sp/s avg); "
 			"app success: %u %sp/s (%sp/s avg); "
 			"drops: %sp/s (%sp/s avg); "
@@ -333,7 +345,7 @@ static void onscreen_generic(export_status_t *exp)
 {
 	if (!exp->complete) {
 		fprintf(stderr,
-			"%5s %0.0f%%%s; send: %u %sp/s (%sp/s avg); "
+			"%5s %0.0f%%%s; send: %llu %sp/s (%sp/s avg); "
 			"recv: %u %sp/s (%sp/s avg); "
 			"drops: %sp/s (%sp/s avg); "
 			"hitrate: %0.2f%%\n",
@@ -345,7 +357,7 @@ static void onscreen_generic(export_status_t *exp)
 			exp->pcap_drop_avg_str, exp->hitrate);
 	} else {
 		fprintf(stderr,
-			"%5s %0.0f%%%s; send: %u done (%sp/s avg); "
+			"%5s %0.0f%%%s; send: %llu done (%sp/s avg); "
 			"recv: %u %sp/s (%sp/s avg); "
 			"drops: %sp/s (%sp/s avg); "
 			"hitrate: %0.2f%%\n",
@@ -393,9 +405,9 @@ static void update_status_updates_file(export_status_t *exp, FILE *f)
 	fprintf(f,
 		"%s,%u,%u,"
 		"%f,%f,%u,"
+		"%llu,%.0f,%.0f,"
 		"%u,%.0f,%.0f,"
-		"%u,%.0f,%.0f,"
-		"%u,%.0f,%.0f,"
+		"%llu,%.0f,%.0f,"
 		"%u,%.0f,%.0f,"
 		"%u,%.0f,%.0f\n",
 		timestamp, exp->time_past, exp->time_remaining,

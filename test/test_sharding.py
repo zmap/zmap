@@ -4,7 +4,7 @@ import unittest
 from sh import cut, grep, cat, wc, uniq, mv
 
 zmap_std_args = [ "-b",
-                  "configs/blacklist_shard.conf",
+                  "configs/blocklist_shard.conf",
                   "--seed=1234",
                   "192.168.1.0/24",
                   "--dryrun",

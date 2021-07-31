@@ -12,16 +12,16 @@ purpose "A tool for iterating over the IPv4 space"
 
 section "Basic arguments"
 
-option "blacklist-file"           b "File of subnets to exclude, in CIDR notation, one-per line."
+option "blocklist-file"           b "File of subnets to exclude, in CIDR notation, one-per line."
     optional string
-option "whitelist-file"           w "File of subnets to include, in CIDR notation, one-per line."
+option "allowlist-file"           w "File of subnets to include, in CIDR notation, one-per line."
     optional string
 option "log-file"                 l "File to log to"
     optional string
 option "verbosity"                v "Set log level verbosity (0-5, default 3)"
     default="3"
     optional int
-option "ignore-blacklist-errors"  - "Ignore invalid entires in the blacklist/whitelist (default false)"
+option "ignore-blocklist-errors"  - "Ignore invalid entires in the blocklist/allowlist (default false)"
     optional
 option "seed"                   e "Seed used to select address permutation"
     typestr="n"
@@ -52,4 +52,4 @@ option "version"                V "Print version and exit"
 
 text "\nExamples:\n\
     ziterate (iterate over all public IPv4 addresses)\n\
-    ziterate -b exclusions 10.0.0.0/8 (iterate all IPs in 10./8 except those in blacklist)\n"
+    ziterate -b exclusions 10.0.0.0/8 (iterate all IPs in 10./8 except those in blocklist)\n"

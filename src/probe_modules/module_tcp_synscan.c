@@ -49,7 +49,7 @@ static int synscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 }
 
 static int synscan_make_packet(void *buf, UNUSED size_t *buf_len,
-			       ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
+			       ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
 			       uint32_t *validation, int probe_num,
 			       UNUSED void *arg)
 {
@@ -60,6 +60,7 @@ static int synscan_make_packet(void *buf, UNUSED size_t *buf_len,
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
+	ip_header->ip_ttl = ttl;
 
 	port_h_t sport = get_src_port(num_ports, probe_num, validation);
 	tcp_header->th_sport = htons(sport);
@@ -160,7 +161,8 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 static void synscan_process_packet(const u_char *packet,
 				   UNUSED uint32_t len,
 				   fieldset_t *fs,
-				   UNUSED uint32_t *validation)
+				   UNUSED uint32_t *validation,
+				   UNUSED struct timespec ts)
 {
 	struct ip *ip_hdr = get_ip_header(packet, len);
 	assert(ip_hdr);

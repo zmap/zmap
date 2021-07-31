@@ -24,7 +24,7 @@
 #include <pthread.h>
 
 #include "../lib/includes.h"
-#include "../lib/blacklist.h"
+#include "../lib/blocklist.h"
 #include "../lib/logger.h"
 #include "../lib/random.h"
 #include "../lib/util.h"
@@ -40,6 +40,7 @@
 #include "get_gateway.h"
 #include "filter.h"
 #include "summary.h"
+#include "utility.h"
 
 #include "output_modules/output_modules.h"
 #include "probe_modules/probe_modules.h"
@@ -121,22 +122,20 @@ static void start_zmap(void)
 			  " interface (%s).",
 			  zconf.iface);
 	}
-	if (zconf.source_ip_first == NULL) {
+	if (zconf.number_source_ips == 0) {
 		struct in_addr default_ip;
-		zconf.source_ip_first = xmalloc(INET_ADDRSTRLEN);
-		zconf.source_ip_last = zconf.source_ip_first;
 		if (get_iface_ip(zconf.iface, &default_ip) < 0) {
 			log_fatal("zmap",
 				  "could not detect default IP address for %s."
 				  " Try specifying a source address (-S).",
 				  zconf.iface);
 		}
-		inet_ntop(AF_INET, &default_ip, zconf.source_ip_first,
-			  INET_ADDRSTRLEN);
+		zconf.source_ip_addresses[0] = default_ip.s_addr;
+		zconf.number_source_ips++;
 		log_debug(
 		    "zmap",
 		    "no source IP address given. will use default address: %s.",
-		    zconf.source_ip_first);
+		    inet_ntoa(default_ip));
 	}
 	if (!zconf.gw_mac_set) {
 		struct in_addr gw_ip;
@@ -335,6 +334,8 @@ int main(int argc, char *argv[])
 		config_loaded = 1;
 	}
 
+	// set defaults before loading in command line arguments
+	init_empty_global_configuration(&zconf);
 	// initialize logging. if no log file or log directory are specified
 	// default to using stderr.
 	zconf.log_level = args.verbosity_arg;
@@ -457,6 +458,11 @@ int main(int argc, char *argv[])
 		print_probe_modules();
 		exit(EXIT_SUCCESS);
 	}
+	if (args.iplayer_given) {
+		zconf.send_ip_pkts = 1;
+		zconf.gw_mac_set = 1;
+		memset(zconf.gw_mac, 0, MAC_ADDR_LEN);
+	}
 	if (cmdline_parser_required(&args, CMDLINE_PARSER_PACKAGE) != 0) {
 		exit(EXIT_FAILURE);
 	}
@@ -569,22 +575,16 @@ int main(int argc, char *argv[])
 		log_debug("filter", "will use output filter %s",
 			  args.output_filter_arg);
 	}
-	// --ignore-invalid-hosts is deprecated and will be removed in zmap 4.0
-	if (args.ignore_invalid_hosts_given) {
-		log_warn(
-		    "zmap",
-		    "--ignore-invalid-hosts is deprecated and will be removed in ZMap 4.0. Use --ignore-blacklist-errors instead to ignore invalid blacklist/whitelist entries.");
-	}
-	zconf.ignore_invalid_hosts = args.ignore_invalid_hosts_given ||
-				     args.ignore_blacklist_errors_given;
+	zconf.ignore_invalid_hosts = args.ignore_blocklist_errors_given;
 
 	SET_BOOL(zconf.dryrun, dryrun);
 	SET_BOOL(zconf.quiet, quiet);
 	zconf.cooldown_secs = args.cooldown_time_arg;
 	SET_IF_GIVEN(zconf.output_filename, output_file);
-	SET_IF_GIVEN(zconf.blacklist_filename, blacklist_file);
+	SET_IF_GIVEN(zconf.blocklist_filename, blocklist_file);
 	SET_IF_GIVEN(zconf.list_of_ips_filename, list_of_ips_file);
 	SET_IF_GIVEN(zconf.probe_args, probe_args);
+	SET_IF_GIVEN(zconf.probe_ttl, probe_ttl);
 	SET_IF_GIVEN(zconf.output_args, output_args);
 	SET_IF_GIVEN(zconf.iface, interface);
 	SET_IF_GIVEN(zconf.max_runtime, max_runtime);
@@ -645,17 +645,17 @@ int main(int argc, char *argv[])
 	// of the entire Internet
 	zconf.destination_cidrs = args.inputs;
 	zconf.destination_cidrs_len = args.inputs_num;
-	if (zconf.destination_cidrs && zconf.blacklist_filename &&
-	    !strcmp(zconf.blacklist_filename, "/etc/zmap/blacklist.conf")) {
+	if (zconf.destination_cidrs && zconf.blocklist_filename &&
+	    !strcmp(zconf.blocklist_filename, "/etc/zmap/blocklist.conf")) {
 		log_warn(
-		    "blacklist",
-		    "ZMap is currently using the default blacklist located "
-		    "at /etc/zmap/blacklist.conf. By default, this blacklist excludes locally "
+		    "blocklist",
+		    "ZMap is currently using the default blocklist located "
+		    "at /etc/zmap/blocklist.conf. By default, this blocklist excludes locally "
 		    "scoped networks (e.g. 10.0.0.0/8, 127.0.0.1/8, and 192.168.0.0/16). If you are"
-		    " trying to scan local networks, you can change the default blacklist by "
+		    " trying to scan local networks, you can change the default blocklist by "
 		    "editing the default ZMap configuration at /etc/zmap/zmap.conf.");
 	}
-	SET_IF_GIVEN(zconf.whitelist_filename, whitelist_file);
+	SET_IF_GIVEN(zconf.allowlist_filename, allowlist_file);
 
 	if (zconf.probe_module->port_args) {
 		if (args.source_port_given) {
@@ -696,15 +696,7 @@ int main(int argc, char *argv[])
 		zconf.target_port = args.target_port_arg;
 	}
 	if (args.source_ip_given) {
-		char *dash = strchr(args.source_ip_arg, '-');
-		if (dash) { // range
-			*dash = '\0';
-			zconf.source_ip_first = args.source_ip_arg;
-			zconf.source_ip_last = dash + 1;
-		} else { // single address
-			zconf.source_ip_first = args.source_ip_arg;
-			zconf.source_ip_last = args.source_ip_arg;
-		}
+		parse_source_ip_addresses(args.source_ip_arg);
 	}
 	if (args.gateway_mac_given) {
 		if (!parse_mac(zconf.gw_mac, args.gateway_mac_arg)) {
@@ -800,15 +792,18 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
+	if(args.batch_given){
+		zconf.batch = args.batch_arg;
+	}
 	if (args.max_targets_given) {
 		zconf.max_targets = parse_max_hosts(args.max_targets_arg);
 	}
 
-	// blacklist
-	if (blacklist_init(zconf.whitelist_filename, zconf.blacklist_filename,
+	// blocklist
+	if (blocklist_init(zconf.allowlist_filename, zconf.blocklist_filename,
 			   zconf.destination_cidrs, zconf.destination_cidrs_len,
 			   NULL, 0, zconf.ignore_invalid_hosts)) {
-		log_fatal("zmap", "unable to initialize blacklist / whitelist");
+		log_fatal("zmap", "unable to initialize blocklist / allowlist");
 	}
 	// if there's a list of ips to scan, then initialize PBM and populate
 	// it based on the provided file
@@ -819,12 +814,15 @@ int main(int argc, char *argv[])
 	}
 
 	// compute number of targets
-	uint64_t allowed = blacklist_count_allowed();
+	uint64_t allowed = blocklist_count_allowed();
 	zconf.total_allowed = allowed;
-	zconf.total_disallowed = blacklist_count_not_allowed();
+	zconf.total_disallowed = blocklist_count_not_allowed();
 	assert(allowed <= (1LL << 32));
 	if (!zconf.total_allowed) {
 		log_fatal("zmap", "zero eligible addresses to scan");
+	}
+	if (zconf.list_of_ips_count > 0 && 0xFFFFFFFFU / zconf.list_of_ips_count > 100000) {
+		log_warn("zmap", "list of IPs is small compared to address space. Performance will suffer, consider using an allowlist instead");
 	}
 	if (zconf.max_targets) {
 		zsend.max_targets = zconf.max_targets;
@@ -881,7 +879,7 @@ int main(int argc, char *argv[])
 	uint32_t numa_node = 0; // TODO
 	zconf.pf.cluster = pfring_zc_create_cluster(
 	    ZMAP_PF_ZC_CLUSTER_ID, ZMAP_PF_BUFFER_SIZE, metadata_len,
-	    total_buffers, numa_node, NULL);
+	    total_buffers, numa_node, NULL, NULL);
 	if (zconf.pf.cluster == NULL) {
 		log_fatal("zmap", "Could not create zc cluster: %s",
 			  strerror(errno));

@@ -54,21 +54,23 @@ void fprintf_ip_header(FILE *fp, struct ip *iph)
 
 void fprintf_eth_header(FILE *fp, struct ether_header *ethh)
 {
-	fprintf(fp,
-		"eth { shost: %02x:%02x:%02x:%02x:%02x:%02x | "
-		"dhost: %02x:%02x:%02x:%02x:%02x:%02x }\n",
-		(int)((unsigned char *)ethh->ether_shost)[0],
-		(int)((unsigned char *)ethh->ether_shost)[1],
-		(int)((unsigned char *)ethh->ether_shost)[2],
-		(int)((unsigned char *)ethh->ether_shost)[3],
-		(int)((unsigned char *)ethh->ether_shost)[4],
-		(int)((unsigned char *)ethh->ether_shost)[5],
-		(int)((unsigned char *)ethh->ether_dhost)[0],
-		(int)((unsigned char *)ethh->ether_dhost)[1],
-		(int)((unsigned char *)ethh->ether_dhost)[2],
-		(int)((unsigned char *)ethh->ether_dhost)[3],
-		(int)((unsigned char *)ethh->ether_dhost)[4],
-		(int)((unsigned char *)ethh->ether_dhost)[5]);
+	if (!zconf.send_ip_pkts) {
+		fprintf(fp,
+			"eth { shost: %02x:%02x:%02x:%02x:%02x:%02x | "
+			"dhost: %02x:%02x:%02x:%02x:%02x:%02x }\n",
+			(int)((unsigned char *)ethh->ether_shost)[0],
+			(int)((unsigned char *)ethh->ether_shost)[1],
+			(int)((unsigned char *)ethh->ether_shost)[2],
+			(int)((unsigned char *)ethh->ether_shost)[3],
+			(int)((unsigned char *)ethh->ether_shost)[4],
+			(int)((unsigned char *)ethh->ether_shost)[5],
+			(int)((unsigned char *)ethh->ether_dhost)[0],
+			(int)((unsigned char *)ethh->ether_dhost)[1],
+			(int)((unsigned char *)ethh->ether_dhost)[2],
+			(int)((unsigned char *)ethh->ether_dhost)[3],
+			(int)((unsigned char *)ethh->ether_dhost)[4],
+			(int)((unsigned char *)ethh->ether_dhost)[5]);
+	}
 }
 
 void make_eth_header(struct ether_header *ethh, macaddr_t *src, macaddr_t *dst)
@@ -95,6 +97,7 @@ void make_ip_header(struct ip *iph, uint8_t protocol, uint16_t len)
 
 void make_icmp_header(struct icmp *buf)
 {
+	memset(buf, 0, sizeof(struct icmp));
 	buf->icmp_type = ICMP_ECHO;
 	buf->icmp_code = 0;
 	buf->icmp_seq = 0;

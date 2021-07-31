@@ -64,6 +64,7 @@ struct state_conf {
 	int cooldown_secs;
 	// number of sending threads
 	uint8_t senders;
+	uint8_t batch;
 	uint32_t pin_cores_len;
 	uint32_t *pin_cores;
 	// should use CLI provided randomization seed instead of generating
@@ -82,17 +83,19 @@ struct state_conf {
 	char *output_module_name;
 	struct output_module *output_module;
 	char *probe_args;
+	uint8_t probe_ttl;
 	char *output_args;
 	macaddr_t gw_mac[MAC_ADDR_LEN_BYTES];
 	macaddr_t hw_mac[MAC_ADDR_LEN_BYTES];
 	uint32_t gw_ip;
 	int gw_mac_set;
 	int hw_mac_set;
-	char *source_ip_first;
-	char *source_ip_last;
+	in_addr_t source_ip_addresses[256];
+	uint32_t number_source_ips;
+	int send_ip_pkts;
 	char *output_filename;
-	char *blacklist_filename;
-	char *whitelist_filename;
+	char *blocklist_filename;
+	char *allowlist_filename;
 	char *list_of_ips_filename;
 	uint32_t list_of_ips_count;
 	char *metadata_filename;
@@ -122,6 +125,7 @@ struct state_conf {
 	uint64_t total_disallowed;
 	int max_sendto_failures;
 	float min_hitrate;
+	int data_link_size;
 #ifdef PFRING
 	struct {
 		pfring_zc_cluster *cluster;
@@ -135,14 +139,16 @@ struct state_conf {
 };
 extern struct state_conf zconf;
 
+void init_empty_global_configuration(struct state_conf *c);
+
 // global sender stats
 struct state_send {
 	double start;
 	double finish;
-	uint32_t sent;
-	uint32_t tried_sent;
-	uint32_t blacklisted;
-	uint32_t whitelisted;
+	uint64_t packets_sent;
+	uint64_t hosts_scanned;
+	uint64_t blocklisted;
+	uint64_t allowlisted;
 	int warmup;
 	int complete;
 	uint32_t first_scanned;
@@ -170,7 +176,7 @@ struct state_recv {
 	// valid responses NOT classified as "success"
 	uint32_t failure_total;
 	// valid responses that passed the filter
-	uint32_t filter_success;
+	uint64_t filter_success;
 	// how many packets did we receive that were marked as being the first
 	// fragment in a stream
 	uint32_t ip_fragments;

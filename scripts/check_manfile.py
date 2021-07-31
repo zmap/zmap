@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # CI runs this script to verify that options appearing in ZTools' ggo.in files also appear in their .ronn files.
 # It does not check that `make manpages` has actually been run.
@@ -10,7 +10,7 @@ import sys
 
 checks = [
     ("zopt.ggo.in", "zmap.1.ronn"),
-    ("zbopt.ggo.in", "zblacklist.1.ronn"),
+    ("zbopt.ggo.in", "zblocklist.1.ronn"),
     ("zitopt.ggo.in", "ziterate.1.ronn"),
     ("ztopt.ggo.in", "ztee.1.ronn")
 ]
@@ -30,7 +30,8 @@ for ggo, ronn in checks:
     for option in options:
         if option not in man:
             failures = True
-            sys.stderr.write("option %s is present in %s but missing from man file %s\n" % (option, ggo, ronn))
+            sys.stderr.write(f"option \"{option}\" is present in \"{ggo}\" but missing from man file \"{ronn}\"\n")
+    sys.stderr.flush()
 
 if failures:
     sys.exit(1)
