@@ -111,7 +111,7 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 			return PACKET_INVALID;
 		}
 		// check whether we'll ever send to this IP during the scan
-		if (!blacklist_is_allowed(*src_ip)) {
+		if (!blocklist_is_allowed(*src_ip)) {
 			return PACKET_INVALID;
 		}
 		// We treat RST packets different from non RST packets

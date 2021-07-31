@@ -282,7 +282,7 @@ probe_module_t module_upnp = {
     .make_packet = &udp_make_packet,
     .print_packet = &udp_print_packet,
     .process_packet = &upnp_process_packet,
-    .validate_packet = &udp_validate_packet,
+    .validate_packet = &upnp_validate_packet,
     // UPnP isn't actually dynamic, however, we don't handle escaping
     // properly in the CSV module and this will force users to use JSON.
     .output_type = OUTPUT_TYPE_DYNAMIC,

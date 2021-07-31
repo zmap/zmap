@@ -418,20 +418,18 @@ int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
 				return PACKET_INVALID;
 			}
 		}
-<<<<<<< HEAD
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		struct ip *ip_inner;
 		size_t ip_inner_len;
 		if (icmp_helper_validate(ip_hdr, len, sizeof(struct udphdr),
 					 &ip_inner,
 					 &ip_inner_len) == PACKET_INVALID) {
-=======
-		// find original destination IP and check that we sent a packet
-		// to that IP address
-		uint32_t dest = ip_inner->ip_dst.s_addr;
-		if (!blocklist_is_allowed(dest)) {
->>>>>>> main
-			return PACKET_INVALID;
+			// find original destination IP and check that we sent a packet
+			// to that IP address
+			uint32_t dest = ip_inner->ip_dst.s_addr;
+			if (!blocklist_is_allowed(dest)) {
+				return PACKET_INVALID;
+			}
 		}
 		struct udphdr *udp = get_udp_header(ip_inner, ip_inner_len);
 		// we can always check the destination port because this is the
@@ -459,8 +457,7 @@ void udp_template_add_field(udp_payload_template_t *t,
 	udp_payload_field_t *c;
 
 	t->fcount++;
-	t->fields =
-	    xrealloc(t->fields, sizeof(udp_payload_field_t) * t->fcount);
+	t->fields = xrealloc(t->fields, sizeof(udp_payload_field_t) * t->fcount);
 	if (!t->fields) {
 		exit(1);
 	}

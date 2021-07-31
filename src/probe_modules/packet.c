@@ -168,7 +168,7 @@ int icmp_helper_validate(const struct ip *ip_hdr, uint32_t len,
 	// find original destination IP and check that we sent a packet
 	// to that IP address
 	uint32_t dest = ip_inner->ip_dst.s_addr;
-	if (!blacklist_is_allowed(dest)) {
+	if (!blocklist_is_allowed(dest)) {
 		return PACKET_INVALID;
 	}
 	// TODO: can we also check whether the packet
