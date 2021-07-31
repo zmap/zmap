@@ -149,7 +149,7 @@ the probe module, and outputting them to the user. Users can specify output
 fields, and write filters over the output fields.
 
    * `--list-output-modules`:
-     List available output modules (e.g. tcp_synscan)
+     List available output modules (e.g. csv)
 
    * `-O`, `--output-module=name`:
      Select output module (default=csv)
