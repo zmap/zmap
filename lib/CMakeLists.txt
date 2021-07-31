@@ -12,10 +12,6 @@ SET(LIB_SOURCES
     csv.c
 )
 
-if (WITH_REDIS)
-    SET(LIB_SOURCES ${LIB_SOURCES} redis.c)
-endif()
-
 add_library(zmaplib STATIC ${LIB_SOURCES})
 
 target_include_directories (zmaplib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

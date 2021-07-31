@@ -20,11 +20,6 @@ set(OUTPUT_MODULE_SOURCES
     output_modules/output_modules.c
 )
 
-# Handle optional output modules
-if(WITH_REDIS)
-    set(OUTPUT_MODULE_SOURCES ${OUTPUT_MODULE_SOURCES} output_modules/module_redis_packed.c output_modules/module_redis_csv.c)
-endif()
-
 set(PROBE_MODULE_SOURCES
     probe_modules/module_icmp_echo.c
     probe_modules/module_icmp_echo_time.c
@@ -223,7 +218,6 @@ target_link_libraries(
     ${PFRING_LIBRARIES}
     pcap gmp m unistring
     ${DNET_LIBRARIES}
-    ${REDIS_LIBS}
     ${JSON_LIBRARIES}
 )
 
@@ -252,7 +246,6 @@ target_link_libraries(
     ${PFRING_LIBRARIES}
     pcap gmp m unistring
     ${DNET_LIBRARIES}
-    ${REDIS_LIBS}
     ${JSON_LIBRARIES}
 )
 
