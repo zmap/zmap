@@ -17,7 +17,7 @@ src/topt.h
 src/ztopt.c
 src/ztopt.h
 src/*.ggo
-src/zblacklist
+src/zblocklist
 src/ztee
 src/ziterate
 lexer.c

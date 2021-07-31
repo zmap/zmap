@@ -573,14 +573,7 @@ int main(int argc, char *argv[])
 		log_debug("filter", "will use output filter %s",
 			  args.output_filter_arg);
 	}
-	// --ignore-invalid-hosts is deprecated and will be removed in zmap 4.0
-	if (args.ignore_invalid_hosts_given) {
-		log_warn(
-		    "zmap",
-		    "--ignore-invalid-hosts is deprecated and will be removed in ZMap 4.0. Use --ignore-blocklist-errors instead to ignore invalid blocklist/allowlist entries.");
-	}
-	zconf.ignore_invalid_hosts = args.ignore_invalid_hosts_given ||
-				     args.ignore_blocklist_errors_given;
+	zconf.ignore_invalid_hosts = args.ignore_blocklist_errors_given;
 
 	SET_BOOL(zconf.dryrun, dryrun);
 	SET_BOOL(zconf.quiet, quiet);
