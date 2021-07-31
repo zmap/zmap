@@ -310,7 +310,7 @@ char *fs_get_string_by_index(fieldset_t *fs, int index)
 	return (char *)fs->fields[index].value.ptr;
 }
 
-int fds_get_index_by_name(fielddefset_t *fds, char *name)
+int fds_get_index_by_name(fielddefset_t *fds, const char *name)
 {
 	for (int i = 0; i < fds->len; i++) {
 		if (!strcmp(fds->fielddefs[i].name, name)) {
@@ -342,7 +342,7 @@ void fs_free(fieldset_t *fs)
 }
 
 void fs_generate_fieldset_translation(translation_t *t, fielddefset_t *avail,
-				      char **req, int reqlen)
+				      const char **req, int reqlen)
 {
 	memset(t, 0, sizeof(translation_t));
 	if (!t) {

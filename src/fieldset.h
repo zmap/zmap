@@ -91,7 +91,7 @@ fieldset_t *fs_new_repeated_fieldset();
 
 char *fs_get_string_by_index(fieldset_t *fs, int index);
 
-int fds_get_index_by_name(fielddefset_t *fds, char *name);
+int fds_get_index_by_name(fielddefset_t *fds, const char *name);
 
 void gen_fielddef_set(fielddefset_t *fds, fielddef_t fs[], int len);
 
@@ -136,7 +136,7 @@ uint64_t fs_get_uint64_by_index(fieldset_t *fs, int index);
 void fs_free(fieldset_t *fs);
 
 void fs_generate_fieldset_translation(translation_t *t, fielddefset_t *avail,
-				      char **req, int reqlen);
+				      const char **req, int reqlen);
 
 fieldset_t *translate_fieldset(fieldset_t *fs, translation_t *t);
 

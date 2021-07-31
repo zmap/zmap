@@ -76,7 +76,7 @@ typedef struct mon_start_arg {
 } mon_start_arg_t;
 
 const char *default_help_text =
-    "By default, ZMap prints out unique, successful"
+    "By default, ZMap prints out unique, successful "
     "IP addresses (e.g., SYN-ACK from a TCP SYN scan) "
     "in ASCII form (e.g., 192.168.1.5) to stdout or the specified output "
     "file. Internally this is handled by the \"csv\" output module and is "
@@ -365,7 +365,6 @@ int main(int argc, char *argv[])
 		sprintf(fullpath, "%s/%s", zconf.log_directory, path);
 		log_location = fopen(fullpath, "w");
 		free(fullpath);
-
 	} else {
 		log_location = stderr;
 	}
@@ -428,7 +427,7 @@ int main(int argc, char *argv[])
 		cmdline_parser_print_help();
 		printf("\nProbe-module (%s) Help:\n", zconf.probe_module->name);
 		if (zconf.probe_module->helptext) {
-			fprintw(stdout, (char *)zconf.probe_module->helptext,
+			fprintw(stdout, zconf.probe_module->helptext,
 				80);
 		} else {
 			printf("no help text available\n");
@@ -437,9 +436,9 @@ int main(int argc, char *argv[])
 		       zconf.output_module->name);
 
 		if (!strcmp(args.output_module_arg, "default")) {
-			fprintw(stdout, (char *)default_help_text, 80);
+			fprintw(stdout, default_help_text, 80);
 		} else if (zconf.output_module->helptext) {
-			fprintw(stdout, (char *)zconf.output_module->helptext,
+			fprintw(stdout, zconf.output_module->helptext,
 				80);
 		} else {
 			printf("no help text available\n");
@@ -484,13 +483,13 @@ int main(int argc, char *argv[])
 	}
 	// find the fields we need for the framework
 	zconf.fsconf.success_index =
-	    fds_get_index_by_name(fds, (char *)"success");
+	    fds_get_index_by_name(fds, "success");
 	if (zconf.fsconf.success_index < 0) {
 		log_fatal("fieldset", "probe module does not supply "
 				      "required success field.");
 	}
 	zconf.fsconf.app_success_index =
-	    fds_get_index_by_name(fds, (char *)"app_success");
+	    fds_get_index_by_name(fds, "app_success");
 	if (zconf.fsconf.app_success_index < 0) {
 		log_debug("fieldset", "probe module does not supply "
 				      "application success field.");
@@ -501,7 +500,7 @@ int main(int argc, char *argv[])
 		    " output field. It will be included in monitor output");
 	}
 	zconf.fsconf.classification_index =
-	    fds_get_index_by_name(fds, (char *)"classification");
+	    fds_get_index_by_name(fds, "classification");
 	if (zconf.fsconf.classification_index < 0) {
 		log_fatal("fieldset", "probe module does not supply "
 				      "required packet classification field.");
@@ -520,16 +519,16 @@ int main(int argc, char *argv[])
 	if (args.output_fields_given) {
 		zconf.raw_output_fields = args.output_fields_arg;
 	} else if (!zconf.raw_output_fields) {
-		zconf.raw_output_fields = (char *)"saddr";
+		zconf.raw_output_fields = "saddr";
 	}
 	// add all fields if wildcard received
 	if (!strcmp(zconf.raw_output_fields, "*")) {
 		zconf.output_fields_len = zconf.fsconf.defs.len;
 		zconf.output_fields =
-		    xcalloc(zconf.fsconf.defs.len, sizeof(char *));
+		    xcalloc(zconf.fsconf.defs.len, sizeof(const char *));
 		for (int i = 0; i < zconf.fsconf.defs.len; i++) {
 			zconf.output_fields[i] =
-			    (char *)zconf.fsconf.defs.fielddefs[i].name;
+			    zconf.fsconf.defs.fielddefs[i].name;
 		}
 		fs_generate_full_fieldset_translation(&zconf.fsconf.translation,
 						      &zconf.fsconf.defs);
@@ -845,7 +844,7 @@ int main(int argc, char *argv[])
 #endif
 	// Figure out what cores to bind to
 	if (args.cores_given) {
-		char **core_list = NULL;
+		const char **core_list = NULL;
 		int len = 0;
 		split_string(args.cores_arg, &len, &core_list);
 		zconf.pin_cores_len = (uint32_t)len;
