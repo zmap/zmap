@@ -334,6 +334,8 @@ int main(int argc, char *argv[])
 		config_loaded = 1;
 	}
 
+	// set defaults before loading in command line arguments
+	init_empty_global_configuration(&zconf);
 	// initialize logging. if no log file or log directory are specified
 	// default to using stderr.
 	zconf.log_level = args.verbosity_arg;
