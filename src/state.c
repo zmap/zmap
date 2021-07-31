@@ -42,7 +42,6 @@ struct state_conf zconf = {.log_level = LOG_INFO,
 			   .hw_mac = {0},
 			   .gw_mac_set = 0,
 			   .hw_mac_set = 0,
-			   .source_ip_addresses = NULL,
 			   .number_source_ips = 0,
 			   .send_ip_pkts = 0,
 			   .raw_output_fields = NULL,
@@ -65,6 +64,10 @@ struct state_conf zconf = {.log_level = LOG_INFO,
 			   .custom_metadata_str = NULL,
 			   .recv_ready = 0,
 			   .data_link_size = 0};
+
+void init_empty_global_configuration(struct state_conf *c) {
+	memset(c->source_ip_addresses, 0, sizeof(c->source_ip_addresses));
+}
 
 // global sender stats and defaults
 struct state_send zsend = {

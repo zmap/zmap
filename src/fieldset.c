@@ -12,7 +12,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wundef"
 #include <unistr.h>
+#pragma GCC diagnostic pop
 
 #include "../lib/logger.h"
 #include "../lib/xalloc.h"

@@ -139,6 +139,8 @@ struct state_conf {
 };
 extern struct state_conf zconf;
 
+void init_empty_global_configuration(struct state_conf *c);
+
 // global sender stats
 struct state_send {
 	double start;
