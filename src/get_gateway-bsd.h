@@ -76,8 +76,9 @@ int get_iface_ip(char *iface, struct in_addr *ip)
 	if (getifaddrs(&ifaddr)) {
 		log_fatal(
 		    "get-iface-ip",
-		    "unable able to retrieve list of network interfaces: %s",
-		    strerror(errno));
+		    "ZMap is unable able to retrieve a list of available network "
+			"interfaces: %s. You can manually specify the network interface "
+			"to use with the \"-i\" flag.", strerror(errno));
 	}
 	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
 		if (ifa->ifa_addr == NULL ||
@@ -88,13 +89,13 @@ int get_iface_ip(char *iface, struct in_addr *ip)
 			struct sockaddr_in *sin =
 			    (struct sockaddr_in *)ifa->ifa_addr;
 			ip->s_addr = sin->sin_addr.s_addr;
-			log_debug("get-iface-ip", "ip address found for %s: %s",
+			log_debug("get-iface-ip", "IP address found for %s: %s",
 				  iface, inet_ntoa(*ip));
 			return EXIT_SUCCESS;
 		}
 	}
-	log_fatal("get-iface-ip", "specified interface does not"
-				  " exist or have an IPv4 address");
+	log_fatal("get-iface-ip", "The specified network interface (\"%s\") does not"
+				  " exist or does not have an assigned IPv4 address.", iface);
 	return EXIT_FAILURE;
 }
 
@@ -130,9 +131,10 @@ int _get_default_gw(struct in_addr *gw, char **iface)
 	int fd = socket(PF_ROUTE, SOCK_RAW, 0);
 	assert(fd > 0);
 	if (!write(fd, (char *)rtm, sizeof(buf))) {
-		log_fatal("get-gateway", "unable to send request");
+		log_fatal("get-gateway", "Unable to send request to retrieve default"
+				"gateway MAC address. You will need to manually specify your "
+				"gateway MAC with the \"-G\" or \"--gateway-mac\" flag.");
 	}
-
 	size_t len;
 	while (rtm->rtm_type == RTM_GET &&
 	       (len = read(fd, rtm, sizeof(buf))) > 0) {
@@ -156,8 +158,9 @@ int _get_default_gw(struct in_addr *gw, char **iface)
 				struct sockaddr_dl *sdl =
 				    (struct sockaddr_dl *)sa;
 				if (!sdl) {
-					log_fatal("get-gateway",
-						  "unable to retrieve gateway");
+					log_fatal("get-gateway", "Unable to parse kernel response to request "
+							"for gateway MAC address. You will need to manually specify "
+							"your gateway MAC with the \"-G\" or \"--gateway-mac\" flag.");
 				}
 				char *_iface = xmalloc(sdl->sdl_nlen + 1);
 				memcpy(_iface, sdl->sdl_data, sdl->sdl_nlen);

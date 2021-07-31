@@ -26,9 +26,10 @@ char *get_default_iface(void)
 	char errbuf[PCAP_ERRBUF_SIZE];
 	char *iface = pcap_lookupdev(errbuf);
 	if (iface == NULL) {
-		log_fatal("zmap", "could not detect default network interface "
-				  "(e.g. eth0). Try running as root or setting"
-				  " interface using -i flag.");
+		log_fatal("send", "ZMap could not detect your default network interface. "
+				"You likely do not privileges to open a raw packet socket. "
+				"Are you running as root or with the CAP_NET_RAW capability? If you are, you "
+				"may need to manually set interface using the \"-i\" flag.");
 	}
 	return iface;
 }
@@ -249,13 +250,13 @@ int get_default_gw(struct in_addr *gw, char *iface)
 	memset(_iface, 0, IF_NAMESIZE);
 
 	_get_default_gw(gw, _iface);
-	if (strcmp(iface, _iface) != 0) {
+	if (strcmp(iface, _iface)) {
 		log_fatal(
 		    "get-gateway",
-		    "interface specified (%s) does not match "
-		    "the interface of the default gateway (%s). You will need "
-		    "to manually specify the MAC address of your gateway.",
-		    iface, _iface);
+		    "The specified network (\"%s\") does not match "
+		    "the interface associated with the default gateway (%s). You will "
+			"need to manually specify the MAC address of your gateway using "
+			"the \"--gateway-mac\" flag.", iface, _iface);
 	}
 	return EXIT_SUCCESS;
 }
@@ -275,7 +276,12 @@ int get_iface_ip(char *iface, struct in_addr *ip)
 
 	if (ioctl(sock, SIOCGIFADDR, &ifr) < 0) {
 		close(sock);
-		log_fatal("get-iface-ip", "ioctl failure: %s", strerror(errno));
+		log_fatal("get-iface-ip", "Unable to automatically identify the correct "
+				"source address for %s interface. ioctl failure: %s. "
+				"If this is the unexpected interface, you can manually specify "
+				"the correct interface with \"-i\" flag. If this is the correct "
+				"interface, you likely need to manually specify the source IP "
+				"address to use with the \"-S\" flag.", iface, strerror(errno));
 	}
 	ip->s_addr = ((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr;
 	close(sock);
