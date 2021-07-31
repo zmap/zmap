@@ -16,7 +16,7 @@
 #define DYNAMIC_SUPPORT 1
 
 // called at scanner initialization
-typedef int (*output_init_cb)(struct state_conf *, char **fields,
+typedef int (*output_init_cb)(struct state_conf *, const char **fields,
 			      int fieldslen);
 
 // called on packet receipt

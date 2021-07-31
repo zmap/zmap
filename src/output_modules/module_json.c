@@ -33,7 +33,7 @@
 
 static FILE *file = NULL;
 
-int json_output_file_init(struct state_conf *conf, UNUSED char **fields,
+int json_output_file_init(struct state_conf *conf, UNUSED const char **fields,
 			  UNUSED int fieldlens)
 {
 	assert(conf);
