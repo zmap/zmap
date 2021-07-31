@@ -173,8 +173,10 @@ iterator_t *send_init(void)
 	if (!zconf.hw_mac_set) {
 		if (get_iface_hw_addr(zconf.iface, zconf.hw_mac)) {
 			log_fatal("send",
-				  "could not retrieve hardware address for "
-				  "interface: %s",
+				  "ZMap could not retrieve the hardware (MAC) address for "
+				  "the interface \"%s\". You likely do not privileges to open a raw packet socket. "
+				  "Are you running as root or with the CAP_NET_RAW capability? If you are, you "
+				  "may need to manually set the source MAC address with the \"--source-mac\" flag.",
 				  zconf.iface);
 			return NULL;
 		}
