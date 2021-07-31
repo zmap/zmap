@@ -181,9 +181,7 @@ option "sender-threads"         T "Threads used to send packets"
 
 option "cores"                  - "Comma-separated list of cores to pin to"
     optional string
-option "ignore-invalid-hosts"   - "Deprecated; use --ignore-blocklist-errors instead"
-    optional
-option "ignore-blocklist-errors" - "Ignore invalid entries in allowlist/blocklist file. Equivalent to --ignore-invalid-hosts"
+option "ignore-blocklist-errors" - "Ignore invalid entries in allowlist/blocklist file."
     optional
 option "help"                   h "Print help and exit"
     optional
