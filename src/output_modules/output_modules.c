@@ -15,7 +15,7 @@ extern output_module_t module_csv_file;
 extern output_module_t module_json_file;
 
 output_module_t *output_modules[] = {
-    &module_csv_file,
+	&module_csv_file,
 	&module_json_file,
     // ADD YOUR MODULE HERE
 };
