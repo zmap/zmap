@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 #
-# CI runs this script to verify that options appearing in ZTools' ggo.in files also appear in their .ronn files.
-# It does not check that `make manpages` has actually been run.
+# CI runs this script to verify that options appearing in ZTools' ggo.in files
+# also appear in their .ronn files.  It does not check that `make manpages` has
+# actually been run.
 #
 # This script assumes it's being run from the root of the zmap repository.
 #

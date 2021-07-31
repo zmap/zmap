@@ -1,0 +1,18 @@
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+
+[*.{c,h}]
+indent_style = tab
+indent_size = 8
+
+[CMakeLists.txt]
+indent_style = spaces
+indent_size = 4
+
+[*.py]
+indent_style = spaces
+indent_size = 4
+

@@ -1,7 +1,7 @@
 ZMap: The Internet Scanner
 ==========================
 
-[![Build Status](https://travis-ci.org/zmap/zmap.svg?branch=travis-configuration)](https://travis-ci.org/zmap/zmap)
+![Build Status](https://github.com/zmap/zmap/actions/workflows/cmake.yml/badge.svg)
 
 ZMap is a fast single packet network scanner designed for Internet-wide network
 surveys. On a typical desktop computer with a gigabit Ethernet connection, ZMap

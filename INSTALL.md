@@ -49,6 +49,12 @@ Install the required dependencies with the following commands.
   brew install pkg-config cmake gmp gengetopt json-c byacc libdnet libunistring
   ```
 
+* To launch a shell inside a Docker container with the build dependencies
+  mounted at `/src`:
+  ```sh
+  docker run -it -v $(pwd):/src zmap/builder
+  ```
+
 ### Building and Installing ZMap
 
 Once these prerequisites are installed, ZMap can be compiled by running:
