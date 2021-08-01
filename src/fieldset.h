@@ -62,6 +62,7 @@ typedef struct field {
 typedef struct fieldset {
 	int len;
 	field_t fields[MAX_FIELDS];
+	fielddefset_t *fds;
 	// only used for repeated.
 	int inner_type; // type of repeated element. e.g., FS_STRING
 	int type;       // REPEATED or FIELDSET
@@ -80,7 +81,7 @@ typedef struct translation {
 	int translation[MAX_FIELDS];
 } translation_t;
 
-fieldset_t *fs_new_fieldset(void);
+fieldset_t *fs_new_fieldset(fielddefset_t*);
 
 fieldset_t *fs_new_repeated_field(int type, int free_);
 fieldset_t *fs_new_repeated_uint64(void);

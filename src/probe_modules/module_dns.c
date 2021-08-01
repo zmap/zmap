@@ -394,7 +394,7 @@ static bool process_response_question(char **data, uint16_t *data_len,
 	uint16_t qtype = ntohs(tail->qtype);
 	uint16_t qclass = ntohs(tail->qclass);
 	// Build our new question fieldset
-	fieldset_t *qfs = fs_new_fieldset();
+	fieldset_t *qfs = fs_new_fieldset(NULL);
 	fs_add_unsafe_string(qfs, "name", question_name, 1);
 	fs_add_uint64(qfs, "qtype", qtype);
 	if (qtype > MAX_QTYPE || qtype_qtype_to_strid[qtype] == BAD_QTYPE_VAL) {
@@ -449,7 +449,7 @@ static bool process_response_answer(char **data, uint16_t *data_len,
 		return 1;
 	}
 	// Build our new question fieldset
-	fieldset_t *afs = fs_new_fieldset();
+	fieldset_t *afs = fs_new_fieldset(NULL);
 	fs_add_unsafe_string(afs, "name", answer_name, 1);
 	fs_add_uint64(afs, "type", type);
 	if (type > MAX_QTYPE || qtype_qtype_to_strid[type] == BAD_QTYPE_VAL) {
