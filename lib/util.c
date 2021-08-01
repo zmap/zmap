@@ -51,11 +51,11 @@ void enforce_range(const char *name, int v, int min, int max)
 	}
 }
 
-void split_string(char *in, int *len, char ***results)
+void split_string(const char *in, int *len, const char ***results)
 {
-	char **fields = xcalloc(MAX_SPLITS, sizeof(char *));
+	const char **fields = xcalloc(MAX_SPLITS, sizeof(const char *));
 	int retvlen = 0;
-	char *currloc = in;
+	const char *currloc = in;
 	// parse csv into a set of strings
 	while (1) {
 		assert(retvlen < MAX_SPLITS);
@@ -78,7 +78,7 @@ void split_string(char *in, int *len, char ***results)
 	*len = retvlen;
 }
 
-void fprintw(FILE *f, char *s, size_t w)
+void fprintw(FILE *f, const char *s, size_t w)
 {
 	if (strlen(s) <= w) {
 		fprintf(f, "%s", s);

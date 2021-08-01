@@ -31,11 +31,12 @@ void gen_fielddef_set(fielddefset_t *fds, fielddef_t fs[], int len)
 	fds->len += len;
 }
 
-fieldset_t *fs_new_fieldset(void)
+fieldset_t *fs_new_fieldset(fielddefset_t *fds)
 {
 	fieldset_t *f = xcalloc(1, sizeof(fieldset_t));
 	f->len = 0;
 	f->type = FS_FIELDSET;
+	f->fds = fds;
 	return f;
 }
 
@@ -86,6 +87,13 @@ static inline void fs_add_word(fieldset_t *fs, const char *name, int type,
 		    "object added to repeated field does not match type of repeated field.");
 	}
 	field_t *f = &(fs->fields[fs->len]);
+	// if we have a fieldset definition, then we can validate that the name
+	// of the field is as expected
+	if (fs->fds && strcmp(fs->fds->fielddefs[fs->len].name, name)) {
+		log_fatal("fieldset", "added field (%s) is not next expected field (%s).",
+				name, fs->fds->fielddefs[fs->len].name);
+	}
+
 	fs->len++;
 	f->type = type;
 	f->name = name;
@@ -319,7 +327,7 @@ char *fs_get_string_by_index(fieldset_t *fs, int index)
 	return (char *)fs->fields[index].value.ptr;
 }
 
-int fds_get_index_by_name(fielddefset_t *fds, char *name)
+int fds_get_index_by_name(fielddefset_t *fds, const char *name)
 {
 	for (int i = 0; i < fds->len; i++) {
 		if (!strcmp(fds->fielddefs[i].name, name)) {
@@ -351,7 +359,7 @@ void fs_free(fieldset_t *fs)
 }
 
 void fs_generate_fieldset_translation(translation_t *t, fielddefset_t *avail,
-				      char **req, int reqlen)
+				      const char **req, int reqlen)
 {
 	memset(t, 0, sizeof(translation_t));
 	if (!t) {
@@ -387,7 +395,7 @@ void fs_generate_full_fieldset_translation(translation_t *t,
 
 fieldset_t *translate_fieldset(fieldset_t *fs, translation_t *t)
 {
-	fieldset_t *retv = fs_new_fieldset();
+	fieldset_t *retv = fs_new_fieldset(NULL);
 	if (!retv) {
 		log_fatal("fieldset",
 			  "unable to allocate space for translated field set");
