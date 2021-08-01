@@ -126,6 +126,8 @@ struct state_conf {
 	int max_sendto_failures;
 	float min_hitrate;
 	int data_link_size;
+	int default_mode;
+	int no_header_row;
 #ifdef PFRING
 	struct {
 		pfring_zc_cluster *cluster;
