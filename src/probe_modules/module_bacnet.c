@@ -132,21 +132,25 @@ void bacnet_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		struct udphdr *udp = get_udp_header(ip_hdr, len);
 		assert(udp);
-		fs_add_constchar(fs, "classification", "bacnet");
-		fs_add_bool(fs, "success", 1);
 		fs_add_uint64(fs, "sport", ntohs(udp->uh_sport));
 		fs_add_uint64(fs, "dport", ntohs(udp->uh_dport));
+		fs_add_constchar(fs, "classification", "bacnet");
+		fs_add_bool(fs, "success", 1);
 		fs_add_null_icmp(fs);
 		uint32_t udp_offset = sizeof(struct ether_header) + ip_hdr->ip_hl * 4;
 		uint32_t payload_offset = udp_offset + sizeof(struct udphdr);
 		assert(payload_offset < len);
 		char *payload = get_udp_payload(udp, len);
 		uint32_t payload_len = len - payload_offset;
-		fs_add_binary(fs, "udp_payload", payload_len, (void *)payload,
-			      0);
+		fs_add_binary(fs, "udp_payload", payload_len, (void *)payload, 0);
+		fs_add_null_icmp(fs);
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
-		fs_populate_icmp_from_iphdr(ip_hdr, len, fs);
+		fs_add_null(fs, "sport");
+		fs_add_null(fs, "dport");
+		fs_add_constchar(fs, "classification", "icmp-unreach");
+		fs_add_bool(fs, "success", 0);
 		fs_add_null(fs, "udp_payload");
+		fs_populate_icmp_from_iphdr(ip_hdr, len, fs);
 	}
 }
 
@@ -157,16 +161,11 @@ int bacnet_global_initialize(struct state_conf *conf)
 }
 
 static fielddef_t fields[] = {
-    {.name = "classification",
-     .type = "string",
-     .desc = "packet classification"},
-    {.name = "success",
-     .type = "bool",
-     .desc = "is  response considered success"},
     {.name = "sport", .type = "int", .desc = "UDP source port"},
     {.name = "dport", .type = "int", .desc = "UDP destination port"},
-    ICMP_FIELDSET_FIELDS,
+    CLASSIFICATION_SUCCESS_FIELDSET_FIELDS,
     {.name = "udp_payload", .type = "binary", .desc = "UDP payload"},
+    ICMP_FIELDSET_FIELDS,
 };
 
 probe_module_t module_bacnet = {
