@@ -24,7 +24,7 @@
 
 static FILE *file = NULL;
 
-int csv_init(struct state_conf *conf, char **fields, int fieldlens)
+int csv_init(struct state_conf *conf, const char **fields, int fieldlens)
 {
 	assert(conf);
 	if (conf->output_filename) {

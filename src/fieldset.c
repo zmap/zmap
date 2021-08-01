@@ -342,7 +342,7 @@ void fs_free(fieldset_t *fs)
 }
 
 void fs_generate_fieldset_translation(translation_t *t, fielddefset_t *avail,
-				      char **req, int reqlen)
+				      const char **req, int reqlen)
 {
 	memset(t, 0, sizeof(translation_t));
 	if (!t) {
