@@ -264,7 +264,7 @@ static fielddef_t fields[] = {
 
 probe_module_t module_upnp = {
     .name = "upnp",
-    .packet_length = 139,
+    .max_packet_length = 139,
     .pcap_filter = "udp || icmp",
     .pcap_snaplen = 2048,
     .port_args = 1,

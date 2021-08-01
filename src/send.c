@@ -54,9 +54,6 @@ static inline int send_run_init(sock_t sock);
 // Lock for send run
 static pthread_mutex_t send_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-// Source IP address offset for outgoing packets
-static uint32_t srcip_offset;
-
 // Source ports for outgoing packets
 static uint16_t num_src_ports;
 
@@ -96,17 +93,10 @@ iterator_t *send_init(void)
 	log_debug("send", "srcip_first: %s", inet_ntoa(temp));
 	temp.s_addr = zconf.source_ip_addresses[zconf.number_source_ips - 1];
 	log_debug("send", "srcip_last: %s", inet_ntoa(temp));
-	if (zconf.number_source_ips == 1) {
-		srcip_offset = 0;
-	} else {
-		uint32_t offset =
-		    (uint32_t)(aesrand_getword(zconf.aes) & 0xFFFFFFFF);
-		srcip_offset = offset % (zconf.number_source_ips);
-	}
 
 	// process the source port range that ZMap is allowed to use
 	num_src_ports = zconf.source_port_last - zconf.source_port_first + 1;
-	log_debug("send", "will send from %i address%s on %u source ports",
+	log_debug("send", "will send from %u address%s on %hu source ports",
 		  zconf.number_source_ips,
 		  ((zconf.number_source_ips == 1) ? "" : "es"), num_src_ports);
 	// global initialization for send module
@@ -125,9 +115,11 @@ iterator_t *send_init(void)
 		    "send",
 		    "must specify rate or bandwidth, or neither, not both.");
 	}
-	// convert specified bandwidth to packet rate
+
+	// Convert specified bandwidth to packet rate. This is an estimate using the
+	// max packet size a probe module will generate.
 	if (zconf.bandwidth > 0) {
-		size_t pkt_len = zconf.probe_module->packet_length;
+		size_t pkt_len = zconf.probe_module->max_packet_length;
 		pkt_len *= 8;
 		// 7 byte MAC preamble, 1 byte Start frame, 4 byte CRC, 12 byte
 		// inter-frame gap
@@ -211,7 +203,7 @@ static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
 		return zconf.source_ip_addresses[0];
 	}
 	return zconf
-	    .source_ip_addresses[(ntohl(dst) + srcip_offset + local_offset) %
+	    .source_ip_addresses[(ntohl(dst) + local_offset) %
 				 zconf.number_source_ips];
 }
 
@@ -382,7 +374,7 @@ int send_run(sock_t st, shard_t *s)
 				uint32_t validation[VALIDATE_BYTES / sizeof(uint32_t)];
 				validate_gen(src_ip, current_ip, (uint8_t *)validation);
 				uint8_t ttl = zconf.probe_ttl;
-				size_t length = zconf.probe_module->packet_length;
+				size_t length = 0;
 				zconf.probe_module->make_packet(buf, &length, src_ip,
 								current_ip, ttl, validation,
 								i, probe_data);

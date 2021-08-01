@@ -37,6 +37,7 @@ typedef enum udp_payload_field_type {
 typedef struct udp_payload_field_type_def {
 	const char *name;
 	const char *desc;
+	size_t max_length;
 	udp_payload_field_type_t ftype;
 } udp_payload_field_type_def_t;
 
@@ -89,6 +90,6 @@ int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len,
 		       struct ip *ip_hdr, struct udphdr *udp_hdr,
 		       aesrand_t *aes);
 
-int udp_template_field_lookup(char *vname, udp_payload_field_t *c);
+int udp_template_field_lookup(const char *vname, udp_payload_field_t *c);
 
-udp_payload_template_t *udp_template_load(char *buf, unsigned int len);
+udp_payload_template_t *udp_template_load(char *buf, uint32_t buf_len, uint32_t *max_pkt_len);

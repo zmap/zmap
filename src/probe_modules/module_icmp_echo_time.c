@@ -53,7 +53,7 @@ static int icmp_echo_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	return EXIT_SUCCESS;
 }
 
-static int icmp_echo_make_packet(void *buf, UNUSED size_t *buf_len,
+static int icmp_echo_make_packet(void *buf, size_t *buf_len,
 				 ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
 				 uint32_t *validation, UNUSED int probe_num,
 				 UNUSED void *arg)
@@ -81,12 +81,17 @@ static int icmp_echo_make_packet(void *buf, UNUSED size_t *buf_len,
 	payload->dst = dst_ip;
 
 	icmp_header->icmp_cksum = 0;
-	icmp_header->icmp_cksum = icmp_checksum((unsigned short *)icmp_header,
-											sizeof(struct icmp));
+	icmp_header->icmp_cksum =
+	    icmp_checksum((unsigned short *)icmp_header, sizeof(struct icmp));
+
+	// Update the IP and UDP headers to match the new payload length
+	size_t ip_len = sizeof(struct ip) + ICMP_MINLEN + sizeof(struct icmp_payload_for_rtt);
+	ip_header->ip_len = htons(ip_len);
 
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
 
+	*buf_len = ip_len + sizeof(struct ether_header);
 	return EXIT_SUCCESS;
 }
 
@@ -229,7 +234,7 @@ static fielddef_t fields[] = {
 
 probe_module_t module_icmp_echo_time = {
     .name = "icmp_echo_time",
-    .packet_length = 62,
+    .max_packet_length = 62,
     .pcap_filter = "icmp and icmp[0]!=8",
     .pcap_snaplen = 96,
     .port_args = 0,

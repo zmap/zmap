@@ -89,39 +89,51 @@ static uint32_t udp_num_template_field_types = 12;
 static udp_payload_field_type_def_t udp_payload_template_fields[] = {
     {.name = "SADDR_N",
      .ftype = UDP_SADDR_N,
+     .max_length = 4,
      .desc = "Source IP address in network byte order"},
     {.name = "SADDR",
      .ftype = UDP_SADDR_A,
+     .max_length = 15,
      .desc = "Source IP address in dotted-quad format"},
     {.name = "DADDR_N",
      .ftype = UDP_DADDR_N,
+     .max_length = 4,
      .desc = "Destination IP address in network byte order"},
     {.name = "DADDR",
      .ftype = UDP_DADDR_A,
+     .max_length = 15,
      .desc = "Destination IP address in dotted-quad format"},
     {.name = "SPORT_N",
      .ftype = UDP_SPORT_N,
+     .max_length = 2,
      .desc = "UDP source port in netowrk byte order"},
     {.name = "SPORT",
      .ftype = UDP_SPORT_A,
+     .max_length = 5,
      .desc = "UDP source port in ascii format"},
     {.name = "DPORT_N",
      .ftype = UDP_DPORT_N,
+     .max_length = 2,
      .desc = "UDP destination port in network byte order"},
     {.name = "DPORT",
      .ftype = UDP_DPORT_A,
+     .max_length = 5,
      .desc = "UDP destination port in ascii format"},
     {.name = "RAND_BYTE",
      .ftype = UDP_RAND_BYTE,
+     .max_length = 0,
      .desc = "Random bytes from 0-255"},
     {.name = "RAND_DIGIT",
      .ftype = UDP_RAND_DIGIT,
+     .max_length = 0,
      .desc = "Random digits from 0-9"},
     {.name = "RAND_ALPHA",
      .ftype = UDP_RAND_ALPHA,
+     .max_length = 0,
      .desc = "Random mixed-case letters (a-z)"},
     {.name = "RAND_ALPHANUM",
      .ftype = UDP_RAND_ALPHANUM,
+     .max_length = 0,
      .desc = "Random mixed-case letters (a-z) and numbers"}};
 
 void udp_set_num_ports(int x) { num_ports = x; }
@@ -193,8 +205,10 @@ int udp_global_initialize(struct state_conf *conf)
 
 		if (strcmp(args, "template") == 0) {
 			udp_send_substitutions = 1;
+			uint32_t max_pkt_len;
 			udp_template =
-			    udp_template_load(udp_send_msg, udp_send_msg_len);
+			    udp_template_load(udp_send_msg, udp_send_msg_len, &max_pkt_len);
+			udp_send_msg_len = max_pkt_len;
 		}
 
 	} else if (strcmp(args, "hex") == 0) {
@@ -227,10 +241,11 @@ int udp_global_initialize(struct state_conf *conf)
 		udp_send_msg_len = MAX_UDP_PAYLOAD_LEN;
 	}
 
-	module_udp.packet_length = sizeof(struct ether_header) +
-				   sizeof(struct ip) + sizeof(struct udphdr) +
-				   udp_send_msg_len;
-	assert(module_udp.packet_length <= MAX_PACKET_SIZE);
+	size_t header_len = sizeof(struct ether_header)
+	    + sizeof(struct ip)
+	    + sizeof(struct udphdr);
+	module_udp.max_packet_length = header_len + udp_send_msg_len;
+	assert(module_udp.max_packet_length <= MAX_PACKET_SIZE);
 
 	free(args);
 	return EXIT_SUCCESS;
@@ -288,7 +303,9 @@ int udp_make_packet(void *buf, UNUSED size_t *buf_len,
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
 	struct udphdr *udp_header = (struct udphdr *)&ip_header[1];
-	// struct = (struct udphdr*) (&ip_header[1]);
+	size_t headers_len = sizeof(struct ether_header)
+		+ sizeof(struct ip)
+		+ sizeof(struct udphdr);
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
@@ -296,10 +313,9 @@ int udp_make_packet(void *buf, UNUSED size_t *buf_len,
 	udp_header->uh_sport =
 	    htons(get_src_port(num_ports, probe_num, validation));
 
+	size_t payload_len = udp_send_msg_len;
 	if (udp_send_substitutions) {
 		char *payload = (char *)&udp_header[1];
-		int payload_len = 0;
-
 		memset(payload, 0, MAX_UDP_PAYLOAD_LEN);
 
 		// Grab our random number generator
@@ -310,10 +326,6 @@ int udp_make_packet(void *buf, UNUSED size_t *buf_len,
 		payload_len = udp_template_build(udp_template, payload,
 						 MAX_UDP_PAYLOAD_LEN, ip_header,
 						 udp_header, aes);
-		// Recalculate the total length of the packet
-		module_udp.packet_length = sizeof(struct ether_header) +
-					   sizeof(struct ip) +
-					   sizeof(struct udphdr) + payload_len;
 
 		// If success is zero, the template output was truncated
 		if (payload_len <= 0) {
@@ -333,6 +345,8 @@ int udp_make_packet(void *buf, UNUSED size_t *buf_len,
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
 
+	// Recalculate the total length of the packet
+	*buf_len = headers_len + payload_len;
 	return EXIT_SUCCESS;
 }
 
@@ -517,10 +531,6 @@ void udp_template_add_field(udp_payload_template_t *t,
 	t->fcount++;
 	t->fields =
 	    xrealloc(t->fields, sizeof(udp_payload_field_t) * t->fcount);
-	if (!t->fields) {
-		exit(1);
-	}
-
 	t->fields[t->fcount - 1] = xmalloc(sizeof(udp_payload_field_t));
 	c = t->fields[t->fcount - 1];
 
@@ -587,8 +597,7 @@ int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len,
 		}
 
 		switch (c->ftype) {
-
-			// These fields have a specified output length value
+		// These fields have a specified output length value
 
 		case UDP_DATA:
 			if (!(c->data && c->length))
@@ -719,17 +728,17 @@ int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len,
 
 // Convert a string field name to a field type, parsing any specified length
 // value
-int udp_template_field_lookup(char *vname, udp_payload_field_t *c)
+int udp_template_field_lookup(const char *vname, udp_payload_field_t *c)
 {
 	char *param;
 	unsigned int f;
 	unsigned int olen = 0;
 	unsigned int fcount = sizeof(udp_payload_template_fields) /
 			      sizeof(udp_payload_template_fields[0]);
-
+	size_t type_name_len = strlen(vname);
 	param = strstr((const char *)vname, "=");
 	if (param) {
-		*param = '\0';
+		type_name_len = param - vname;
 		param++;
 	}
 
@@ -742,10 +751,10 @@ int udp_template_field_lookup(char *vname, udp_payload_field_t *c)
 	// Find a field that matches the
 	for (f = 0; f < fcount; f++) {
 
-		if (strcmp((char *)vname,
-			   udp_payload_template_fields[f].name) == 0) {
+		if (strncmp(vname,
+		    udp_payload_template_fields[f].name, type_name_len) == 0) {
 			c->ftype = udp_payload_template_fields[f].ftype;
-			c->length = olen;
+			c->length = udp_payload_template_fields[f].max_length || olen;
 			c->data = NULL;
 			return 1;
 		}
@@ -757,9 +766,10 @@ int udp_template_field_lookup(char *vname, udp_payload_field_t *c)
 
 // Allocate a payload template and populate it by parsing a template file as a
 // binary buffer
-udp_payload_template_t *udp_template_load(char *buf, unsigned int len)
+udp_payload_template_t *udp_template_load(char *buf, uint32_t buf_len, uint32_t *max_pkt_len)
 {
 	udp_payload_template_t *t = xmalloc(sizeof(udp_payload_template_t));
+	uint32_t _max_pkt_len = 0;
 
 	// The last $ we encountered outside of a field specifier
 	char *dollar = NULL;
@@ -781,16 +791,14 @@ udp_payload_template_t *udp_template_load(char *buf, unsigned int len)
 	t->fcount = 0;
 	t->fields = NULL;
 
-	while (p < (buf + len)) {
+	while (p < (buf + buf_len)) {
 		switch (*p) {
-
 		case '$':
 			if ((dollar && !lbrack) || !dollar) {
 				dollar = p;
 			}
 			p++;
 			continue;
-
 		case '{':
 			if (dollar && !lbrack) {
 				lbrack = p;
@@ -798,7 +806,6 @@ udp_payload_template_t *udp_template_load(char *buf, unsigned int len)
 
 			p++;
 			continue;
-
 		case '}':
 			if (!(dollar && lbrack)) {
 				p++;
@@ -811,6 +818,7 @@ udp_payload_template_t *udp_template_load(char *buf, unsigned int len)
 				tmp = xmalloc(tlen);
 				memcpy(tmp, s, tlen);
 				udp_template_add_field(t, UDP_DATA, tlen, tmp);
+				_max_pkt_len += tlen;
 			}
 
 			tmp = xcalloc(1, p - lbrack);
@@ -819,7 +827,7 @@ udp_payload_template_t *udp_template_load(char *buf, unsigned int len)
 			if (udp_template_field_lookup(tmp, &c)) {
 				udp_template_add_field(t, c.ftype, c.length,
 						       c.data);
-
+				_max_pkt_len += c.length;
 				// Push the pointer past the } if this was a
 				// valid variable
 				s = p + 1;
@@ -832,17 +840,14 @@ udp_payload_template_t *udp_template_load(char *buf, unsigned int len)
 
 			free(tmp);
 			break;
-
 		default:
 			if (dollar && lbrack) {
 				p++;
 				continue;
 			}
 		}
-
 		dollar = NULL;
 		lbrack = NULL;
-
 		p++;
 	}
 
@@ -852,7 +857,9 @@ udp_payload_template_t *udp_template_load(char *buf, unsigned int len)
 		tmp = xmalloc(tlen);
 		memcpy(tmp, s, tlen);
 		udp_template_add_field(t, UDP_DATA, tlen, tmp);
+		_max_pkt_len += tlen;
 	}
+	*max_pkt_len = _max_pkt_len;
 	return t;
 }
 
@@ -879,8 +886,7 @@ static fielddef_t fields[] = {
 
 probe_module_t module_udp = {
     .name = "udp",
-    .packet_length = sizeof(struct ether_header) + sizeof(struct ip) +
-		     sizeof(struct udphdr) + MAX_UDP_PAYLOAD_LEN,
+    .max_packet_length = 0, // set in init
     .pcap_filter = "udp || icmp",
     .pcap_snaplen = 1500,
     .port_args = 1,
@@ -892,8 +898,8 @@ probe_module_t module_udp = {
     .process_packet = &udp_process_packet,
     .close = &udp_global_cleanup,
     .helptext = "Probe module that sends UDP packets to hosts. Packets can "
-		"optionally be templated based on destination host. Specify"
-		" packet file with --probe-args=file:/path_to_packet_file "
+		"optionally be templated based on destination host. Specify "
+		"packet file with --probe-args=file:/path_to_packet_file "
 		"and templates with template:/path_to_template_file.",
     .fields = fields,
     .numfields = sizeof(fields) / sizeof(fields[0])};
