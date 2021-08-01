@@ -91,7 +91,7 @@ fieldset_t *fs_new_repeated_fieldset();
 
 char *fs_get_string_by_index(fieldset_t *fs, int index);
 
-int fds_get_index_by_name(fielddefset_t *fds, char *name);
+int fds_get_index_by_name(fielddefset_t *fds, const char *name);
 
 void gen_fielddef_set(fielddefset_t *fds, fielddef_t fs[], int len);
 

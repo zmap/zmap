@@ -30,7 +30,7 @@ void enforce_range(const char *name, int v, int min, int max);
 // Splits comma delimited string into char*[]. Does not handle
 // escaping or complicated setups - designed to process a set
 // of fields that the user wants output
-void split_string(char *in, int *len, char ***results);
+void split_string(const char *in, int *len, char ***results);
 
 // Print a string using w length long lines, attempting to break on
 // spaces

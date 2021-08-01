@@ -24,11 +24,13 @@ option "blocklist-file"         b "File of subnets to exclude, in CIDR notation,
 option "allowlist-file"         w "File of subnets to constrain scan to, in CIDR notation, e.g. 192.168.0.0/16"
     typestr="path"
     optional string
-option "list-of-ips-file"		I "List of individual addresses to scan in random order. Use --white-list file unless >1 million IPs"
+option "list-of-ips-file"       I "List of individual addresses to scan in random order. Use --white-list file unless >1 million IPs"
     typestr="path"
     optional string
 
+
 section "Scan Options"
+
 option "rate"                   r "Set send rate in packets/sec"
     typestr="pps"
     optional int
@@ -64,6 +66,7 @@ option "retries"                - "Max number of times to try to send packet if 
     optional int
 option "dryrun"                 d "Don't actually send packets"
     optional
+
 
 section "Scan Sharding"
 
@@ -120,7 +123,6 @@ option "output-fields"          f "Fields that should be output in result set"
     optional string
 option "output-module"          O "Select output module"
     typestr="name"
-    default="default"
     optional string
 option "output-args"            - "Arguments to pass to output module"
     typestr="args"
@@ -132,6 +134,9 @@ option "list-output-modules"    - "List available output modules"
         optional
 option "list-output-fields"     - "List all fields that can be output by selected probe module"
     optional
+option "no-header-row"          - "Precludes outputting any header rows in data (e.g., CSV headers)"
+    optional
+
 
 section "Logging and Metadata"
 option "verbosity"              v "Level of log detail (0-5)"
@@ -192,7 +197,7 @@ option "version"                V "Print version and exit"
     optional
 
 text "\nExamples:\n\
-    zmap -p 80 (scan the Internet for hosts on tcp/80 and output to stdout)\n\
+    zmap -p 80 (scan full IPv4 address space for hosts on TCP/80)\n\
     zmap -N 5 -B 10M -p 80 (find 5 HTTP servers, scanning at 10 Mb/s)\n\
-    zmap -p 80 10.0.0.0/8 192.168.0.0/16 -o (scan both subnets on tcp/80)\n\
-    zmap -p 80 1.2.3.4 10.0.0.3 (scan 1.2.3.4, 10.0.0.3 on tcp/80)"
+    zmap -p 80 10.0.0.0/8 192.168.0.0/16 (scan both subnets on TCP/80)\n\
+    zmap -p 80 1.2.3.4 10.0.0.3 (scan 1.2.3.4, 10.0.0.3 on TCP/80)"

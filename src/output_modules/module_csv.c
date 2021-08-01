@@ -40,9 +40,9 @@ int csv_init(struct state_conf *conf, char **fields, int fieldlens)
 		}
 	} else {
 		file = stdout;
-		log_info("csv", "no output file selected, will use stdout");
+		log_debug("csv", "no output file selected, will use stdout");
 	}
-	if (file && strcmp(conf->output_module_name, "default")) {
+	if (!conf->no_header_row) {
 		log_debug("csv", "more than one field, will add headers");
 		for (int i = 0; i < fieldlens; i++) {
 			if (i) {
