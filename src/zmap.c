@@ -399,7 +399,7 @@ int main(int argc, char *argv[])
 				"is equivalent to running ZMap with the following flags: "
 				"--output-module=csv --output-fields=saddr --output-filter='"
 				"success=1 && repeat=0' --no-header-row. "
-				"If you want all responses, select a different output module or "
+				"If you want all responses, explicitly set an output module or "
 				"set --output-filter=\"\".");
 		zconf.output_module = get_output_module_by_name("csv");
 		zconf.output_module_name = strdup("csv");
