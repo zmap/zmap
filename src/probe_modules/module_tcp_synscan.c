@@ -206,13 +206,13 @@ static fielddef_t fields[] = {
     {.name = "acknum", .type = "int", .desc = "TCP acknowledgement number"},
     {.name = "window", .type = "int", .desc = "TCP window"},
     CLASSIFICATION_SUCCESS_FIELDSET_FIELDS,
-    ICMP_FIELDSET_FIELDS    
+    ICMP_FIELDSET_FIELDS,
 };
 
 probe_module_t module_tcp_synscan = {
     .name = "tcp_synscan",
     .packet_length = 54,
-    .pcap_filter = "tcp && tcp[13] & 4 != 0 || tcp[13] == 18",
+    .pcap_filter = "(tcp && tcp[13] & 4 != 0 || tcp[13] == 18) || icmp",
     .pcap_snaplen = 96,
     .port_args = 1,
     .global_initialize = &synscan_global_initialize,
@@ -228,4 +228,4 @@ probe_module_t module_tcp_synscan = {
 		"is considered a failed response.",
     .output_type = OUTPUT_TYPE_STATIC,
     .fields = fields,
-    .numfields = 10};
+    .numfields = 5 + CLASSIFICATION_SUCCESS_FIELDSET_LEN + ICMP_FIELDSET_LEN};

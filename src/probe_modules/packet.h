@@ -41,6 +41,7 @@
      .type = "bool", \
      .desc = "is response considered success"} 
 
+#define CLASSIFICATION_SUCCESS_FIELDSET_LEN 2
 
 #define ICMP_FIELDSET_FIELDS \
     {.name = "icmp_responder", \
@@ -51,6 +52,8 @@
     {.name = "icmp_unreach_str", \
      .type = "string", \
      .desc = "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"}
+
+#define ICMP_FIELDSET_LEN 4
 
 
 typedef unsigned short __attribute__((__may_alias__)) alias_unsigned_short;
