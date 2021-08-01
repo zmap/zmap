@@ -806,15 +806,7 @@ static fielddef_t fields[] = {
      .desc = "is response considered success"},
     {.name = "sport", .type = "int", .desc = "UDP source port"},
     {.name = "dport", .type = "int", .desc = "UDP destination port"},
-    {.name = "icmp_responder",
-     .type = "string",
-     .desc = "Source IP of ICMP_UNREACH message"},
-    {.name = "icmp_type", .type = "int", .desc = "icmp message type"},
-    {.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
-    {.name = "icmp_unreach_str",
-     .type = "string",
-     .desc =
-	 "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"},
+    ICMP_FIELDSET_FIELDS,
     {.name = "udp_pkt_size", .type = "int", .desc = "UDP packet length"},
     {.name = "data", .type = "binary", .desc = "UDP payload"}};
 

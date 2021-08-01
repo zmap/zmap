@@ -110,7 +110,10 @@ static void fs_modify_word(fieldset_t *fs, const char *name, int type,
 			return;
 		}
 	}
-	fs_add_word(fs, name, type, free_, len, value);
+	// TODO(ZD): We need to test, but this is really unsafe to just add because it 
+	// will all but guarantee that it's in the wront place
+	//fs_add_word(fs, name, type, free_, len, value);
+	log_fatal("fs", "attempting to modify non-existent field");
 }
 
 static char *sanitize_utf8(const char *buf)
@@ -279,6 +282,12 @@ void fs_modify_string(fieldset_t *fs, const char *name, char *value, int free_)
 {
 	field_val_t val = {.ptr = value};
 	fs_modify_word(fs, name, FS_STRING, free_, strlen(value), val);
+}
+
+void fs_modify_constchar(fieldset_t *fs, const char *name, const char *value)
+{
+	field_val_t val = {.ptr = (char*) value};
+	fs_modify_word(fs, name, FS_STRING, 0, strlen(value), val);
 }
 
 void fs_modify_uint64(fieldset_t *fs, const char *name, uint64_t value)

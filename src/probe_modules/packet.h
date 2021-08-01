@@ -33,6 +33,26 @@
 #define PRINT_PACKET_SEP                                                       \
 	"------------------------------------------------------\n"
 
+#define CLASSIFICATION_SUCCESS_FIELDSET_FIELDS \
+    {.name = "classification", \
+     .type = "string", \
+     .desc = "packet classification"}, \
+    {.name = "success", \
+     .type = "bool", \
+     .desc = "is response considered success"} 
+
+
+#define ICMP_FIELDSET_FIELDS \
+    {.name = "icmp_responder", \
+     .type = "string", \
+     .desc = "Source IP of ICMP_UNREACH messages"}, \
+    {.name = "icmp_type", .type = "int", .desc = "icmp message type"}, \
+    {.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"}, \
+    {.name = "icmp_unreach_str", \
+     .type = "string", \
+     .desc = "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"}
+
+
 typedef unsigned short __attribute__((__may_alias__)) alias_unsigned_short;
 
 void make_eth_header(struct ether_header *ethh, macaddr_t *src, macaddr_t *dst);

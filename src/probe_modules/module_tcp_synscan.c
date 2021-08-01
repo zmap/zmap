@@ -37,7 +37,6 @@ static int synscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 				  port_h_t dst_port,
 				  UNUSED void **arg_ptr)
 {
-	memset(buf, 0, MAX_PACKET_SIZE);
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	make_eth_header(eth_header, src, gw);
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
@@ -92,6 +91,7 @@ void synscan_print_packet(FILE *fp, void *packet)
 	fprintf(fp, PRINT_PACKET_SEP);
 }
 
+
 static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 				   uint32_t *src_ip, uint32_t *validation)
 {
@@ -141,7 +141,9 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		}
 		// we can always check the destination port because this is the
 		// original packet and wouldn't have been altered by something
-		// responding on a different port
+		// responding on a different port. Note this is *different*
+		// than the logic above because we're validating the probe packet
+		// rather than the response packet
 		port_h_t sport = ntohs(tcp->th_sport);
 		port_h_t dport = ntohs(tcp->th_dport);
 		if (dport != target_port) {
@@ -175,11 +177,10 @@ static void synscan_process_packet(const u_char *packet,
 		fs_add_uint64(fs, "acknum", (uint64_t)ntohl(tcp->th_ack));
 		fs_add_uint64(fs, "window", (uint64_t)ntohs(tcp->th_win));
 		if (tcp->th_flags & TH_RST) { // RST packet
-			fs_add_string(fs, "classification", (char *)"rst", 0);
+			fs_add_constchar(fs, "classification", "rst");
 			fs_add_bool(fs, "success", 0);
 		} else { // SYNACK packet
-			fs_add_string(fs, "classification", (char *)"synack",
-				      0);
+			fs_add_constchar(fs, "classification", "synack");
 			fs_add_bool(fs, "success", 1);
 		}
 		fs_add_null_icmp(fs);
@@ -191,7 +192,7 @@ static void synscan_process_packet(const u_char *packet,
 		fs_add_null(fs, "acknum");
 		fs_add_null(fs, "window");
 		// global
-		fs_add_string(fs, "classification", (char *)"icmp", 0);
+		fs_add_constchar(fs, "classification", "icmp-unreach");
 		fs_add_bool(fs, "success", 0);
 		// icmp
 		fs_populate_icmp_from_iphdr(ip_hdr, len, fs);
@@ -204,18 +205,9 @@ static fielddef_t fields[] = {
     {.name = "seqnum", .type = "int", .desc = "TCP sequence number"},
     {.name = "acknum", .type = "int", .desc = "TCP acknowledgement number"},
     {.name = "window", .type = "int", .desc = "TCP window"},
-    {.name = "classification",
-     .type = "string",
-     .desc = "packet classification"},
-    {.name = "success",
-     .type = "bool",
-     .desc = "is response considered success"},
-    {.name = "icmp_type", .type = "int", .desc = "icmp message type"},
-    {.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
-    {.name = "icmp_unreach_str",
-     .type = "string",
-     .desc =
-	 "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"}};
+    CLASSIFICATION_SUCCESS_FIELDSET_FIELDS,
+    ICMP_FIELDSET_FIELDS    
+};
 
 probe_module_t module_tcp_synscan = {
     .name = "tcp_synscan",

@@ -185,14 +185,8 @@ void upnp_process_packet(const u_char *packet,
 			      (void *)&udp[1], 0);
 
 		free(s);
-#if 0
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
-		struct icmp *icmp = (struct icmp *) ((char *) ip_hdr + ip_hdr->ip_hl * 4);
-		struct ip *ip_inner = (struct ip *) ((char *) icmp + ICMP_UNREACH_HEADER_SIZE);
-		// ICMP unreach comes from another server (not the one we sent a probe to);
-		// But we will fix up saddr to be who we sent the probe to, in case you care.
-		fs_modify_string(fs, "saddr", make_ip_str(ip_inner->ip_dst.s_addr), 1);
-		fs_add_string(fs, "classification", (char*) "icmp-unreach", 0);
+		fs_add_constchar(fs, "classification", "icmp-unreach");
 		fs_add_uint64(fs, "success", 0);
 
 		fs_add_null(fs, "server");
@@ -207,18 +201,11 @@ void upnp_process_packet(const u_char *packet,
 
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");
-		fs_add_string(fs, "icmp_responder", make_ip_str(ip_hdr->ip_src.s_addr), 1);
-		fs_add_uint64(fs, "icmp_type", icmp->icmp_type);
-		fs_add_uint64(fs, "icmp_code", icmp->icmp_code);
-		if (icmp->icmp_code <= ICMP_UNREACH_PRECEDENCE_CUTOFF) {
-			fs_add_string(fs, "icmp_unreach_str", (char *) udp_unreach_strings[icmp->icmp_code], 0);
-		} else {
-			fs_add_string(fs, "icmp_unreach_str", (char *) "unknown", 0);
-		}
+
+		fs_populate_icmp_from_iphdr(ip_hdr, len, fs);
 		fs_add_null(fs, "data");
-#endif
 	} else {
-		fs_add_string(fs, "classification", (char *)"other", 0);
+		fs_add_constchar(fs, "classification", "other");
 		fs_add_bool(fs, "success", 0);
 		fs_add_null(fs, "server");
 		fs_add_null(fs, "location");
@@ -259,16 +246,7 @@ static fielddef_t fields[] = {
 
     {.name = "sport", .type = "int", .desc = "UDP source port"},
     {.name = "dport", .type = "int", .desc = "UDP destination port"},
-    {.name = "icmp_responder",
-     .type = "string",
-     .desc = "Source IP of ICMP_UNREACH message"},
-    {.name = "icmp_type", .type = "int", .desc = "icmp message type"},
-    {.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
-    {.name = "icmp_unreach_str",
-     .type = "string",
-     .desc =
-	 "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"},
-
+    ICMP_FIELDSET_FIELDS,
     {.name = "data", .type = "binary", .desc = "UDP payload"}};
 
 probe_module_t module_upnp = {
