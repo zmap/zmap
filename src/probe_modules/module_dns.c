@@ -873,13 +873,15 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		// Success: Has the right validation bits and the right Q
 		// App success: has qr and rcode bits right
 		// Any app level parsing issues: dns_parse_err
+		//
+		fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
+		fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
+
 
 		// High level info
 		fs_add_string(fs, "classification", (char *)"dns", 0);
 		fs_add_bool(fs, "success", is_valid);
 		// TCP/UDP info
-		fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
-		fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
 		// ICMP info
 		fs_add_null_icmp(fs);
 		// additional UDP information
@@ -991,6 +993,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		fs_add_binary(fs, "raw_data", (udp_len - sizeof(struct udphdr)),
 			      (void *)&udp_hdr[1], 0);
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
+		// TODO: ADD SADDR, classification, etc.
 		fs_populate_icmp_from_iphdr(ip_hdr, len, fs);
 		// ICMP info
 		fs_add_null(fs, "udp_len");
@@ -1034,15 +1037,12 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 }
 
 static fielddef_t fields[] = {
-    {.name = "classification", .type = "string", .desc = "packet protocol"},
-    {.name = "success",
-     .type = "bool",
-     .desc = "Are the validation bits and question correct"},
+    {.name = "sport", .type = "int", .desc = "UDP source port"},
+    {.name = "dport", .type = "int", .desc = "UDP destination port"},
+    CLASSIFICATION_SUCCESS_FIELDSET_FIELDS,
     {.name = "app_success",
      .type = "bool",
      .desc = "Is the RA bit set with no error code?"},
-    {.name = "sport", .type = "int", .desc = "UDP source port"},
-    {.name = "dport", .type = "int", .desc = "UDP destination port"},
     ICMP_FIELDSET_FIELDS,
     {.name = "udp_len", .type = "int", .desc = "UDP packet lenght"},
     {.name = "dns_id", .type = "int", .desc = "DNS transaction ID"},
