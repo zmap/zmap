@@ -21,7 +21,8 @@
 #include "packet.h"
 #include "module_tcp_synscan.h"
 
-#define ZMAP_TCP_SYNACKSCAN_PACKET_LEN 54
+#define ZMAP_TCP_SYNACKSCAN_TCP_HEADER_LEN 24
+#define ZMAP_TCP_SYNACKSCAN_PACKET_LEN 58
 
 probe_module_t module_tcp_synackscan;
 static uint32_t num_ports;
@@ -40,10 +41,11 @@ static int synackscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	make_eth_header(eth_header, src, gw);
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
-	uint16_t len = htons(sizeof(struct ip) + sizeof(struct tcphdr));
+	uint16_t len = htons(sizeof(struct ip) + ZMAP_TCP_SYNACKSCAN_TCP_HEADER_LEN);
 	make_ip_header(ip_header, IPPROTO_TCP, len);
 	struct tcphdr *tcp_header = (struct tcphdr *)(&ip_header[1]);
 	make_tcp_header(tcp_header, dst_port, TH_SYN | TH_ACK);
+	set_mss_option(tcp_header);
 	return EXIT_SUCCESS;
 }
 
@@ -69,7 +71,7 @@ static int synackscan_make_packet(void *buf, UNUSED size_t *buf_len,
 	tcp_header->th_ack = tcp_ack;
 	tcp_header->th_sum = 0;
 	tcp_header->th_sum =
-	    tcp_checksum(sizeof(struct tcphdr), ip_header->ip_src.s_addr,
+	    tcp_checksum(ZMAP_TCP_SYNACKSCAN_TCP_HEADER_LEN, ip_header->ip_src.s_addr,
 			 ip_header->ip_dst.s_addr, tcp_header);
 
 	ip_header->ip_sum = 0;

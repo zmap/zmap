@@ -118,6 +118,24 @@ void make_tcp_header(struct tcphdr *tcp_header, port_h_t dest_port,
 	tcp_header->th_dport = htons(dest_port);
 }
 
+size_t set_mss_option(struct tcphdr *tcp_header) {
+	// This only sets MSS, which is a single-word option.
+	size_t header_size = tcp_header->th_off * 4;
+	uint8_t *base = (uint8_t *) tcp_header;
+	uint8_t *last_opt = (uint8_t*) base + header_size;
+
+	// TCP Option "header"
+	last_opt[0] = 2; // MSS
+	last_opt[1] = 4; // MSS is 4 bytes long
+
+	// Default Linux MSS is 1460, which 0x05b4
+	last_opt[2] = 0x05;
+	last_opt[3] = 0xb4;
+
+	tcp_header->th_off += 1;
+	return tcp_header->th_off*4;
+}
+
 void make_udp_header(struct udphdr *udp_header, port_h_t dest_port,
 		     uint16_t len)
 {
