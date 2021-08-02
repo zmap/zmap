@@ -140,7 +140,7 @@ void udp_set_num_ports(int x) { num_ports = x; }
 
 int udp_global_initialize(struct state_conf *conf)
 {
-	size_t udp_template_max_len = 0;
+	uint32_t udp_template_max_len = 0;
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
 
 	if (!conf->probe_args) {
@@ -196,8 +196,7 @@ int udp_global_initialize(struct state_conf *conf)
 		size_t in_len = fread(in, 1, MAX_UDP_PAYLOAD_LEN, f);
 		fclose(f);
 
-		uint32_t max_pkt_len;
-		udp_template = udp_template_load(in, in_len, &max_pkt_len);
+		udp_template = udp_template_load(in, in_len, &udp_template_max_len);
 		module_udp.make_packet = udp_make_templated_packet;
 	} else if (strcmp(args, "hex") == 0) {
 		udp_fixed_payload_len = strlen(c) / 2;
@@ -232,6 +231,7 @@ int udp_global_initialize(struct state_conf *conf)
 		module_udp.max_packet_length =
 		    header_len + udp_template_max_len;
 	}
+	assert(module_udp.max_packet_length);
 	assert(module_udp.max_packet_length <= MAX_PACKET_SIZE);
 	return EXIT_SUCCESS;
 }
