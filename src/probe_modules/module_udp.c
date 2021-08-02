@@ -756,7 +756,6 @@ int udp_template_field_lookup(const char *vname, udp_payload_field_t *c)
 	}
 
 	// Find a field that matches the
-	log_error("udp_template", "vname: %.*s", type_name_len, vname);
 	for (unsigned int f = 0; f < fcount; f++) {
 		const udp_payload_field_type_def_t* ftype = &udp_payload_template_fields[f];
 		if (strncmp(vname, ftype->name, type_name_len) == 0 && strlen(ftype->name) == type_name_len) {
@@ -858,7 +857,6 @@ udp_payload_template_t *udp_template_load(uint8_t *buf, uint32_t buf_len,
 		lbrack = NULL;
 		p++;
 	}
-	log_error("udp", "%s", "template loaded");
 
 	// Store the trailing bytes as a final data field
 	if (s < p) {
