@@ -27,6 +27,12 @@ probe_module_t module_ntp;
 
 static int num_ports;
 
+
+int ntp_global_initialize(struct state_conf *conf) {
+	num_ports = conf->source_port_last - conf->source_port_first + 1;
+	return udp_global_initialize(conf);
+}
+
 int ntp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
 		    uint32_t *validation, int probe_num)
 {
@@ -101,7 +107,7 @@ void ntp_process_packet(const u_char *packet,
 			temp64 = *((uint64_t *)ptr + 16);
 			fs_add_uint64(fs, "reference_timestamp", temp64);
 			temp64 = *((uint64_t *)ptr + 24);
-			fs_add_uint64(fs, "originate_timestap", temp64);
+			fs_add_uint64(fs, "originate_timestamp", temp64);
 			temp64 = *((uint64_t *)ptr + 32);
 			fs_add_uint64(fs, "receive_timestamp", temp64);
 			temp64 = *((uint64_t *)ptr + 39);
@@ -145,7 +151,7 @@ void ntp_process_packet(const u_char *packet,
 		fs_add_null(fs, "root_dispersion");
 		fs_add_null(fs, "reference_clock_identifier");
 		fs_add_null(fs, "reference_timestamp");
-		fs_add_null(fs, "originate_timestap");
+		fs_add_null(fs, "originate_timestamp");
 		fs_add_null(fs, "receive_timestamp");
 		fs_add_null(fs, "transmit_timestamp");
 
@@ -166,7 +172,7 @@ void ntp_process_packet(const u_char *packet,
 		fs_add_null(fs, "root_dispersion");
 		fs_add_null(fs, "reference_clock_identifier");
 		fs_add_null(fs, "reference_timestamp");
-		fs_add_null(fs, "originate_timestap");
+		fs_add_null(fs, "originate_timestamp");
 		fs_add_null(fs, "receive_timestamp");
 		fs_add_null(fs, "transmit_timestamp");
 	}
@@ -264,7 +270,7 @@ probe_module_t module_ntp = {.name = "ntp",
 			     .pcap_snaplen = 1500,
 			     .port_args = 1,
 			     .thread_initialize = &ntp_init_perthread,
-			     .global_initialize = &udp_global_initialize,
+			     .global_initialize = &ntp_global_initialize,
 			     .make_packet = &udp_make_packet,
 			     .print_packet = &ntp_print_packet,
 			     .validate_packet = &ntp_validate_packet,
