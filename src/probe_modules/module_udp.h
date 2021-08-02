@@ -43,7 +43,7 @@ typedef struct udp_payload_field_type_def {
 
 typedef struct udp_payload_field {
 	enum udp_payload_field_type ftype;
-	unsigned int length;
+	size_t length;
 	char *data;
 } udp_payload_field_t;
 

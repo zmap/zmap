@@ -753,6 +753,9 @@ int udp_template_field_lookup(const char *vname, udp_payload_field_t *c)
 		if (!end || end != vname + vname_len) {
 			log_fatal("udp", "invalid template: unable to read length from %s", vname);
 		}
+		if (olen < 0 || olen > MAX_UDP_PAYLOAD_LEN) {
+			log_fatal("udp", "invalid template: field size %d is larger than the max (%d)", olen, MAX_UDP_PAYLOAD_LEN);
+		}
 	}
 
 	// Find a field that matches the
@@ -760,7 +763,7 @@ int udp_template_field_lookup(const char *vname, udp_payload_field_t *c)
 		const udp_payload_field_type_def_t* ftype = &udp_payload_template_fields[f];
 		if (strncmp(vname, ftype->name, type_name_len) == 0 && strlen(ftype->name) == type_name_len) {
 			c->ftype = ftype->ftype;
-			c->length = ftype->max_length ? ftype->max_length : olen;
+			c->length = ftype->max_length ? ftype->max_length : (size_t) olen;
 			c->data = NULL;
 			return 1;
 		}
