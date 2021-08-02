@@ -249,7 +249,7 @@ int send_run(sock_t st, shard_t *s)
 	int interval = 0;
 	volatile int vi;
 	struct timespec ts, rem;
-	double send_rate = (double)zconf.rate / ((double)zconf.senders * zconf.batch);
+	double send_rate = (double)zconf.rate / ((double)zconf.senders * zconf.batch * zconf.packet_streams);
 	const double slow_rate = 50; // packets per seconds per thread
 	// at which it uses the slow methods
 	long nsec_per_sec = 1000 * 1000 * 1000;
@@ -292,7 +292,6 @@ int send_run(sock_t st, shard_t *s)
 	uint32_t idx = 0;
 	while (1) {
 		// Adaptive timing delay
-		send_rate = (double)zconf.rate / ((double)zconf.senders * zconf.batch);
 		if (count && delay > 0) {
 			if (send_rate < slow_rate) {
 				double t = now();
