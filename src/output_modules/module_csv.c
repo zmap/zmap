@@ -24,7 +24,7 @@
 
 static FILE *file = NULL;
 
-int csv_init(struct state_conf *conf, char **fields, int fieldlens)
+int csv_init(struct state_conf *conf, const char **fields, int fieldlens)
 {
 	assert(conf);
 	if (conf->output_filename) {
@@ -40,9 +40,9 @@ int csv_init(struct state_conf *conf, char **fields, int fieldlens)
 		}
 	} else {
 		file = stdout;
-		log_info("csv", "no output file selected, will use stdout");
+		log_debug("csv", "no output file selected, will use stdout");
 	}
-	if (file && strcmp(conf->output_module_name, "default")) {
+	if (!conf->no_header_row) {
 		log_debug("csv", "more than one field, will add headers");
 		for (int i = 0; i < fieldlens; i++) {
 			if (i) {
@@ -111,8 +111,6 @@ int csv_process(fieldset_t *fs)
 
 output_module_t module_csv_file = {
     .name = "csv",
-    .filter_duplicates = 0,   // framework should not filter out duplicates
-    .filter_unsuccessful = 0, // framework should not filter out unsuccessful
     .init = &csv_init,
     .start = NULL,
     .update = NULL,
@@ -125,4 +123,5 @@ output_module_t module_csv_file = {
 	"probe module does not filter out duplicates or limit to successful fields, "
 	"but rather includes all received packets. Fields can be controlled by "
 	"setting --output-fields. Filtering out failures and duplicate packets can "
-	"be achieved by setting an --output-filter."};
+	"be achieved by setting an --output-filter."
+};

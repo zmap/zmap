@@ -12,8 +12,7 @@
 // global configuration and defaults
 struct state_conf zconf = {.log_level = LOG_INFO,
 			   .source_port_first = 32768, // (these are the default
-			   .source_port_last =
-			       61000, //	 ephemeral range on Linux)
+			   .source_port_last = 61000, //   ephemeral range on Linux)
 			   .output_filename = NULL,
 			   .blocklist_filename = NULL,
 			   .allowlist_filename = NULL,
@@ -63,7 +62,10 @@ struct state_conf zconf = {.log_level = LOG_INFO,
 			   .notes = NULL,
 			   .custom_metadata_str = NULL,
 			   .recv_ready = 0,
-			   .data_link_size = 0};
+			   .data_link_size = 0,
+			   .default_mode = 0,
+			   .no_header_row = 0,
+};
 
 void init_empty_global_configuration(struct state_conf *c) {
 	memset(c->source_ip_addresses, 0, sizeof(c->source_ip_addresses));

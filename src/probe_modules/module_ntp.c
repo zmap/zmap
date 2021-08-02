@@ -27,6 +27,12 @@ probe_module_t module_ntp;
 
 static int num_ports;
 
+
+int ntp_global_initialize(struct state_conf *conf) {
+	num_ports = conf->source_port_last - conf->source_port_first + 1;
+	return udp_global_initialize(conf);
+}
+
 int ntp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
 		    uint32_t *validation, int probe_num)
 {
@@ -101,7 +107,7 @@ void ntp_process_packet(const u_char *packet,
 			temp64 = *((uint64_t *)ptr + 16);
 			fs_add_uint64(fs, "reference_timestamp", temp64);
 			temp64 = *((uint64_t *)ptr + 24);
-			fs_add_uint64(fs, "originate_timestap", temp64);
+			fs_add_uint64(fs, "originate_timestamp", temp64);
 			temp64 = *((uint64_t *)ptr + 32);
 			fs_add_uint64(fs, "receive_timestamp", temp64);
 			temp64 = *((uint64_t *)ptr + 39);
@@ -145,7 +151,7 @@ void ntp_process_packet(const u_char *packet,
 		fs_add_null(fs, "root_dispersion");
 		fs_add_null(fs, "reference_clock_identifier");
 		fs_add_null(fs, "reference_timestamp");
-		fs_add_null(fs, "originate_timestap");
+		fs_add_null(fs, "originate_timestamp");
 		fs_add_null(fs, "receive_timestamp");
 		fs_add_null(fs, "transmit_timestamp");
 
@@ -166,7 +172,7 @@ void ntp_process_packet(const u_char *packet,
 		fs_add_null(fs, "root_dispersion");
 		fs_add_null(fs, "reference_clock_identifier");
 		fs_add_null(fs, "reference_timestamp");
-		fs_add_null(fs, "originate_timestap");
+		fs_add_null(fs, "originate_timestamp");
 		fs_add_null(fs, "receive_timestamp");
 		fs_add_null(fs, "transmit_timestamp");
 	}
@@ -190,14 +196,12 @@ int ntp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 
 	make_udp_header(udp_header, zconf.target_port, len);
 
-	char *payload = (char *)(&ntp_header[1]);
-
-	module_ntp.packet_length = sizeof(struct ether_header) +
-				   sizeof(struct ip) + sizeof(struct udphdr) +
-				   sizeof(struct ntphdr);
-
-	assert(module_ntp.packet_length <= MAX_PACKET_SIZE);
-	memcpy(payload, ntp_header, module_ntp.packet_length);
+	// TODO(dadrian): Should this have a payload? It was being set incorrectly.
+	size_t header_len = sizeof(struct ether_header)
+	    + sizeof(struct ip)
+	    + sizeof(struct udphdr)
+	    + sizeof(struct ntphdr);
+	module_ntp.max_packet_length = header_len;
 
 	uint32_t seed = aesrand_getword(zconf.aes);
 	aesrand_t *aes = aesrand_init_from_seed(seed);
@@ -232,14 +236,7 @@ static fielddef_t fields[] = {
      .desc = "is  response considered success"},
     {.name = "sport", .type = "int", .desc = "UDP source port"},
     {.name = "dport", .type = "int", .desc = "UDP destination port"},
-    {.name = "icmp_responder",
-     .type = "string",
-     .desc = "Source IP of ICMP_UNREACH messages"},
-    {.name = "icmp_type", .type = "int", .desc = "icmp message type"},
-    {.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
-    {.name = "icmp_unreach_str",
-     .type = "string",
-     .desc = "for icmp_unreach responses, the string version of icmp_code "},
+    ICMP_FIELDSET_FIELDS,
     {.name = "LI_VN_MODE",
      .type = "int",
      .desc = "leap indication, version number, mode"},
@@ -266,12 +263,12 @@ static fielddef_t fields[] = {
 };
 
 probe_module_t module_ntp = {.name = "ntp",
-			     .packet_length = 1,
+			     .max_packet_length = 0, // set in init
 			     .pcap_filter = "udp || icmp",
 			     .pcap_snaplen = 1500,
 			     .port_args = 1,
 			     .thread_initialize = &ntp_init_perthread,
-			     .global_initialize = &udp_global_initialize,
+			     .global_initialize = &ntp_global_initialize,
 			     .make_packet = &udp_make_packet,
 			     .print_packet = &ntp_print_packet,
 			     .validate_packet = &ntp_validate_packet,

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021 Regents of the University of Michigan
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include "../state.h"
 #include "../fieldset.h"
 
@@ -17,6 +33,20 @@ typedef int (*probe_thread_init_cb)(void *packetbuf, macaddr_t *src_mac,
 				    macaddr_t *gw_mac, port_n_t src_port,
 				    void **arg_ptr);
 
+// The make_packet callback is passed a buffer pointing at an ethernet header.
+// The buffer is MAX_PACKET_SIZE bytes. The callback must update the value
+// pointed at by buf_len with the actual length of the packet. The contents of
+// the buffer will match the previous packet sent. Every invocation of
+// make_packet contains a unique (src_ip, probe_num) tuple.
+//
+// The probe module is responsible for populating the IP header. The src_ip,
+// dst_ip, and ttl are provided by the framework and must be set on the IP
+// header.
+//
+// The uin32_t validation parameter is a pointer to four 4-byte words of
+// validation data.  The data is deterministic based on the the validation
+// state, and is constant across a src_ip. To get the src_port, use the
+// get_src_port function which takes probe_num and validation as parameters.
 typedef int (*probe_make_packet_cb)(void *packetbuf, size_t *buf_len,
 				    ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
 				    uint32_t *validation, int probe_num,
@@ -33,7 +63,12 @@ typedef void (*probe_classify_packet_cb)(const u_char *packetbuf, uint32_t len,
 
 typedef struct probe_module {
 	const char *name;
-	size_t packet_length;
+
+	// TODO(dadrian): Completely get rid of this. We can do bandwidth rate
+	// limiting by actually counting how much data is sent over the wire. We
+	// know the lengths of packets from the make_packet API.
+	size_t max_packet_length;
+
 	const char *pcap_filter;
 	size_t pcap_snaplen;
 

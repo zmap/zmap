@@ -46,8 +46,8 @@
 
 int test_recursive_fieldsets(void)
 {
-	fieldset_t *outer = fs_new_fieldset();
-	fieldset_t *inner = fs_new_fieldset();
+	fieldset_t *outer = fs_new_fieldset(NULL);
+	fieldset_t *inner = fs_new_fieldset(NULL);
 
 	fieldset_t *repeated = fs_new_repeated_string(0);
 	assert(repeated->type == FS_REPEATED);

@@ -40,3 +40,4 @@ void print_output_modules(void)
 		printf("%s\n", output_modules[i]->name);
 	}
 }
+

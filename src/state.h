@@ -104,8 +104,8 @@ struct state_conf {
 	char *custom_metadata_str;
 	char **destination_cidrs;
 	int destination_cidrs_len;
-	char *raw_output_fields;
-	char **output_fields;
+	const char *raw_output_fields;
+	const char **output_fields;
 	struct output_filter filter;
 	char *output_filter_str;
 	struct fieldset_conf fsconf;
@@ -126,6 +126,8 @@ struct state_conf {
 	int max_sendto_failures;
 	float min_hitrate;
 	int data_link_size;
+	int default_mode;
+	int no_header_row;
 #ifdef PFRING
 	struct {
 		pfring_zc_cluster *cluster;

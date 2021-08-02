@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021 Regents of the University of Michigan
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include "../../lib/includes.h"
 #include "../../lib/blocklist.h"
 #include "../state.h"
@@ -16,6 +32,29 @@
 
 #define PRINT_PACKET_SEP                                                       \
 	"------------------------------------------------------\n"
+
+#define CLASSIFICATION_SUCCESS_FIELDSET_FIELDS \
+    {.name = "classification", \
+     .type = "string", \
+     .desc = "packet classification"}, \
+    {.name = "success", \
+     .type = "bool", \
+     .desc = "is response considered success"} 
+
+#define CLASSIFICATION_SUCCESS_FIELDSET_LEN 2
+
+#define ICMP_FIELDSET_FIELDS \
+    {.name = "icmp_responder", \
+     .type = "string", \
+     .desc = "Source IP of ICMP_UNREACH messages"}, \
+    {.name = "icmp_type", .type = "int", .desc = "icmp message type"}, \
+    {.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"}, \
+    {.name = "icmp_unreach_str", \
+     .type = "string", \
+     .desc = "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"}
+
+#define ICMP_FIELDSET_LEN 4
+
 
 typedef unsigned short __attribute__((__may_alias__)) alias_unsigned_short;
 

@@ -107,9 +107,9 @@ int icmp_global_initialize(struct state_conf *conf)
 		return EXIT_FAILURE;
 	}
 
-	module_icmp_echo.packet_length = sizeof(struct ether_header) +
+	module_icmp_echo.max_packet_length = sizeof(struct ether_header) +
 							   sizeof(struct ip) + ICMP_MINLEN + icmp_payload_len;
-	assert(module_icmp_echo.packet_length <= 1500);
+	assert(module_icmp_echo.max_packet_length <= 1500);
 	return EXIT_SUCCESS;
 }
 
@@ -150,7 +150,7 @@ static int icmp_echo_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	return EXIT_SUCCESS;
 }
 
-static int icmp_echo_make_packet(void *buf, UNUSED size_t *buf_len,
+static int icmp_echo_make_packet(void *buf, size_t *buf_len,
 				 ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
 				 uint32_t *validation, UNUSED int probe_num,
 				 UNUSED void *arg)
@@ -301,7 +301,7 @@ static void icmp_echo_process_packet(const u_char *packet,
 static fielddef_t fields[] = {
 	{.name = "type", .type = "int", .desc = "icmp message type"},
 	{.name = "code", .type = "int", .desc = "icmp message sub type code"},
-	{.name = "icmp-id", .type = "int", .desc = "icmp id number"},
+	{.name = "icmp_id", .type = "int", .desc = "icmp id number"},
 	{.name = "seq", .type = "int", .desc = "icmp sequence number"},
 	{.name = "classification",
 	 .type = "string",
@@ -312,7 +312,7 @@ static fielddef_t fields[] = {
 	{.name = "data", .type = "binary", .desc = "ICMP payload"}};
 
 probe_module_t module_icmp_echo = {.name = "icmp_echoscan",
-				   .packet_length = 48,
+				   .max_packet_length = 48,
 				   .pcap_filter = "icmp and icmp[0]!=8",
 				   .pcap_snaplen = 96,
 				   .port_args = 0,

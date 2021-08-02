@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021 Regents of the University of Michigan
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #define _GNU_SOURCE
 #include "util.h"
 
@@ -9,6 +25,7 @@
 #include "includes.h"
 #include "xalloc.h"
 
+#include <errno.h>
 #include <unistd.h>
 #include <sched.h>
 #include <pthread.h>
@@ -35,11 +52,11 @@ void enforce_range(const char *name, int v, int min, int max)
 	}
 }
 
-void split_string(char *in, int *len, char ***results)
+void split_string(const char *in, int *len, const char ***results)
 {
-	char **fields = xcalloc(MAX_SPLITS, sizeof(char *));
+	const char **fields = xcalloc(MAX_SPLITS, sizeof(const char *));
 	int retvlen = 0;
-	char *currloc = in;
+	const char *currloc = in;
 	// parse csv into a set of strings
 	while (1) {
 		assert(retvlen < MAX_SPLITS);
@@ -62,7 +79,7 @@ void split_string(char *in, int *len, char ***results)
 	*len = retvlen;
 }
 
-void fprintw(FILE *f, char *s, size_t w)
+void fprintw(FILE *f, const char *s, size_t w)
 {
 	if (strlen(s) <= w) {
 		fprintf(f, "%s", s);
@@ -113,7 +130,6 @@ void fprintw(FILE *f, char *s, size_t w)
 
 uint32_t parse_max_hosts(char *max_targets)
 {
-	int errno = 0;
 	char *end;
 	double v = strtod(max_targets, &end);
 	if (end == max_targets || errno != 0) {
