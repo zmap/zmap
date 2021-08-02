@@ -231,4 +231,5 @@ probe_module_t module_tcp_synscan = {
 		"is considered a failed response.",
     .output_type = OUTPUT_TYPE_STATIC,
     .fields = fields,
-    .numfields = 5 + CLASSIFICATION_SUCCESS_FIELDSET_LEN + ICMP_FIELDSET_LEN};
+    .numfields = sizeof(fields) / sizeof(fields[0])
+};

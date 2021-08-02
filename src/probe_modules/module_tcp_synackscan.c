@@ -159,24 +159,34 @@ static void synackscan_process_packet(const u_char *packet,
 				      UNUSED uint32_t *validation,
 				      UNUSED struct timespec ts)
 {
-	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
-	struct tcphdr *tcp =
-	    (struct tcphdr *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
-
-	fs_add_uint64(fs, "sport", (uint64_t)ntohs(tcp->th_sport));
-	fs_add_uint64(fs, "dport", (uint64_t)ntohs(tcp->th_dport));
-	fs_add_uint64(fs, "seqnum", (uint64_t)ntohl(tcp->th_seq));
-	fs_add_uint64(fs, "acknum", (uint64_t)ntohl(tcp->th_ack));
-	fs_add_uint64(fs, "window", (uint64_t)ntohs(tcp->th_win));
-	fs_add_uint64(fs, "ipid", (uint64_t)ntohs(ip_hdr->ip_id));
-
-	if (tcp->th_flags & TH_RST) { // RST packet
-		fs_add_string(fs, "classification", (char *)"rst", 0);
-	} else { // SYNACK packet
-		fs_add_string(fs, "classification", (char *)"synack", 0);
+	struct ip *ip_hdr = get_ip_header(packet, len);
+	if (ip_hdr->ip_p == IPPROTO_TCP) {
+		struct tcphdr *tcp = get_tcp_header(ip_hdr, len);
+		fs_add_uint64(fs, "sport", (uint64_t)ntohs(tcp->th_sport));
+		fs_add_uint64(fs, "dport", (uint64_t)ntohs(tcp->th_dport));
+		fs_add_uint64(fs, "seqnum", (uint64_t)ntohl(tcp->th_seq));
+		fs_add_uint64(fs, "acknum", (uint64_t)ntohl(tcp->th_ack));
+		fs_add_uint64(fs, "window", (uint64_t)ntohs(tcp->th_win));
+		if (tcp->th_flags & TH_RST) { // RST packet
+			fs_add_constchar(fs, "classification", "rst");
+		} else { // SYNACK packet
+			fs_add_constchar(fs, "classification", "synack");
+		}
+		fs_add_bool(fs, "success", 1);
+		fs_add_null_icmp(fs);
+	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
+		// tcp
+		fs_add_null(fs, "sport");
+		fs_add_null(fs, "dport");
+		fs_add_null(fs, "seqnum");
+		fs_add_null(fs, "acknum");
+		fs_add_null(fs, "window");
+		// global
+		fs_add_constchar(fs, "classification", "icmp-unreach");
+		fs_add_bool(fs, "success", 0);
+		// icmp
+		fs_populate_icmp_from_iphdr(ip_hdr, len, fs);
 	}
-
-	fs_add_bool(fs, "success", 1);
 }
 
 static fielddef_t fields[] = {
@@ -185,13 +195,9 @@ static fielddef_t fields[] = {
     {.name = "seqnum", .type = "int", .desc = "TCP sequence number"},
     {.name = "acknum", .type = "int", .desc = "TCP acknowledgement number"},
     {.name = "window", .type = "int", .desc = "TCP window"},
-    {.name = "ipid", .type = "int", .desc = "IP Identification"},
-    {.name = "classification",
-     .type = "string",
-     .desc = "packet classification"},
-    {.name = "success",
-     .type = "bool",
-     .desc = "is response considered success"}};
+    CLASSIFICATION_SUCCESS_FIELDSET_FIELDS,
+    ICMP_FIELDSET_FIELDS,
+};
 
 probe_module_t module_tcp_synackscan = {
     .name = "tcp_synackscan",
@@ -212,4 +218,5 @@ probe_module_t module_tcp_synackscan = {
 		"is considered a success.",
     .output_type = OUTPUT_TYPE_STATIC,
     .fields = fields,
-    .numfields = 8};
+    .numfields = sizeof(fields) / sizeof(fields[0])
+};
