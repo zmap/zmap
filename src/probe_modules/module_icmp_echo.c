@@ -301,7 +301,7 @@ static void icmp_echo_process_packet(const u_char *packet,
 static fielddef_t fields[] = {
 	{.name = "type", .type = "int", .desc = "icmp message type"},
 	{.name = "code", .type = "int", .desc = "icmp message sub type code"},
-	{.name = "icmp-id", .type = "int", .desc = "icmp id number"},
+	{.name = "icmp_id", .type = "int", .desc = "icmp id number"},
 	{.name = "seq", .type = "int", .desc = "icmp sequence number"},
 	{.name = "classification",
 	 .type = "string",
