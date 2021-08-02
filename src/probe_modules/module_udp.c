@@ -15,6 +15,8 @@
 #include <string.h>
 #include <assert.h>
 
+#include <errno.h>
+
 #include "../../lib/blocklist.h"
 #include "../../lib/includes.h"
 #include "../../lib/xalloc.h"
@@ -532,11 +534,7 @@ void udp_template_add_field(udp_payload_template_t *t,
 	    xrealloc(t->fields, sizeof(udp_payload_field_t) * t->fcount);
 	t->fields[t->fcount - 1] = xmalloc(sizeof(udp_payload_field_t));
 	c = t->fields[t->fcount - 1];
-
-	if (!c) {
-		exit(1);
-	}
-
+	assert(c);
 	c->ftype = ftype;
 	c->length = length;
 	c->data = data;
@@ -729,13 +727,11 @@ int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len,
 // value
 int udp_template_field_lookup(const char *vname, udp_payload_field_t *c)
 {
-	char *param;
-	unsigned int f;
-	unsigned int olen = 0;
-	unsigned int fcount = sizeof(udp_payload_template_fields) /
+	static const size_t fcount = sizeof(udp_payload_template_fields) /
 			      sizeof(udp_payload_template_fields[0]);
-	size_t type_name_len = strlen(vname);
-	param = strstr((const char *)vname, "=");
+	size_t vname_len = strlen(vname);
+	size_t type_name_len = vname_len;
+	const char *param = strstr(vname, "=");
 	if (param) {
 		type_name_len = param - vname;
 		param++;
@@ -743,18 +739,29 @@ int udp_template_field_lookup(const char *vname, udp_payload_field_t *c)
 
 	// Most field types treat their parameter as a generator output length
 	// unless it is ignored (ADDR, PORT, etc).
+	long olen = 0;
+	if (param && !*param) {
+		log_fatal("udp", "invalid template: field spec %s is invalid (missing length)", vname);
+	}
 	if (param) {
-		olen = atoi((const char *)param);
+		char *end = NULL;
+		errno = 0;
+		olen = strtol(param, &end, 10);
+		if (errno) {
+			log_fatal("udp", "invalid template: unable to read length from %s: %s", vname, strerror(errno));
+		}
+		if (!end || end != vname + vname_len) {
+			log_fatal("udp", "invalid template: unable to read length from %s", vname);
+		}
 	}
 
 	// Find a field that matches the
 	log_error("udp_template", "vname: %.*s", type_name_len, vname);
-	for (f = 0; f < fcount; f++) {
-		if (strncmp(vname, udp_payload_template_fields[f].name,
-			    type_name_len) == 0) {
-			c->ftype = udp_payload_template_fields[f].ftype;
-			c->length =
-			    udp_payload_template_fields[f].max_length || olen;
+	for (unsigned int f = 0; f < fcount; f++) {
+		const udp_payload_field_type_def_t* ftype = &udp_payload_template_fields[f];
+		if (strncmp(vname, ftype->name, type_name_len) == 0 && strlen(ftype->name) == type_name_len) {
+			c->ftype = ftype->ftype;
+			c->length = ftype->max_length ? ftype->max_length : olen;
 			c->data = NULL;
 			return 1;
 		}

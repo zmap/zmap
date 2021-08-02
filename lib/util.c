@@ -25,6 +25,7 @@
 #include "includes.h"
 #include "xalloc.h"
 
+#include <errno.h>
 #include <unistd.h>
 #include <sched.h>
 #include <pthread.h>
@@ -129,7 +130,6 @@ void fprintw(FILE *f, const char *s, size_t w)
 
 uint32_t parse_max_hosts(char *max_targets)
 {
-	int errno = 0;
 	char *end;
 	double v = strtod(max_targets, &end);
 	if (end == max_targets || errno != 0) {
