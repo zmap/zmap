@@ -796,7 +796,7 @@ void dns_print_packet(FILE *fp, void *packet)
 int dns_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation)
 {
-	// this does the heavy lifting
+	// this does the heavy lifting including ICMP validation
 	if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports,
 				   zconf.target_port) == PACKET_INVALID) {
 		return PACKET_INVALID;
@@ -822,6 +822,35 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 		}
 	}
 	return PACKET_VALID;
+}
+
+void dns_add_null_fs(fieldset_t *fs) {
+	fs_add_null(fs, "dns_id");
+	fs_add_null(fs, "dns_rd");
+	fs_add_null(fs, "dns_tc");
+	fs_add_null(fs, "dns_aa");
+	fs_add_null(fs, "dns_opcode");
+	fs_add_null(fs, "dns_qr");
+	fs_add_null(fs, "dns_rcode");
+	fs_add_null(fs, "dns_cd");
+	fs_add_null(fs, "dns_ad");
+	fs_add_null(fs, "dns_z");
+	fs_add_null(fs, "dns_ra");
+	fs_add_null(fs, "dns_qdcount");
+	fs_add_null(fs, "dns_ancount");
+	fs_add_null(fs, "dns_nscount");
+	fs_add_null(fs, "dns_arcount");
+
+	fs_add_repeated(fs, "dns_questions",
+			fs_new_repeated_fieldset());
+	fs_add_repeated(fs, "dns_answers", fs_new_repeated_fieldset());
+	fs_add_repeated(fs, "dns_authorities",
+			fs_new_repeated_fieldset());
+	fs_add_repeated(fs, "dns_additionals",
+			fs_new_repeated_fieldset());
+
+	fs_add_uint64(fs, "dns_parse_err", 1);
+	fs_add_uint64(fs, "dns_unconsumed_bytes", 0);
 }
 
 void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
@@ -877,48 +906,19 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
 		fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
 
-
 		// High level info
 		fs_add_string(fs, "classification", (char *)"dns", 0);
 		fs_add_bool(fs, "success", is_valid);
-		// TCP/UDP info
-		// ICMP info
-		fs_add_null_icmp(fs);
-		// additional UDP information
-		fs_add_uint64(fs, "udp_len", udp_len);
+				// additional UDP information
 		fs_add_bool(fs, "app_success",
 			    is_valid && (qr == DNS_QR_ANSWER) &&
 				(rcode == DNS_RCODE_NOERR));
+		// ICMP info
+		fs_add_null_icmp(fs);
+		fs_add_uint64(fs, "udp_len", udp_len);
 		// DNS data
 		if (!is_valid) {
-			// DNS header
-			fs_add_null(fs, "dns_id");
-			fs_add_null(fs, "dns_rd");
-			fs_add_null(fs, "dns_tc");
-			fs_add_null(fs, "dns_aa");
-			fs_add_null(fs, "dns_opcode");
-			fs_add_null(fs, "dns_qr");
-			fs_add_null(fs, "dns_rcode");
-			fs_add_null(fs, "dns_cd");
-			fs_add_null(fs, "dns_ad");
-			fs_add_null(fs, "dns_z");
-			fs_add_null(fs, "dns_ra");
-			fs_add_null(fs, "dns_qdcount");
-			fs_add_null(fs, "dns_ancount");
-			fs_add_null(fs, "dns_nscount");
-			fs_add_null(fs, "dns_arcount");
-
-			fs_add_repeated(fs, "dns_questions",
-					fs_new_repeated_fieldset());
-			fs_add_repeated(fs, "dns_answers",
-					fs_new_repeated_fieldset());
-			fs_add_repeated(fs, "dns_authorities",
-					fs_new_repeated_fieldset());
-			fs_add_repeated(fs, "dns_additionals",
-					fs_new_repeated_fieldset());
-
-			fs_add_uint64(fs, "dns_unconsumed_bytes", 0);
-			fs_add_uint64(fs, "dns_parse_err", 1);
+			dns_add_null_fs(fs);
 		} else {
 			// DNS header
 			fs_add_uint64(fs, "dns_id", ntohs(dns_hdr->id));
@@ -982,50 +982,26 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 			}
 			fs_add_repeated(fs, "dns_additionals", list);
 			// Do we have unconsumed data?
-			fs_add_uint64(fs, "dns_unconsumed_bytes", data_len);
 			if (data_len != 0) {
 				err = 1;
 			}
 			// Did we parse OK?
 			fs_add_uint64(fs, "dns_parse_err", err);
+			fs_add_uint64(fs, "dns_unconsumed_bytes", data_len);
 		}
 		// Now the raw stuff.
 		fs_add_binary(fs, "raw_data", (udp_len - sizeof(struct udphdr)),
 			      (void *)&udp_hdr[1], 0);
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
-		// TODO: ADD SADDR, classification, etc.
-		fs_populate_icmp_from_iphdr(ip_hdr, len, fs);
-		// ICMP info
-		fs_add_null(fs, "udp_len");
+		fs_add_null(fs, "sport");
+		fs_add_null(fs, "dport");
+		fs_add_constchar(fs, "classification", "icmp-unreach");
+		fs_add_bool(fs, "success", 0);
 		fs_add_bool(fs, "app_success", 0);
-		// XXX This is legacy. not well tested.
-		// DNS header
-		fs_add_null(fs, "dns_id");
-		fs_add_null(fs, "dns_rd");
-		fs_add_null(fs, "dns_tc");
-		fs_add_null(fs, "dns_aa");
-		fs_add_null(fs, "dns_opcode");
-		fs_add_null(fs, "dns_qr");
-		fs_add_null(fs, "dns_rcode");
-		fs_add_null(fs, "dns_cd");
-		fs_add_null(fs, "dns_ad");
-		fs_add_null(fs, "dns_z");
-		fs_add_null(fs, "dns_ra");
-		fs_add_null(fs, "dns_qdcount");
-		fs_add_null(fs, "dns_ancount");
-		fs_add_null(fs, "dns_nscount");
-		fs_add_null(fs, "dns_arcount");
-
-		fs_add_repeated(fs, "dns_questions",
-				fs_new_repeated_fieldset());
-		fs_add_repeated(fs, "dns_answers", fs_new_repeated_fieldset());
-		fs_add_repeated(fs, "dns_authorities",
-				fs_new_repeated_fieldset());
-		fs_add_repeated(fs, "dns_additionals",
-				fs_new_repeated_fieldset());
-
-		fs_add_uint64(fs, "dns_unconsumed_bytes", 0);
-		fs_add_uint64(fs, "dns_parse_err", 1);
+		// Populate all ICMP Fields
+		fs_populate_icmp_from_iphdr(ip_hdr, len, fs);
+		fs_add_null(fs, "udp_len");
+		dns_add_null_fs(fs);
 		fs_add_binary(fs, "raw_data", len, (char *)packet, 0);
 	} else {
 		// This should not happen. Both the pcap filter and validate

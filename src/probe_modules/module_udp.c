@@ -335,7 +335,6 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len,
 		fs_add_bool(fs, "success", 1);
 		fs_add_uint64(fs, "sport", ntohs(udp->uh_sport));
 		fs_add_uint64(fs, "dport", ntohs(udp->uh_dport));
-		fs_add_null_icmp(fs);
 		fs_add_uint64(fs, "udp_pkt_size", ntohs(udp->uh_ulen));
 		// Verify that the UDP length is big enough for the header and
 		// at least one byte
@@ -361,25 +360,23 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len,
 		} else {
 			fs_add_null(fs, "data");
 		}
+		fs_add_null_icmp(fs);
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		fs_add_constchar(fs, "classification", "icmp-unreach");
 		fs_add_bool(fs, "success", 0);
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");
-		fs_populate_icmp_from_iphdr(ip_hdr, len, fs);
 		fs_add_null(fs, "udp_pkt_size");
 		fs_add_null(fs, "data");
+		fs_populate_icmp_from_iphdr(ip_hdr, len, fs);
 	} else {
 		fs_add_constchar(fs, "classification", "other");
 		fs_add_bool(fs, "success", 0);
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");
-		fs_add_null(fs, "icmp_responder");
-		fs_add_null(fs, "icmp_type");
-		fs_add_null(fs, "icmp_code");
-		fs_add_null(fs, "icmp_unreach_str");
 		fs_add_null(fs, "udp_pkt_size");
 		fs_add_null(fs, "data");
+		fs_add_null_icmp(fs);
 	}
 }
 
@@ -798,17 +795,13 @@ udp_payload_template_t *udp_template_load(char *buf, unsigned int len)
 }
 
 static fielddef_t fields[] = {
-    {.name = "classification",
-     .type = "string",
-     .desc = "packet classification"},
-    {.name = "success",
-     .type = "bool",
-     .desc = "is response considered success"},
+    CLASSIFICATION_SUCCESS_FIELDSET_FIELDS,
     {.name = "sport", .type = "int", .desc = "UDP source port"},
     {.name = "dport", .type = "int", .desc = "UDP destination port"},
-    ICMP_FIELDSET_FIELDS,
     {.name = "udp_pkt_size", .type = "int", .desc = "UDP packet length"},
-    {.name = "data", .type = "binary", .desc = "UDP payload"}};
+    {.name = "data", .type = "binary", .desc = "UDP payload"},
+    ICMP_FIELDSET_FIELDS,
+};
 
 probe_module_t module_udp = {
     .name = "udp",
