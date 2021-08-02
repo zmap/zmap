@@ -131,6 +131,7 @@ void fprintw(FILE *f, const char *s, size_t w)
 uint32_t parse_max_hosts(char *max_targets)
 {
 	char *end;
+	errno = 0;
 	double v = strtod(max_targets, &end);
 	if (end == max_targets || errno != 0) {
 		log_fatal("argparse", "can't convert max-targets to a number");
