@@ -128,6 +128,9 @@ static int synackscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 			return PACKET_INVALID;
 		}
 		struct tcphdr *tcp = get_tcp_header(ip_inner, ip_inner_len);
+		if (!tcp) {
+			return PACKET_INVALID;
+		}
 		// we can always check the destination port because this is the
 		// original packet and wouldn't have been altered by something
 		// responding on a different port
@@ -190,7 +193,7 @@ static fielddef_t fields[] = {
 probe_module_t module_tcp_synackscan = {
     .name = "tcp_synackscan",
     .packet_length = 54,
-    .pcap_filter = "tcp && tcp[13] & 4 != 0 || tcp[13] == 18",
+    .pcap_filter = "(tcp && tcp[13] & 4 != 0 || tcp[13] == 18) || icmp",
     .pcap_snaplen = 96,
     .port_args = 1,
     .global_initialize = &synackscan_global_initialize,
