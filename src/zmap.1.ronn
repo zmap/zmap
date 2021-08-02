@@ -52,8 +52,8 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
 
    * `-r`, `--rate=pps`:
      Set the send rate in packets/sec. Note: when combined with --probes,  this is
-     total packets per second, not IPs per second. Setting the rate to 0 will scan 
-     at full line rate. Default: 10000 pps. 
+     total packets per second, not IPs per second. Setting the rate to 0 will scan
+     at full line rate. Default: 10000 pps.
 
    * `-B`, `--bandwidth=bps`:
      Set the send rate in bits/second (supports suffixes G, M, and K (e.g. -B
@@ -77,15 +77,6 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
      Seed used to select address permutation. Use this if you want to scan
      addresses in the same order for multiple ZMap runs.
 
-   * `--shards=N`:
-     Split the scan up into N shards/partitions among different instances of
-     zmap (default=1). When sharding, **--seed** is required.
-
-   * `--shard=n`:
-     Set which shard to scan (default=0). Shards are 0-indexed in the range
-     [0, N), where N is the    total number of shards. When sharding
-     **--seed** is required.
-
    * `-P`, `--probes=n`:
      Number of probes to send to each IP (default=1)
 
@@ -98,6 +89,16 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
      proportionally higher rates. This can reduce CPU usage, in exchange for a
      bursty send rate. (default=1)
 
+### SCAN SHARDING ###
+
+   * `--shards=N`:
+     Split the scan up into N shards/partitions among different instances of
+     zmap (default=1). When sharding, **--seed** is required.
+
+   * `--shard=n`:
+     Set which shard to scan (default=0). Shards are 0-indexed in the range
+     [0, N), where N is the    total number of shards. When sharding
+     **--seed** is required.
 
 ### NETWORK OPTIONS ###
 
@@ -163,6 +164,11 @@ fields, and write filters over the output fields.
    * `--output-filter`:
      Specify an output filter over the fields defined by the probe module. See
      the output filter section for more details.
+
+   * `--no-header-row`:
+     Excludes any header rows (e.g., CSV header fields) from ZMap output. This is
+     useful if you're piping results into another application that expects only
+     data.
 
 ### LOGGING AND METADATA OPTIONS ###
 

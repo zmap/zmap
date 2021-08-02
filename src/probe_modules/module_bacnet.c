@@ -21,6 +21,8 @@
 
 #define ICMP_UNREACH_HEADER_SIZE 8
 
+#define ZMAP_BACNET_PACKET_LEN (sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr) + 0x11)
+
 probe_module_t module_bacnet;
 
 static int num_ports;
@@ -71,7 +73,7 @@ int bacnet_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	return EXIT_SUCCESS;
 }
 
-int bacnet_make_packet(void *buf, UNUSED size_t *buf_len,
+int bacnet_make_packet(void *buf, size_t *buf_len,
                ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
 			   uint32_t *validation, int probe_num,
 		       UNUSED void *arg)
@@ -92,6 +94,7 @@ int bacnet_make_packet(void *buf, UNUSED size_t *buf_len,
 	bnp->apdu.invoke_id = get_invoke_id(validation);
 
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
+	*buf_len = ZMAP_BACNET_PACKET_LEN;
 
 	return EXIT_SUCCESS;
 }
@@ -170,8 +173,7 @@ static fielddef_t fields[] = {
 
 probe_module_t module_bacnet = {
     .name = "bacnet",
-    .packet_length = sizeof(struct ether_header) + sizeof(struct ip) +
-		     sizeof(struct udphdr) + 0x11,
+    .max_packet_length = ZMAP_BACNET_PACKET_LEN,
     .pcap_filter = "udp || icmp",
     .pcap_snaplen = 1500,
     .port_args = 1,

@@ -21,6 +21,8 @@
 #include "packet.h"
 #include "validate.h"
 
+#define ZMAP_TCP_SYNSCAN_PACKET_LEN 54
+
 probe_module_t module_tcp_synscan;
 
 static uint16_t num_ports;
@@ -47,7 +49,7 @@ static int synscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	return EXIT_SUCCESS;
 }
 
-static int synscan_make_packet(void *buf, UNUSED size_t *buf_len,
+static int synscan_make_packet(void *buf, size_t *buf_len,
 			       ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
 			       uint32_t *validation, int probe_num,
 			       UNUSED void *arg)
@@ -73,6 +75,7 @@ static int synscan_make_packet(void *buf, UNUSED size_t *buf_len,
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
 
+	*buf_len = ZMAP_TCP_SYNSCAN_PACKET_LEN;
 	return EXIT_SUCCESS;
 }
 
@@ -211,7 +214,7 @@ static fielddef_t fields[] = {
 
 probe_module_t module_tcp_synscan = {
     .name = "tcp_synscan",
-    .packet_length = 54,
+    .max_packet_length = ZMAP_TCP_SYNSCAN_PACKET_LEN,
     .pcap_filter = "(tcp && tcp[13] & 4 != 0 || tcp[13] == 18) || icmp",
     .pcap_snaplen = 96,
     .port_args = 1,

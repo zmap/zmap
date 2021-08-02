@@ -70,7 +70,7 @@ void recv_init()
 	}
 	switch (pcap_datalink(pc)) {
 	case DLT_EN10MB:
-		log_info("recv", "Data link layer Ethernet");
+		log_debug("recv", "Data link layer Ethernet");
 		zconf.data_link_size = sizeof(struct ether_header);
 		break;
 	case DLT_RAW:

@@ -196,14 +196,12 @@ int ntp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 
 	make_udp_header(udp_header, zconf.target_port, len);
 
-	char *payload = (char *)(&ntp_header[1]);
-
-	module_ntp.packet_length = sizeof(struct ether_header) +
-				   sizeof(struct ip) + sizeof(struct udphdr) +
-				   sizeof(struct ntphdr);
-
-	assert(module_ntp.packet_length <= MAX_PACKET_SIZE);
-	memcpy(payload, ntp_header, module_ntp.packet_length);
+	// TODO(dadrian): Should this have a payload? It was being set incorrectly.
+	size_t header_len = sizeof(struct ether_header)
+	    + sizeof(struct ip)
+	    + sizeof(struct udphdr)
+	    + sizeof(struct ntphdr);
+	module_ntp.max_packet_length = header_len;
 
 	uint32_t seed = aesrand_getword(zconf.aes);
 	aesrand_t *aes = aesrand_init_from_seed(seed);
@@ -265,7 +263,7 @@ static fielddef_t fields[] = {
 };
 
 probe_module_t module_ntp = {.name = "ntp",
-			     .packet_length = 1,
+			     .max_packet_length = 0, // set in init
 			     .pcap_filter = "udp || icmp",
 			     .pcap_snaplen = 1500,
 			     .port_args = 1,

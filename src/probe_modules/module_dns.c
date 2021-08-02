@@ -6,36 +6,36 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-/* Module for scanning for open UDP DNS resolvers.
- *
- * This module optionally takes in an argument of the form "TYPE,QUESTION"
- * (e.g. "A,google.com").
- *
- * Given no arguments it will default to asking for an A record for
- * www.google.com.
- *
- * This module does minimal answer verification. It only verifies that the
- * response roughly looks like a DNS response. It will not, for example,
- * require the QR bit be set to 1. All such analysis should happen offline.
- * Specifically, to be included in the output it requires:
- * - That the response packet is >= the query packet.
- * - That the ports match and the packet is complete.
- * To be marked as success it also requires:
- * - That the response bytes that should be the ID field matches the send bytes.
- * - That the response bytes that should be question match send bytes.
- * To be marked as app_success it also requires:
- * - That the QR bit be 1 and rcode == 0.
- *
- * Usage: zmap -p 53 --probe-module=dns --probe-args="ANY,www.example.com"
- *			-O json --output-fields=* 8.8.8.8
- *
- * We also support multiple questions, of the form:
- *"A,example.com;AAAA,www.example.com" This requires --probes=X, where X matches
- *the number of questions in --probe-args, and --output-filter="" to remove the
- *implicit "filter_duplicates" configuration flag.
- *
- * Based on a deprecated udp_dns module.
- */
+// Module for scanning for open UDP DNS resolvers.
+//
+// This module optionally takes in an argument of the form "TYPE,QUESTION"
+// (e.g. "A,google.com").
+//
+// Given no arguments it will default to asking for an A record for
+// www.google.com.
+//
+// This module does minimal answer verification. It only verifies that the
+// response roughly looks like a DNS response. It will not, for example,
+// require the QR bit be set to 1. All such analysis should happen offline.
+// Specifically, to be included in the output it requires:
+//   - That the response packet is >= the query packet.
+//   - That the ports match and the packet is complete.
+// To be marked as success it also requires:
+//   - That the response bytes that should be the ID field matches the send bytes.
+//   - That the response bytes that should be question match send bytes.
+// To be marked as app_success it also requires:
+//   - That the QR bit be 1 and rcode == 0.
+//
+// Usage:
+//     zmap -p 53 --probe-module=dns --probe-args="ANY,www.example.com"
+//         -O json --output-fields=* 8.8.8.8
+//
+// We also support multiple questions, of the form:
+// "A,example.com;AAAA,www.example.com" This requires --probes=X, where X
+// matches the number of questions in --probe-args, and either
+// --output-filter="" or --output-module=csv to remove the implicit
+// "filter_duplicates" configuration flag.
+//
 
 #include "module_dns.h"
 #include <stdlib.h>
@@ -54,7 +54,7 @@
 #include "module_udp.h"
 #include "../fieldset.h"
 
-#define DNS_SEND_LEN 512 // This is arbitrary
+#define DNS_PAYLOAD_LEN_LIMIT 512 // This is arbitrary
 #define UDP_HEADER_LEN 8
 #define PCAP_SNAPLEN 1500 // This is even more arbitrary
 #define MAX_QTYPE 255
@@ -153,20 +153,26 @@ static uint16_t domain_to_qname(char **qname_handle, const char *domain)
 	return len;
 }
 
-static int build_global_dns_packets(char *domains[], int num_domains)
+static int build_global_dns_packets(char *domains[], int num_domains, size_t *max_len)
 {
+	size_t _max_len = 0;
 	for (int i = 0; i < num_domains; i++) {
 
 		qname_lens[i] = domain_to_qname(&qnames[i], domains[i]);
 		if (domains[i] != (char *)default_domain) {
 			free(domains[i]);
 		}
-		dns_packet_lens[i] = sizeof(dns_header) + qname_lens[i] +
+		uint16_t len = sizeof(dns_header) + qname_lens[i] +
 				     sizeof(dns_question_tail);
-		if (dns_packet_lens[i] > DNS_SEND_LEN) {
+		dns_packet_lens[i] = len;
+		if (len > _max_len) {
+			_max_len = len;
+		}
+
+		if (dns_packet_lens[i] > DNS_PAYLOAD_LEN_LIMIT) {
 			log_fatal("dns",
 				  "DNS packet bigger (%d) than our limit (%d)",
-				  dns_packet_lens[i], DNS_SEND_LEN);
+				  dns_packet_lens[i], DNS_PAYLOAD_LEN_LIMIT);
 			return EXIT_FAILURE;
 		}
 
@@ -186,11 +192,10 @@ static int build_global_dns_packets(char *domains[], int num_domains)
 		memcpy(qname_p, qnames[i], qname_lens[i]);
 		// Set the qtype to what we passed from args
 		tail_p->qtype = htons(qtypes[i]);
-		// Set the qclass to The Internet (TM) (R) (I hope you're happy
-		// now Zakir)
-		tail_p->qclass = htons(
-		    0x01); // MAGIC NUMBER. Let's be honest. This is only ever 1
+		// Set the qclass to The Internet
+		tail_p->qclass = htons(0x01);
 	}
+	*max_len = _max_len;
 	return EXIT_SUCCESS;
 }
 
@@ -592,12 +597,11 @@ static int dns_global_initialize(struct state_conf *conf)
 		qtypes[i] = default_qtype;
 	}
 
-	// This is zmap boilerplate. Why do I have to write this?
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
 
 	setup_qtype_str_map();
 
-	if (conf->probe_args) { // no parameters passed in. Use defaults
+	if (conf->probe_args) {
 		int arg_strlen = strlen(conf->probe_args);
 		char *arg_pos = conf->probe_args;
 
@@ -659,7 +663,13 @@ static int dns_global_initialize(struct state_conf *conf)
 			    "More args than probes passed. Add additional probes.");
 		}
 	}
-	return build_global_dns_packets(domains, num_questions);
+	size_t max_payload_len;
+	int ret = build_global_dns_packets(domains, num_questions, &max_payload_len);
+	module_dns.max_packet_length = max_payload_len
+	     + sizeof(struct ether_header)
+	     + sizeof(struct ip)
+	     + sizeof(struct udphdr);
+	return ret;
 }
 
 static int dns_global_cleanup(UNUSED struct state_conf *zconf,
@@ -720,10 +730,6 @@ int dns_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	make_udp_header(udp_header, zconf.target_port, len);
 
 	char *payload = (char *)(&udp_header[1]);
-	module_dns.packet_length = sizeof(struct ether_header) +
-				   sizeof(struct ip) + sizeof(struct udphdr) +
-				   dns_packet_lens[0];
-	assert(module_dns.packet_length <= MAX_PACKET_SIZE);
 
 	memcpy(payload, dns_packets[0], dns_packet_lens[0]);
 
@@ -1060,7 +1066,7 @@ static fielddef_t fields[] = {
 
 probe_module_t module_dns = {
     .name = "dns",
-    .packet_length = DNS_SEND_LEN + UDP_HEADER_LEN,
+    .max_packet_length = 0, // set in init
     .pcap_filter = "udp || icmp",
     .pcap_snaplen = PCAP_SNAPLEN,
     .port_args = 1,
