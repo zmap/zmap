@@ -44,7 +44,7 @@ static int synscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	make_ip_header(ip_header, IPPROTO_TCP, len);
 	struct tcphdr *tcp_header = (struct tcphdr *)(&ip_header[1]);
 	make_tcp_header(tcp_header, dst_port, TH_SYN);
-	set_tcp_options(tcp_header);
+	set_mss_option(tcp_header);
 	return EXIT_SUCCESS;
 }
 
