@@ -28,10 +28,6 @@ ZMap has the following dependencies:
   - [libunistring](https://www.gnu.org/software/libunistring/) - Unicode string library for C
   - [libdnet](https://github.com/dugsong/libdnet) - (macOS Only) Gateway and route detection
 
-In addition, the following optional packages enable optional ZMap functionality:
-
-  - [hiredis](https://github.com/redis/hiredis) - RedisDB support in C
-
 Install the required dependencies with the following commands.
 
 * On Debian-based systems (including Ubuntu):
