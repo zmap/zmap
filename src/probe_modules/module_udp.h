@@ -73,6 +73,7 @@ int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
 			   uint32_t *validation, int num_ports,
 			   int expected_port);
 
+void udp_set_num_ports(int);
 int udp_global_initialize(struct state_conf *conf);
 int udp_global_cleanup(UNUSED struct state_conf *zconf,
 		       UNUSED struct state_send *zsend,

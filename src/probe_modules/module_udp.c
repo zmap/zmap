@@ -125,6 +125,9 @@ static udp_payload_field_type_def_t udp_payload_template_fields[] = {
      .max_length = 0,
      .desc = "Random mixed-case letters (a-z) and numbers"}};
 
+
+void udp_set_num_ports(int x) { num_ports = x; }
+
 int udp_global_initialize(struct state_conf *conf)
 {
 	size_t udp_template_max_len = 0;
@@ -449,12 +452,6 @@ int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		if (icmp_helper_validate(ip_hdr, len, sizeof(struct udphdr),
 					 &ip_inner,
 					 &ip_inner_len) == PACKET_INVALID) {
-			// find original destination IP and check that we sent a packet
-			// to that IP address
-			uint32_t dest = ip_inner->ip_dst.s_addr;
-			if (!blocklist_is_allowed(dest)) {
-				return PACKET_INVALID;
-			}
 		}
 		struct udphdr *udp = get_udp_header(ip_inner, ip_inner_len);
 		// we can always check the destination port because this is the
