@@ -133,7 +133,7 @@ void ntp_process_packet(const u_char *packet,
 
 		fs_modify_string(fs, "saddr",
 				 make_ip_str(ip_inner->ip_dst.s_addr), 1);
-		fs_add_string(fs, "classification", (char *)"icmp-unreach", 0);
+		fs_add_constchar(fs, "classification", "icmp");
 		fs_add_bool(fs, "success", 0);
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");
@@ -156,7 +156,7 @@ void ntp_process_packet(const u_char *packet,
 		fs_add_null(fs, "transmit_timestamp");
 
 	} else {
-		fs_add_string(fs, "classification", (char *)"other", 0);
+		fs_add_constchar(fs, "classification", "other");
 		fs_add_bool(fs, "success", 0);
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");

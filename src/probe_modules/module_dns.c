@@ -1001,7 +1001,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");
-		fs_add_constchar(fs, "classification", "icmp-unreach");
+		fs_add_constchar(fs, "classification", "icmp");
 		fs_add_bool(fs, "success", 0);
 		fs_add_bool(fs, "app_success", 0);
 		// Populate all ICMP Fields

@@ -187,7 +187,7 @@ void upnp_process_packet(const u_char *packet,
 
 		free(s);
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
-		fs_add_constchar(fs, "classification", "icmp-unreach");
+		fs_add_constchar(fs, "classification", "icmp");
 		fs_add_uint64(fs, "success", 0);
 
 		fs_add_null(fs, "server");

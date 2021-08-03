@@ -393,7 +393,7 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len,
 		}
 		fs_add_null_icmp(fs);
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
-		fs_add_constchar(fs, "classification", "icmp-unreach");
+		fs_add_constchar(fs, "classification", "icmp");
 		fs_add_bool(fs, "success", 0);
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");

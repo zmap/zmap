@@ -182,7 +182,7 @@ static void synackscan_process_packet(const u_char *packet,
 		fs_add_null(fs, "acknum");
 		fs_add_null(fs, "window");
 		// global
-		fs_add_constchar(fs, "classification", "icmp-unreach");
+		fs_add_constchar(fs, "classification", "icmp");
 		fs_add_bool(fs, "success", 0);
 		// icmp
 		fs_populate_icmp_from_iphdr(ip_hdr, len, fs);
