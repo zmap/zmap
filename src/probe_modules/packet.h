@@ -167,7 +167,6 @@ get_src_port(int num_ports, int probe_num, uint32_t *validation)
 
 static inline struct ip *get_ip_header(const u_char *packet, uint32_t len)
 {
-	// buf not large enough to contain expected udp header
 	if (len < sizeof(struct ether_header)) {
 		return NULL;
 	}
