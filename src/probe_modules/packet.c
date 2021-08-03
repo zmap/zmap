@@ -171,8 +171,6 @@ int icmp_helper_validate(const struct ip *ip_hdr, uint32_t len,
 	if (!blocklist_is_allowed(dest)) {
 		return PACKET_INVALID;
 	}
-	// TODO: can we also check whether the packet
-	//
 	*probe_pkt = ip_inner;
 	*probe_len = inner_packet_len;
 	return PACKET_VALID;
