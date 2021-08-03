@@ -22,11 +22,16 @@
 
 #define MAX_NTP_PAYLOAD_LEN 1472
 #define ICMP_UNREACH_HEADER_SIZE 8
-#define UNUSED __attribute__((unused))
 
 probe_module_t module_ntp;
 
 static int num_ports;
+
+
+int ntp_global_initialize(struct state_conf *conf) {
+	num_ports = conf->source_port_last - conf->source_port_first + 1;
+	return udp_global_initialize(conf);
+}
 
 int ntp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
 		    uint32_t *validation, int probe_num)
@@ -54,24 +59,14 @@ int ntp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl
 int ntp_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation)
 {
-	if (!udp_validate_packet(ip_hdr, len, src_ip, validation)) {
-		return 0;
-	}
-	if (ip_hdr->ip_p == IPPROTO_UDP) {
-		struct udphdr *udp =
-		    (struct udphdr *)((char *)ip_hdr + ip_hdr->ip_hl * 4);
-		uint16_t sport = ntohs(udp->uh_sport);
-		if (sport != zconf.target_port) {
-			return 0;
-		}
-	}
-	return 1;
+	return udp_do_validate_packet(ip_hdr, len, src_ip, validation,
+				      num_ports, zconf.target_port);
 }
 
 void ntp_process_packet(const u_char *packet,
-			__attribute__((unused)) uint32_t len, fieldset_t *fs,
-			__attribute__((unused)) uint32_t *validation,
-			__attribute__((unused)) struct timespec ts)
+			UNUSED uint32_t len, fieldset_t *fs,
+			UNUSED uint32_t *validation,
+			UNUSED struct timespec ts)
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
 	uint64_t temp64;
@@ -112,7 +107,7 @@ void ntp_process_packet(const u_char *packet,
 			temp64 = *((uint64_t *)ptr + 16);
 			fs_add_uint64(fs, "reference_timestamp", temp64);
 			temp64 = *((uint64_t *)ptr + 24);
-			fs_add_uint64(fs, "originate_timestap", temp64);
+			fs_add_uint64(fs, "originate_timestamp", temp64);
 			temp64 = *((uint64_t *)ptr + 32);
 			fs_add_uint64(fs, "receive_timestamp", temp64);
 			temp64 = *((uint64_t *)ptr + 39);
@@ -138,7 +133,7 @@ void ntp_process_packet(const u_char *packet,
 
 		fs_modify_string(fs, "saddr",
 				 make_ip_str(ip_inner->ip_dst.s_addr), 1);
-		fs_add_string(fs, "classification", (char *)"icmp-unreach", 0);
+		fs_add_constchar(fs, "classification", "icmp");
 		fs_add_bool(fs, "success", 0);
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");
@@ -156,12 +151,12 @@ void ntp_process_packet(const u_char *packet,
 		fs_add_null(fs, "root_dispersion");
 		fs_add_null(fs, "reference_clock_identifier");
 		fs_add_null(fs, "reference_timestamp");
-		fs_add_null(fs, "originate_timestap");
+		fs_add_null(fs, "originate_timestamp");
 		fs_add_null(fs, "receive_timestamp");
 		fs_add_null(fs, "transmit_timestamp");
 
 	} else {
-		fs_add_string(fs, "classification", (char *)"other", 0);
+		fs_add_constchar(fs, "classification", "other");
 		fs_add_bool(fs, "success", 0);
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");
@@ -177,14 +172,14 @@ void ntp_process_packet(const u_char *packet,
 		fs_add_null(fs, "root_dispersion");
 		fs_add_null(fs, "reference_clock_identifier");
 		fs_add_null(fs, "reference_timestamp");
-		fs_add_null(fs, "originate_timestap");
+		fs_add_null(fs, "originate_timestamp");
 		fs_add_null(fs, "receive_timestamp");
 		fs_add_null(fs, "transmit_timestamp");
 	}
 }
 
 int ntp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-		       __attribute__((unused)) port_h_t dst_port, void **arg)
+		       UNUSED port_h_t dst_port, void **arg)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -229,7 +224,7 @@ void ntp_print_packet(FILE *fp, void *packet)
 		ntohs(udph->uh_sum));
 	fprintf_ip_header(fp, iph);
 	fprintf_eth_header(fp, ethh);
-	fprintf(fp, "-------------------------------------------------\n");
+	fprintf(fp, PRINT_PACKET_SEP);
 }
 
 static fielddef_t fields[] = {
@@ -241,14 +236,7 @@ static fielddef_t fields[] = {
      .desc = "is  response considered success"},
     {.name = "sport", .type = "int", .desc = "UDP source port"},
     {.name = "dport", .type = "int", .desc = "UDP destination port"},
-    {.name = "icmp_responder",
-     .type = "string",
-     .desc = "Source IP of ICMP_UNREACH messages"},
-    {.name = "icmp_type", .type = "int", .desc = "icmp message type"},
-    {.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
-    {.name = "icmp_unreach_str",
-     .type = "string",
-     .desc = "for icmp_unreach responses, the string version of icmp_code "},
+    ICMP_FIELDSET_FIELDS,
     {.name = "LI_VN_MODE",
      .type = "int",
      .desc = "leap indication, version number, mode"},
@@ -280,7 +268,7 @@ probe_module_t module_ntp = {.name = "ntp",
 			     .pcap_snaplen = 1500,
 			     .port_args = 1,
 			     .thread_initialize = &ntp_init_perthread,
-			     .global_initialize = &udp_global_initialize,
+			     .global_initialize = &ntp_global_initialize,
 			     .make_packet = &udp_make_packet,
 			     .print_packet = &ntp_print_packet,
 			     .validate_packet = &ntp_validate_packet,

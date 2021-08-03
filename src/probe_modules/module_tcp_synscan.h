@@ -24,19 +24,19 @@ int synscan_global_initialize(struct state_conf *state);
 
 int synscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 			   port_h_t dst_port,
-			   __attribute__((unused)) void **arg_ptr);
+			   UNUSED void **arg_ptr);
 
 int synscan_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
 			uint32_t *validation, int probe_num,
-			__attribute__((unused)) void *arg);
+			UNUSED void *arg);
 
 void synscan_print_packet(FILE *fp, void *packet);
 
 int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
-			    __attribute__((unused)) uint32_t *src_ip,
+			    UNUSED uint32_t *src_ip,
 			    uint32_t *validation);
 
 void synscan_process_packet(const u_char *packet,
-			    __attribute__((unused)) uint32_t len,
+			    UNUSED uint32_t len,
 			    fieldset_t *fs,
-			    __attribute__((unused)) uint32_t *validation);
+			    UNUSED uint32_t *validation);

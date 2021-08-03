@@ -57,7 +57,6 @@
 #define DNS_PAYLOAD_LEN_LIMIT 512 // This is arbitrary
 #define UDP_HEADER_LEN 8
 #define PCAP_SNAPLEN 1500 // This is even more arbitrary
-#define UNUSED __attribute__((unused))
 #define MAX_QTYPE 255
 #define ICMP_UNREACH_HEADER_SIZE 8
 #define BAD_QTYPE_STR "BAD QTYPE"
@@ -278,7 +277,8 @@ static uint16_t get_name_helper(const char *data, uint16_t data_len,
 				bytes_consumed += 2;
 				log_trace(
 				    "dns",
-				    "_get_name_helper OUT. rec level %d success. %d rec bytes consumed. %d bytes consumed.",
+				    "_get_name_helper OUT. rec level %d success. "
+				    "%d rec bytes consumed. %d bytes consumed.",
 				    recursion_level, rec_bytes_consumed,
 				    bytes_consumed);
 				return bytes_consumed;
@@ -399,7 +399,7 @@ static bool process_response_question(char **data, uint16_t *data_len,
 	uint16_t qtype = ntohs(tail->qtype);
 	uint16_t qclass = ntohs(tail->qclass);
 	// Build our new question fieldset
-	fieldset_t *qfs = fs_new_fieldset();
+	fieldset_t *qfs = fs_new_fieldset(NULL);
 	fs_add_unsafe_string(qfs, "name", question_name, 1);
 	fs_add_uint64(qfs, "qtype", qtype);
 	if (qtype > MAX_QTYPE || qtype_qtype_to_strid[qtype] == BAD_QTYPE_VAL) {
@@ -454,7 +454,7 @@ static bool process_response_answer(char **data, uint16_t *data_len,
 		return 1;
 	}
 	// Build our new question fieldset
-	fieldset_t *afs = fs_new_fieldset();
+	fieldset_t *afs = fs_new_fieldset(NULL);
 	fs_add_unsafe_string(afs, "name", answer_name, 1);
 	fs_add_uint64(afs, "type", type);
 	if (type > MAX_QTYPE || qtype_qtype_to_strid[type] == BAD_QTYPE_VAL) {
@@ -577,7 +577,8 @@ static int dns_global_initialize(struct state_conf *conf)
 {
 	num_questions = conf->packet_streams;
 	if (num_questions < 1) {
-		log_fatal("dns", "Invalid number of probes for the DNS module:",
+		log_fatal("dns",
+			  "Invalid number of probes for the DNS module: %i",
 			  num_questions);
 	}
 
@@ -597,7 +598,7 @@ static int dns_global_initialize(struct state_conf *conf)
 	}
 
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
-	udp_set_num_ports(num_ports);
+
 	setup_qtype_str_map();
 
 	if (conf->probe_args) {
@@ -789,82 +790,73 @@ void dns_print_packet(FILE *fp, void *packet)
 	struct ether_header *ethh = (struct ether_header *)packet;
 	struct ip *iph = (struct ip *)&ethh[1];
 	struct udphdr *udph = (struct udphdr *)(&iph[1]);
-	fprintf(fp, "------------------------------------------------------\n");
+	fprintf(fp, PRINT_PACKET_SEP);
 	fprintf(fp, "dns { source: %u | dest: %u | checksum: %#04X }\n",
 		ntohs(udph->uh_sport), ntohs(udph->uh_dport),
 		ntohs(udph->uh_sum));
 	fprintf_ip_header(fp, iph);
 	fprintf_eth_header(fp, ethh);
-	fprintf(fp, "------------------------------------------------------\n");
+	fprintf(fp, PRINT_PACKET_SEP);
 }
 
 int dns_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation)
 {
-	// This does the heavy lifting.
-	if (!udp_validate_packet(ip_hdr, len, src_ip, validation)) {
-		return 0;
+	// this does the heavy lifting including ICMP validation
+	if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports,
+				   zconf.target_port) == PACKET_INVALID) {
+		return PACKET_INVALID;
 	}
-
-	uint16_t sport = 0;
-
-	// This entire if..elif..else block is getting at the udp body
-	struct udphdr *udp = NULL;
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
-		udp = (struct udphdr *)((char *)ip_hdr + ip_hdr->ip_hl * 4);
-		sport = ntohs(udp->uh_sport);
-	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
-		// UDP can return ICMP Destination unreach
-		// IP( ICMP( IP( UDP ) ) ) for a destination unreach
-		uint32_t min_len = 4 * ip_hdr->ip_hl +
-				   ICMP_UNREACH_HEADER_SIZE +
-				   sizeof(struct ip) + sizeof(struct udphdr);
-		if (len < min_len) {
-			// Not enough information for us to validate
-			return 0;
+		struct udphdr *udp = get_udp_header(ip_hdr, len);
+		if (!udp) {
+			return PACKET_INVALID;
 		}
-		struct icmp *icmp =
-		    (struct icmp *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
-		struct ip *ip_inner =
-		    (struct ip *)((char *)icmp + ICMP_UNREACH_HEADER_SIZE);
-		// Now we know the actual inner ip length, we should recheck the
-		// buffer
-		if (len < 4 * ip_inner->ip_hl - sizeof(struct ip) + min_len) {
-			return 0;
+		// verify our packet length
+		uint16_t udp_len = ntohs(udp->uh_ulen);
+		int match = 0;
+		for (int i = 0; i < num_questions; i++) {
+			if (udp_len >= dns_packet_lens[i]) {
+				match += 1;
+			}
 		}
-		// This is the packet we sent
-		udp = (struct udphdr *)((char *)ip_inner + 4 * ip_inner->ip_hl);
-		sport = ntohs(udp->uh_dport);
-	} else {
-		// We should never get here unless udp_validate_packet() has
-		// changed.
-		assert(0);
-		return 0;
-	}
-	// Verify our source port.
-	if (sport != zconf.target_port) {
-		return 0;
-	}
-	// Verify our packet length.
-	uint16_t udp_len = ntohs(udp->uh_ulen);
-
-	int match = 0;
-
-	for (int i = 0; i < num_questions; i++) {
-		if (udp_len >= dns_packet_lens[i]) {
-			match += 1;
+		if (match == 0) {
+			return PACKET_INVALID;
+		}
+		if (len < udp_len) {
+			return PACKET_INVALID;
 		}
 	}
+	return PACKET_VALID;
+}
 
-	if (match == 0) {
-		return 0;
-	}
-	// Verify the packet length is ok.
-	if (len < udp_len) {
-		return 0;
-	}
-	// Looks good.
-	return 1;
+void dns_add_null_fs(fieldset_t *fs) {
+	fs_add_null(fs, "dns_id");
+	fs_add_null(fs, "dns_rd");
+	fs_add_null(fs, "dns_tc");
+	fs_add_null(fs, "dns_aa");
+	fs_add_null(fs, "dns_opcode");
+	fs_add_null(fs, "dns_qr");
+	fs_add_null(fs, "dns_rcode");
+	fs_add_null(fs, "dns_cd");
+	fs_add_null(fs, "dns_ad");
+	fs_add_null(fs, "dns_z");
+	fs_add_null(fs, "dns_ra");
+	fs_add_null(fs, "dns_qdcount");
+	fs_add_null(fs, "dns_ancount");
+	fs_add_null(fs, "dns_nscount");
+	fs_add_null(fs, "dns_arcount");
+
+	fs_add_repeated(fs, "dns_questions",
+			fs_new_repeated_fieldset());
+	fs_add_repeated(fs, "dns_answers", fs_new_repeated_fieldset());
+	fs_add_repeated(fs, "dns_authorities",
+			fs_new_repeated_fieldset());
+	fs_add_repeated(fs, "dns_additionals",
+			fs_new_repeated_fieldset());
+
+	fs_add_uint64(fs, "dns_parse_err", 1);
+	fs_add_uint64(fs, "dns_unconsumed_bytes", 0);
 }
 
 void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
@@ -873,8 +865,8 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
-		struct udphdr *udp_hdr =
-		    (struct udphdr *)((char *)ip_hdr + ip_hdr->ip_hl * 4);
+		struct udphdr *udp_hdr = get_udp_header(ip_hdr, len);
+		assert(udp_hdr);
 		uint16_t udp_len = ntohs(udp_hdr->uh_ulen);
 
 		int match = 0;
@@ -916,52 +908,23 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		// Success: Has the right validation bits and the right Q
 		// App success: has qr and rcode bits right
 		// Any app level parsing issues: dns_parse_err
+		//
+		fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
+		fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
 
 		// High level info
 		fs_add_string(fs, "classification", (char *)"dns", 0);
 		fs_add_bool(fs, "success", is_valid);
+				// additional UDP information
 		fs_add_bool(fs, "app_success",
 			    is_valid && (qr == DNS_QR_ANSWER) &&
 				(rcode == DNS_RCODE_NOERR));
-		// UDP info
-		fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
-		fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
-		fs_add_uint64(fs, "udp_len", udp_len);
 		// ICMP info
-		fs_add_null(fs, "icmp_responder");
-		fs_add_null(fs, "icmp_type");
-		fs_add_null(fs, "icmp_code");
-		fs_add_null(fs, "icmp_unreach_str");
+		fs_add_null_icmp(fs);
+		fs_add_uint64(fs, "udp_len", udp_len);
 		// DNS data
 		if (!is_valid) {
-			// DNS header
-			fs_add_null(fs, "dns_id");
-			fs_add_null(fs, "dns_rd");
-			fs_add_null(fs, "dns_tc");
-			fs_add_null(fs, "dns_aa");
-			fs_add_null(fs, "dns_opcode");
-			fs_add_null(fs, "dns_qr");
-			fs_add_null(fs, "dns_rcode");
-			fs_add_null(fs, "dns_cd");
-			fs_add_null(fs, "dns_ad");
-			fs_add_null(fs, "dns_z");
-			fs_add_null(fs, "dns_ra");
-			fs_add_null(fs, "dns_qdcount");
-			fs_add_null(fs, "dns_ancount");
-			fs_add_null(fs, "dns_nscount");
-			fs_add_null(fs, "dns_arcount");
-
-			fs_add_repeated(fs, "dns_questions",
-					fs_new_repeated_fieldset());
-			fs_add_repeated(fs, "dns_answers",
-					fs_new_repeated_fieldset());
-			fs_add_repeated(fs, "dns_authorities",
-					fs_new_repeated_fieldset());
-			fs_add_repeated(fs, "dns_additionals",
-					fs_new_repeated_fieldset());
-
-			fs_add_uint64(fs, "dns_unconsumed_bytes", 0);
-			fs_add_uint64(fs, "dns_parse_err", 1);
+			dns_add_null_fs(fs);
 		} else {
 			// DNS header
 			fs_add_uint64(fs, "dns_id", ntohs(dns_hdr->id));
@@ -1025,110 +988,45 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 			}
 			fs_add_repeated(fs, "dns_additionals", list);
 			// Do we have unconsumed data?
-			fs_add_uint64(fs, "dns_unconsumed_bytes", data_len);
 			if (data_len != 0) {
 				err = 1;
 			}
 			// Did we parse OK?
 			fs_add_uint64(fs, "dns_parse_err", err);
+			fs_add_uint64(fs, "dns_unconsumed_bytes", data_len);
 		}
 		// Now the raw stuff.
 		fs_add_binary(fs, "raw_data", (udp_len - sizeof(struct udphdr)),
 			      (void *)&udp_hdr[1], 0);
-		return;
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
-		struct icmp *icmp =
-		    (struct icmp *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
-		struct ip *ip_inner =
-		    (struct ip *)((char *)icmp + ICMP_UNREACH_HEADER_SIZE);
-
-		// This is the packet we sent
-		struct udphdr *udp_hdr =
-		    (struct udphdr *)((char *)ip_inner + 4 * ip_inner->ip_hl);
-		uint16_t udp_len = ntohs(udp_hdr->uh_ulen);
-		// High level info
-		fs_add_string(fs, "classification", (char *)"icmp-unreach", 0);
+		fs_add_null(fs, "sport");
+		fs_add_null(fs, "dport");
+		fs_add_constchar(fs, "classification", "icmp");
 		fs_add_bool(fs, "success", 0);
 		fs_add_bool(fs, "app_success", 0);
-		// UDP info
-		fs_add_uint64(fs, "sport", ntohs(udp_hdr->uh_sport));
-		fs_add_uint64(fs, "dport", ntohs(udp_hdr->uh_dport));
-		fs_add_uint64(fs, "udp_len", udp_len);
-		// ICMP info
-		// XXX This is legacy. not well tested.
-		fs_add_string(fs, "icmp_responder",
-			      make_ip_str(ip_hdr->ip_src.s_addr), 1);
-		fs_add_uint64(fs, "icmp_type", icmp->icmp_type);
-		fs_add_uint64(fs, "icmp_code", icmp->icmp_code);
-		if (icmp->icmp_code <= ICMP_UNREACH_PRECEDENCE_CUTOFF) {
-			fs_add_string(
-			    fs, "icmp_unreach_str",
-			    (char *)udp_unreach_strings[icmp->icmp_code], 0);
-		} else {
-			fs_add_string(fs, "icmp_unreach_str", (char *)"unknown",
-				      0);
-		}
-		// DNS header
-		fs_add_null(fs, "dns_id");
-		fs_add_null(fs, "dns_rd");
-		fs_add_null(fs, "dns_tc");
-		fs_add_null(fs, "dns_aa");
-		fs_add_null(fs, "dns_opcode");
-		fs_add_null(fs, "dns_qr");
-		fs_add_null(fs, "dns_rcode");
-		fs_add_null(fs, "dns_cd");
-		fs_add_null(fs, "dns_ad");
-		fs_add_null(fs, "dns_z");
-		fs_add_null(fs, "dns_ra");
-		fs_add_null(fs, "dns_qdcount");
-		fs_add_null(fs, "dns_ancount");
-		fs_add_null(fs, "dns_nscount");
-		fs_add_null(fs, "dns_arcount");
-
-		fs_add_repeated(fs, "dns_questions",
-				fs_new_repeated_fieldset());
-		fs_add_repeated(fs, "dns_answers", fs_new_repeated_fieldset());
-		fs_add_repeated(fs, "dns_authorities",
-				fs_new_repeated_fieldset());
-		fs_add_repeated(fs, "dns_additionals",
-				fs_new_repeated_fieldset());
-
-		fs_add_uint64(fs, "dns_unconsumed_bytes", 0);
-		fs_add_uint64(fs, "dns_parse_err", 1);
+		// Populate all ICMP Fields
+		fs_populate_icmp_from_iphdr(ip_hdr, len, fs);
+		fs_add_null(fs, "udp_len");
+		dns_add_null_fs(fs);
 		fs_add_binary(fs, "raw_data", len, (char *)packet, 0);
-
-		return;
-
 	} else {
 		// This should not happen. Both the pcap filter and validate
 		// packet prevent this.
 		log_fatal("dns", "Die. This can only happen if you "
 				 "change the pcap filter and don't update the "
 				 "process function.");
-		return;
 	}
 }
 
 static fielddef_t fields[] = {
-    {.name = "classification", .type = "string", .desc = "packet protocol"},
-    {.name = "success",
-     .type = "bool",
-     .desc = "Are the validation bits and question correct"},
+    {.name = "sport", .type = "int", .desc = "UDP source port"},
+    {.name = "dport", .type = "int", .desc = "UDP destination port"},
+    CLASSIFICATION_SUCCESS_FIELDSET_FIELDS,
     {.name = "app_success",
      .type = "bool",
      .desc = "Is the RA bit set with no error code?"},
-    {.name = "sport", .type = "int", .desc = "UDP source port"},
-    {.name = "dport", .type = "int", .desc = "UDP destination port"},
+    ICMP_FIELDSET_FIELDS,
     {.name = "udp_len", .type = "int", .desc = "UDP packet lenght"},
-    {.name = "icmp_responder",
-     .type = "string",
-     .desc = "Source IP of ICMP_UNREACH message"},
-    {.name = "icmp_type", .type = "int", .desc = "icmp message type"},
-    {.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"},
-    {.name = "icmp_unreach_str",
-     .type = "string",
-     .desc = "for icmp_unreach responses, "
-	     "the string version of icmp_code (e.g. network-unreach)"},
     {.name = "dns_id", .type = "int", .desc = "DNS transaction ID"},
     {.name = "dns_rd", .type = "int", .desc = "DNS recursion desired"},
     {.name = "dns_tc", .type = "int", .desc = "DNS packet truncated"},

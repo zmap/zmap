@@ -62,7 +62,7 @@ void handle_packet(uint32_t buflen, const u_char *bytes, const struct timespec t
 		zrecv.ip_fragments++;
 	}
 
-	fieldset_t *fs = fs_new_fieldset();
+	fieldset_t *fs = fs_new_fieldset(&zconf.fsconf.defs);
 	fs_add_ip_fields(fs, ip_hdr);
 	// HACK:
 	// probe modules expect the full ethernet frame

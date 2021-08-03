@@ -128,8 +128,8 @@ int icmp_global_cleanup(__attribute__((unused)) struct state_conf *zconf,
 
 
 static int icmp_echo_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-				    __attribute__((unused)) port_h_t dst_port,
-				    __attribute__((unused)) void **arg_ptr)
+				    UNUSED port_h_t dst_port,
+				    UNUSED void **arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 
@@ -197,64 +197,58 @@ static void icmp_echo_print_packet(FILE *fp, void *packet)
 		ntohs(icmp_header->icmp_seq));
 	fprintf_ip_header(fp, iph);
 	fprintf_eth_header(fp, ethh);
-	fprintf(fp, "------------------------------------------------------\n");
+	fprintf(fp, PRINT_PACKET_SEP);
+}
+
+static int imcp_validate_id_seq(struct icmp *icmp_h, uint32_t *validation)
+{
+	if (icmp_h->icmp_id != (validation[1] & 0xFFFF)) {
+		return PACKET_INVALID;
+	}
+	if (icmp_h->icmp_seq != (validation[2] & 0xFFFF)) {
+		return PACKET_INVALID;
+	}
+	return PACKET_VALID;
 }
 
 static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
-				uint32_t *src_ip, uint32_t *validation)
+				UNUSED uint32_t *src_ip, uint32_t *validation)
 {
 	if (ip_hdr->ip_p != IPPROTO_ICMP) {
-		return 0;
+		return PACKET_INVALID;
 	}
-	// check if buffer is large enough to contain expected icmp header
-	if (((uint32_t)4 * ip_hdr->ip_hl + ICMP_SMALLEST_SIZE) > len) {
-		return 0;
+	struct icmp *icmp_h = get_icmp_header(ip_hdr, len);
+	if (!icmp_h) {
+		return PACKET_INVALID;
 	}
-	struct icmp *icmp_h =
-	    (struct icmp *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
-	uint16_t icmp_idnum = icmp_h->icmp_id;
-	uint16_t icmp_seqnum = icmp_h->icmp_seq;
-	// ICMP validation is tricky: for some packet types, we must look inside
-	// the payload
-	if (icmp_h->icmp_type == ICMP_TIMXCEED ||
-	    icmp_h->icmp_type == ICMP_UNREACH) {
-		// Should have 16B TimeExceeded/Dest_Unreachable header +
-		// original IP header + 1st 8B of original ICMP frame
-		if ((4 * ip_hdr->ip_hl + ICMP_TIMXCEED_UNREACH_HEADER_SIZE +
-		     sizeof(struct ip)) > len) {
-			return 0;
-		}
-		struct ip *ip_inner = (struct ip *)((char *)icmp_h + 8);
-		if (((uint32_t)4 * ip_hdr->ip_hl +
-		     ICMP_TIMXCEED_UNREACH_HEADER_SIZE + 4 * ip_inner->ip_hl +
-		     8 /*1st 8 bytes of original*/) > len) {
-			return 0;
+	if (icmp_h->icmp_type == ICMP_ECHOREPLY) {
+		return imcp_validate_id_seq(icmp_h, validation);
+	} else {
+		// handle unresearch/quench/redirect/timeout
+		struct ip *ip_inner;
+		size_t ip_inner_len;
+		int icmp_inner_valid = icmp_helper_validate(
+		    ip_hdr, len, sizeof(struct icmp), &ip_inner, &ip_inner_len);
+		if (icmp_inner_valid == PACKET_INVALID) {
+			return PACKET_INVALID;
 		}
 		struct icmp *icmp_inner =
-		    (struct icmp *)((char *)ip_inner + 4 * ip_hdr->ip_hl);
-		// Regenerate validation and icmp id based off inner payload
-		icmp_idnum = icmp_inner->icmp_id;
-		icmp_seqnum = icmp_inner->icmp_seq;
-		*src_ip = ip_inner->ip_dst.s_addr;
+		    get_icmp_header(ip_inner, ip_inner_len);
+		if (!icmp_inner) {
+			return PACKET_INVALID;
+		}
 		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
 			     (uint8_t *)validation);
+		// validate icmp id and seqnum
+		return imcp_validate_id_seq(icmp_inner, validation);
 	}
-	// validate icmp id and seqnum
-	if (icmp_idnum != (validation[1] & 0xFFFF)) {
-		return 0;
-	}
-	if (icmp_seqnum != (validation[2] & 0xFFFF)) {
-		return 0;
-	}
-	return 1;
 }
 
 static void icmp_echo_process_packet(const u_char *packet,
 				     uint32_t len,
 				     fieldset_t *fs,
-				     __attribute__((unused))
-				     uint32_t *validation,
-				     __attribute__((unused)) struct timespec ts)
+				     UNUSED uint32_t *validation,
+				     UNUSED struct timespec ts)
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
 	struct icmp *icmp_hdr =
@@ -307,7 +301,7 @@ static void icmp_echo_process_packet(const u_char *packet,
 static fielddef_t fields[] = {
 	{.name = "type", .type = "int", .desc = "icmp message type"},
 	{.name = "code", .type = "int", .desc = "icmp message sub type code"},
-	{.name = "icmp-id", .type = "int", .desc = "icmp id number"},
+	{.name = "icmp_id", .type = "int", .desc = "icmp id number"},
 	{.name = "seq", .type = "int", .desc = "icmp sequence number"},
 	{.name = "classification",
 	 .type = "string",
