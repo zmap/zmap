@@ -39,7 +39,7 @@
      .desc = "packet classification"}, \
     {.name = "success", \
      .type = "bool", \
-     .desc = "is response considered success"} 
+     .desc = "is response considered success"}
 
 #define CLASSIFICATION_SUCCESS_FIELDSET_LEN 2
 
@@ -94,20 +94,20 @@ static inline unsigned short in_icmp_checksum(unsigned short *ip_pkt, int len)
 	return (unsigned short)(~sum);
 }
 
-UNUSED static inline unsigned short
+static inline unsigned short
 zmap_ip_checksum(unsigned short *buf)
 {
 	return in_checksum(buf, (int)sizeof(struct ip));
 }
 
 
-UNUSED static inline unsigned short
+static inline unsigned short
 icmp_checksum(unsigned short *buf, size_t buflen)
 {
 	return in_icmp_checksum(buf, buflen);
 }
 
-static UNUSED uint16_t tcp_checksum(unsigned short len_tcp,
+static inline uint16_t tcp_checksum(unsigned short len_tcp,
 						     uint32_t saddr,
 						     uint32_t daddr,
 						     struct tcphdr *tcp_pkt)
@@ -145,7 +145,7 @@ static UNUSED uint16_t tcp_checksum(unsigned short len_tcp,
 }
 
 // Returns 0 if dst_port is outside the expected valid range, non-zero otherwise
-static UNUSED inline int
+static inline int
 check_dst_port(uint16_t port, int num_ports, uint32_t *validation)
 {
 	if (port > zconf.source_port_last || port < zconf.source_port_first) {
@@ -158,7 +158,7 @@ check_dst_port(uint16_t port, int num_ports, uint32_t *validation)
 	return (((max - min) % num_ports) >= ((to_validate - min) % num_ports));
 }
 
-static UNUSED inline uint16_t
+static inline uint16_t
 get_src_port(int num_ports, int probe_num, uint32_t *validation)
 {
 	return zconf.source_port_first +
