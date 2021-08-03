@@ -108,11 +108,8 @@ void json_metadata(FILE *file)
 
 	json_object_object_add(obj, "syslog",
 			       json_object_new_int(zconf.syslog));
-	json_object_object_add(obj, "filter_duplicates",
-			       json_object_new_int(zconf.filter_duplicates));
-	json_object_object_add(obj, "filter_unsuccessful",
-			       json_object_new_int(zconf.filter_unsuccessful));
-
+	json_object_object_add(obj, "default_mode",
+			       json_object_new_int(zconf.default_mode));
 	json_object_object_add(obj, "pcap_recv",
 			       json_object_new_int(zrecv.pcap_recv));
 	json_object_object_add(obj, "pcap_drop",

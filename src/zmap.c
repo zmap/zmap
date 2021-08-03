@@ -552,8 +552,6 @@ int main(int argc, char *argv[])
 	}
 	// default filtering behavior is to drop unsuccessful and duplicates
 	if (zconf.default_mode) {
-		zconf.filter_duplicates = 1;
-		zconf.filter_unsuccessful = 1;
 		log_debug(
 		    "filter",
 		    "No output filter specified. Will use default: exclude duplicates and unssuccessful");

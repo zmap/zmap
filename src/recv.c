@@ -113,10 +113,10 @@ void handle_packet(uint32_t buflen, const u_char *bytes, const struct timespec t
 	fieldset_t *o = NULL;
 	// we need to translate the data provided by the probe module
 	// into a fieldset that can be used by the output module
-	if (!is_success && zconf.filter_unsuccessful) {
+	if (!is_success && zconf.default_mode) {
 		goto cleanup;
 	}
-	if (is_repeat && zconf.filter_duplicates) {
+	if (is_repeat && zconf.default_mode) {
 		goto cleanup;
 	}
 	if (!evaluate_expression(zconf.filter.expression, fs)) {
@@ -150,22 +150,17 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 	}
 	// initialize paged bitmap
 	seen = pbm_init();
-	if (zconf.filter_duplicates) {
+	if (zconf.default_mode) {
 		log_debug("recv",
 			  "duplicate responses will be excluded from output");
+		log_debug("recv",
+			  "unsuccessful responses will be excluded from output");
 	} else {
 		log_debug("recv",
-			  "duplicate responses will be included in output");
-	}
-	if (zconf.filter_unsuccessful) {
-		log_debug(
-		    "recv",
-		    "unsuccessful responses will be excluded from output");
-	} else {
+			  "duplicate responses will be passed to the output module");
 		log_debug("recv",
-			  "unsuccessful responses will be included in output");
+			  "unsuccessful responses will be passed to the output module");
 	}
-
 	pthread_mutex_lock(recv_ready_mutex);
 	zconf.recv_ready = 1;
 	pthread_mutex_unlock(recv_ready_mutex);
