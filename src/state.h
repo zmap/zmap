@@ -117,8 +117,6 @@ struct state_conf {
 	int quiet;
 	int ignore_invalid_hosts;
 	int syslog;
-	int filter_duplicates;
-	int filter_unsuccessful;
 	int recv_ready;
 	int num_retries;
 	uint64_t total_allowed;
