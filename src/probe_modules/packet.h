@@ -203,10 +203,10 @@ static inline struct icmp *get_icmp_header(const struct ip *ip_hdr,
 	return (struct icmp *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
 }
 
-static inline char *get_udp_payload(const struct udphdr *udp,
+static inline uint8_t *get_udp_payload(const struct udphdr *udp,
 				    UNUSED uint32_t len)
 {
-	return (char *)(&udp[1]);
+	return (uint8_t*)(&udp[1]);
 }
 
 static inline struct ip *get_inner_ip_header(const struct icmp *icmp,
