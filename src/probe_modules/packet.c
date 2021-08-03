@@ -227,11 +227,20 @@ char *make_ip_str(uint32_t ip)
 }
 
 const char *icmp_unreach_strings[] = {
-    "network unreachable",      "host unreachable",
-    "protocol unreachable",     "port unreachable",
-    "fragments required",       "source route failed",
-    "network unknown",		"host unknown",
-    "source host isolated",     "network admin. prohibited",
-    "host admin. prohibited",   "network unreachable TOS",
-    "host unreachable TOS",     "communication admin. prohibited",
-    "host presdence violation", "precedence cutoff"};
+    "network unreachable",
+	"host unreachable",
+    "protocol unreachable",
+	"port unreachable",
+    "fragments required",
+	"source route failed",
+    "network unknown",
+	"host unknown",
+    "source host isolated",
+	"network admin. prohibited",
+    "host admin. prohibited",
+	"network unreachable TOS",
+    "host unreachable TOS",
+	"communication admin. prohibited",
+    "host presdence violation",
+	"precedence cutoff"
+};
