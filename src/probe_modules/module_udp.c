@@ -188,7 +188,7 @@ int udp_global_initialize(struct state_conf *conf)
 
 		udp_template = udp_template_load(in, in_len, &udp_template_max_len);
 		module_udp.make_packet = udp_make_templated_packet;
-	} else if (strcmp(args, "hex") == 0) {
+	} else if (strncmp(args, "hex", arg_name_len) == 0) {
 		udp_fixed_payload_len = strlen(c) / 2;
 		udp_fixed_payload = xmalloc(udp_fixed_payload_len);
 
