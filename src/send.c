@@ -218,6 +218,7 @@ int send_run(sock_t st, shard_t *s)
 
 	// OS specific per-thread init
 	if (send_run_init(st)) {
+		pthread_mutex_unlock(&send_mutex);
 		return -1;
 	}
 	// MAC address length in characters
