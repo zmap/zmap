@@ -144,7 +144,8 @@ static void start_zmap(void)
 			log_fatal(
 			    "zmap",
 			    "could not detect default gateway address for %s."
-			    " Try setting default gateway mac address (-G).",
+			    " Try setting default gateway mac address (-G)."
+			    " If this is a newly launched machine, try completing an outgoing network connection (e.g. curl https://zmap.io), and trying again.",
 			    zconf.iface);
 		}
 		log_debug("zmap", "found gateway IP %s on %s", inet_ntoa(gw_ip),
@@ -156,7 +157,8 @@ static void start_zmap(void)
 			    "zmap",
 			    "could not detect GW MAC address for %s on %s."
 			    " Try setting default gateway mac address (-G), or run"
-			    " \"arp <gateway_ip>\" in terminal.",
+			    " \"arp <gateway_ip>\" in terminal."
+			    " If this is a newly launched machine, try completing an outgoing network connection (e.g. curl https://zmap.io), and trying again.",
 			    inet_ntoa(gw_ip), zconf.iface);
 		}
 		zconf.gw_mac_set = 1;
