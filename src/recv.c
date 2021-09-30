@@ -29,7 +29,8 @@ static u_char fake_eth_hdr[65535];
 // bitmap of observed IP addresses
 static uint8_t **seen = NULL;
 
-void handle_packet(uint32_t buflen, const u_char *bytes, const struct timespec ts)
+void handle_packet(uint32_t buflen, const u_char *bytes,
+		   const struct timespec ts)
 {
 	if ((sizeof(struct ip) + zconf.data_link_size) > buflen) {
 		// buffer not large enough to contain ethernet
@@ -151,15 +152,17 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 	// initialize paged bitmap
 	seen = pbm_init();
 	if (zconf.default_mode) {
-		log_debug("recv",
-			  "duplicate responses will be excluded from output");
-		log_debug("recv",
-			  "unsuccessful responses will be excluded from output");
+		log_info("recv",
+			 "duplicate responses will be excluded from output");
+		log_info("recv",
+			 "unsuccessful responses will be excluded from output");
 	} else {
-		log_debug("recv",
-			  "duplicate responses will be passed to the output module");
-		log_debug("recv",
-			  "unsuccessful responses will be passed to the output module");
+		log_info(
+		    "recv",
+		    "duplicate responses will be passed to the output module");
+		log_info(
+		    "recv",
+		    "unsuccessful responses will be passed to the output module");
 	}
 	pthread_mutex_lock(recv_ready_mutex);
 	zconf.recv_ready = 1;
