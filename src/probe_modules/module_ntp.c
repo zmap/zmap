@@ -33,29 +33,6 @@ int ntp_global_initialize(struct state_conf *conf) {
 	return udp_global_initialize(conf);
 }
 
-int ntp_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
-		    uint32_t *validation, int probe_num)
-{
-	struct ether_header *eth_header = (struct ether_header *)buf;
-	struct ip *ip_header = (struct ip *)(&eth_header[1]);
-	struct udphdr *udp_header = (struct udphdr *)&ip_header[1];
-	struct ntphdr *ntp = (struct ntphdr *)&udp_header[1];
-
-	ip_header->ip_src.s_addr = src_ip;
-	ip_header->ip_dst.s_addr = dst_ip;
-	ip_header->ip_ttl = ttl;
-	udp_header->uh_sport =
-	    htons(get_src_port(num_ports, probe_num, validation));
-	ip_header->ip_sum = 0;
-	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
-
-	// Sets LI_VN_MODE to 11100011
-	// Sends a packet with NTP version 4 and as a client (to a server)
-	ntp->LI_VN_MODE = 227;
-
-	return EXIT_SUCCESS;
-}
-
 int ntp_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation)
 {
