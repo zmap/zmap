@@ -21,7 +21,7 @@ option "log-file"                 l "File to log to"
 option "verbosity"                v "Set log level verbosity (0-5, default 3)"
     default="3"
     optional int
-option "ignore-blocklist-errors"  - "Ignore invalid entires in the blocklist/allowlist (default false)"
+option "ignore-blocklist-errors"  - "Ignore invalid entries in the blocklist/allowlist (default false)"
     optional
 option "seed"                   e "Seed used to select address permutation"
     typestr="n"

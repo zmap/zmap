@@ -629,7 +629,7 @@ int main(int argc, char *argv[])
 				  "unable to open metadata file (%s): %s",
 				  zconf.metadata_filename, strerror(errno));
 		}
-		log_debug("metadata", "metdata will be saved to %s",
+		log_debug("metadata", "metadata will be saved to %s",
 			  zconf.metadata_filename);
 	}
 

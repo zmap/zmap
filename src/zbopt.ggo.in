@@ -23,9 +23,9 @@ option "verbosity"                v "Set log level verbosity (0-5, default 3)"
     optional int
 option "no-duplicate-checking"    - "Don't deduplicate IP addresses (default false)"
     optional
-option "ignore-blocklist-errors"  - "Ignore invalid entires in the blocklist/allowlist (default false)"
+option "ignore-blocklist-errors"  - "Ignore invalid entries in the blocklist/allowlist (default false)"
     optional
-option "ignore-input-errors"      - "Don't print invalid entires in the input (default false)"
+option "ignore-input-errors"      - "Don't print invalid entries in the input (default false)"
     optional
 option "disable-syslog"           - "Disables logging messages to syslog"
     optional

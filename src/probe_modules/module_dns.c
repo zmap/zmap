@@ -205,7 +205,7 @@ static uint16_t get_name_helper(const char *data, uint16_t data_len,
 				uint16_t recursion_level)
 {
 	log_trace("dns",
-		  "_get_name_helper IN, datalen: %d namelen: %d recusion: %d",
+		  "_get_name_helper IN, datalen: %d namelen: %d recursion: %d",
 		  data_len, name_len, recursion_level);
 	if (data_len == 0 || name_len == 0 || payload_len == 0) {
 		log_trace(
@@ -215,7 +215,7 @@ static uint16_t get_name_helper(const char *data, uint16_t data_len,
 		return 0;
 	}
 	if (recursion_level > MAX_LABEL_RECURSION) {
-		log_trace("dns", "_get_name_helper OUT. ERR, MAX RECUSION");
+		log_trace("dns", "_get_name_helper OUT. ERR, MAX RECURSION");
 		return 0;
 	}
 	uint16_t bytes_consumed = 0;
@@ -1026,7 +1026,7 @@ static fielddef_t fields[] = {
      .type = "bool",
      .desc = "Is the RA bit set with no error code?"},
     ICMP_FIELDSET_FIELDS,
-    {.name = "udp_len", .type = "int", .desc = "UDP packet lenght"},
+    {.name = "udp_len", .type = "int", .desc = "UDP packet length"},
     {.name = "dns_id", .type = "int", .desc = "DNS transaction ID"},
     {.name = "dns_rd", .type = "int", .desc = "DNS recursion desired"},
     {.name = "dns_tc", .type = "int", .desc = "DNS packet truncated"},

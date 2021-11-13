@@ -11,7 +11,7 @@ from source.
 Developing
 ----------
 
-- ZMap code follows the [Linux kernel style guide][kernelguide]. We mantain [a
+- ZMap code follows the [Linux kernel style guide][kernelguide]. We maintain [a
   configuration file](/.clang-format) for `clang-format` that applies this
   style. You can use the [format.sh](/format.sh) script to apply this style.
 
