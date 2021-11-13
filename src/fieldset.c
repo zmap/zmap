@@ -119,7 +119,7 @@ static void fs_modify_word(fieldset_t *fs, const char *name, int type,
 		}
 	}
 	// TODO(ZD): We need to test, but this is really unsafe to just add because it 
-	// will all but guarantee that it's in the wront place
+	// will all but guarantee that it's in the wrong place
 	//fs_add_word(fs, name, type, free_, len, value);
 	log_fatal("fs", "attempting to modify non-existent field");
 }

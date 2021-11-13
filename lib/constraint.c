@@ -258,7 +258,7 @@ uint32_t constraint_lookup_index(constraint_t *con, uint64_t index,
 // the number of addresses in a prefix at the current level of the tree.
 // If paint is specified, each node will have its count set to the number of
 // leaves under it set to value.
-// If exclude_radix is specified, the number of addresses will exlcude prefixes
+// If exclude_radix is specified, the number of addresses will exclude prefixes
 // that are a /RADIX_LENGTH or larger
 static uint64_t _count_ips_recurse(node_t *node, value_t value, uint64_t size,
 				   int paint, int exclude_radix)

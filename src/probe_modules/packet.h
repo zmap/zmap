@@ -127,7 +127,7 @@ static inline uint16_t tcp_checksum(unsigned short len_tcp,
 		sum += *w++;
 		nleft -= 2;
 	}
-	// if nleft is 1 there ist still on byte left.
+	// if nleft is 1 there is still one byte left.
 	// We add a padding byte (0xFF) to build a 16bit word
 	if (nleft > 0) {
 		sum += *w & ntohs(0xFF00);

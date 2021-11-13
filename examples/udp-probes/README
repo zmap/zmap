@@ -28,8 +28,8 @@ memcache_11211.pkt      This probe triggers a response from memcached on UDP por
 mssql_1434.pkt          This probe triggers a response from Microsoft SQL Server discovery services on UDP port 1434
 natpmp_5351.pkt         This probe triggers a response from NATPMP-enabled devices on UDP port 5351
 netbios_137.pkt         This probe triggers a status reply from NetBIOS services on UDP port 137
-ntp_123.pkt             This probe triggers a response from NTP servies on UDP port 123
-ntp_123_monlist.pkt     This probe triggers a response for command "monlist" from NTP servies on UDP port 123
+ntp_123.pkt             This probe triggers a response from NTP services on UDP port 123
+ntp_123_monlist.pkt     This probe triggers a response for command "monlist" from NTP services on UDP port 123
 pca_nq_5632.pkt         This probe triggers a response from PC Anywhere services on UDP port 5632 (network query)
 pca_st_5632.pkt         This probe triggers a response from PC Anywhere services on UDP port 5632 (status)
 portmap_111.pkt         This probe triggers a response from SunRPC portmapper services on UDP port 111

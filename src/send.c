@@ -260,7 +260,7 @@ int send_run(sock_t st, shard_t *s)
 	if (zconf.rate > 0) {
 		delay = 10000;
 		if (send_rate < slow_rate) {
-			// set the inital time difference
+			// set the initial time difference
 			sleep_time = nsec_per_sec / send_rate;
 			last_time = now() - (1.0 / send_rate);
 		} else {

@@ -47,7 +47,7 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 	// This instance of ZMap will run T subshards, with one subshard per
 	// thread. This composes a single shard, as specified by the command
 	// line flag --shard=n.  E.g. to run shard with index n, we must run
-	// subshards with indicies the range [n*T, (n+1)*T].
+	// subshards with indices the range [n*T, (n+1)*T].
 	//
 	// We can calculate our subshard index i = n*T + t.
 	uint32_t sub_idx = shard_idx * num_threads + thread_idx;
