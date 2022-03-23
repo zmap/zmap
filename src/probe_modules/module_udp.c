@@ -452,6 +452,7 @@ int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		if (icmp_helper_validate(ip_hdr, len, sizeof(struct udphdr),
 					 &ip_inner,
 					 &ip_inner_len) == PACKET_INVALID) {
+			return PACKET_INVALID;
 		}
 		struct udphdr *udp = get_udp_header(ip_inner, ip_inner_len);
 		// we can always check the destination port because this is the
