@@ -639,7 +639,7 @@ int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len,
 				break;
 			}
 			u16 = (uint16_t *)p;
-			*u16 = udp_hdr->uh_sport;
+			*u16 = udp_hdr->uh_dport;
 			p += 2;
 			break;
 
@@ -658,7 +658,7 @@ int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len,
 				full = 1;
 				break;
 			}
-			y = snprintf(tmp, 6, "%d", ntohs(udp_hdr->uh_sport));
+			y = snprintf(tmp, 6, "%d", ntohs(udp_hdr->uh_dport));
 			memcpy(p, tmp, y);
 			p += y;
 			break;
