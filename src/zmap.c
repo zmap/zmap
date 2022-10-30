@@ -90,7 +90,7 @@ static void *start_send(void *arg)
 	set_cpu(s->cpu);
 	int ret = send_run(s->sock, s->shard);
 	free(s);
-	if ret != EXIT_SUCCESS {
+	if (ret != EXIT_SUCCESS) {
 		log_fatal("send", "send_run failed, terminating")
 	}
 	return NULL;
