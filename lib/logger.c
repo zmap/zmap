@@ -267,6 +267,19 @@ double now(void)
 	return (double)now.tv_sec + (double)now.tv_usec / 1000000.;
 }
 
+double steady_now(void)
+{
+#if defined(_POSIX_TIMERS) && defined(_POSIX_MONOTONIC_CLOCK)
+	struct timespec tp;
+	clock_gettime(CLOCK_MONOTONIC, &tp);
+	return (double)tp.tv_sec + (double)tp.tv_nsec / 1000000000.;
+#else
+	struct timeval now;
+	gettimeofday(&now, NULL);
+	return (double)now.tv_sec + (double)now.tv_usec / 1000000.;
+#endif
+}
+
 size_t dstrftime(char *buf, size_t maxsize, const char *format, double tm)
 {
 	struct timeval tv;

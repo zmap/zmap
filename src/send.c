@@ -73,15 +73,6 @@ void sig_handler_decrease_speed(UNUSED int signal)
 		 zconf.rate);
 }
 
-// A monotonic clock whose value is guaranteed to never decrease.
-// This is useful for rate limiting.
-double steady_now(void)
-{
-	struct timespec tp;
-	clock_gettime(CLOCK_MONOTONIC, &tp);
-	return (double)tp.tv_sec + (double)tp.tv_nsec / 1000000000.;
-}
-
 // global sender initialize (not thread specific)
 iterator_t *send_init(void)
 {
