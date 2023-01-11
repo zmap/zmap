@@ -60,8 +60,6 @@ void check_and_log_file_error(FILE *file, const char *name);
 
 size_t dstrftime(char *, size_t, const char *, double);
 
-double now();
-
 #ifdef __cplusplus
 }
 #endif

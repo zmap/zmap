@@ -260,13 +260,6 @@ void check_and_log_file_error(FILE *file, const char *name)
 	}
 }
 
-double now(void)
-{
-	struct timeval now;
-	gettimeofday(&now, NULL);
-	return (double)now.tv_sec + (double)now.tv_usec / 1000000.;
-}
-
 size_t dstrftime(char *buf, size_t maxsize, const char *format, double tm)
 {
 	struct timeval tv;

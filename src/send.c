@@ -20,6 +20,7 @@
 #include <signal.h>
 
 #include "../lib/includes.h"
+#include "../lib/util.h"
 #include "../lib/logger.h"
 #include "../lib/random.h"
 #include "../lib/blocklist.h"
@@ -245,7 +246,7 @@ int send_run(sock_t st, shard_t *s)
 	// adaptive timing to hit target rate
 	uint64_t count = 0;
 	uint64_t last_count = count;
-	double last_time = now();
+	double last_time = steady_now();
 	uint32_t delay = 0;
 	int interval = 0;
 	volatile int vi;
@@ -262,18 +263,18 @@ int send_run(sock_t st, shard_t *s)
 		if (send_rate < slow_rate) {
 			// set the initial time difference
 			sleep_time = nsec_per_sec / send_rate;
-			last_time = now() - (1.0 / send_rate);
+			last_time = steady_now() - (1.0 / send_rate);
 		} else {
 			// estimate initial rate
 			for (vi = delay; vi--;)
 				;
-			delay *= 1 / (now() - last_time) /
+			delay *= 1 / (steady_now() - last_time) /
 				 ((double)zconf.rate /
 				  ((double)zconf.senders * zconf.batch));
 			interval = ((double)zconf.rate /
 				    ((double)zconf.senders * zconf.batch)) /
 				   20;
-			last_time = now();
+			last_time = steady_now();
 		}
 	}
 	// Get the initial IP to scan.
@@ -300,7 +301,7 @@ int send_run(sock_t st, shard_t *s)
 		// Adaptive timing delay
 		if (count && delay > 0) {
 			if (send_rate < slow_rate) {
-				double t = now();
+				double t = steady_now();
 				double last_rate = (1.0 / (t - last_time));
 
 				sleep_time *= ((last_rate / send_rate) + 1) / 2;
@@ -316,7 +317,7 @@ int send_run(sock_t st, shard_t *s)
 				for (vi = delay; vi--;)
 					;
 				if (!interval || (count % interval == 0)) {
-					double t = now();
+					double t = steady_now();
 					assert(count > last_count);
 					assert(t > last_time);
 					double multiplier =

@@ -23,14 +23,14 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "iterator.h"
-#include "recv.h"
-#include "state.h"
-
 #include "../lib/lockfd.h"
 #include "../lib/logger.h"
 #include "../lib/util.h"
 #include "../lib/xalloc.h"
+
+#include "iterator.h"
+#include "recv.h"
+#include "state.h"
 
 #define UPDATE_INTERVAL 1 // seconds
 #define NUMBER_STR_LEN 20
