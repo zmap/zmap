@@ -57,24 +57,17 @@ int drop_privs();
 // Set CPU affinity to a single core
 int set_cpu(uint32_t core);
 
-double now(void)
-{
-	struct timeval now;
-	gettimeofday(&now, NULL);
-	return (double)now.tv_sec + (double)now.tv_usec / 1000000.;
-}
+// The number of seconds and microseconds since the Epoch.
+double now();
 
-double steady_now(void)
-{
-#if defined(_POSIX_TIMERS) && defined(_POSIX_MONOTONIC_CLOCK)
-	struct timespec tp;
-	clock_gettime(CLOCK_MONOTONIC, &tp);
-	return (double)tp.tv_sec + (double)tp.tv_nsec / 1000000000.;
-#else
-	struct timeval now;
-	gettimeofday(&now, NULL);
-	return (double)now.tv_sec + (double)now.tv_usec / 1000000.;
-#endif
-}
+// The number of seconds and nanoseconds since an unspecified point in time.
+// On supported hosts, this value is guaranteed to never decrease.
+//
+// According to the POSIX specification the `clock_gettime` function is part
+// of the Timers option and may not be available on all implementations.
+//
+// On hosts where a monotonic clock is not available, this falls back
+// to `gettimeofday` which was ZMap's original implementation.
+double steady_now();
 
 #endif /* ZMAP_UTIL_H */
