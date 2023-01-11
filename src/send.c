@@ -20,6 +20,7 @@
 #include <signal.h>
 
 #include "../lib/includes.h"
+#include "../lib/util.h"
 #include "../lib/logger.h"
 #include "../lib/random.h"
 #include "../lib/blocklist.h"

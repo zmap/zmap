@@ -15,6 +15,7 @@
 #include "../lib/blocklist.h"
 #include "../lib/logger.h"
 #include "../lib/xalloc.h"
+#include "../lib/util.h"
 
 #include "iterator.h"
 

@@ -11,6 +11,7 @@
 #include <assert.h>
 
 #include "../lib/includes.h"
+#include "../lib/util.h"
 #include "../lib/logger.h"
 #include "../lib/pbm.h"
 
