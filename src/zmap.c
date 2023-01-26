@@ -91,7 +91,7 @@ static void *start_send(void *arg)
 	int ret = send_run(s->sock, s->shard);
 	free(s);
 	if (ret != EXIT_SUCCESS) {
-		log_fatal("send", "send_run failed, terminating")
+		log_fatal("send", "send_run failed, terminating");
 	}
 	return NULL;
 }
