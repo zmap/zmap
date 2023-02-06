@@ -88,8 +88,11 @@ static void *start_send(void *arg)
 	send_arg_t *s = (send_arg_t *)arg;
 	log_debug("zmap", "Pinning a send thread to core %u", s->cpu);
 	set_cpu(s->cpu);
-	send_run(s->sock, s->shard);
+	int ret = send_run(s->sock, s->shard);
 	free(s);
+	if (ret != EXIT_SUCCESS) {
+		log_fatal("send", "send_run failed, terminating");
+	}
 	return NULL;
 }
 
