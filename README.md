@@ -43,3 +43,105 @@ Unless required by applicable law or agreed to in writing, software distributed
 under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
 CONDITIONS OF ANY KIND, either express or implied. See LICENSE for the specific
 language governing permissions and limitations under the License.
+
+
+
+
+Command Usage.
+--------------
+
+Basic arguments:
+  -p, --target-port=port    of    port number to scan (for TCP and UDP scans)
+  -o, --output-file=name        Output file
+  -b, --blacklist-file=path     File of subnets to exclude, in CIDR notation,
+                                  e.g. 192.168.0.0/16
+  -w, --whitelist-file=path     File of subnets to constrain scan to, in CIDR
+                                  notation, e.g. 192.168.0.0/16
+
+Scan options:
+  -r, --rate=pps                Set send rate in packets/sec
+  -B, --bandwidth=bps           Set send rate in bits/second (supports suffixes
+                                  G, M and K)
+  -n, --max-targets=n           Cap number of targets to probe (as a number or
+                                  a percentage of the address space)
+  -t, --max-runtime=ses         Cap length of time for sending packets
+  -N, --max-results=n           Cap number of results to return
+  -P, --probes=n                Number of probes to send to each IP
+                                  (default=`1')
+  -c, --cooldown-time=secs      How long to continue receiving after sending
+                                  last probe  (default=`8')
+  -e, --seed=n                  Seed used to select address permutation
+      --retries=n               Max number of times to try to send packet if
+                                  send fails  (default=`10')
+  -d, --dryrun                  Don't actually send packets
+      --shards=N                Set the total number of shards  (default=`1')
+      --shard=n                 Set which shard this scan is (0 indexed)
+                                  (default=`0')
+
+Network options:
+  -s, --source-port=port|range  Source port(s) for scan packets
+  -S, --source-ip=ip|range      Source address(es) for scan packets
+  -G, --gateway-mac=addr        Specify gateway MAC address
+      --source-mac=addr         Source MAC address
+  -i, --interface=name          Specify network interface to use                                                                               -X, --vpn                     Sends IP packets instead of Ethernet (for VPNs)                                                              
+Probe Modules:
+  -M, --probe-module=name       Select probe module  (default=`tcp_synscan')
+      --probe-args=args         Arguments to pass to probe module
+      --list-probe-modules      List available probe modules
+
+Data Output:
+  -f, --output-fields=fields    Fields that should be output in result set
+  -O, --output-module=name      Select output module  (default=`default')
+      --output-args=args        Arguments to pass to output module
+      --output-filter=filter    Specify a filter over the response fields to
+                                  limit what responses get sent to the output
+                                  module                                                                                                           --list-output-modules     List available output modules
+      --list-output-fields      List all fields that can be output by selected
+                                  probe module
+
+Logging and Metadata:
+  -v, --verbosity=n             Level of log detail (0-5)  (default=`3')
+  -l, --log-file=name           Write log entries to file
+  -L, --log-directory=directory Write log entries to a timestamped file in this
+                                  directory
+  -m, --metadata-file=name      Output file for scan metadata (JSON)
+  -u, --status-updates-file=name
+                                Write scan progress updates to CSV file
+  -q, --quiet                   Do not print status updates
+      --disable-syslog          Disables logging messages to syslog
+      --notes=notes             Inject user-specified notes into scan metadata
+      --user-metadata=json      Inject user-specified JSON metadata into scan
+                                  metadata
+
+Additional options:
+  -C, --config=filename         Read a configuration file, which can specify
+                                  any of these options
+                                  (default=`/etc/zmap/zmap.conf')
+      --max-sendto-failures=n   Maximum NIC sendto failures before scan is
+                                  aborted  (default=`-1')
+      --min-hitrate=n           Minimum hitrate that scan can hit before scan
+                                  is aborted  (default=`0.0')
+  -T, --sender-threads=n        Threads used to send packets  (default=`1')
+      --cores=STRING            Comma-separated list of cores to pin to
+      --ignore-invalid-hosts    Ignore invalid hosts in whitelist/blacklist
+                                  file
+  -h, --help                    Print help and exit
+  -V, --version                 Print version and exit
+
+Examples:
+    zmap -p 80 (scan the Internet for hosts on tcp/80 and output to stdout)
+    zmap -N 5 -B 10M -p 80 (find 5 HTTP servers, scanning at 10 Mb/s)
+    zmap -p 80 10.0.0.0/8 192.168.0.0/16 -o (scan both subnets on tcp/80)
+    zmap -p 80 1.2.3.4 10.0.0.3 (scan 1.2.3.4, 10.0.0.3 on tcp/80)
+
+Probe-module (tcp_synscan) Help:
+Probe module that sends a TCP SYN packet to a specific port. Possible
+classifications are: synack and rst. A SYN-ACK packet is considered a success
+and a reset packet is considered a failed response.
+
+Output-module (csv) Help:
+ (e.g., SYN-ACK from
+a TCP SYN scan) in ASCII form (e.g., 192.168.1.5) to stdout or the specified
+output file. Internally this is handled by the "csv" output module and is
+equivalent to running zmap --output-module=csv --output-fields=saddr
+--output-filter="success = 1 && repeat = 0".
