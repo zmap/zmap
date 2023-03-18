@@ -14,6 +14,7 @@
 #include "../../lib/xalloc.h"
 
 #include "../state.h"
+#include "../validate.h"
 
 #include "probe_modules.h"
 #include "packet.h"
@@ -303,12 +304,20 @@ int ipip_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		if (dport != zconf.target_port) {
 			return PACKET_INVALID;
 		}
-		uint16_t sport = ntohs(udp->uh_sport);
-		if (!check_dst_port(sport, num_ports, validation)) {
-			return PACKET_INVALID;
-		}
 		if (!blocklist_is_allowed(*src_ip)) {
 			return PACKET_INVALID;
+		}
+		uint16_t sport = ntohs(udp->uh_sport);
+		if (check_dst_port(sport, num_ports, validation)) {
+			return PACKET_VALID;
+		}
+		for (unsigned i = 0; i < zconf.number_source_ips; i++) {
+			validate_gen(
+				zconf.source_ip_addresses[i],
+				ip_hdr->ip_src.s_addr, validation);
+			if (check_dst_port(sport, num_ports, validation)) {
+				return PACKET_VALID;
+			}
 		}
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		// IPIP can return ICMP Destination unreach
@@ -360,10 +369,9 @@ int ipip_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		if (!check_dst_port(sport, num_ports, validation)) {
 			return PACKET_INVALID;
 		}
-	} else {
-		return PACKET_INVALID;
+		return PACKET_VALID;
 	}
-	return PACKET_VALID;
+	return PACKET_INVALID;
 }
 
 static fielddef_t fields[] = {
