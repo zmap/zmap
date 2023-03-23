@@ -745,9 +745,9 @@ int dns_make_packet(void *buf, size_t *buf_len,
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
 	struct udphdr *udp_header = (struct udphdr *)&ip_header[1];
 
-	// For num_questions == 1, we handle this in per-thread init. Do less
+	// For num_questions == 0, we handle this in per-thread init. Do less
 	// work
-	if (num_questions > 1) {
+	if (num_questions > 0) {
 
 		uint16_t encoded_len =
 		    htons(sizeof(struct ip) + sizeof(struct udphdr) +
