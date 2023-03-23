@@ -32,6 +32,7 @@
 #include "../lib/pbm.h"
 
 #include "aesrand.h"
+#include "constants.h"
 #include "zopt.h"
 #include "send.h"
 #include "recv.h"
@@ -655,14 +656,15 @@ int main(int argc, char *argv[])
 	zconf.destination_cidrs = args.inputs;
 	zconf.destination_cidrs_len = args.inputs_num;
 	if (zconf.destination_cidrs && zconf.blocklist_filename &&
-	    !strcmp(zconf.blocklist_filename, "/etc/zmap/blocklist.conf")) {
+	    !strcmp(zconf.blocklist_filename, ZMAP_DEFAULT_BLOCKLIST)) {
 		log_warn(
 		    "blocklist",
 		    "ZMap is currently using the default blocklist located "
-		    "at /etc/zmap/blocklist.conf. By default, this blocklist excludes locally "
+		    "at " ZMAP_DEFAULT_BLOCKLIST ". By default, this blocklist excludes locally "
 		    "scoped networks (e.g. 10.0.0.0/8, 127.0.0.1/8, and 192.168.0.0/16). If you are"
 		    " trying to scan local networks, you can change the default blocklist by "
-		    "editing the default ZMap configuration at /etc/zmap/zmap.conf.");
+		    "editing the default ZMap configuration at " ZMAP_DEFAULT_BLOCKLIST "."
+			" If you have modified the default blocklist, you can ignore this message.");
 	}
 	SET_IF_GIVEN(zconf.allowlist_filename, allowlist_file);
 
