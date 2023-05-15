@@ -42,13 +42,14 @@ Install the required dependencies with the following commands.
    sudo yum install cmake gmp-devel gengetopt libpcap-devel flex byacc json-c-devel libunistring-devel
    ```
 
-* On macOS systems (using [Homebrew](http://brew.sh/)):
+* On macOS systems (using [Homebrew](https://brew.sh/)):
   ```sh
   brew install pkg-config cmake gmp gengetopt json-c byacc libdnet libunistring
   ```
 
 * On macOS systems (using [MacPorts](https://macports.org/)):
-  ```sudo port install zmap
+  ```
+  sudo port install zmap
   ```
 
 * To launch a shell inside a Docker container with the build dependencies
