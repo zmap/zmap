@@ -11,7 +11,7 @@ can be installed using most OS package managers:
 | Debian 8+ or Ubuntu 14.04+                | `sudo apt install zmap` |
 | Gentoo                                    | `sudo emerge zmap`      |
 | macOS (using [Homebrew](https://brew.sh)) | `brew install zmap`     |
-| macOS (using [MacPorts](https://macports.org)) | `port install zmap`|
+| macOS (using [MacPorts](https://macports.org)) | `sudo port install zmap`|
 | Arch Linux                                | `sudo pacman -S zmap`   |
 
 ## Building from Source
