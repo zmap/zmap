@@ -49,7 +49,7 @@ Install the required dependencies with the following commands.
 
 * On macOS systems (using [MacPorts](https://macports.org/)):
   ```
-  sudo port install zmap
+  sudo port install cmake byacc flex gengetopt pkgconfig gmp libdnet libpcap json-c libunistring 
   ```
 
 * To launch a shell inside a Docker container with the build dependencies
