@@ -11,6 +11,7 @@ can be installed using most OS package managers:
 | Debian 8+ or Ubuntu 14.04+                | `sudo apt install zmap` |
 | Gentoo                                    | `sudo emerge zmap`      |
 | macOS (using [Homebrew](https://brew.sh)) | `brew install zmap`     |
+| macOS (using [MacPorts](https://macports.org)) | `sudo port install zmap`|
 | Arch Linux                                | `sudo pacman -S zmap`   |
 
 ## Building from Source
@@ -26,6 +27,7 @@ ZMap has the following dependencies:
   - [flex](http://flex.sourceforge.net/) and [byacc](http://invisible-island.net/byacc/) - Output filter lexer and parser generator
   - [json-c](https://github.com/json-c/json-c/) - JSON implementation in C
   - [libunistring](https://www.gnu.org/software/libunistring/) - Unicode string library for C
+  - [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/) - compiler and library helper tool
   - [libdnet](https://github.com/dugsong/libdnet) - (macOS Only) Gateway and route detection
 
 Install the required dependencies with the following commands.
@@ -40,9 +42,14 @@ Install the required dependencies with the following commands.
    sudo yum install cmake gmp-devel gengetopt libpcap-devel flex byacc json-c-devel libunistring-devel
    ```
 
-* On macOS systems (using [Homebrew](http://brew.sh/)):
+* On macOS systems (using [Homebrew](https://brew.sh/)):
   ```sh
   brew install pkg-config cmake gmp gengetopt json-c byacc libdnet libunistring
+  ```
+
+* On macOS systems (using [MacPorts](https://macports.org/)):
+  ```
+  sudo port install cmake byacc flex gengetopt pkgconfig gmp libdnet libpcap json-c libunistring 
   ```
 
 * To launch a shell inside a Docker container with the build dependencies
