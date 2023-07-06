@@ -2,8 +2,7 @@
 
 ## Installing via Package Manager
 
-ZMap operates on GNU/Linux, macOS, and BSD. The latest stable version (v2.1.1)
-can be installed using most OS package managers:
+ZMap operates on GNU/Linux, macOS, and BSD. The latest stable version may be available in package managers.
 
 | OS                                        |                         |
 | ----------------------------------------- | ----------------------- |
@@ -97,3 +96,4 @@ option. For example, to install it in `$HOME/opt` run
     make -j4
     make install
     ```
+- On some BSD systems, you man need to manually add `-D_SYSTYPE_BSD` to your CFLAGS.
