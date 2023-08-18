@@ -178,8 +178,18 @@ static void icmp_echo_process_packet(const u_char *packet,
 
 	struct icmp_payload_for_rtt *payload =
 	    (struct icmp_payload_for_rtt *)(((char *)icmp_hdr) + 8);
-	fs_add_uint64(fs, "sent_timestamp_ts", (uint64_t)payload->sent_tv_sec);
-	fs_add_uint64(fs, "sent_timestamp_us", (uint64_t)payload->sent_tv_usec);
+
+	uint64_t sent_timestamp_ts = (uint64_t)payload->sent_tv_sec;
+	uint64_t sent_timestamp_us = (uint64_t)payload->sent_tv_usec;
+	uint64_t recv_timestamp_ts = (uint64_t)ts.tv_sec;
+	uint64_t recv_timestamp_us = (uint64_t)ts.tv_nsec / 1000;
+	uint64_t rtt_us = (recv_timestamp_ts * 1000000 + recv_timestamp_us) - (sent_timestamp_ts * 1000000 + sent_timestamp_us);
+
+	fs_add_uint64(fs, "sent_timestamp_ts", sent_timestamp_ts);
+	fs_add_uint64(fs, "sent_timestamp_us", sent_timestamp_us);
+	fs_add_uint64(fs, "recv_timestamp_ts", recv_timestamp_ts);
+	fs_add_uint64(fs, "recv_timestamp_us", recv_timestamp_us);
+	fs_add_uint64(fs, "rtt_us", rtt_us);
 	fs_add_uint64(fs, "dst_raw", (uint64_t)payload->dst);
 
 	switch (icmp_hdr->icmp_type) {
@@ -221,6 +231,15 @@ static fielddef_t fields[] = {
     {.name = "sent_timestamp_us",
      .type = "int",
      .desc = "microsecond part of sent timestamp"},
+    {.name = "recv_timestamp_ts",
+     .type = "int",
+     .desc = "timestamp of receive probe in seconds since Epoch"},
+    {.name = "recv_timestamp_us",
+     .type = "int",
+     .desc = "microsecond part of receive timestamp"},
+    {.name = "rtt_us",
+     .type = "int",
+     .desc = "round-trip time in microseconds"},
     {.name = "dst_raw",
      .type = "int",
      .desc = "raw destination IP address of sent probe"},
@@ -245,4 +264,4 @@ probe_module_t module_icmp_echo_time = {
     .close = NULL,
     .output_type = OUTPUT_TYPE_STATIC,
     .fields = fields,
-    .numfields = 9};
+    .numfields = 12};
