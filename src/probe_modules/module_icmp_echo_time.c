@@ -35,7 +35,6 @@ struct icmp_payload_for_rtt {
 };
 
 static int icmp_echo_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-				    UNUSED port_h_t dst_port,
 				    UNUSED void **arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);

@@ -66,7 +66,7 @@ void json_metadata(FILE *file)
 	}
 
 	json_object_object_add(obj, "target_port",
-			       json_object_new_int(zconf.target_port));
+			       json_object_new_int(zconf.ports->target_port));
 	json_object_object_add(obj, "source_port_first",
 			       json_object_new_int(zconf.source_port_first));
 	json_object_object_add(obj, "source_port_last",

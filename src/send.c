@@ -384,7 +384,7 @@ int send_run(sock_t st, shard_t *s)
 				uint8_t ttl = zconf.probe_ttl;
 				size_t length = 0;
 				zconf.probe_module->make_packet(
-				    buf, &length, src_ip, current_ip, zconf.target_port, ttl,
+				    buf, &length, src_ip, current_ip, zconf.ports->target_port, ttl,
 				    validation, i, probe_data);
 				if (length > MAX_PACKET_SIZE) {
 					log_fatal(

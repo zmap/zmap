@@ -35,7 +35,6 @@ static int synackscan_global_initialize(struct state_conf *state)
 }
 
 static int synackscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-				     port_h_t dst_port,
 				     UNUSED void **arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
@@ -45,14 +44,14 @@ static int synackscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	uint16_t len = htons(sizeof(struct ip) + ZMAP_TCP_SYNACKSCAN_TCP_HEADER_LEN);
 	make_ip_header(ip_header, IPPROTO_TCP, len);
 	struct tcphdr *tcp_header = (struct tcphdr *)(&ip_header[1]);
-	make_tcp_header(tcp_header, dst_port, TH_SYN | TH_ACK);
+	make_tcp_header(tcp_header, TH_SYN | TH_ACK);
 	set_mss_option(tcp_header);
 	return EXIT_SUCCESS;
 }
 
 static int synackscan_make_packet(void *buf, UNUSED size_t *buf_len,
-				  ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
-				  uint32_t *validation, int probe_num,
+				  ipaddr_n_t src_ip, ipaddr_n_t dst_ip, port_n_t dport,
+				  uint8_t ttl, uint32_t *validation, int probe_num,
 				  UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -68,6 +67,7 @@ static int synackscan_make_packet(void *buf, UNUSED size_t *buf_len,
 
 	tcp_header->th_sport =
 	    htons(get_src_port(num_ports, probe_num, validation));
+	tcp_header->th_dport = dport;
 	tcp_header->th_seq = tcp_seq;
 	tcp_header->th_ack = tcp_ack;
 	tcp_header->th_sum = 0;
@@ -83,8 +83,8 @@ static int synackscan_make_packet(void *buf, UNUSED size_t *buf_len,
 }
 
 static int synackscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
-				      UNUSED uint32_t *src_ip,
-				      uint32_t *validation)
+				      UNUSED uint32_t *src_ip, uint32_t *validation,
+					  const struct port_conf *ports)
 {
 
 	if (ip_hdr->ip_p == IPPROTO_TCP) {
@@ -95,7 +95,7 @@ static int synackscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		uint16_t sport = ntohs(tcp->th_sport);
 		uint16_t dport = ntohs(tcp->th_dport);
 		// validate source port
-		if (sport != zconf.target_port) {
+		if(!check_src_port(sport, ports)) {
 			return PACKET_INVALID;
 		}
 		// validate destination port
@@ -141,7 +141,7 @@ static int synackscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		// responding on a different port
 		uint16_t sport = ntohs(tcp->th_sport);
 		uint16_t dport = ntohs(tcp->th_dport);
-		if (dport != zconf.target_port) {
+		if(!check_src_port(dport, ports)) {
 			return PACKET_INVALID;
 		}
 		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,

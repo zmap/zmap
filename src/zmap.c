@@ -704,7 +704,8 @@ int main(int argc, char *argv[])
 			    "target port (-p) is required for this type of probe");
 		}
 		enforce_range("target-port", args.target_port_arg, 0, 0xFFFF);
-		zconf.target_port = args.target_port_arg;
+		zconf.ports = xmalloc(sizeof(struct port_conf));
+		zconf.ports->target_port = args.target_port_arg;
 	}
 	if (args.source_ip_given) {
 		parse_source_ip_addresses(args.source_ip_arg);

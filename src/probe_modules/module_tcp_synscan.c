@@ -64,7 +64,7 @@ static int synscan_make_packet(void *buf, size_t *buf_len,
 
 	port_h_t sport = get_src_port(num_source_ports, probe_num, validation);
 	tcp_header->th_sport = htons(sport);
-	tcp_header->th_sport = dport;
+	tcp_header->th_dport = dport;
 	tcp_header->th_seq = tcp_seq;
 	// checksum value must be zero when calculating packet's checksum
 	tcp_header->th_sum = 0;
@@ -96,7 +96,8 @@ void synscan_print_packet(FILE *fp, void *packet)
 
 
 static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
-				   uint32_t *src_ip, uint32_t *validation)
+				   uint32_t *src_ip, uint32_t *validation,
+				   const struct port_conf *ports)
 {
 	if (ip_hdr->ip_p == IPPROTO_TCP) {
 		struct tcphdr *tcp = get_tcp_header(ip_hdr, len);
@@ -106,7 +107,7 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		port_h_t sport = ntohs(tcp->th_sport);
 		port_h_t dport = ntohs(tcp->th_dport);
 		// validate source port
-		if (sport != target_port) {
+		if(!check_src_port(sport, ports)) {
 			return PACKET_INVALID;
 		}
 		// validate destination port
@@ -149,7 +150,7 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		// rather than the response packet
 		port_h_t sport = ntohs(tcp->th_sport);
 		port_h_t dport = ntohs(tcp->th_dport);
-		if (dport != target_port) {
+		if(!check_src_port(dport, ports)) {
 			return PACKET_INVALID;
 		}
 		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,

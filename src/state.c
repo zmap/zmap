@@ -10,7 +10,8 @@
 #include "../lib/logger.h"
 
 // global configuration and defaults
-struct state_conf zconf = {.log_level = LOG_INFO,
+struct state_conf zconf = {
+               .log_level = LOG_INFO,
 			   .source_port_first = 32768, // (these are the default
 			   .source_port_last = 61000, //   ephemeral range on Linux)
 			   .output_filename = NULL,
@@ -18,7 +19,7 @@ struct state_conf zconf = {.log_level = LOG_INFO,
 			   .allowlist_filename = NULL,
 			   .list_of_ips_filename = NULL,
 			   .list_of_ips_count = 0,
-			   .target_port = 0,
+			   .ports = NULL,
 			   .max_targets = 0xFFFFFFFF,
 			   .max_runtime = 0,
 			   .max_results = 0,

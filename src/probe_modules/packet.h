@@ -64,8 +64,7 @@ void make_ip_header(struct ip *iph, uint8_t, uint16_t);
 void make_tcp_header(struct tcphdr *, uint16_t th_flags);
 size_t set_mss_option(struct tcphdr *tcp_header);
 void make_icmp_header(struct icmp *);
-void make_udp_header(struct udphdr *udp_header, port_h_t dest_port,
-		     uint16_t len);
+void make_udp_header(struct udphdr *udp_header, uint16_t len);
 void fprintf_ip_header(FILE *fp, struct ip *iph);
 void fprintf_eth_header(FILE *fp, struct ether_header *ethh);
 
@@ -164,6 +163,12 @@ get_src_port(int num_ports, int probe_num, uint32_t *validation)
 {
 	return zconf.source_port_first +
 	       ((validation[1] + probe_num) % num_ports);
+}
+
+static inline int
+check_src_port(uint16_t port, const struct port_conf *ports)
+{
+	return ports->target_port == port;
 }
 
 static inline struct ip *get_ip_header(const u_char *packet, uint32_t len)
