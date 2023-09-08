@@ -105,7 +105,7 @@ const dns_qtype qtype_strid_to_qtype[] = {
 
 int8_t qtype_qtype_to_strid[256] = {BAD_QTYPE_VAL};
 
-void setup_qtype_str_map()
+void setup_qtype_str_map(void)
 {
 	qtype_qtype_to_strid[DNS_QTYPE_A] = 0;
 	qtype_qtype_to_strid[DNS_QTYPE_NS] = 1;

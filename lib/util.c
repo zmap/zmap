@@ -254,7 +254,7 @@ int file_exists(char *name)
 #include <uuid/uuid.h>
 #endif
 
-int drop_privs()
+int drop_privs(void)
 {
 	struct passwd *pw;
 	if (geteuid() != 0) {

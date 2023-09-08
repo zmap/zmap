@@ -51,7 +51,7 @@ aesrand_t *aesrand_init_from_seed(uint64_t seed)
 	return _aesrand_init(key);
 }
 
-aesrand_t *aesrand_init_from_random()
+aesrand_t *aesrand_init_from_random(void)
 {
 	uint8_t key[AES_KEY_BYTES];
 	if (!random_bytes(key, AES_KEY_BYTES)) {

@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void die() __attribute__((noreturn));
+static void die(void) __attribute__((noreturn));
 
 void *xcalloc(size_t count, size_t size)
 {
@@ -52,4 +52,4 @@ void *xrealloc(void *ptr, size_t size)
 	return res;
 }
 
-void die() { log_fatal("zmap", "Out of memory"); }
+void die(void) { log_fatal("zmap", "Out of memory"); }
