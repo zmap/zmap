@@ -426,7 +426,7 @@ int udp_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 
 int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
 			   uint32_t *src_ip, uint32_t *validation,
-			   int num_ports, int expected_port, const struct port_conf *ports)
+			   int num_ports, int validate_port, const struct port_conf *ports)
 {
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		struct udphdr *udp = get_udp_header(ip_hdr, len);
@@ -440,10 +440,9 @@ int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		if (!blocklist_is_allowed(*src_ip)) {
 			return PACKET_INVALID;
 		}
-		if (expected_port != NO_SRC_PORT_VALIDATION) {
-			uint16_t ep = (uint16_t)expected_port;
+		if (validate_port == SRC_PORT_VALIDATION) {
 			uint16_t sport = ntohs(udp->uh_sport);
-			if (sport != ep) {
+			if (!check_src_port(sport, ports)) {
 				return PACKET_INVALID;
 			}
 		}

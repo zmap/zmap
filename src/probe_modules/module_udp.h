@@ -18,7 +18,8 @@
 
 #include "state.h"
 
-#define NO_SRC_PORT_VALIDATION -1
+#define NO_SRC_PORT_VALIDATION 0
+#define SRC_PORT_VALIDATION 1
 
 typedef enum udp_payload_field_type {
 	UDP_DATA,
