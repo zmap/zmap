@@ -13,7 +13,7 @@
 
 typedef struct aesrand aesrand_t;
 
-aesrand_t *aesrand_init_from_random();
+aesrand_t *aesrand_init_from_random(void);
 
 aesrand_t *aesrand_init_from_seed(uint64_t);
 

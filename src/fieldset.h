@@ -88,7 +88,7 @@ fieldset_t *fs_new_repeated_uint64(void);
 fieldset_t *fs_new_repeated_bool(void);
 fieldset_t *fs_new_repeated_string(int free_);
 fieldset_t *fs_new_repeated_binary(int free_);
-fieldset_t *fs_new_repeated_fieldset();
+fieldset_t *fs_new_repeated_fieldset(void);
 
 char *fs_get_string_by_index(fieldset_t *fs, int index);
 
