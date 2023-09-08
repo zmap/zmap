@@ -61,7 +61,7 @@ typedef unsigned short __attribute__((__may_alias__)) alias_unsigned_short;
 void make_eth_header(struct ether_header *ethh, macaddr_t *src, macaddr_t *dst);
 
 void make_ip_header(struct ip *iph, uint8_t, uint16_t);
-void make_tcp_header(struct tcphdr *, port_h_t, uint16_t);
+void make_tcp_header(struct tcphdr *, uint16_t th_flags);
 size_t set_mss_option(struct tcphdr *tcp_header);
 void make_icmp_header(struct icmp *);
 void make_udp_header(struct udphdr *udp_header, port_h_t dest_port,

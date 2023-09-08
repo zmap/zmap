@@ -29,9 +29,9 @@ typedef struct probe_response_type {
 } response_type_t;
 
 typedef int (*probe_global_init_cb)(struct state_conf *);
+
 typedef int (*probe_thread_init_cb)(void *packetbuf, macaddr_t *src_mac,
-				    macaddr_t *gw_mac, port_n_t src_port,
-				    void **arg_ptr);
+				    macaddr_t *gw_mac, void **arg_ptr);
 
 // The make_packet callback is passed a buffer pointing at an ethernet header.
 // The buffer is MAX_PACKET_SIZE bytes. The callback must update the value
@@ -47,14 +47,16 @@ typedef int (*probe_thread_init_cb)(void *packetbuf, macaddr_t *src_mac,
 // validation data.  The data is deterministic based on the the validation
 // state, and is constant across a src_ip. To get the src_port, use the
 // get_src_port function which takes probe_num and validation as parameters.
+//
 typedef int (*probe_make_packet_cb)(void *packetbuf, size_t *buf_len,
-				    ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
-				    uint32_t *validation, int probe_num,
-				    void *arg);
+		ipaddr_n_t src_ip, ipaddr_n_t dst_ip, port_n_t dst_port, uint8_t ttl,
+		uint32_t *validation, int probe_num, void *arg);
 
 typedef void (*probe_print_packet_cb)(FILE *, void *packetbuf);
+
 typedef int (*probe_close_cb)(struct state_conf *, struct state_send *,
 			      struct state_recv *);
+
 typedef int (*probe_validate_packet_cb)(const struct ip *ip_hdr, uint32_t len,
 					uint32_t *src_ip, uint32_t *validation);
 

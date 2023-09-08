@@ -103,8 +103,7 @@ void make_icmp_header(struct icmp *buf)
 	buf->icmp_seq = 0;
 }
 
-void make_tcp_header(struct tcphdr *tcp_header, port_h_t dest_port,
-		     uint16_t th_flags)
+void make_tcp_header(struct tcphdr *tcp_header, uint16_t th_flags)
 {
 	tcp_header->th_seq = random();
 	tcp_header->th_ack = 0;
