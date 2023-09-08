@@ -57,7 +57,7 @@ void packet_cb(u_char __attribute__((__unused__)) * user,
 
 #define BPFLEN 1024
 
-void recv_init()
+void recv_init(void)
 {
 	char bpftmp[BPFLEN];
 	char errbuf[PCAP_ERRBUF_SIZE];
@@ -124,7 +124,7 @@ void recv_init()
 	}
 }
 
-void recv_packets()
+void recv_packets(void)
 {
 	int ret = pcap_dispatch(pc, -1, packet_cb, NULL);
 	if (ret == -1) {
@@ -134,7 +134,7 @@ void recv_packets()
 	}
 }
 
-void recv_cleanup()
+void recv_cleanup(void)
 {
 	pcap_close(pc);
 	pc = NULL;

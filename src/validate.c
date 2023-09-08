@@ -20,7 +20,7 @@
 static int inited = 0;
 static uint32_t aes_sched[(AES_ROUNDS + 1) * 4];
 
-void validate_init()
+void validate_init(void)
 {
 	uint8_t key[AES_KEY_BYTES];
 	if (!random_bytes(key, AES_KEY_BYTES)) {
