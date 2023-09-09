@@ -105,7 +105,7 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 		if (sub_idx < (max_total_targets % num_subshards)) {
 			++max_targets_this_shard;
 		}
-		shard->state.max_hosts = max_targets_this_shard;
+		shard->state.max_targets = max_targets_this_shard;
 	}
 
 	// Set the callbacks
@@ -152,10 +152,8 @@ uint32_t shard_get_next_ip(shard_t *shard)
 			return ZMAP_SHARD_DONE;
 		}
 		if (candidate - 1 < zsend.max_index) {
-			shard->state.hosts_allowlisted++;
 			shard->iterations++;
 			return blocklist_lookup_index(candidate - 1);
 		}
-		shard->state.hosts_blocklisted++;
 	}
 }

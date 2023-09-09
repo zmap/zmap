@@ -46,11 +46,11 @@ struct state_conf {
 	port_h_t source_port_last;
 	// maximum number of packets that the scanner will send before
 	// terminating
-	uint32_t max_targets;
+	uint64_t max_targets;
 	// maximum number of seconds that scanner will run before terminating
 	uint32_t max_runtime;
 	// maximum number of results before terminating
-	uint32_t max_results;
+	uint64_t max_results;
 	// name of network interface that
 	// will be utilized for sending/receiving
 	char *iface;
@@ -146,9 +146,7 @@ struct state_send {
 	double start;
 	double finish;
 	uint64_t packets_sent;
-	uint64_t hosts_scanned;
-	uint64_t blocklisted;
-	uint64_t allowlisted;
+	uint64_t targets_scanned;
 	int warmup;
 	int complete;
 	uint32_t first_scanned;

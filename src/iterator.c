@@ -41,9 +41,7 @@ void shard_complete(uint8_t thread_id, void *arg)
 	it->curr_threads--;
 	shard_t *s = &it->thread_shards[thread_id];
 	zsend.packets_sent += s->state.packets_sent;
-	zsend.hosts_scanned += s->state.hosts_scanned;
-	zsend.blocklisted += s->state.hosts_blocklisted;
-	zsend.allowlisted += s->state.hosts_allowlisted;
+	zsend.targets_scanned += s->state.targets_scanned;
 	zsend.sendto_failures += s->state.packets_failed;
 	uint8_t done = 1;
 	for (uint8_t i = 0; done && (i < it->num_threads); ++i) {

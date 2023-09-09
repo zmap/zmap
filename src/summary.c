@@ -42,7 +42,7 @@ void json_metadata(FILE *file)
 	assert(dstrftime(recv_end_time, STRTIME_LEN, "%Y-%m-%dT%H:%M:%S%z",
 			 zrecv.finish));
 	double hitrate =
-	    ((double)100 * zrecv.success_unique) / ((double)zsend.hosts_scanned);
+	    ((double)100 * zrecv.success_unique) / ((double)zsend.targets_scanned);
 
 	json_object *obj = json_object_new_object();
 
@@ -139,8 +139,8 @@ void json_metadata(FILE *file)
 			       json_object_new_int64(zsend.sendto_failures));
 	json_object_object_add(obj, "packets_sent",
 			       json_object_new_int64(zsend.packets_sent));
-	json_object_object_add(obj, "hosts_scanned",
-			       json_object_new_int64(zsend.hosts_scanned));
+	json_object_object_add(obj, "targets_scanned",
+			       json_object_new_int64(zsend.targets_scanned));
 	json_object_object_add(obj, "success_total",
 			       json_object_new_int64(zrecv.success_total));
 	json_object_object_add(obj, "success_unique",
