@@ -56,14 +56,9 @@ void shard_complete(uint8_t thread_id, void *arg)
 }
 
 iterator_t *iterator_init(uint8_t num_threads, uint16_t shard,
-			  uint16_t num_shards)
+			  uint16_t num_shards, uint64_t num_addrs, uint16_t num_ports)
 {
-	uint64_t num_addrs = blocklist_count_allowed();
 	uint64_t group_min_size = num_addrs;
-	if (zconf.list_of_ips_filename) {
-		log_debug("send", "forcing max group size for compatibility with -I");
-		group_min_size = 0xFFFFFFFF;
-	}
 	iterator_t *it = xmalloc(sizeof(struct iterator));
 	const cyclic_group_t *group = get_group(group_min_size);
 	if (num_addrs > (1LL << 32)) {
@@ -71,6 +66,7 @@ iterator_t *iterator_init(uint8_t num_threads, uint16_t shard,
 	} else {
 		zsend.max_index = (uint32_t)num_addrs;
 	}
+	//zsend.max_index = (uint32_t)num_addrs;
 	log_debug("iterator", "max index %u", zsend.max_index);
 	it->cycle = make_cycle(group, zconf.aes);
 	it->num_threads = num_threads;

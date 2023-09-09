@@ -16,12 +16,13 @@
 #include "shard.h"
 #include "state.h"
 
-static uint32_t shard_roll_to_valid(shard_t *s)
+// TODO: This is going to be fucked — needs to have IP extracted
+static void shard_roll_to_valid(shard_t *s)
 {
 	if (s->current - 1 < zsend.max_index) {
-		return s->current;
+		return;
 	}
-	return shard_get_next_ip(s);
+	shard_get_next_target(s);
 }
 
 void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
@@ -125,35 +126,41 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 	mpz_clear(stop_m);
 }
 
-uint32_t shard_get_cur_ip(shard_t *shard)
+target_t shard_get_cur_target(shard_t *shard)
 {
-	return (uint32_t)blocklist_lookup_index(shard->current - 1);
+	return (target_t){
+		.ip = (uint32_t)blocklist_lookup_index(shard->current - 1),
+		.port = (uint16_t) 0
+	};
 }
 
-static inline uint32_t shard_get_next_elem(shard_t *shard)
+static inline uint64_t shard_get_next_elem(shard_t *shard)
 {
 	do {
 		shard->current *= shard->params.factor;
 		shard->current %= shard->params.modulus;
 	} while (shard->current >= (1LL << 32));
-	return (uint32_t)shard->current;
+	return (uint64_t)shard->current;
 }
 
-uint32_t shard_get_next_ip(shard_t *shard)
+target_t shard_get_next_target(shard_t *shard)
 {
 	if (shard->current == ZMAP_SHARD_DONE) {
-		return ZMAP_SHARD_DONE;
+		return (target_t){.ip=ZMAP_SHARD_DONE, .port=0};
 	}
 	while (1) {
 		uint32_t candidate = shard_get_next_elem(shard);
 		if (candidate == shard->params.last) {
 			shard->current = ZMAP_SHARD_DONE;
 			shard->iterations++;
-			return ZMAP_SHARD_DONE;
+			return (target_t){.ip=ZMAP_SHARD_DONE, .port=0};
 		}
 		if (candidate - 1 < zsend.max_index) {
 			shard->iterations++;
-			return blocklist_lookup_index(candidate - 1);
+			return (target_t){
+				.ip=blocklist_lookup_index(candidate - 1),
+				.port=0
+			};
 		}
 	}
 }

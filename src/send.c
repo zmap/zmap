@@ -87,7 +87,13 @@ iterator_t *send_init(void)
 	if (zsend.max_targets && (num_subshards > zsend.max_targets)) {
 		log_fatal("send", "senders * shards > max targets");
 	}
-	it = iterator_init(zconf.senders, zconf.shard_num, zconf.total_shards);
+	uint64_t num_addrs = blocklist_count_allowed();
+	if (zconf.list_of_ips_filename) {
+		log_debug("send", "forcing max group size for compatibility with -I");
+		num_addrs = 0xFFFFFFFF;
+	}
+	it = iterator_init(zconf.senders, zconf.shard_num,
+			zconf.total_shards, num_addrs, 1);
 	// determine the source address offset from which we'll send packets
 	struct in_addr temp;
 	temp.s_addr = zconf.source_ip_addresses[0];
@@ -271,14 +277,16 @@ int send_run(sock_t st, shard_t *s)
 		}
 	}
 	// Get the initial IP to scan.
-	uint32_t current_ip = shard_get_cur_ip(s);
+	target_t current = shard_get_cur_target(s);
+	uint32_t current_ip = current.ip;
 
 	// If provided a list of IPs to scan, then the first generated address
 	// might not be on that list. Iterate until the current IP is one the
 	// list, then start the true scanning process.
 	if (zconf.list_of_ips_filename) {
 		while (!pbm_check(zsend.list_of_ips_pbm, current_ip)) {
-			current_ip = shard_get_next_ip(s);
+			current = shard_get_next_target(s);
+			current_ip = current.ip;
 			if (current_ip == ZMAP_SHARD_DONE) {
 				log_debug(
 					"send",
@@ -414,14 +422,16 @@ int send_run(sock_t st, shard_t *s)
 			s->state.targets_scanned++;
 
 			// Get the next IP to scan
-			current_ip = shard_get_next_ip(s);
+			current = shard_get_next_target(s);
+			current_ip = current.ip;
 			if (zconf.list_of_ips_filename &&
 				current_ip != ZMAP_SHARD_DONE) {
 				// If we have a list of IPs bitmap, ensure the next IP
 				// to scan is on the list.
 				while (!pbm_check(zsend.list_of_ips_pbm,
 						  current_ip)) {
-					current_ip = shard_get_next_ip(s);
+					current = shard_get_next_target(s);
+					current_ip = current.ip;
 					if (current_ip == ZMAP_SHARD_DONE) {
 						log_debug(
 							"send",

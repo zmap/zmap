@@ -80,6 +80,16 @@ static cyclic_group_t groups[] = {
 	 .known_primroot = 3,
 	 .prime_factors = {2, 3, 5, 131, 364289},
      .num_prime_factors = 5},
+	{// 2^33 + 17
+	 .prime = 8589934609,
+	 .known_primroot = 19,
+	 .prime_factors = {2, 3, 59, 3033169},
+     .num_prime_factors = 4},
+	{// 2^34 + 25
+	 .prime = 17179869209,
+	 .known_primroot = 3,
+	 .prime_factors = {2, 83, 1277, 20261},
+     .num_prime_factors = 4},
     {// 2^36 + 31
      .prime = 68719476767,
      .known_primroot = 5,
@@ -160,7 +170,8 @@ const cyclic_group_t *get_group(uint64_t min_size)
 			return &groups[i];
 		}
 	}
-	// Should not reach, final group should always be larger than 2^32
+	// Should not reach, final group should always be larger than 2^48
+	// which is max based on 2**32 IPs and 2**16 ports
 	assert(0);
 }
 

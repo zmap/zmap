@@ -44,7 +44,12 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 		uint32_t max_total_targets, const cycle_t *cycle,
 		shard_complete_cb cb, void *arg);
 
-uint32_t shard_get_cur_ip(shard_t *shard);
-uint32_t shard_get_next_ip(shard_t *shard);
+typedef struct target {
+	uint32_t ip;
+	uint16_t port;
+} target_t;
+
+target_t shard_get_cur_target(shard_t *shard);
+target_t shard_get_next_target(shard_t *shard);
 
 #endif /* ZMAP_SHARD_H */
