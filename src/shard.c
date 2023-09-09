@@ -12,13 +12,19 @@
 #include <gmp.h>
 
 #include "../lib/includes.h"
+#include "../lib/logger.h"
 #include "../lib/blocklist.h"
 #include "shard.h"
 #include "state.h"
 
+static uint16_t extract_port(uint64_t v, uint8_t bits) {
+	uint64_t mask = (1 << bits) - 1;
+	return (uint16_t)(v & mask);
+}
+
 static void shard_roll_to_valid(shard_t *s)
 {
-	uint64_t current_ip_index = (s->current - 1) << s->bits_for_port;
+	uint64_t current_ip_index = (s->current - 1) >> s->bits_for_port;
 	if (current_ip_index < zsend.max_index) {
 		return;
 	}
@@ -129,22 +135,22 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 
 target_t shard_get_cur_target(shard_t *shard)
 {
-	uint32_t untranslated_ip = (shard->current - 1) << shard->bits_for_port;
+	uint32_t untranslated_ip = (shard->current - 1) >> shard->bits_for_port;
 	return (target_t){
 		.ip = (uint32_t)blocklist_lookup_index(untranslated_ip),
-		.port = (uint16_t) 0,
+		.port = (uint16_t) extract_port(shard->current - 1, shard->bits_for_port),
 		.status = ZMAP_SHARD_OK
 	};
 }
 
 static inline uint64_t shard_get_next_elem(shard_t *shard)
 {
-	uint64_t current_ip = 0;
+	//uint64_t current_ip = 0;
 	do {
 		shard->current *= shard->params.factor;
 		shard->current %= shard->params.modulus;
-		current_ip = shard->current << shard->bits_for_port;
-	} while (shard->current >= (1LL << 48) && current_ip >= (1LL << 32));
+		//current_ip = shard->current >> shard->bits_for_port;
+	} while (shard->current >= (1LL << 48));
 	return (uint64_t)shard->current;
 }
 
@@ -160,11 +166,13 @@ target_t shard_get_next_target(shard_t *shard)
 			shard->iterations++;
 			return (target_t){.ip=0, .port=0, .status=ZMAP_SHARD_DONE};
 		}
-		if (candidate - 1 < zsend.max_index) {
+		// TODO: add part where we check if part is above number of ports we
+		// want
+		if (((candidate - 1) >> shard->bits_for_port) < zsend.max_index) {
 			shard->iterations++;
 			return (target_t){
-				.ip=blocklist_lookup_index(candidate - 1),
-				.port=0,
+				.ip=blocklist_lookup_index((candidate - 1) >> shard->bits_for_port),
+				.port=extract_port(candidate - 1, shard->bits_for_port),
 				.status=ZMAP_SHARD_OK
 			};
 		}
