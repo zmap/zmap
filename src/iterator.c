@@ -59,6 +59,7 @@ iterator_t *iterator_init(uint8_t num_threads, uint16_t shard,
 			  uint16_t num_shards, uint64_t num_addrs, uint16_t num_ports)
 {
 	uint64_t group_min_size = num_addrs;
+	uint8_t bits_for_port = 0;
 	iterator_t *it = xmalloc(sizeof(struct iterator));
 	const cyclic_group_t *group = get_group(group_min_size);
 	if (num_addrs > (1LL << 32)) {
@@ -76,8 +77,8 @@ iterator_t *iterator_init(uint8_t num_threads, uint16_t shard,
 	pthread_mutex_init(&it->mutex, NULL);
 	for (uint8_t i = 0; i < num_threads; ++i) {
 		shard_init(&it->thread_shards[i], shard, num_shards, i,
-			   num_threads, zsend.max_targets, &it->cycle,
-			   shard_complete, it);
+			   num_threads, zsend.max_targets, bits_for_port,
+			   &it->cycle, shard_complete, it);
 	}
 	zconf.generator = it->cycle.generator;
 	return it;

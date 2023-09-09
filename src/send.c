@@ -287,7 +287,7 @@ int send_run(sock_t st, shard_t *s)
 		while (!pbm_check(zsend.list_of_ips_pbm, current_ip)) {
 			current = shard_get_next_target(s);
 			current_ip = current.ip;
-			if (current_ip == ZMAP_SHARD_DONE) {
+			if (current.status == ZMAP_SHARD_DONE) {
 				log_debug(
 					"send",
 					"never made it to send loop in send thread %i",
@@ -362,7 +362,7 @@ int send_run(sock_t st, shard_t *s)
 						s->thread_id, s->state.max_packets);
 				goto cleanup;
 			}
-			if (current_ip == ZMAP_SHARD_DONE) {
+			if (current.status == ZMAP_SHARD_DONE) {
 				log_debug("send", "send thread %hhu finished, shard depleted",
 						s->thread_id);
 				goto cleanup;
@@ -425,14 +425,14 @@ int send_run(sock_t st, shard_t *s)
 			current = shard_get_next_target(s);
 			current_ip = current.ip;
 			if (zconf.list_of_ips_filename &&
-				current_ip != ZMAP_SHARD_DONE) {
+				current.status != ZMAP_SHARD_DONE) {
 				// If we have a list of IPs bitmap, ensure the next IP
 				// to scan is on the list.
 				while (!pbm_check(zsend.list_of_ips_pbm,
 						  current_ip)) {
 					current = shard_get_next_target(s);
 					current_ip = current.ip;
-					if (current_ip == ZMAP_SHARD_DONE) {
+					if (current.status == ZMAP_SHARD_DONE) {
 						log_debug(
 							"send",
 							"send thread %hhu shard finished in get_next_ip_loop depleted",

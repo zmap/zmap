@@ -16,10 +16,10 @@
 #include "shard.h"
 #include "state.h"
 
-// TODO: This is going to be fucked — needs to have IP extracted
 static void shard_roll_to_valid(shard_t *s)
 {
-	if (s->current - 1 < zsend.max_index) {
+	uint64_t current_ip_index = (s->current - 1) << s->bits_for_port;
+	if (current_ip_index < zsend.max_index) {
 		return;
 	}
 	shard_get_next_target(s);
@@ -27,7 +27,7 @@ static void shard_roll_to_valid(shard_t *s)
 
 void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 		uint8_t thread_idx, uint8_t num_threads,
-		uint32_t max_total_targets, const cycle_t *cycle,
+		uint32_t max_total_targets, uint8_t bits_for_port, const cycle_t *cycle,
 		shard_complete_cb cb, void *arg)
 {
 	// Start out by figuring out how many shards we have. A single shard of
@@ -92,6 +92,8 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 	shard->params.last = (uint64_t)mpz_get_ui(stop_m);
 	shard->params.factor = cycle->generator;
 	shard->params.modulus = cycle->group->prime;
+	//
+	shard->bits_for_port = bits_for_port;
 
 	// Set the shard at the beginning.
 	shard->current = shard->params.first;
@@ -101,8 +103,7 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 
 	// Set max_targets if applicable
 	if (max_total_targets > 0) {
-		uint32_t max_targets_this_shard =
-		    max_total_targets / num_subshards;
+		uint32_t max_targets_this_shard = max_total_targets / num_subshards;
 		if (sub_idx < (max_total_targets % num_subshards)) {
 			++max_targets_this_shard;
 		}
@@ -128,38 +129,43 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 
 target_t shard_get_cur_target(shard_t *shard)
 {
+	uint32_t untranslated_ip = (shard->current - 1) << shard->bits_for_port;
 	return (target_t){
-		.ip = (uint32_t)blocklist_lookup_index(shard->current - 1),
-		.port = (uint16_t) 0
+		.ip = (uint32_t)blocklist_lookup_index(untranslated_ip),
+		.port = (uint16_t) 0,
+		.status = ZMAP_SHARD_OK
 	};
 }
 
 static inline uint64_t shard_get_next_elem(shard_t *shard)
 {
+	uint64_t current_ip = 0;
 	do {
 		shard->current *= shard->params.factor;
 		shard->current %= shard->params.modulus;
-	} while (shard->current >= (1LL << 32));
+		current_ip = shard->current << shard->bits_for_port;
+	} while (shard->current >= (1LL << 48) && current_ip >= (1LL << 32));
 	return (uint64_t)shard->current;
 }
 
 target_t shard_get_next_target(shard_t *shard)
 {
 	if (shard->current == ZMAP_SHARD_DONE) {
-		return (target_t){.ip=ZMAP_SHARD_DONE, .port=0};
+		return (target_t){.ip=0, .port=0, .status=ZMAP_SHARD_DONE};
 	}
 	while (1) {
-		uint32_t candidate = shard_get_next_elem(shard);
+		uint64_t candidate = shard_get_next_elem(shard);
 		if (candidate == shard->params.last) {
 			shard->current = ZMAP_SHARD_DONE;
 			shard->iterations++;
-			return (target_t){.ip=ZMAP_SHARD_DONE, .port=0};
+			return (target_t){.ip=0, .port=0, .status=ZMAP_SHARD_DONE};
 		}
 		if (candidate - 1 < zsend.max_index) {
 			shard->iterations++;
 			return (target_t){
 				.ip=blocklist_lookup_index(candidate - 1),
-				.port=0
+				.port=0,
+				.status=ZMAP_SHARD_OK
 			};
 		}
 	}
