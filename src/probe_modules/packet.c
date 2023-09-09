@@ -103,8 +103,7 @@ void make_icmp_header(struct icmp *buf)
 	buf->icmp_seq = 0;
 }
 
-void make_tcp_header(struct tcphdr *tcp_header, port_h_t dest_port,
-		     uint16_t th_flags)
+void make_tcp_header(struct tcphdr *tcp_header, uint16_t th_flags)
 {
 	tcp_header->th_seq = random();
 	tcp_header->th_ack = 0;
@@ -115,7 +114,6 @@ void make_tcp_header(struct tcphdr *tcp_header, port_h_t dest_port,
 	tcp_header->th_win = htons(65535); // largest possible window
 	tcp_header->th_sum = 0;
 	tcp_header->th_urp = 0;
-	tcp_header->th_dport = htons(dest_port);
 }
 
 size_t set_mss_option(struct tcphdr *tcp_header) {
@@ -136,10 +134,8 @@ size_t set_mss_option(struct tcphdr *tcp_header) {
 	return tcp_header->th_off*4;
 }
 
-void make_udp_header(struct udphdr *udp_header, port_h_t dest_port,
-		     uint16_t len)
+void make_udp_header(struct udphdr *udp_header, uint16_t len)
 {
-	udp_header->uh_dport = htons(dest_port);
 	udp_header->uh_ulen = htons(len);
 	// checksum ignored in IPv4 if 0
 	udp_header->uh_sum = 0;

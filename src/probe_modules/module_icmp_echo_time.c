@@ -35,7 +35,6 @@ struct icmp_payload_for_rtt {
 };
 
 static int icmp_echo_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-				    UNUSED port_h_t dst_port,
 				    UNUSED void **arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
@@ -54,7 +53,8 @@ static int icmp_echo_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 }
 
 static int icmp_echo_make_packet(void *buf, size_t *buf_len,
-				 ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
+				 ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
+                 UNUSED port_n_t dport, uint8_t ttl,
 				 uint32_t *validation, UNUSED int probe_num,
 				 UNUSED void *arg)
 {
@@ -113,7 +113,8 @@ static void icmp_echo_print_packet(FILE *fp, void *packet)
 }
 
 static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
-				uint32_t *src_ip, uint32_t *validation)
+				uint32_t *src_ip, uint32_t *validation,
+				UNUSED const struct port_conf *ports)
 {
 	if (ip_hdr->ip_p != IPPROTO_ICMP) {
 		return 0;

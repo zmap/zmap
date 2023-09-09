@@ -41,7 +41,7 @@ struct fieldset_conf {
 // global configuration
 struct state_conf {
 	int log_level;
-	port_h_t target_port;
+	struct port_conf *ports;
 	port_h_t source_port_first;
 	port_h_t source_port_last;
 	// maximum number of packets that the scanner will send before
@@ -198,5 +198,10 @@ struct state_recv {
 	uint32_t pcap_ifdrop;
 };
 extern struct state_recv zrecv;
+
+struct port_conf {
+	uint16_t target_port;
+};
+
 
 #endif // _STATE_H

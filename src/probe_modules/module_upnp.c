@@ -40,7 +40,6 @@ int upnp_global_initialize(struct state_conf *state)
 }
 
 int upnp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-			port_h_t dst_port,
 			UNUSED void **arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
@@ -54,7 +53,7 @@ int upnp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 
 	struct udphdr *udp_header = (struct udphdr *)(&ip_header[1]);
 	len = sizeof(struct udphdr) + strlen(upnp_query);
-	make_udp_header(udp_header, dst_port, len);
+	make_udp_header(udp_header, len);
 
 	char *payload = (char *)(&udp_header[1]);
 
@@ -70,10 +69,11 @@ int upnp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 }
 
 int upnp_validate_packet(const struct ip *ip_hdr, uint32_t len,
-			 uint32_t *src_ip, uint32_t *validation)
+			 uint32_t *src_ip, uint32_t *validation,
+			 const struct port_conf *ports)
 {
 	return udp_do_validate_packet(ip_hdr, len, src_ip, validation,
-				      num_ports, zconf.target_port);
+				      num_ports, SRC_PORT_VALIDATION, ports);
 }
 
 

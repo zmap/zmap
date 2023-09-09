@@ -242,7 +242,6 @@ int udp_global_cleanup(UNUSED struct state_conf *zconf,
 }
 
 int udp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-		       UNUSED port_h_t dst_port,
 		       void **arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
@@ -255,7 +254,7 @@ int udp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 
 	struct udphdr *udp_header = (struct udphdr *)(&ip_header[1]);
 	uint16_t udp_len = sizeof(struct udphdr) + udp_fixed_payload_len;
-	make_udp_header(udp_header, zconf.target_port, udp_len);
+	make_udp_header(udp_header, udp_len);
 
 	if (udp_fixed_payload) {
 		void *payload = &udp_header[1];
@@ -271,8 +270,8 @@ int udp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 }
 
 int udp_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
-		    ipaddr_n_t dst_ip, uint8_t ttl, uint32_t *validation,
-		    int probe_num, UNUSED void *arg)
+		    ipaddr_n_t dst_ip, port_n_t dport, uint8_t ttl,
+			uint32_t *validation, int probe_num, UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
@@ -285,6 +284,7 @@ int udp_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	ip_header->ip_ttl = ttl;
 	udp_header->uh_sport =
 	    htons(get_src_port(num_ports, probe_num, validation));
+	udp_header->uh_dport = dport;
 
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
@@ -295,7 +295,7 @@ int udp_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 }
 
 int udp_make_templated_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
-			      ipaddr_n_t dst_ip, uint8_t ttl,
+			      ipaddr_n_t dst_ip, port_n_t dport, uint8_t ttl,
 			      uint32_t *validation, int probe_num, void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -309,6 +309,7 @@ int udp_make_templated_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	ip_header->ip_ttl = ttl;
 	udp_header->uh_sport =
 	    htons(get_src_port(num_ports, probe_num, validation));
+	udp_header->uh_dport = dport;
 
 	char *payload = (char *)&udp_header[1];
 	memset(payload, 0, MAX_UDP_PAYLOAD_LEN);
@@ -412,10 +413,10 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len,
 }
 
 int udp_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
-			uint32_t *validation)
+			uint32_t *validation, const struct port_conf *ports)
 {
 	return udp_do_validate_packet(ip_hdr, len, src_ip, validation,
-				      num_ports, NO_SRC_PORT_VALIDATION);
+				      num_ports, NO_SRC_PORT_VALIDATION, ports);
 }
 
 // Do very basic validation that this is an ICMP response to a packet we sent
@@ -425,7 +426,7 @@ int udp_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 
 int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
 			   uint32_t *src_ip, uint32_t *validation,
-			   int num_ports, int expected_port)
+			   int num_ports, int validate_port, const struct port_conf *ports)
 {
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		struct udphdr *udp = get_udp_header(ip_hdr, len);
@@ -439,10 +440,9 @@ int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		if (!blocklist_is_allowed(*src_ip)) {
 			return PACKET_INVALID;
 		}
-		if (expected_port != NO_SRC_PORT_VALIDATION) {
-			uint16_t ep = (uint16_t)expected_port;
+		if (validate_port == SRC_PORT_VALIDATION) {
 			uint16_t sport = ntohs(udp->uh_sport);
-			if (sport != ep) {
+			if (!check_src_port(sport, ports)) {
 				return PACKET_INVALID;
 			}
 		}
@@ -460,7 +460,7 @@ int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		// responding on a different port
 		uint16_t dport = ntohs(udp->uh_dport);
 		uint16_t sport = ntohs(udp->uh_sport);
-		if (dport != zconf.target_port) {
+		if(!check_src_port(dport, ports)) {
 			return PACKET_INVALID;
 		}
 		if (!check_dst_port(sport, num_ports, validation)) {

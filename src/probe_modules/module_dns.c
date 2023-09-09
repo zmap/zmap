@@ -712,7 +712,7 @@ static int dns_global_cleanup(UNUSED struct state_conf *zconf,
 }
 
 int dns_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-		       UNUSED port_h_t dst_port, UNUSED void **arg_ptr)
+		       UNUSED void **arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 
@@ -727,7 +727,7 @@ int dns_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 
 	struct udphdr *udp_header = (struct udphdr *)(&ip_header[1]);
 	len = sizeof(struct udphdr) + dns_packet_lens[0];
-	make_udp_header(udp_header, zconf.target_port, len);
+	make_udp_header(udp_header, len);
 
 	char *payload = (char *)(&udp_header[1]);
 
@@ -737,8 +737,8 @@ int dns_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 }
 
 int dns_make_packet(void *buf, size_t *buf_len,
-            ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
-			uint32_t *validation, int probe_num,
+            ipaddr_n_t src_ip, ipaddr_n_t dst_ip, port_n_t dport,
+			uint8_t ttl, uint32_t *validation, int probe_num,
 		    UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -756,8 +756,7 @@ int dns_make_packet(void *buf, size_t *buf_len,
 
 		encoded_len =
 		    sizeof(struct udphdr) + dns_packet_lens[probe_num];
-		make_udp_header(udp_header, ntohs(udp_header->uh_dport),
-				encoded_len);
+		make_udp_header(udp_header, encoded_len);
 
 		char *payload = (char *)(&udp_header[1]);
 		*buf_len = sizeof(struct ether_header) + sizeof(struct ip) +
@@ -774,6 +773,7 @@ int dns_make_packet(void *buf, size_t *buf_len,
 	ip_header->ip_ttl = ttl;
 	udp_header->uh_sport =
 	    htons(get_src_port(num_ports, probe_num, validation));
+	udp_header->uh_dport = dport;
 
 	dns_header *dns_header_p = (dns_header *)&udp_header[1];
 
@@ -800,11 +800,11 @@ void dns_print_packet(FILE *fp, void *packet)
 }
 
 int dns_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
-			uint32_t *validation)
+			uint32_t *validation, const struct port_conf *ports)
 {
 	// this does the heavy lifting including ICMP validation
 	if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports,
-				   zconf.target_port) == PACKET_INVALID) {
+				   SRC_PORT_VALIDATION, ports) == PACKET_INVALID) {
 		return PACKET_INVALID;
 	}
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
