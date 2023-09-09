@@ -698,14 +698,23 @@ int main(int argc, char *argv[])
 				zconf.source_port_last = port;
 			}
 		}
-		if (!args.target_port_given) {
+		if (!args.target_ports_given) {
 			log_fatal(
 			    "zmap",
-			    "target port (-p) is required for this type of probe");
+			    "target ports (-p) required for this type of probe");
 		}
-		enforce_range("target-port", args.target_port_arg, 0, 0xFFFF);
 		zconf.ports = xmalloc(sizeof(struct port_conf));
-		zconf.ports->target_port = args.target_port_arg;
+		printf("fuck fuck\n");
+		char *next = strtok(args.target_ports_arg, ",");
+		printf("fuck fuck past strtok\n");
+		while (next != NULL) {
+			uint16_t port = (uint16_t) atoi(next);
+			enforce_range("target-port", port, 0, 0xFFFF);
+			zconf.ports->ports[zconf.ports->port_count] = port;
+			zconf.ports->port_count++;
+			next = strtok(NULL, ",");
+		}
+		printf("fuck fuck past loop\n");
 	}
 	if (args.source_ip_given) {
 		parse_source_ip_addresses(args.source_ip_arg);

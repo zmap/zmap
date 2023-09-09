@@ -69,8 +69,16 @@ void json_metadata(FILE *file)
 				       json_object_new_int(zconf.source_port_first));
 		json_object_object_add(obj, "source_port_last",
 				       json_object_new_int(zconf.source_port_last));
-		json_object_object_add(obj, "target_port",
-				       json_object_new_int(zconf.ports->target_port));
+
+
+		json_object *target_ports = json_object_new_array();
+		for (int i = 0; i < zconf.ports->port_count; i++) {
+			json_object_array_add(
+			    target_ports,
+			    json_object_new_int(zconf.ports->ports[i]));
+		}
+		json_object_object_add(obj, "target_ports",
+				       target_ports);
 	}
 	json_object_object_add(obj, "max_targets",
 			       json_object_new_int(zconf.max_targets));

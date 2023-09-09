@@ -12,9 +12,9 @@ purpose "A fast Internet-wide scanner."
 
 section "Basic Arguments"
 
-option "target-port"            p "port number to scan (for TCP and UDP scans)"
-    typestr="port"
-    optional int
+option "target-ports"           p "comma-delimited list of ports to scan (for TCP and UDP scans)"
+    typestr="ports"
+    optional string
 option "output-file"            o "Output file"
     typestr="name"
     optional string

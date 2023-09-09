@@ -168,7 +168,12 @@ get_src_port(int num_ports, int probe_num, uint32_t *validation)
 static inline int
 check_src_port(uint16_t port, const struct port_conf *ports)
 {
-	return ports->target_port == port;
+	for (int i=0; i < ports->port_count; i++) {
+		if (ports->ports[i] == port) {
+			return 1;
+		}
+	}
+	return 0;
 }
 
 static inline struct ip *get_ip_header(const u_char *packet, uint32_t len)

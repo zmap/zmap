@@ -93,7 +93,7 @@ iterator_t *send_init(void)
 		num_addrs = 0xFFFFFFFF;
 	}
 	it = iterator_init(zconf.senders, zconf.shard_num,
-			zconf.total_shards, num_addrs, 1);
+			zconf.total_shards, num_addrs, zconf.ports->port_count);
 	// determine the source address offset from which we'll send packets
 	struct in_addr temp;
 	temp.s_addr = zconf.source_ip_addresses[0];
@@ -279,6 +279,7 @@ int send_run(sock_t st, shard_t *s)
 	// Get the initial IP to scan.
 	target_t current = shard_get_cur_target(s);
 	uint32_t current_ip = current.ip;
+	uint16_t current_port = current.port;
 
 	// If provided a list of IPs to scan, then the first generated address
 	// might not be on that list. Iterate until the current IP is one the
@@ -374,12 +375,8 @@ int send_run(sock_t st, shard_t *s)
 				validate_gen(src_ip, current_ip, (uint8_t *)validation);
 				uint8_t ttl = zconf.probe_ttl;
 				size_t length = 0;
-				uint16_t dport = 0;
-				if (zconf.ports) {
-					dport = htons(zconf.ports->target_port);
-				}
 				zconf.probe_module->make_packet(
-					buf, &length, src_ip, current_ip, dport, ttl,
+					buf, &length, src_ip, current_ip, current_port, ttl,
 					validation, i, probe_data);
 				if (length > MAX_PACKET_SIZE) {
 					log_fatal("send", "send thread %hhu set length (%zu) larger than MAX (%zu)",
