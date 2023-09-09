@@ -54,31 +54,53 @@
 // entire Internet scan, this would be cyclic32
 // Note: this list should remain ordered by size (primes) ascending.
 
-static cyclic_group_t groups[] = {{// 2^8 + 1
-				   .prime = 257,
-				   .known_primroot = 3,
-				   .prime_factors = {2},
-				   .num_prime_factors = 1},
-				  {// 2^16 + 1
-				   .prime = 65537,
-				   .known_primroot = 3,
-				   .prime_factors = {2},
-				   .num_prime_factors = 1},
-				  {// 2^24 + 43
-				   .prime = 16777259,
-				   .known_primroot = 2,
-				   .prime_factors = {2, 23, 103, 3541},
-				   .num_prime_factors = 4},
-				  {// 2^28 + 3
-				   .prime = 268435459,
-				   .known_primroot = 2,
-				   .prime_factors = {2, 3, 19, 87211},
-				   .num_prime_factors = 4},
-				  {// 2^32 + 15
-				   .prime = 4294967311,
-				   .known_primroot = 3,
-				   .prime_factors = {2, 3, 5, 131, 364289},
-				   .num_prime_factors = 5}};
+static cyclic_group_t groups[] = {
+	{// 2^8 + 1
+	 .prime = 257,
+	 .known_primroot = 3,
+	 .prime_factors = {2},
+	 .num_prime_factors = 1},
+	{// 2^16 + 1
+	 .prime = 65537,
+	 .known_primroot = 3,
+	 .prime_factors = {2},
+	 .num_prime_factors = 1},
+	{// 2^24 + 43
+	 .prime = 16777259,
+	 .known_primroot = 2,
+	 .prime_factors = {2, 23, 103, 3541},
+	 .num_prime_factors = 4},
+	{// 2^28 + 3
+	 .prime = 268435459,
+	 .known_primroot = 2,
+	 .prime_factors = {2, 3, 19, 87211},
+	 .num_prime_factors = 4},
+	{// 2^32 + 15
+	 .prime = 4294967311,
+	 .known_primroot = 3,
+	 .prime_factors = {2, 3, 5, 131, 364289},
+     .num_prime_factors = 5},
+    {// 2^36 + 31
+     .prime = 68719476767,
+     .known_primroot = 5,
+     .prime_factors = {2, 163, 883, 238727},
+     .num_prime_factors = 4},
+    {// 2^40 + 15
+     .prime = 1099511627791,
+     .known_primroot = 3,
+     .prime_factors = {2, 3, 5, 36650387593},
+     .num_prime_factors = 4},
+    {// 2^44 + 7
+     .prime = 17592186044423,
+      .known_primroot = 5,
+      .prime_factors = {2, 11, 53, 97, 155542661},
+      .num_prime_factors = 5},
+    {// 2^48 + 23
+     .prime = 281474976710677,
+     .known_primroot = 6,
+     .prime_factors = {2, 3, 7, 1361, 2462081249},
+     .num_prime_factors = 5},
+};
 
 #define COPRIME 1
 #define NOT_COPRIME 0
