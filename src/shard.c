@@ -135,10 +135,11 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 
 target_t shard_get_cur_target(shard_t *shard)
 {
-	uint32_t untranslated_ip = (shard->current - 1) >> shard->bits_for_port;
+	uint32_t ip = (shard->current - 1) >> shard->bits_for_port;
+	uint16_t port = extract_port(shard->current - 1, shard->bits_for_port);
 	return (target_t){
-		.ip = (uint32_t)blocklist_lookup_index(untranslated_ip),
-		.port = (uint16_t) extract_port(shard->current - 1, shard->bits_for_port),
+		.ip = (uint32_t)blocklist_lookup_index(ip),
+		.port = (uint16_t) zconf.ports->ports[port],
 		.status = ZMAP_SHARD_OK
 	};
 }
@@ -168,11 +169,13 @@ target_t shard_get_next_target(shard_t *shard)
 		}
 		// TODO: add part where we check if part is above number of ports we
 		// want
-		if (((candidate - 1) >> shard->bits_for_port) < zsend.max_index) {
+		uint32_t candidate_ip = (candidate - 1) >> shard->bits_for_port;
+		uint16_t candidate_port = extract_port(candidate - 1, shard->bits_for_port);
+		if (candidate_ip < zsend.max_index && candidate_port < zconf.ports->port_count) {
 			shard->iterations++;
 			return (target_t){
-				.ip=blocklist_lookup_index((candidate - 1) >> shard->bits_for_port),
-				.port=extract_port(candidate - 1, shard->bits_for_port),
+				.ip=blocklist_lookup_index(candidate_ip),
+				.port=zconf.ports->ports[candidate_port],
 				.status=ZMAP_SHARD_OK
 			};
 		}

@@ -288,6 +288,7 @@ int send_run(sock_t st, shard_t *s)
 		while (!pbm_check(zsend.list_of_ips_pbm, current_ip)) {
 			current = shard_get_next_target(s);
 			current_ip = current.ip;
+			current_port = current.port;
 			if (current.status == ZMAP_SHARD_DONE) {
 				log_debug(
 					"send",
@@ -376,7 +377,7 @@ int send_run(sock_t st, shard_t *s)
 				uint8_t ttl = zconf.probe_ttl;
 				size_t length = 0;
 				zconf.probe_module->make_packet(
-					buf, &length, src_ip, current_ip, current_port, ttl,
+					buf, &length, src_ip, current_ip, htons(current_port), ttl,
 					validation, i, probe_data);
 				if (length > MAX_PACKET_SIZE) {
 					log_fatal("send", "send thread %hhu set length (%zu) larger than MAX (%zu)",
@@ -421,6 +422,7 @@ int send_run(sock_t st, shard_t *s)
 			// Get the next IP to scan
 			current = shard_get_next_target(s);
 			current_ip = current.ip;
+			current_port = current.port;
 			if (zconf.list_of_ips_filename &&
 				current.status != ZMAP_SHARD_DONE) {
 				// If we have a list of IPs bitmap, ensure the next IP
