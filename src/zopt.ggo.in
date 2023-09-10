@@ -104,16 +104,13 @@ option "probe-module"           M "Select probe module"
     typestr="name"
     default="tcp_synscan"
     optional string
-
 option "probe-args"             - "Arguments to pass to probe module"
     typestr="args"
     optional string
-
 option "probe-ttl"              - "Set TTL value for probe IP packets"
     typestr="n"
     default="255"
     optional int
-
 option "list-probe-modules"     - "List available probe modules"
         optional
 
@@ -137,6 +134,15 @@ option "list-output-fields"     - "List all fields that can be output by selecte
 option "no-header-row"          - "Precludes outputting any header rows in data (e.g., CSV headers)"
     optional
 
+
+section "Deduplication Strategy"
+option "dedup-method"           - "Specifices how response deduplication should be performed. Options: default, none, deterministic, probabilistic"
+    typestr="method"
+    optional string
+option "dedup-window-size"      - "Specifices window size for how many recent responses to kept in memory for deuplication"
+    typestr="targets"
+    default="1000000"
+    optional int
 
 section "Logging and Metadata"
 option "verbosity"              v "Level of log detail (0-5)"

@@ -29,6 +29,7 @@
 #include "../lib/xalloc.h"
 
 #include "iterator.h"
+#include "ports.h"
 #include "state.h"
 #include "validate.h"
 #include "zitopt.h"
@@ -212,14 +213,7 @@ int main(int argc, char **argv)
 
 	zconf.ports = xmalloc(sizeof(struct port_conf));
 	if (args.target_ports_given) {
-		char *next = strtok(args.target_ports_arg, ",");
-		while (next != NULL) {
-			uint16_t port = (uint16_t) atoi(next);
-			enforce_range("target-port", port, 0, 0xFFFF);
-			zconf.ports->ports[zconf.ports->port_count] = port;
-			zconf.ports->port_count++;
-			next = strtok(NULL, ",");
-		}
+		parse_ports(args.target_ports_arg, zconf.ports);
 	} else {
 		zconf.ports->port_count = 1;
 	}

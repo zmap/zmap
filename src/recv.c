@@ -39,8 +39,9 @@ void handle_packet(uint32_t buflen, const u_char *bytes,
 		return;
 	}
 	struct ip *ip_hdr = (struct ip *)&bytes[zconf.data_link_size];
-
 	uint32_t src_ip = ip_hdr->ip_src.s_addr;
+	// extract port if TCP or UDP packet to both generate validation data and to
+	// check if the response is a duplicate
 
 	uint32_t validation[VALIDATE_BYTES / sizeof(uint8_t)];
 	// TODO: for TTL exceeded messages, ip_hdr->saddr is going to be
