@@ -16,6 +16,7 @@
 
 #include "../../lib/includes.h"
 #include "../../lib/blocklist.h"
+#include "../../lib/pbm.h"
 #include "../state.h"
 
 #ifndef PACKET_H
@@ -168,12 +169,7 @@ get_src_port(int num_ports, int probe_num, uint32_t *validation)
 static inline int
 check_src_port(uint16_t port, const struct port_conf *ports)
 {
-	for (int i=0; i < ports->port_count; i++) {
-		if (ports->ports[i] == port) {
-			return 1;
-		}
-	}
-	return 0;
+	return bm_check(ports->port_bitmap, port);
 }
 
 static inline struct ip *get_ip_header(const u_char *packet, uint32_t len)
