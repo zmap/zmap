@@ -135,7 +135,7 @@ option "no-header-row"          - "Precludes outputting any header rows in data 
     optional
 
 
-section "Deduplication Method"
+section "Response Deduplication"
 option "dedup-method"           - "Specifices how response deduplication should be performed. Options: default, none, full, window"
     typestr="method"
     optional string

@@ -2,7 +2,7 @@
  * CacheHash Copyright 2014 Regents of the University of Michigan
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy 
+ * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
@@ -65,7 +65,9 @@ cachehash* cachehash_init(size_t maxitems, cachehash_process_cb *cb)
         nodes[i].next = &nodes[i+1];
     }
     // last node
-    nodes[maxitems-1].prev = &nodes[maxitems-2]; return retv;
+    nodes[maxitems-1].prev = &nodes[maxitems-2];
+    retv->evict_cb = cb;
+	return retv;
 }
 
 void cachehash_set_evict_cb(cachehash *ch, cachehash_process_cb *cb)
@@ -85,7 +87,7 @@ static inline int eviction_needed(cachehash *ch)
 static inline void* evict(cachehash *ch)
 {
 
-    
+
     assert(ch);
     node_t *last = ch->end;
     // remove item from judy array
@@ -107,7 +109,7 @@ static inline void* evict(cachehash *ch)
 
 static inline void use(cachehash *ch, node_t *n)
 {
-    
+
     assert(ch);
     assert(n);
     //if first node, nothing to do and return
@@ -189,7 +191,7 @@ void cachehash_put(cachehash *ch, const void *key, size_t keylen, void *value)
 
     void *evicted = cachehash_evict_if_full(ch);
     if (evicted && ch->evict_cb) {
-       ch->evict_cb(evicted); 
+       ch->evict_cb(evicted);
        ch->curr_end = ch->end;
     }
     // create new node
@@ -205,8 +207,8 @@ void cachehash_put(cachehash *ch, const void *key, size_t keylen, void *value)
     //n->prev = ch->curr_end->prev;
     //n->next = ch->curr_end->next;
 
-    if(ch->curr_end != ch->end){ 
-        ch->curr_end = ch->curr_end->next;  
+    if(ch->curr_end != ch->end){
+        ch->curr_end = ch->curr_end->next;
         ch->curr_end->prev = n;
     }
 
@@ -259,7 +261,7 @@ void cachehash_free(cachehash *ch, cachehash_process_cb *cb)
     } while(n);
     free(ch->malloced);
     free(ch);
-} 
+}
 
 void cachehash_iter(cachehash *ch, cachehash_process_cb *cb)
 {

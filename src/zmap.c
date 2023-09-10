@@ -396,15 +396,6 @@ int main(int argc, char *argv[])
 	// other command-line helpers (e.g. probe help)
 	log_debug("zmap", "requested ouput-module: %s", args.output_module_arg);
 
-	if (!args.target_ports_given) {
-		log_fatal(
-		    "zmap",
-		    "target ports (-p) required for this type of probe");
-	}
-	zconf.ports = xmalloc(sizeof(struct port_conf));
-	zconf.ports->port_bitmap=bm_init();
-	parse_ports(args.target_ports_arg, zconf.ports);
-
 	// ZMap's default behavior is to provide a simple file of the unique IP
 	// addresses that responded successfully. We only use this simple "default"
 	// mode if none of {output module, output filter, output fields} are set.
@@ -496,6 +487,16 @@ int main(int argc, char *argv[])
 	if (cmdline_parser_required(&args, CMDLINE_PARSER_PACKAGE) != 0) {
 		exit(EXIT_FAILURE);
 	}
+
+	if (!args.target_ports_given) {
+		log_fatal(
+		    "zmap",
+		    "target ports (-p) required for this type of probe");
+	}
+	zconf.ports = xmalloc(sizeof(struct port_conf));
+	zconf.ports->port_bitmap=bm_init();
+	parse_ports(args.target_ports_arg, zconf.ports);
+
 	// now that we know the probe module, let's find what it supports
 	memset(&zconf.fsconf, 0, sizeof(struct fieldset_conf));
 	// the set of fields made available to a user is constructed
