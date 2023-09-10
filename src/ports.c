@@ -23,7 +23,7 @@
 
 static void add_port(struct port_conf *ports, int port)
 {
-	if (port < 0 || port >= 0xFFFF) {
+	if (port < 0 || port > 0xFFFF) {
 		log_fatal("ports", "invalid target port specified: %i", port);
 	}
 	ports->ports[ports->port_count] = port;
@@ -35,7 +35,7 @@ static void add_port(struct port_conf *ports, int port)
 
 void parse_ports(char *portdef, struct port_conf *ports) {
 	if (!strcmp(portdef, "*")) {
-		for (uint16_t i = 0; i < 0xFFFF; i++) {
+		for (int i = 0; i <= 0xFFFF; i++) {
 			add_port(ports, i);
 		}
 		return;
@@ -47,7 +47,7 @@ void parse_ports(char *portdef, struct port_conf *ports) {
 			*dash = '\0';
 			int first  = atoi(next);
 			int last = atoi(dash + 1);
-			if (last >= 0xFFFF) {
+			if (last > 0xFFFF) {
 				log_fatal("ports", "invalid target port specified: %i", last);
 			}
 			for (int i=first; i<= last; i++) {

@@ -68,7 +68,7 @@ static uint64_t bits_needed(uint64_t n) {
 
 
 iterator_t *iterator_init(uint8_t num_threads, uint16_t shard,
-			  uint16_t num_shards, uint64_t num_addrs, uint16_t num_ports)
+			  uint16_t num_shards, uint64_t num_addrs, uint32_t num_ports)
 {
 	uint8_t bits_for_ip = bits_needed(num_addrs);
 	log_debug("iterator", "bits needed for %u addresses: %u", num_addrs, bits_for_ip);
