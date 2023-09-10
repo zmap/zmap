@@ -153,7 +153,7 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		if(!check_src_port(dport, ports)) {
 			return PACKET_INVALID;
 		}
-		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
+		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr, tcp->th_dport,
 			     (uint8_t *)validation);
 		if (!check_dst_port(sport, num_source_ports, validation)) {
 			return PACKET_INVALID;

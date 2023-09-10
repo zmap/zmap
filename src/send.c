@@ -373,7 +373,7 @@ int send_run(sock_t st, shard_t *s)
 				count++;
 				uint32_t src_ip = get_src_ip(current_ip, i);
 				uint32_t validation[VALIDATE_BYTES / sizeof(uint32_t)];
-				validate_gen(src_ip, current_ip, (uint8_t *)validation);
+				validate_gen(src_ip, current_ip, htons(current_port), (uint8_t *)validation);
 				uint8_t ttl = zconf.probe_ttl;
 				size_t length = 0;
 				zconf.probe_module->make_packet(

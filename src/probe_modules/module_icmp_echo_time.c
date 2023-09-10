@@ -149,7 +149,7 @@ static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		icmp_idnum = icmp_inner->icmp_id;
 		icmp_seqnum = icmp_inner->icmp_seq;
 		*src_ip = ip_inner->ip_dst.s_addr;
-		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
+		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr, 0,
 			     (uint8_t *)validation);
 	}
 	// validate icmp id and seqnum

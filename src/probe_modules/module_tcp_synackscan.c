@@ -145,7 +145,7 @@ static int synackscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 			return PACKET_INVALID;
 		}
 		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
-			     (uint8_t *)validation);
+				tcp->th_dport, (uint8_t *)validation);
 		if (!check_dst_port(sport, num_ports, validation)) {
 			return PACKET_INVALID;
 		}

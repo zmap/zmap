@@ -23,6 +23,7 @@
 #include "validate.h"
 #include "fieldset.h"
 #include "expression.h"
+#include "probe_modules/packet.h"
 #include "probe_modules/probe_modules.h"
 #include "output_modules/output_modules.h"
 
@@ -40,18 +41,32 @@ void handle_packet(uint32_t buflen, const u_char *bytes,
 	}
 	struct ip *ip_hdr = (struct ip *)&bytes[zconf.data_link_size];
 	uint32_t src_ip = ip_hdr->ip_src.s_addr;
+	uint16_t src_port = 0;
+
+	uint32_t len_ip_and_payload = buflen - (zconf.send_ip_pkts ? 0 : sizeof(struct ether_header));
 	// extract port if TCP or UDP packet to both generate validation data and to
 	// check if the response is a duplicate
+	if (ip_hdr->ip_p == IPPROTO_TCP) {
+		struct tcphdr *tcp = get_tcp_header(ip_hdr, len_ip_and_payload);
+		if (tcp) {
+			src_port = tcp->th_sport;
+		}
+	} else if (ip_hdr->ip_p == IPPROTO_UDP) {
+		struct udphdr *udp = get_udp_header(ip_hdr, len_ip_and_payload);
+		if (udp) {
+			src_port = udp->uh_sport;
+		}
+	}
 
 	uint32_t validation[VALIDATE_BYTES / sizeof(uint8_t)];
 	// TODO: for TTL exceeded messages, ip_hdr->saddr is going to be
 	// different and we must calculate off potential payload message instead
-	validate_gen(ip_hdr->ip_dst.s_addr, ip_hdr->ip_src.s_addr,
+	validate_gen(ip_hdr->ip_dst.s_addr, ip_hdr->ip_src.s_addr, src_port,
 		     (uint8_t *)validation);
 
 	if (!zconf.probe_module->validate_packet(
 		ip_hdr,
-		buflen - (zconf.send_ip_pkts ? 0 : sizeof(struct ether_header)),
+		len_ip_and_payload,
 		&src_ip, validation, zconf.ports)) {
 		zrecv.validation_failed++;
 		return;
@@ -59,7 +74,11 @@ void handle_packet(uint32_t buflen, const u_char *bytes,
 		zrecv.validation_passed++;
 	}
 	// woo! We've validated that the packet is a response to our scan
-	int is_repeat = pbm_check(seen, ntohl(src_ip));
+	int is_repeat = 0;
+	if (zconf.dedup_method == DEDUP_METHOD_FULL) {
+		is_repeat = pbm_check(seen, ntohl(src_ip));
+	} else if (zconf.dedup_method == DEDUP_METHOD_WINDOW){
+	}
 	// track whether this is the first packet in an IP fragment.
 	if (ip_hdr->ip_off & IP_MF) {
 		zrecv.ip_fragments++;
@@ -90,7 +109,10 @@ void handle_packet(uint32_t buflen, const u_char *bytes,
 		zrecv.success_total++;
 		if (!is_repeat) {
 			zrecv.success_unique++;
-			pbm_set(seen, ntohl(src_ip));
+			if (zconf.dedup_method == DEDUP_METHOD_FULL) {
+				pbm_set(seen, ntohl(src_ip));
+			} else if (zconf.dedup_method == DEDUP_METHOD_WINDOW) {
+			}
 		}
 		if (zsend.complete) {
 			zrecv.cooldown_total++;
@@ -152,11 +174,10 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 		eth->ether_type = htons(ETHERTYPE_IP);
 	}
 	// initialize paged bitmap
-	//if (zconf.dedup_method == DEDUP_METHOD_FULL) {
-	//	seen = pbm_init();
-	//} else if (zconf.dedup_method == DEDUP_METHOD_WINDOW) {
-	//}
-	seen = pbm_init();
+	if (zconf.dedup_method == DEDUP_METHOD_FULL) {
+		seen = pbm_init();
+	} else if (zconf.dedup_method == DEDUP_METHOD_WINDOW) {
+	}
 	if (zconf.default_mode) {
 		log_info("recv",
 			 "duplicate responses will be excluded from output");
