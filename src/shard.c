@@ -23,7 +23,6 @@ static inline uint16_t extract_port(uint64_t v, uint8_t bits)
 	return (uint16_t)(v & mask);
 }
 
-
 static inline uint32_t extract_ip(uint64_t v, uint8_t bits)
 {
 	return (uint32_t) v >> bits;
@@ -153,7 +152,6 @@ target_t shard_get_cur_target(shard_t *shard)
 
 static inline uint64_t shard_get_next_elem(shard_t *shard)
 {
-	//uint64_t current_ip = 0;
 	do {
 		shard->current *= shard->params.factor;
 		shard->current %= shard->params.modulus;
