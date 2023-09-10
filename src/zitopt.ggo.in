@@ -12,6 +12,9 @@ purpose "A tool for iterating over the IPv4 space"
 
 section "Basic arguments"
 
+option "target-ports"           p "comma-delimited list of ports to scan (for TCP and UDP scans)"
+    typestr="ports"
+    optional string
 option "blocklist-file"           b "File of subnets to exclude, in CIDR notation, one-per line."
     optional string
 option "allowlist-file"           w "File of subnets to include, in CIDR notation, one-per line."
