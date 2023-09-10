@@ -152,6 +152,8 @@ static uint32_t find_primroot(const cyclic_group_t *group, aesrand_t *aes)
 	// the largest group, we have a very low probability of ever executing this
 	// loop more than once, and for small groups it will only execute once.
 	do {
+		candidate += 1;
+		candidate %= group->prime;
 		// Find an element that is coprime in the additive group
 		while (check_coprime(candidate, group) != COPRIME) {
 			candidate += 1;
@@ -160,6 +162,7 @@ static uint32_t find_primroot(const cyclic_group_t *group, aesrand_t *aes)
 		// Given a coprime element, apply the isomorphism.
 		retv = isomorphism(candidate, group);
 	} while (retv > max_root);
+	log_debug("zmap", "Isomorphism: %llu", retv);
 	return retv;
 }
 
@@ -196,7 +199,6 @@ uint64_t isomorphism(uint64_t additive_elt, const cyclic_group_t *mult_group)
 	mpz_init(primroot);
 	mpz_powm(primroot, base, power, prime);
 	uint64_t retv = (uint64_t)mpz_get_ui(primroot);
-	log_debug("zmap", "Isomorphism: %llu", retv);
 	mpz_clear(base);
 	mpz_clear(power);
 	mpz_clear(prime);
