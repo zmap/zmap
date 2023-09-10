@@ -38,7 +38,6 @@ set(PROBE_MODULE_SOURCES
 set(SOURCES
     aesrand.c
     cyclic.c
-    cachehash.c
     expression.c
     fieldset.c
     filter.c
@@ -67,7 +66,6 @@ set(SOURCES
 
 set(ZTESTSOURCES
     aesrand.c
-    cachehash.c
     cyclic.c
     expression.c
     fieldset.c
@@ -216,8 +214,6 @@ if(APPLE OR BSD)
 else()
     set(DNET_LIBRARIES "")
 endif()
-
-set(JUDY_LIBRARIES "Judy")
 
 target_link_libraries(
     zmap
