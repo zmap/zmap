@@ -396,6 +396,15 @@ int main(int argc, char *argv[])
 	// other command-line helpers (e.g. probe help)
 	log_debug("zmap", "requested ouput-module: %s", args.output_module_arg);
 
+	if (!args.target_ports_given) {
+		log_fatal(
+		    "zmap",
+		    "target ports (-p) required for this type of probe");
+	}
+	zconf.ports = xmalloc(sizeof(struct port_conf));
+	zconf.ports->port_bitmap=bm_init();
+	parse_ports(args.target_ports_arg, zconf.ports);
+
 	// ZMap's default behavior is to provide a simple file of the unique IP
 	// addresses that responded successfully. We only use this simple "default"
 	// mode if none of {output module, output filter, output fields} are set.
@@ -416,8 +425,7 @@ int main(int argc, char *argv[])
 		zconf.output_module = get_output_module_by_name("csv");
 		zconf.output_module_name = strdup("csv");
 	} else {
-		zconf.output_module =
-		    get_output_module_by_name(args.output_module_arg);
+		zconf.output_module = get_output_module_by_name(args.output_module_arg);
 		if (!zconf.output_module) {
 			log_fatal(
 			    "zmap",
@@ -530,7 +538,11 @@ int main(int argc, char *argv[])
 	if (args.output_fields_given) {
 		zconf.raw_output_fields = args.output_fields_arg;
 	} else {
-		zconf.raw_output_fields = "saddr";
+		if (zconf.ports->port_count > 1) {
+			zconf.raw_output_fields = "saddr,sport";
+		} else {
+			zconf.raw_output_fields = "saddr";
+		}
 	}
 	// add all fields if wildcard received
 	if (!strcmp(zconf.raw_output_fields, "*")) {
@@ -557,6 +569,8 @@ int main(int argc, char *argv[])
 		    &zconf.fsconf.translation, &zconf.fsconf.defs,
 		    zconf.output_fields, zconf.output_fields_len);
 	}
+
+
 	// default filtering behavior is to drop unsuccessful and duplicates
 	if (zconf.default_mode) {
 		log_debug(
@@ -699,14 +713,6 @@ int main(int argc, char *argv[])
 				zconf.source_port_last = port;
 			}
 		}
-		if (!args.target_ports_given) {
-			log_fatal(
-			    "zmap",
-			    "target ports (-p) required for this type of probe");
-		}
-		zconf.ports = xmalloc(sizeof(struct port_conf));
-		zconf.ports->port_bitmap=bm_init();
-		parse_ports(args.target_ports_arg, zconf.ports);
 	}
 	if (args.source_ip_given) {
 		parse_source_ip_addresses(args.source_ip_arg);

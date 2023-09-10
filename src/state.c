@@ -64,6 +64,8 @@ struct state_conf zconf = {
 			   .data_link_size = 0,
 			   .default_mode = 0,
 			   .no_header_row = 0,
+               .dedup_strategy = 0,
+               .dedup_size = 0
 };
 
 void init_empty_global_configuration(struct state_conf *c) {

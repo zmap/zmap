@@ -26,6 +26,11 @@
 #define MAX_PACKET_SIZE 4096
 #define MAC_ADDR_LEN_BYTES 6
 
+#define DEDUP_METHOD_DEFAULT 0
+#define DEDUP_METHOD_NONE 1
+#define DEDUP_METHOD_FULL 2
+#define DEDUP_METHOD_WINDOW 3
+
 struct probe_module;
 struct output_module;
 
@@ -126,6 +131,8 @@ struct state_conf {
 	int data_link_size;
 	int default_mode;
 	int no_header_row;
+	int dedup_strategy;
+	int dedup_size;
 #ifdef PFRING
 	struct {
 		pfring_zc_cluster *cluster;

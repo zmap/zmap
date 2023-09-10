@@ -135,11 +135,11 @@ option "no-header-row"          - "Precludes outputting any header rows in data 
     optional
 
 
-section "Deduplication Strategy"
-option "dedup-method"           - "Specifices how response deduplication should be performed. Options: default, none, deterministic, probabilistic"
+section "Deduplication Method"
+option "dedup-method"           - "Specifices how response deduplication should be performed. Options: default, none, full, window"
     typestr="method"
     optional string
-option "dedup-window-size"      - "Specifices window size for how many recent responses to kept in memory for deuplication"
+option "dedup-window-size"      - "Specifices window size for how many recent responses to keep in memory for deuplication"
     typestr="targets"
     default="1000000"
     optional int
