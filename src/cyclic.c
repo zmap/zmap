@@ -79,37 +79,37 @@ static cyclic_group_t groups[] = {
 	 .prime = 4294967311,
 	 .known_primroot = 3,
 	 .prime_factors = {2, 3, 5, 131, 364289},
-     .num_prime_factors = 5},
+	 .num_prime_factors = 5},
 	{// 2^33 + 17
 	 .prime = 8589934609,
 	 .known_primroot = 19,
 	 .prime_factors = {2, 3, 59, 3033169},
-     .num_prime_factors = 4},
+	 .num_prime_factors = 4},
 	{// 2^34 + 25
 	 .prime = 17179869209,
 	 .known_primroot = 3,
 	 .prime_factors = {2, 83, 1277, 20261},
-     .num_prime_factors = 4},
-    {// 2^36 + 31
-     .prime = 68719476767,
-     .known_primroot = 5,
-     .prime_factors = {2, 163, 883, 238727},
-     .num_prime_factors = 4},
-    {// 2^40 + 15
-     .prime = 1099511627791,
-     .known_primroot = 3,
-     .prime_factors = {2, 3, 5, 36650387593},
-     .num_prime_factors = 4},
-    {// 2^44 + 7
-     .prime = 17592186044423,
-      .known_primroot = 5,
-      .prime_factors = {2, 11, 53, 97, 155542661},
-      .num_prime_factors = 5},
-    {// 2^48 + 23
-     .prime = 281474976710677,
-     .known_primroot = 6,
-     .prime_factors = {2, 3, 7, 1361, 2462081249},
-     .num_prime_factors = 5},
+	 .num_prime_factors = 4},
+	{// 2^36 + 31
+	 .prime = 68719476767,
+	 .known_primroot = 5,
+	 .prime_factors = {2, 163, 883, 238727},
+	 .num_prime_factors = 4},
+	{// 2^40 + 15
+	 .prime = 1099511627791,
+	 .known_primroot = 3,
+	 .prime_factors = {2, 3, 5, 36650387593},
+	 .num_prime_factors = 4},
+	{// 2^44 + 7
+	 .prime = 17592186044423,
+	  .known_primroot = 5,
+	  .prime_factors = {2, 11, 53, 97, 155542661},
+	  .num_prime_factors = 5},
+	{// 2^48 + 23
+	 .prime = 281474976710677,
+	 .known_primroot = 6,
+	 .prime_factors = {2, 3, 7, 1361, 2462081249},
+	 .num_prime_factors = 5},
 };
 
 #define COPRIME 1
@@ -123,7 +123,7 @@ static int check_coprime(uint64_t check, const cyclic_group_t *group)
 	}
 	for (unsigned i = 0; i < group->num_prime_factors; i++) {
 		if (group->prime_factors[i] > check &&
-		    !(group->prime_factors[i] % check)) {
+			!(group->prime_factors[i] % check)) {
 			return NOT_COPRIME;
 		} else if (group->prime_factors[i] < check &&
 			   !(check % group->prime_factors[i])) {
@@ -139,8 +139,7 @@ static int check_coprime(uint64_t check, const cyclic_group_t *group)
 // which is a generator of the additive group mod (p - 1)
 static uint32_t find_primroot(const cyclic_group_t *group, aesrand_t *aes)
 {
-	uint32_t candidate =
-	    (uint32_t)((aesrand_getword(aes) & 0xFFFFFFFF) % group->prime);
+	uint32_t candidate = (uint32_t)((aesrand_getword(aes) & 0xFFFFFFFF) % group->prime);
 	uint64_t retv = 0;
 
 	// The maximum primitive root we can return needs to be small enough such
