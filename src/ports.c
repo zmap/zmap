@@ -18,25 +18,40 @@
 
 #include "state.h"
 #include "../lib/pbm.h"
+#include "../lib/logger.h"
+
+
+static void add_port(struct port_conf *ports, int port)
+{
+	if (port < 0 || port >= 0xFFFF) {
+		log_fatal("ports", "invalid target port specified: %i", port);
+	}
+	ports->ports[ports->port_count] = port;
+	if (ports->port_bitmap) {
+		bm_set(ports->port_bitmap, port);
+	}
+	ports->port_count++;
+}
 
 void parse_ports(char *portdef, struct port_conf *ports) {
 	if (!strcmp(portdef, "*")) {
 		for (uint16_t i = 0; i < 0xFFFF; i++) {
-			ports->ports[i] = i;
-			if (ports->port_bitmap) {
-				bm_set(ports->port_bitmap, i);
-			}
+			add_port(ports, i);
 		}
-		ports->port_count = 0xFFFF;
 		return;
 	}
 	char *next = strtok(portdef, ",");
 	while (next != NULL) {
-		uint16_t port = (uint16_t) atoi(next);
-		ports->ports[zconf.ports->port_count] = port;
-		ports->port_count++;
-		if (ports->port_bitmap) {
-			bm_set(ports->port_bitmap, port);
+		char *dash = strchr(next, '-');
+		if (dash) { // range
+			*dash = '\0';
+			int first  = atoi(next);
+			int last = atoi(dash + 1);
+			for (int i=first; i<= last; i++) {
+				add_port(ports, i);
+			}
+		} else {
+			add_port(ports, atoi(next));
 		}
 		next = strtok(NULL, ",");
 	}
