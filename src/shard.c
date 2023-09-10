@@ -17,9 +17,16 @@
 #include "shard.h"
 #include "state.h"
 
-static uint16_t extract_port(uint64_t v, uint8_t bits) {
+static inline uint16_t extract_port(uint64_t v, uint8_t bits)
+{
 	uint64_t mask = (1 << bits) - 1;
 	return (uint16_t)(v & mask);
+}
+
+
+static inline uint32_t extract_ip(uint64_t v, uint8_t bits)
+{
+	return (uint32_t) v >> bits;
 }
 
 static void shard_roll_to_valid(shard_t *s)
@@ -135,7 +142,7 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 
 target_t shard_get_cur_target(shard_t *shard)
 {
-	uint32_t ip = (shard->current - 1) >> shard->bits_for_port;
+	uint32_t ip = extract_ip(shard->current - 1, shard->bits_for_port);
 	uint16_t port = extract_port(shard->current - 1, shard->bits_for_port);
 	return (target_t){
 		.ip = (uint32_t)blocklist_lookup_index(ip),
@@ -150,7 +157,6 @@ static inline uint64_t shard_get_next_elem(shard_t *shard)
 	do {
 		shard->current *= shard->params.factor;
 		shard->current %= shard->params.modulus;
-		//current_ip = shard->current >> shard->bits_for_port;
 	} while (shard->current >= (1LL << 48));
 	return (uint64_t)shard->current;
 }
@@ -167,9 +173,7 @@ target_t shard_get_next_target(shard_t *shard)
 			shard->iterations++;
 			return (target_t){.ip=0, .port=0, .status=ZMAP_SHARD_DONE};
 		}
-		// TODO: add part where we check if part is above number of ports we
-		// want
-		uint32_t candidate_ip = (candidate - 1) >> shard->bits_for_port;
+		uint32_t candidate_ip = extract_ip(candidate - 1, shard->bits_for_port);
 		uint16_t candidate_port = extract_port(candidate - 1, shard->bits_for_port);
 		if (candidate_ip < zsend.max_index && candidate_port < zconf.ports->port_count) {
 			shard->iterations++;
