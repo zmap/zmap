@@ -25,7 +25,7 @@ static inline uint16_t extract_port(uint64_t v, uint8_t bits)
 
 static inline uint32_t extract_ip(uint64_t v, uint8_t bits)
 {
-	return (uint32_t) v >> bits;
+	return (uint32_t) (v >> bits);
 }
 
 static void shard_roll_to_valid(shard_t *s)
