@@ -152,7 +152,10 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 		eth->ether_type = htons(ETHERTYPE_IP);
 	}
 	// initialize paged bitmap
-	seen = pbm_init();
+	if (zconf.dedup_method == DEDUP_METHOD_FULL) {
+		seen = pbm_init();
+	} else if (zconf.dedup_method == DEDUP_METHOD_WINDOW) {
+	}
 	if (zconf.default_mode) {
 		log_info("recv",
 			 "duplicate responses will be excluded from output");

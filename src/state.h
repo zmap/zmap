@@ -31,6 +31,8 @@
 #define DEDUP_METHOD_FULL 2
 #define DEDUP_METHOD_WINDOW 3
 
+extern const char* const DEDUP_METHOD_NAMES[];
+
 struct probe_module;
 struct output_module;
 
@@ -131,8 +133,8 @@ struct state_conf {
 	int data_link_size;
 	int default_mode;
 	int no_header_row;
-	int dedup_strategy;
-	int dedup_size;
+	int dedup_method;
+	int dedup_window_size;
 #ifdef PFRING
 	struct {
 		pfring_zc_cluster *cluster;

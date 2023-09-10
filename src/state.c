@@ -9,6 +9,8 @@
 #include "state.h"
 #include "../lib/logger.h"
 
+const char* const DEDUP_METHOD_NAMES[] = {"default", "none", "full", "window"};
+
 // global configuration and defaults
 struct state_conf zconf = {
                .log_level = LOG_INFO,
@@ -64,8 +66,8 @@ struct state_conf zconf = {
 			   .data_link_size = 0,
 			   .default_mode = 0,
 			   .no_header_row = 0,
-               .dedup_strategy = 0,
-               .dedup_size = 0
+               .dedup_method = 0,
+               .dedup_window_size = 0
 };
 
 void init_empty_global_configuration(struct state_conf *c) {
