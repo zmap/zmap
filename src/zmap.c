@@ -704,9 +704,7 @@ int main(int argc, char *argv[])
 			    "target ports (-p) required for this type of probe");
 		}
 		zconf.ports = xmalloc(sizeof(struct port_conf));
-		printf("fuck fuck\n");
 		char *next = strtok(args.target_ports_arg, ",");
-		printf("fuck fuck past strtok\n");
 		while (next != NULL) {
 			uint16_t port = (uint16_t) atoi(next);
 			enforce_range("target-port", port, 0, 0xFFFF);
@@ -714,7 +712,6 @@ int main(int argc, char *argv[])
 			zconf.ports->port_count++;
 			next = strtok(NULL, ",");
 		}
-		printf("fuck fuck past loop\n");
 	}
 	if (args.source_ip_given) {
 		parse_source_ip_addresses(args.source_ip_arg);
