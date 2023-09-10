@@ -201,7 +201,7 @@ extern struct state_recv zrecv;
 struct port_conf {
 	uint16_t port_count;
 	uint16_t ports[0xFFFF];
-	uint8_t **port_bitmap;
+	uint8_t *port_bitmap;
 };
 
 
