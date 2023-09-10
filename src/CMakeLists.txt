@@ -67,6 +67,7 @@ set(SOURCES
 
 set(ZTESTSOURCES
     aesrand.c
+    cachehash.c
     cyclic.c
     expression.c
     fieldset.c
@@ -216,7 +217,7 @@ else()
     set(DNET_LIBRARIES "")
 endif()
 
-set(JUDY_LIBRARIES, "judy")
+set(JUDY_LIBRARIES "Judy")
 
 target_link_libraries(
     zmap
@@ -254,6 +255,7 @@ target_link_libraries(
     pcap gmp m unistring
     ${DNET_LIBRARIES}
     ${JSON_LIBRARIES}
+	${JUDY_LIBRARIES}
 )
 
 # Install binary

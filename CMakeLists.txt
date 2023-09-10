@@ -81,15 +81,6 @@ if(WITH_PFRING)
     set(PFRING_LIBRARIES pfring rt numa)
 endif()
 
-#include(FindPkgConfig)
-#pkg_check_modules(JUDY libJudy)
-#if(JUDY_FOUND)
-#	include_directories(${JUDY_INCLUDE_DIRS})
-#else()
-#    message(FATAL_ERROR "Did not find libjudy")
-#endif()
-
-
 # Standard FLAGS
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
 if(NOT APPLE)
