@@ -302,6 +302,13 @@ void json_metadata(FILE *file)
 	json_object_object_add(obj, "log_level",
 			       json_object_new_int(zconf.log_level));
 
+	json_object_object_add(obj, "deduplication_method",
+			       json_object_new_string(DEDUP_METHOD_NAMES[zconf.dedup_method]));
+	if (zconf.dedup_method == DEDUP_METHOD_WINDOW) {
+		json_object_object_add(obj, "deduplication_window_size",
+			       json_object_new_int(zconf.dedup_window_size));
+	}
+
 	// parse out JSON metadata that was supplied on the command-line
 	if (zconf.custom_metadata_str) {
 		json_object *user =
