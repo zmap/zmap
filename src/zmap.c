@@ -33,6 +33,7 @@
 
 #include "aesrand.h"
 #include "constants.h"
+#include "ports.h"
 #include "zopt.h"
 #include "send.h"
 #include "recv.h"
@@ -705,15 +706,7 @@ int main(int argc, char *argv[])
 		}
 		zconf.ports = xmalloc(sizeof(struct port_conf));
 		zconf.ports->port_bitmap=bm_init();
-		char *next = strtok(args.target_ports_arg, ",");
-		while (next != NULL) {
-			uint16_t port = (uint16_t) atoi(next);
-			enforce_range("target-port", port, 0, 0xFFFF);
-			zconf.ports->ports[zconf.ports->port_count] = port;
-			zconf.ports->port_count++;
-			bm_set(zconf.ports->port_bitmap, port);
-			next = strtok(NULL, ",");
-		}
+		parse_ports(args.target_ports_arg, zconf.ports);
 	}
 	if (args.source_ip_given) {
 		parse_source_ip_addresses(args.source_ip_arg);

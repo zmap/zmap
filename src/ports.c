@@ -17,21 +17,27 @@
 #include <stdlib.h>
 
 #include "state.h"
+#include "../lib/pbm.h"
 
 void parse_ports(char *portdef, struct port_conf *ports) {
 	if (!strcmp(portdef, "*")) {
-		for (uint16_t i; i < 0xFFFF; i++) {
-			zconf.ports->ports[i] = i;
+		for (uint16_t i = 0; i < 0xFFFF; i++) {
+			ports->ports[i] = i;
+			if (ports->port_bitmap) {
+				bm_set(ports->port_bitmap, i);
+			}
 		}
-		zconf.ports->port_count = 0xFFFF;
-		return
+		ports->port_count = 0xFFFF;
+		return;
 	}
-	char *next = strtok(args.target_ports_arg, ",");
+	char *next = strtok(portdef, ",");
 	while (next != NULL) {
 		uint16_t port = (uint16_t) atoi(next);
-		enforce_range("target-port", port, 0, 0xFFFF);
-		zconf.ports->ports[zconf.ports->port_count] = port;
-		zconf.ports->port_count++;
+		ports->ports[zconf.ports->port_count] = port;
+		ports->port_count++;
+		if (ports->port_bitmap) {
+			bm_set(ports->port_bitmap, port);
+		}
 		next = strtok(NULL, ",");
 	}
 }
