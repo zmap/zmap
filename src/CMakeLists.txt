@@ -38,6 +38,7 @@ set(PROBE_MODULE_SOURCES
 set(SOURCES
     aesrand.c
     cyclic.c
+    cachehash.c
     expression.c
     fieldset.c
     filter.c
@@ -215,6 +216,8 @@ else()
     set(DNET_LIBRARIES "")
 endif()
 
+set(JUDY_LIBRARIES, "judy")
+
 target_link_libraries(
     zmap
     zmaplib
@@ -222,6 +225,7 @@ target_link_libraries(
     pcap gmp m unistring
     ${DNET_LIBRARIES}
     ${JSON_LIBRARIES}
+	${JUDY_LIBRARIES}
 )
 
 target_link_libraries(

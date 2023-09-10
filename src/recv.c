@@ -11,7 +11,7 @@
 #include <assert.h>
 
 #include "../lib/includes.h"
-#include "../lib/cachehash.h"
+#include "cachehash.h"
 #include "../lib/util.h"
 #include "../lib/logger.h"
 #include "../lib/pbm.h"
