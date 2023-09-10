@@ -11,6 +11,7 @@
 #include <assert.h>
 
 #include "../lib/includes.h"
+#include "../lib/cachehash.h"
 #include "../lib/util.h"
 #include "../lib/logger.h"
 #include "../lib/pbm.h"
@@ -22,6 +23,7 @@
 #include "state.h"
 #include "validate.h"
 #include "fieldset.h"
+#include "shard.h"
 #include "expression.h"
 #include "probe_modules/packet.h"
 #include "probe_modules/probe_modules.h"
@@ -30,6 +32,7 @@
 static u_char fake_eth_hdr[65535];
 // bitmap of observed IP addresses
 static uint8_t **seen = NULL;
+static cachehash *ch = NULL;
 
 void handle_packet(uint32_t buflen, const u_char *bytes,
 		   const struct timespec ts)
@@ -78,6 +81,12 @@ void handle_packet(uint32_t buflen, const u_char *bytes,
 	if (zconf.dedup_method == DEDUP_METHOD_FULL) {
 		is_repeat = pbm_check(seen, ntohl(src_ip));
 	} else if (zconf.dedup_method == DEDUP_METHOD_WINDOW){
+		target_t t = {.ip = src_ip, .port = src_port, .status = 0};
+		if (cachehash_get(ch, &t, sizeof(target_t))) {
+			is_repeat = 1;
+		} else {
+			cachehash_put(ch, &t, sizeof(target_t), (void*)1);
+		}
 	}
 	// track whether this is the first packet in an IP fragment.
 	if (ip_hdr->ip_off & IP_MF) {
@@ -177,6 +186,7 @@ int recv_run(pthread_mutex_t *recv_ready_mutex)
 	if (zconf.dedup_method == DEDUP_METHOD_FULL) {
 		seen = pbm_init();
 	} else if (zconf.dedup_method == DEDUP_METHOD_WINDOW) {
+		ch = cachehash_init(zconf.dedup_window_size, NULL);
 	}
 	if (zconf.default_mode) {
 		log_info("recv",
