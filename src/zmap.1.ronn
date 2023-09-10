@@ -19,8 +19,9 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
      IP addresses or DNS hostnames to scan. Accepts IP ranges in CIDR block
      notation. Defaults to 0.0.0/8
 
-   * `-p`, `--target-port=port`:
-     TCP or UDP port number to scan (for SYN scans and basic UDP scans)
+   * `-p`, `--target-ports=port(s)`:
+     List of TCP/UDP ports and/or port ranges to scan. (e.g., 80,443,100-105).
+     Use '*' to scan all ports, including port 0.
 
    * `-o`, `--output-file=name`:
      When using an output module that uses a file, write results to this file.
