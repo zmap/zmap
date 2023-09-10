@@ -704,12 +704,14 @@ int main(int argc, char *argv[])
 			    "target ports (-p) required for this type of probe");
 		}
 		zconf.ports = xmalloc(sizeof(struct port_conf));
+		zconf.ports->port_bitmap=pbm_init();
 		char *next = strtok(args.target_ports_arg, ",");
 		while (next != NULL) {
 			uint16_t port = (uint16_t) atoi(next);
 			enforce_range("target-port", port, 0, 0xFFFF);
 			zconf.ports->ports[zconf.ports->port_count] = port;
 			zconf.ports->port_count++;
+			pbm_set(zconf.ports->port_bitmap, (uint32_t) port);
 			next = strtok(NULL, ",");
 		}
 	}

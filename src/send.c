@@ -416,7 +416,7 @@ int send_run(sock_t st, shard_t *s)
 				}
 				s->state.packets_sent++;
 			}
-			// Track the number of hosts we actually scanned.
+			// Track the number of targets (ip,port)s we actually scanned.
 			s->state.targets_scanned++;
 
 			// Get the next IP to scan
