@@ -27,22 +27,21 @@ probe_module_t module_ntp;
 
 static int num_ports;
 
-
-int ntp_global_initialize(struct state_conf *conf) {
+int ntp_global_initialize(struct state_conf *conf)
+{
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
 	return udp_global_initialize(conf);
 }
 
 int ntp_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
-			uint32_t *validation)
+			uint32_t *validation, const struct port_conf *ports)
 {
 	return udp_do_validate_packet(ip_hdr, len, src_ip, validation,
-				      num_ports, zconf.target_port);
+				      num_ports, SRC_PORT_VALIDATION, ports);
 }
 
-void ntp_process_packet(const u_char *packet,
-			UNUSED uint32_t len, fieldset_t *fs,
-			UNUSED uint32_t *validation,
+void ntp_process_packet(const u_char *packet, UNUSED uint32_t len,
+			fieldset_t *fs, UNUSED uint32_t *validation,
 			UNUSED struct timespec ts)
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
@@ -155,8 +154,7 @@ void ntp_process_packet(const u_char *packet,
 	}
 }
 
-int ntp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-		       UNUSED port_h_t dst_port, void **arg)
+int ntp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw, void **arg)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -171,13 +169,11 @@ int ntp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	ntp_header->LI_VN_MODE = 227;
 	len = sizeof(struct udphdr) + sizeof(struct ntphdr);
 
-	make_udp_header(udp_header, zconf.target_port, len);
+	make_udp_header(udp_header, len);
 
 	// TODO(dadrian): Should this have a payload? It was being set incorrectly.
-	size_t header_len = sizeof(struct ether_header)
-	    + sizeof(struct ip)
-	    + sizeof(struct udphdr)
-	    + sizeof(struct ntphdr);
+	size_t header_len = sizeof(struct ether_header) + sizeof(struct ip) +
+			    sizeof(struct udphdr) + sizeof(struct ntphdr);
 	module_ntp.max_packet_length = header_len;
 
 	uint32_t seed = aesrand_getword(zconf.aes);

@@ -13,7 +13,7 @@
 #include <string.h>
 
 typedef struct __attribute__((packed)) {
-	uint16_t id;	 /* transaction ID */
+	uint16_t id;	     /* transaction ID */
 	unsigned rd : 1;     /* recursion desired */
 	unsigned tc : 1;     /* truncation */
 	unsigned aa : 1;     /* authoritative answer */
@@ -24,7 +24,7 @@ typedef struct __attribute__((packed)) {
 	unsigned rcode : 4; /* response code */
 	unsigned cd : 1;    /* checking disabled */
 	unsigned ad : 1;    /* authenticated data */
-	unsigned z : 1;     /* reserved set to 0 */
+	unsigned z : 1;	    /* reserved set to 0 */
 	unsigned ra : 1;    /* recursion available */
 
 	uint16_t qdcount; /* # entries in question section */

@@ -26,33 +26,32 @@
 
 probe_module_t module_tcp_synscan;
 
-static uint16_t num_ports;
-static port_h_t target_port;
+static uint16_t num_source_ports;
 
 static int synscan_global_initialize(struct state_conf *state)
 {
-	num_ports = state->source_port_last - state->source_port_first + 1;
-	target_port = state->target_port;
+	num_source_ports =
+	    state->source_port_last - state->source_port_first + 1;
 	return EXIT_SUCCESS;
 }
 
 static int synscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-				  port_h_t dst_port,
 				  UNUSED void **arg_ptr)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	make_eth_header(eth_header, src, gw);
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
-	uint16_t len = htons(sizeof(struct ip) + ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN);
+	uint16_t len =
+	    htons(sizeof(struct ip) + ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN);
 	make_ip_header(ip_header, IPPROTO_TCP, len);
 	struct tcphdr *tcp_header = (struct tcphdr *)(&ip_header[1]);
-	make_tcp_header(tcp_header, dst_port, TH_SYN);
+	make_tcp_header(tcp_header, TH_SYN);
 	set_mss_option(tcp_header);
 	return EXIT_SUCCESS;
 }
 
-static int synscan_make_packet(void *buf, size_t *buf_len,
-			       ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
+static int synscan_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
+			       ipaddr_n_t dst_ip, port_n_t dport, uint8_t ttl,
 			       uint32_t *validation, int probe_num,
 			       UNUSED void *arg)
 {
@@ -65,14 +64,15 @@ static int synscan_make_packet(void *buf, size_t *buf_len,
 	ip_header->ip_dst.s_addr = dst_ip;
 	ip_header->ip_ttl = ttl;
 
-	port_h_t sport = get_src_port(num_ports, probe_num, validation);
+	port_h_t sport = get_src_port(num_source_ports, probe_num, validation);
 	tcp_header->th_sport = htons(sport);
+	tcp_header->th_dport = dport;
 	tcp_header->th_seq = tcp_seq;
 	// checksum value must be zero when calculating packet's checksum
 	tcp_header->th_sum = 0;
-	tcp_header->th_sum =
-	    tcp_checksum(ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN, ip_header->ip_src.s_addr,
-			 ip_header->ip_dst.s_addr, tcp_header);
+	tcp_header->th_sum = tcp_checksum(ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN,
+					  ip_header->ip_src.s_addr,
+					  ip_header->ip_dst.s_addr, tcp_header);
 	// checksum value must be zero when calculating packet's checksum
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
@@ -96,9 +96,9 @@ void synscan_print_packet(FILE *fp, void *packet)
 	fprintf(fp, PRINT_PACKET_SEP);
 }
 
-
 static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
-				   uint32_t *src_ip, uint32_t *validation)
+				   uint32_t *src_ip, uint32_t *validation,
+				   const struct port_conf *ports)
 {
 	if (ip_hdr->ip_p == IPPROTO_TCP) {
 		struct tcphdr *tcp = get_tcp_header(ip_hdr, len);
@@ -108,11 +108,11 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		port_h_t sport = ntohs(tcp->th_sport);
 		port_h_t dport = ntohs(tcp->th_dport);
 		// validate source port
-		if (sport != target_port) {
+		if (!check_src_port(sport, ports)) {
 			return PACKET_INVALID;
 		}
 		// validate destination port
-		if (!check_dst_port(dport, num_ports, validation)) {
+		if (!check_dst_port(dport, num_source_ports, validation)) {
 			return PACKET_INVALID;
 		}
 		// check whether we'll ever send to this IP during the scan
@@ -151,12 +151,12 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		// rather than the response packet
 		port_h_t sport = ntohs(tcp->th_sport);
 		port_h_t dport = ntohs(tcp->th_dport);
-		if (dport != target_port) {
+		if (!check_src_port(dport, ports)) {
 			return PACKET_INVALID;
 		}
 		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
-			     (uint8_t *)validation);
-		if (!check_dst_port(sport, num_ports, validation)) {
+			     tcp->th_dport, (uint8_t *)validation);
+		if (!check_dst_port(sport, num_source_ports, validation)) {
 			return PACKET_INVALID;
 		}
 	} else {
@@ -165,10 +165,8 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	return PACKET_VALID;
 }
 
-static void synscan_process_packet(const u_char *packet,
-				   UNUSED uint32_t len,
-				   fieldset_t *fs,
-				   UNUSED uint32_t *validation,
+static void synscan_process_packet(const u_char *packet, UNUSED uint32_t len,
+				   fieldset_t *fs, UNUSED uint32_t *validation,
 				   UNUSED struct timespec ts)
 {
 	struct ip *ip_hdr = get_ip_header(packet, len);
@@ -233,5 +231,4 @@ probe_module_t module_tcp_synscan = {
 		"is considered a failed response.",
     .output_type = OUTPUT_TYPE_STATIC,
     .fields = fields,
-    .numfields = sizeof(fields) / sizeof(fields[0])
-};
+    .numfields = sizeof(fields) / sizeof(fields[0])};

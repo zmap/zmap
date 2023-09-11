@@ -19,8 +19,9 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
      IP addresses or DNS hostnames to scan. Accepts IP ranges in CIDR block
      notation. Defaults to 0.0.0/8
 
-   * `-p`, `--target-port=port`:
-     TCP or UDP port number to scan (for SYN scans and basic UDP scans)
+   * `-p`, `--target-ports=port(s)`:
+     List of TCP/UDP ports and/or port ranges to scan (e.g., 80,443,100-105).
+     Use '*' to scan all ports, including port 0.
 
    * `-o`, `--output-file=name`:
      When using an output module that uses a file, write results to this file.
@@ -169,6 +170,28 @@ fields, and write filters over the output fields.
      Excludes any header rows (e.g., CSV header fields) from ZMap output. This is
      useful if you're piping results into another application that expects only
      data.
+
+
+### OUTPUT OPTIONS ###
+
+Hosts will oftentimes send multiple responses to a probe (either because the
+scanner doesn't send back a RST packet or because the host has a misimplemented
+TCP stack. To address this, ZMap will attempt to deduplicate responsive (ip,port)
+targets.
+
+
+   * `--dedup-method`:
+     Specifies the method ZMap will use to deduplicate responses. Options are:
+     full, window, and none. Full deduplication uses a 32-bit bitmap and
+     guarantees that no duplicates will be emitted. However, full-deduplication
+     requires around 500MB of memory for a single port. We do not support full
+     deduplication for multiple ports. Window uses a sliding window of a the last
+     (user-defined) number of responses as set by --dedup-window-size. None will
+     prevent any duplication
+
+   * `--dedup-window-size=targets`:
+     Specifies the size of the sliding window of last n target responses to be
+     used for deduplication. Only applicable if using window deduplication.
 
 ### LOGGING AND METADATA OPTIONS ###
 

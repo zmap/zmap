@@ -254,7 +254,7 @@ int file_exists(char *name)
 #include <uuid/uuid.h>
 #endif
 
-int drop_privs()
+int drop_privs(void)
 {
 	struct passwd *pw;
 	if (geteuid() != 0) {
@@ -341,3 +341,23 @@ int set_cpu(uint32_t core)
 }
 
 #endif
+
+double now(void)
+{
+	struct timeval now;
+	gettimeofday(&now, NULL);
+	return (double)now.tv_sec + (double)now.tv_usec / 1000000.;
+}
+
+double steady_now(void)
+{
+#if defined(_POSIX_TIMERS) && defined(_POSIX_MONOTONIC_CLOCK)
+	struct timespec tp;
+	clock_gettime(CLOCK_MONOTONIC, &tp);
+	return (double)tp.tv_sec + (double)tp.tv_nsec / 1000000000.;
+#else
+	struct timeval now;
+	gettimeofday(&now, NULL);
+	return (double)now.tv_sec + (double)now.tv_usec / 1000000.;
+#endif
+}

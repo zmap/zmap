@@ -35,7 +35,7 @@ int send_run_init(sock_t s)
 	}
 	strncpy(if_idx.ifr_name, zconf.iface, IFNAMSIZ - 1);
 	if (ioctl(sock, SIOCGIFINDEX, &if_idx) < 0) {
-		perror("SIOCGIFINDEX");
+		log_error("send", "%s", "SIOCGIFINDEX");
 		return EXIT_FAILURE;
 	}
 	int ifindex = if_idx.ifr_ifindex;

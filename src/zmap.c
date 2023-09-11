@@ -32,6 +32,8 @@
 #include "../lib/pbm.h"
 
 #include "aesrand.h"
+#include "constants.h"
+#include "ports.h"
 #include "zopt.h"
 #include "send.h"
 #include "recv.h"
@@ -88,8 +90,11 @@ static void *start_send(void *arg)
 	send_arg_t *s = (send_arg_t *)arg;
 	log_debug("zmap", "Pinning a send thread to core %u", s->cpu);
 	set_cpu(s->cpu);
-	send_run(s->sock, s->shard);
+	int ret = send_run(s->sock, s->shard);
 	free(s);
+	if (ret != EXIT_SUCCESS) {
+		log_fatal("send", "send_run failed, terminating");
+	}
 	return NULL;
 }
 
@@ -394,15 +399,19 @@ int main(int argc, char *argv[])
 	// ZMap's default behavior is to provide a simple file of the unique IP
 	// addresses that responded successfully. We only use this simple "default"
 	// mode if none of {output module, output filter, output fields} are set.
-	zconf.default_mode = (!(args.output_module_given || args.output_filter_given || args.output_fields_given));
+	zconf.default_mode =
+	    (!(args.output_module_given || args.output_filter_given ||
+	       args.output_fields_given));
 	if (zconf.default_mode) {
-		log_info("zmap", "By default, ZMap will output the unique IP addresses "
-				"of hosts that respond successfully (e.g., SYN-ACK packet). This "
-				"is equivalent to running ZMap with the following flags: "
-				"--output-module=csv --output-fields=saddr --output-filter='"
-				"success=1 && repeat=0' --no-header-row. "
-				"If you want all responses, explicitly set an output module or "
-				"set --output-filter=\"\".");
+		log_info(
+		    "zmap",
+		    "By default, ZMap will output the unique IP addresses "
+		    "of hosts that respond successfully (e.g., SYN-ACK packet). This "
+		    "is equivalent to running ZMap with the following flags: "
+		    "--output-module=csv --output-fields=saddr --output-filter='"
+		    "success=1 && repeat=0' --no-header-row. "
+		    "If you want all responses, explicitly set an output module or "
+		    "set --output-filter=\"\".");
 		zconf.output_module = get_output_module_by_name("csv");
 		zconf.output_module_name = strdup("csv");
 		zconf.no_header_row = 1;
@@ -444,20 +453,19 @@ int main(int argc, char *argv[])
 		cmdline_parser_print_help();
 		printf("\nProbe Module (%s) Help:\n", zconf.probe_module->name);
 		if (zconf.probe_module->helptext) {
-			fprintw(stdout, zconf.probe_module->helptext,
-				80);
+			fprintw(stdout, zconf.probe_module->helptext, 80);
 		} else {
 			printf("no help text available\n");
 		}
 		assert(zconf.output_module && "no output module set");
-		const char *module_name = zconf.default_mode ? "Default" : zconf.output_module->name;
+		const char *module_name =
+		    zconf.default_mode ? "Default" : zconf.output_module->name;
 		printf("\nOutput Module (%s) Help:\n", module_name);
 
 		if (zconf.default_mode) {
 			fprintw(stdout, default_help_text, 80);
 		} else if (zconf.output_module->helptext) {
-			fprintw(stdout, zconf.output_module->helptext,
-				80);
+			fprintw(stdout, zconf.output_module->helptext, 80);
 		} else {
 			printf("no help text available\n");
 		}
@@ -483,6 +491,7 @@ int main(int argc, char *argv[])
 	if (cmdline_parser_required(&args, CMDLINE_PARSER_PACKAGE) != 0) {
 		exit(EXIT_FAILURE);
 	}
+
 	// now that we know the probe module, let's find what it supports
 	memset(&zconf.fsconf, 0, sizeof(struct fieldset_conf));
 	// the set of fields made available to a user is constructed
@@ -500,88 +509,30 @@ int main(int argc, char *argv[])
 		exit(EXIT_SUCCESS);
 	}
 	// find the fields we need for the framework
-	zconf.fsconf.success_index =
-	    fds_get_index_by_name(fds, "success");
+	zconf.fsconf.success_index = fds_get_index_by_name(fds, "success");
 	if (zconf.fsconf.success_index < 0) {
 		log_fatal("fieldset", "probe module does not supply "
 				      "required success field.");
 	}
-	zconf.fsconf.app_success_index = fds_get_index_by_name(fds, "app_success");
+	zconf.fsconf.app_success_index =
+	    fds_get_index_by_name(fds, "app_success");
 
 	if (zconf.fsconf.app_success_index < 0) {
 		log_debug("fieldset", "probe module does not supply "
 				      "application success field.");
 	} else {
-		log_debug( "fieldset",
+		log_debug(
+		    "fieldset",
 		    "probe module supplies app_success"
 		    " output field. It will be included in monitor output");
 	}
-	zconf.fsconf.classification_index = fds_get_index_by_name(fds, "classification");
+	zconf.fsconf.classification_index =
+	    fds_get_index_by_name(fds, "classification");
 	if (zconf.fsconf.classification_index < 0) {
 		log_fatal("fieldset", "probe module does not supply "
 				      "required packet classification field.");
 	}
-	// process the list of requested output fields.
-	if (args.output_fields_given) {
-		zconf.raw_output_fields = args.output_fields_arg;
-	} else {
-		zconf.raw_output_fields = "saddr";
-	}
-	// add all fields if wildcard received
-	if (!strcmp(zconf.raw_output_fields, "*")) {
-		zconf.output_fields_len = zconf.fsconf.defs.len;
-		zconf.output_fields =
-		    xcalloc(zconf.fsconf.defs.len, sizeof(const char *));
-		for (int i = 0; i < zconf.fsconf.defs.len; i++) {
-			zconf.output_fields[i] =
-			    zconf.fsconf.defs.fielddefs[i].name;
-		}
-		fs_generate_full_fieldset_translation(&zconf.fsconf.translation,
-						      &zconf.fsconf.defs);
-	} else {
-		split_string(zconf.raw_output_fields,
-			     &(zconf.output_fields_len),
-			     &(zconf.output_fields));
-		for (int i = 0; i < zconf.output_fields_len; i++) {
-			log_debug("zmap", "requested output field (%i): %s", i,
-				  zconf.output_fields[i]);
-		}
-		// generate a translation that can be used to convert output
-		// from a probe module to the input for an output module
-		fs_generate_fieldset_translation(
-		    &zconf.fsconf.translation, &zconf.fsconf.defs,
-		    zconf.output_fields, zconf.output_fields_len);
-	}
-	// default filtering behavior is to drop unsuccessful and duplicates
-	if (zconf.default_mode) {
-		log_debug(
-		    "filter",
-		    "No output filter specified. Will use default: exclude duplicates and unssuccessful");
-	} else if (args.output_filter_given && strcmp(args.output_filter_arg, "")) {
-		// Run it through yyparse to build the expression tree
-		if (!parse_filter_string(args.output_filter_arg)) {
-			log_fatal("zmap", "Unable to parse filter expression");
-		}
-		// Check the fields used against the fieldset in use
-		if (!validate_filter(zconf.filter.expression,
-				     &zconf.fsconf.defs)) {
-			log_fatal("zmap", "Invalid filter");
-		}
-		zconf.output_filter_str = args.output_filter_arg;
-		log_debug("filter", "will use output filter %s",
-			  args.output_filter_arg);
-	} else if (args.output_filter_given) { // (empty filter argument)
-		log_debug("filter", "Empty output filter provided. ZMap will output all "
-				"results, including duplicate and non-successful responses.");
-	} else {
-		log_info("filter", "No output filter provided. ZMap will output all "
-				"results, including duplicate and non-successful responses (e.g., "
-				"RST and ICMP packets). If you want a filter similar to ZMap's "
-				"default behavior, you can set an output filter similar to the "
-				"following: --output-filter=\"success=1 && repeat=0\".");
-	}
 	zconf.ignore_invalid_hosts = args.ignore_blocklist_errors_given;
-
 	SET_BOOL(zconf.dryrun, dryrun);
 	SET_BOOL(zconf.quiet, quiet);
 	SET_BOOL(zconf.no_header_row, no_header_row);
@@ -652,14 +603,17 @@ int main(int argc, char *argv[])
 	zconf.destination_cidrs = args.inputs;
 	zconf.destination_cidrs_len = args.inputs_num;
 	if (zconf.destination_cidrs && zconf.blocklist_filename &&
-	    !strcmp(zconf.blocklist_filename, "/etc/zmap/blocklist.conf")) {
+	    !strcmp(zconf.blocklist_filename, ZMAP_DEFAULT_BLOCKLIST)) {
 		log_warn(
 		    "blocklist",
 		    "ZMap is currently using the default blocklist located "
-		    "at /etc/zmap/blocklist.conf. By default, this blocklist excludes locally "
+		    "at " ZMAP_DEFAULT_BLOCKLIST
+		    ". By default, this blocklist excludes locally "
 		    "scoped networks (e.g. 10.0.0.0/8, 127.0.0.1/8, and 192.168.0.0/16). If you are"
 		    " trying to scan local networks, you can change the default blocklist by "
-		    "editing the default ZMap configuration at /etc/zmap/zmap.conf.");
+		    "editing the default ZMap configuration at " ZMAP_DEFAULT_BLOCKLIST
+		    "."
+		    " If you have modified the default blocklist, you can ignore this message.");
 	}
 	SET_IF_GIVEN(zconf.allowlist_filename, allowlist_file);
 
@@ -693,14 +647,143 @@ int main(int argc, char *argv[])
 				zconf.source_port_last = port;
 			}
 		}
-		if (!args.target_port_given) {
-			log_fatal(
-			    "zmap",
-			    "target port (-p) is required for this type of probe");
+		if (!args.target_ports_given) {
+			log_fatal("zmap",
+				  "target ports (-p) required for %s probe",
+				  zconf.probe_module->name);
 		}
-		enforce_range("target-port", args.target_port_arg, 0, 0xFFFF);
-		zconf.target_port = args.target_port_arg;
+	} else {
+		if (args.target_ports_given) {
+			log_fatal("zmap",
+				  "Destination port cannot be set for %s probe",
+				  zconf.probe_module->name);
+		}
 	}
+
+	zconf.ports = xmalloc(sizeof(struct port_conf));
+	zconf.ports->port_bitmap = bm_init();
+	if (args.target_ports_given) {
+		parse_ports(args.target_ports_arg, zconf.ports);
+	} else {
+		parse_ports((char *)"0", zconf.ports);
+	}
+
+	if (args.dedup_method_given) {
+		if (!strcmp(args.dedup_method_arg, "default")) {
+			if (zconf.ports->port_count > 1) {
+				zconf.dedup_method = DEDUP_METHOD_WINDOW;
+			} else {
+				zconf.dedup_method = DEDUP_METHOD_FULL;
+			}
+		} else if (!strcmp(args.dedup_method_arg, "none")) {
+			zconf.dedup_method = DEDUP_METHOD_NONE;
+		} else if (!strcmp(args.dedup_method_arg, "full")) {
+			zconf.dedup_method = DEDUP_METHOD_FULL;
+		} else if (!strcmp(args.dedup_method_arg, "window")) {
+			zconf.dedup_method = DEDUP_METHOD_WINDOW;
+		} else {
+			log_fatal(
+			    "dedup",
+			    "Invalid dedup option provided. Legal options are: default, none, full, window.");
+		}
+	} else {
+		if (zconf.ports->port_count > 1) {
+			zconf.dedup_method = DEDUP_METHOD_WINDOW;
+		} else {
+			zconf.dedup_method = DEDUP_METHOD_FULL;
+		}
+	}
+	if (zconf.dedup_method == DEDUP_METHOD_FULL &&
+	    zconf.ports->port_count > 1) {
+		log_fatal(
+		    "dedup",
+		    "full response de-duplication is not supported for multiple ports");
+	}
+	if (zconf.dedup_method == DEDUP_METHOD_WINDOW) {
+		if (args.dedup_window_size_given) {
+			zconf.dedup_window_size = args.dedup_window_size_arg;
+		} else {
+			zconf.dedup_window_size = 1000000;
+		}
+		log_info("dedup",
+			 "Response deduplication method is %s with size %u",
+			 DEDUP_METHOD_NAMES[zconf.dedup_method],
+			 zconf.dedup_window_size);
+	} else {
+		log_info("dedup", "Response deduplication method is %s",
+			 DEDUP_METHOD_NAMES[zconf.dedup_method]);
+	}
+
+	// process the list of requested output fields.
+	if (args.output_fields_given) {
+		zconf.raw_output_fields = args.output_fields_arg;
+	} else {
+		if (zconf.ports->port_count > 1) {
+			zconf.raw_output_fields = "saddr,sport";
+		} else {
+			zconf.raw_output_fields = "saddr";
+		}
+	}
+	// add all fields if wildcard received
+	if (!strcmp(zconf.raw_output_fields, "*")) {
+		zconf.output_fields_len = zconf.fsconf.defs.len;
+		zconf.output_fields =
+		    xcalloc(zconf.fsconf.defs.len, sizeof(const char *));
+		for (int i = 0; i < zconf.fsconf.defs.len; i++) {
+			zconf.output_fields[i] =
+			    zconf.fsconf.defs.fielddefs[i].name;
+		}
+		fs_generate_full_fieldset_translation(&zconf.fsconf.translation,
+						      &zconf.fsconf.defs);
+	} else {
+		split_string(zconf.raw_output_fields,
+			     &(zconf.output_fields_len),
+			     &(zconf.output_fields));
+		for (int i = 0; i < zconf.output_fields_len; i++) {
+			log_debug("zmap", "requested output field (%i): %s", i,
+				  zconf.output_fields[i]);
+		}
+		// generate a translation that can be used to convert output
+		// from a probe module to the input for an output module
+		fs_generate_fieldset_translation(
+		    &zconf.fsconf.translation, &zconf.fsconf.defs,
+		    zconf.output_fields, zconf.output_fields_len);
+	}
+
+	// default filtering behavior is to drop unsuccessful and duplicates
+	if (zconf.default_mode) {
+		log_debug(
+		    "filter",
+		    "No output filter specified. Will use default: exclude duplicates and unssuccessful");
+	} else if (args.output_filter_given &&
+		   strcmp(args.output_filter_arg, "")) {
+		// Run it through yyparse to build the expression tree
+		if (!parse_filter_string(args.output_filter_arg)) {
+			log_fatal("zmap", "Unable to parse filter expression");
+		}
+		// Check the fields used against the fieldset in use
+		if (!validate_filter(zconf.filter.expression,
+				     &zconf.fsconf.defs)) {
+			log_fatal("zmap", "Invalid filter");
+		}
+		zconf.output_filter_str = args.output_filter_arg;
+		log_debug("filter", "will use output filter %s",
+			  args.output_filter_arg);
+	} else if (args.output_filter_given) { // (empty filter argument)
+		log_debug(
+		    "filter",
+		    "Empty output filter provided. ZMap will output all "
+		    "results, including duplicate and non-successful responses.");
+	} else {
+		log_info(
+		    "filter",
+		    "No output filter provided. ZMap will output all "
+		    "results, including duplicate and non-successful responses (e.g., "
+		    "RST and ICMP packets). If you want a filter similar to ZMap's "
+		    "default behavior, you can set an output filter similar to the "
+		    "following: --output-filter=\"success=1 && repeat=0\".");
+	}
+
 	if (args.source_ip_given) {
 		parse_source_ip_addresses(args.source_ip_arg);
 	}
@@ -798,7 +881,7 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
-	if(args.batch_given){
+	if (args.batch_given) {
 		zconf.batch = args.batch_arg;
 	}
 	if (args.max_targets_given) {
@@ -827,8 +910,11 @@ int main(int argc, char *argv[])
 	if (!zconf.total_allowed) {
 		log_fatal("zmap", "zero eligible addresses to scan");
 	}
-	if (zconf.list_of_ips_count > 0 && 0xFFFFFFFFU / zconf.list_of_ips_count > 100000) {
-		log_warn("zmap", "list of IPs is small compared to address space. Performance will suffer, consider using an allowlist instead");
+	if (zconf.list_of_ips_count > 0 &&
+	    0xFFFFFFFFU / zconf.list_of_ips_count > 100000) {
+		log_warn(
+		    "zmap",
+		    "list of IPs is small compared to address space. Performance will suffer, consider using an allowlist instead");
 	}
 	if (zconf.max_targets) {
 		zsend.max_targets = zconf.max_targets;

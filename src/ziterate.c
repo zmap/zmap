@@ -1,5 +1,5 @@
 /*
- * ZMap Copyright 2016 Regents of the University of Michigan
+ * ZMap Copyright 2023 Regents of the University of Michigan
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy
@@ -26,8 +26,10 @@
 #include "../lib/logger.h"
 #include "../lib/random.h"
 #include "../lib/util.h"
+#include "../lib/xalloc.h"
 
 #include "iterator.h"
+#include "ports.h"
 #include "state.h"
 #include "validate.h"
 #include "zitopt.h"
@@ -209,18 +211,36 @@ int main(int argc, char **argv)
 	}
 	zconf.aes = aesrand_init_from_seed(conf.seed);
 
-	iterator_t *it = iterator_init(1, conf.shard_num, conf.total_shards);
-	shard_t *shard = get_shard(it, 0);
-	uint32_t next_int = shard_get_cur_ip(shard);
-	struct in_addr next_ip;
+	zconf.ports = xmalloc(sizeof(struct port_conf));
+	if (args.target_ports_given) {
+		parse_ports(args.target_ports_arg, zconf.ports);
+	} else {
+		zconf.ports->port_count = 1;
+	}
 
-	for (uint32_t count = 0; next_int; ++count) {
+	uint64_t num_addrs = blocklist_count_allowed();
+	if (zconf.list_of_ips_filename) {
+		log_debug("send",
+			  "forcing max group size for compatibility with -I");
+		num_addrs = 0xFFFFFFFF;
+	}
+	iterator_t *it = iterator_init(1, conf.shard_num, conf.total_shards,
+				       num_addrs, zconf.ports->port_count);
+	shard_t *shard = get_shard(it, 0);
+
+	target_t current = shard_get_cur_target(shard);
+	for (uint32_t count = 0; current.ip; ++count) {
 		if (conf.max_hosts && count >= conf.max_hosts) {
 			break;
 		}
-		next_ip.s_addr = next_int;
-		printf("%s\n", inet_ntoa(next_ip));
-		next_int = shard_get_next_ip(shard);
+		struct in_addr next_ip;
+		next_ip.s_addr = current.ip;
+		if (current.port) {
+			printf("%s,%u\n", inet_ntoa(next_ip), current.port);
+		} else {
+			printf("%s\n", inet_ntoa(next_ip));
+		}
+		current = shard_get_next_target(shard);
 	}
 	return EXIT_SUCCESS;
 }

@@ -45,6 +45,7 @@ set(SOURCES
     get_gateway.c
     iterator.c
     monitor.c
+    ports.c
     recv.c
     send.c
     shard.c
@@ -73,6 +74,7 @@ set(ZTESTSOURCES
     get_gateway.c
     iterator.c
     monitor.c
+    ports.c
     recv.c
     send.c
     shard.c
@@ -101,6 +103,7 @@ set(ZITSOURCES
     aesrand.c
     cyclic.c
     iterator.c
+	ports.c
     shard.c
     state.c
     validate.c
@@ -220,6 +223,7 @@ target_link_libraries(
     pcap gmp m unistring
     ${DNET_LIBRARIES}
     ${JSON_LIBRARIES}
+	${JUDY_LIBRARIES}
 )
 
 target_link_libraries(
@@ -248,6 +252,7 @@ target_link_libraries(
     pcap gmp m unistring
     ${DNET_LIBRARIES}
     ${JSON_LIBRARIES}
+	${JUDY_LIBRARIES}
 )
 
 # Install binary

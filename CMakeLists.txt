@@ -81,6 +81,8 @@ if(WITH_PFRING)
     set(PFRING_LIBRARIES pfring rt numa)
 endif()
 
+set(JUDY_LIBRARIES "Judy")
+
 # Standard FLAGS
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
 if(NOT APPLE)
@@ -100,6 +102,10 @@ if(APPLE)
     endif()
     if(EXISTS /usr/local/lib)
         link_directories(/usr/local/lib)
+    endif()
+    if(EXISTS /opt/homebrew)
+        include_directories(/opt/homebrew/include)
+        link_directories(/opt/homebrew/lib)
     endif()
 endif()
 

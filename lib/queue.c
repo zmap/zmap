@@ -20,7 +20,7 @@
 
 #include <pthread.h>
 
-zqueue_t *queue_init()
+zqueue_t *queue_init(void)
 {
 	zqueue_t *p = xmalloc(sizeof(zqueue_t));
 	p->front = NULL;

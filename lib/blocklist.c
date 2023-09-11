@@ -173,7 +173,7 @@ static int init_from_file(char *file, const char *name, int value,
 		}
 		// hostnames can be up to 255 bytes
 		char ip[256];
-		if ((sscanf(line, "%256s", ip)) == EOF) {
+		if ((sscanf(line, "%255s", ip)) == EOF) {
 			continue;
 		}
 		if (init_from_string(ip, value)) {

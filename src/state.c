@@ -9,17 +9,20 @@
 #include "state.h"
 #include "../lib/logger.h"
 
+const char *const DEDUP_METHOD_NAMES[] = {"default", "none", "full", "window"};
+
 // global configuration and defaults
 struct state_conf zconf = {.log_level = LOG_INFO,
 			   .source_port_first = 32768, // (these are the default
-			   .source_port_last = 61000, //   ephemeral range on Linux)
+			   .source_port_last =
+			       61000, //   ephemeral range on Linux)
 			   .output_filename = NULL,
 			   .blocklist_filename = NULL,
 			   .allowlist_filename = NULL,
 			   .list_of_ips_filename = NULL,
 			   .list_of_ips_count = 0,
-			   .target_port = 0,
-			   .max_targets = 0xFFFFFFFF,
+			   .ports = NULL,
+			   .max_targets = UINT64_MAX,
 			   .max_runtime = 0,
 			   .max_results = 0,
 			   .iface = NULL,
@@ -63,9 +66,11 @@ struct state_conf zconf = {.log_level = LOG_INFO,
 			   .data_link_size = 0,
 			   .default_mode = 0,
 			   .no_header_row = 0,
-};
+			   .dedup_method = 0,
+			   .dedup_window_size = 0};
 
-void init_empty_global_configuration(struct state_conf *c) {
+void init_empty_global_configuration(struct state_conf *c)
+{
 	memset(c->source_ip_addresses, 0, sizeof(c->source_ip_addresses));
 }
 
@@ -74,9 +79,7 @@ struct state_send zsend = {
     .start = 0.0,
     .finish = 0.0,
     .packets_sent = 0,
-    .hosts_scanned = 0,
-    .blocklisted = 0,
-    .allowlisted = 0,
+    .targets_scanned = 0,
     .warmup = 1,
     .complete = 0,
     .sendto_failures = 0,

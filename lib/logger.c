@@ -30,7 +30,7 @@ static int color = 0;
 static int log_to_syslog = 0;
 
 static const char *log_level_name[] = {"FATAL", "ERROR", "WARN",
-				       "INFO",  "DEBUG", "TRACE"};
+				       "INFO",	"DEBUG", "TRACE"};
 
 #define RED "\x1b[31m"
 #define GREEN "\x1b[32m"
@@ -258,13 +258,6 @@ void check_and_log_file_error(FILE *file, const char *name)
 	if (ferror(file)) {
 		log_fatal(name, "unable to write to file");
 	}
-}
-
-double now(void)
-{
-	struct timeval now;
-	gettimeofday(&now, NULL);
-	return (double)now.tv_sec + (double)now.tv_usec / 1000000.;
 }
 
 size_t dstrftime(char *buf, size_t maxsize, const char *format, double tm)

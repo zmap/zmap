@@ -123,9 +123,9 @@ void figure_out_fields(char *data);
 // check that the output file is either in a csv form or json form
 // throws error is it is not either
 // NOTE: JSON OUTPUT NOT IMPLEMENTED
-void output_file_is_csv();
+void output_file_is_csv(void);
 
-void print_thread_error();
+void print_thread_error(char *string);
 
 // monitor code for ztee
 // executes every second
@@ -424,7 +424,7 @@ int print_from_csv(char *line)
 	return ret;
 }
 
-void output_file_is_csv()
+void output_file_is_csv(void)
 {
 	return;
 	/*

@@ -23,14 +23,14 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "iterator.h"
-#include "recv.h"
-#include "state.h"
-
 #include "../lib/lockfd.h"
 #include "../lib/logger.h"
 #include "../lib/util.h"
 #include "../lib/xalloc.h"
+
+#include "iterator.h"
+#include "recv.h"
+#include "state.h"
 
 #define UPDATE_INTERVAL 1 // seconds
 #define NUMBER_STR_LEN 20
@@ -119,23 +119,25 @@ static double min_d(double array[], int n)
 }
 
 // estimate time remaining time based on config and state
-double compute_remaining_time(double age, uint64_t packets_sent, uint64_t iterations)
+double compute_remaining_time(double age, uint64_t packets_sent,
+			      uint64_t iterations)
 {
 	if (!zsend.complete) {
-		double remaining[] = {INFINITY, INFINITY, INFINITY, INFINITY, INFINITY};
+		double remaining[] = {INFINITY, INFINITY, INFINITY, INFINITY,
+				      INFINITY};
 		if (zsend.list_of_ips_pbm) {
 			// Estimate progress using group iterations
-			double done = (double) iterations /
-					((uint64_t)0xFFFFFFFFU /
-					zconf.total_shards);
+			double done =
+			    (double)iterations /
+			    ((uint64_t)0xFFFFFFFFU / zconf.total_shards);
 			remaining[0] =
-				(1. - done) * (age / done) + zconf.cooldown_secs;
+			    (1. - done) * (age / done) + zconf.cooldown_secs;
 		}
 		if (zsend.max_targets) {
 			double done =
 			    (double)packets_sent /
-			    ((uint64_t)zsend.max_targets * zconf.packet_streams /
-			     zconf.total_shards);
+			    ((uint64_t)zsend.max_targets *
+			     zconf.packet_streams / zconf.total_shards);
 			remaining[1] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;
 		}
@@ -149,9 +151,10 @@ double compute_remaining_time(double age, uint64_t packets_sent, uint64_t iterat
 			remaining[3] = (1. - done) * (age / done);
 		}
 		if (zsend.max_index) {
-			double done = (double)packets_sent /
-				      (zsend.max_index * zconf.packet_streams /
-				       zconf.total_shards);
+			double done =
+			    (double)packets_sent /
+			    ((uint64_t)zsend.max_index * zconf.packet_streams /
+			     zconf.total_shards);
 			remaining[4] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;
 		}
@@ -182,7 +185,8 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 	double age = cur_time - zsend.start; // time of entire scan
 	// time since the last time we updated
 	double delta = cur_time - intrnl->last_now;
-	double remaining_secs = compute_remaining_time(age, total_sent, total_iterations);
+	double remaining_secs =
+	    compute_remaining_time(age, total_sent, total_iterations);
 
 	// export amount of time the scan has been running
 	if (age < WARMUP_PERIOD) {
@@ -312,7 +316,7 @@ static void onscreen_appsuccess(export_status_t *exp)
 	// this when probe module handles application-level success rates
 	if (!exp->complete) {
 		fprintf(stderr,
-			"%5s %0.0f%%%s; sent: %"PRIu64" %sp/s (%sp/s avg); "
+			"%5s %0.0f%%%s; sent: %" PRIu64 " %sp/s (%sp/s avg); "
 			"recv: %u %sp/s (%sp/s avg); "
 			"app success: %u %sp/s (%sp/s avg); "
 			"drops: %sp/s (%sp/s avg); "
@@ -328,7 +332,7 @@ static void onscreen_appsuccess(export_status_t *exp)
 			exp->hitrate, exp->app_hitrate);
 	} else {
 		fprintf(stderr,
-			"%5s %0.0f%%%s; sent: %"PRIu64" done (%sp/s avg); "
+			"%5s %0.0f%%%s; sent: %" PRIu64 " done (%sp/s avg); "
 			"recv: %u %sp/s (%sp/s avg); "
 			"app success: %u %sp/s (%sp/s avg); "
 			"drops: %sp/s (%sp/s avg); "
@@ -348,7 +352,7 @@ static void onscreen_generic(export_status_t *exp)
 {
 	if (!exp->complete) {
 		fprintf(stderr,
-			"%5s %0.0f%%%s; send: %"PRIu64" %sp/s (%sp/s avg); "
+			"%5s %0.0f%%%s; send: %" PRIu64 " %sp/s (%sp/s avg); "
 			"recv: %u %sp/s (%sp/s avg); "
 			"drops: %sp/s (%sp/s avg); "
 			"hitrate: %0.2f%%\n",
@@ -360,7 +364,7 @@ static void onscreen_generic(export_status_t *exp)
 			exp->pcap_drop_avg_str, exp->hitrate);
 	} else {
 		fprintf(stderr,
-			"%5s %0.0f%%%s; send: %"PRIu64" done (%sp/s avg); "
+			"%5s %0.0f%%%s; send: %" PRIu64 " done (%sp/s avg); "
 			"recv: %u %sp/s (%sp/s avg); "
 			"drops: %sp/s (%sp/s avg); "
 			"hitrate: %0.2f%%\n",
@@ -408,9 +412,9 @@ static void update_status_updates_file(export_status_t *exp, FILE *f)
 	fprintf(f,
 		"%s,%u,%u,"
 		"%f,%f,%u,"
-		"%"PRIu64",%.0f,%.0f,"
+		"%" PRIu64 ",%.0f,%.0f,"
 		"%u,%.0f,%.0f,"
-		"%"PRIu64",%.0f,%.0f,"
+		"%" PRIu64 ",%.0f,%.0f,"
 		"%u,%.0f,%.0f,"
 		"%u,%.0f,%.0f\n",
 		timestamp, exp->time_past, exp->time_remaining,

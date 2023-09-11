@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <sys/time.h>
 
 #include "types.h"
 
@@ -51,9 +52,22 @@ int file_exists(char *name);
 
 // If running as root, drops privileges to that of user "nobody".
 // Otherwise, does nothing.
-int drop_privs();
+int drop_privs(void);
 
 // Set CPU affinity to a single core
 int set_cpu(uint32_t core);
+
+// The number of seconds and microseconds since the Epoch.
+double now(void);
+
+// The number of seconds and nanoseconds since an unspecified point in time.
+// On supported hosts, this value is guaranteed to never decrease.
+//
+// According to the POSIX specification the `clock_gettime` function is part
+// of the Timers option and may not be available on all implementations.
+//
+// On hosts where a monotonic clock is not available, this falls back
+// to `gettimeofday` which was ZMap's original implementation.
+double steady_now(void);
 
 #endif /* ZMAP_UTIL_H */

@@ -12,6 +12,9 @@ purpose "A tool for iterating over the IPv4 space"
 
 section "Basic arguments"
 
+option "target-ports"           p "comma-delimited list of ports to scan (for TCP and UDP scans)"
+    typestr="ports"
+    optional string
 option "blocklist-file"           b "File of subnets to exclude, in CIDR notation, one-per line."
     optional string
 option "allowlist-file"           w "File of subnets to include, in CIDR notation, one-per line."
@@ -52,4 +55,5 @@ option "version"                V "Print version and exit"
 
 text "\nExamples:\n\
     ziterate (iterate over all public IPv4 addresses)\n\
-    ziterate -b exclusions 10.0.0.0/8 (iterate all IPs in 10./8 except those in blocklist)\n"
+    ziterate -b exclusions 10.0.0.0/8 (iterate all IPs in 10./8 except those in blocklist)\n\
+    ziterate -p 80,100-102 (scan full IPv4 on ports 80, 100, 101, 102)\n"
