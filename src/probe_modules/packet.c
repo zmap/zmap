@@ -82,14 +82,14 @@ void make_eth_header(struct ether_header *ethh, macaddr_t *src, macaddr_t *dst)
 
 void make_ip_header(struct ip *iph, uint8_t protocol, uint16_t len)
 {
-	iph->ip_hl = 5;  // Internet Header Length
-	iph->ip_v = 4;   // IPv4
+	iph->ip_hl = 5;	 // Internet Header Length
+	iph->ip_v = 4;	 // IPv4
 	iph->ip_tos = 0; // Type of Service
 	iph->ip_len = len;
 	iph->ip_id = htons(54321); // identification number
 	iph->ip_off = 0;	   // fragmentation flag
-	iph->ip_ttl = MAXTTL;      // time to live (TTL)
-	iph->ip_p = protocol;      // upper layer protocol => TCP
+	iph->ip_ttl = MAXTTL;	   // time to live (TTL)
+	iph->ip_p = protocol;	   // upper layer protocol => TCP
 	// we set the checksum = 0 for now because that's
 	// what it needs to be when we run the IP checksum
 	iph->ip_sum = 0;
@@ -116,11 +116,12 @@ void make_tcp_header(struct tcphdr *tcp_header, uint16_t th_flags)
 	tcp_header->th_urp = 0;
 }
 
-size_t set_mss_option(struct tcphdr *tcp_header) {
+size_t set_mss_option(struct tcphdr *tcp_header)
+{
 	// This only sets MSS, which is a single-word option.
 	size_t header_size = tcp_header->th_off * 4;
-	uint8_t *base = (uint8_t *) tcp_header;
-	uint8_t *last_opt = (uint8_t*) base + header_size;
+	uint8_t *base = (uint8_t *)tcp_header;
+	uint8_t *last_opt = (uint8_t *)base + header_size;
 
 	// TCP Option "header"
 	last_opt[0] = 2; // MSS
@@ -131,7 +132,7 @@ size_t set_mss_option(struct tcphdr *tcp_header) {
 	last_opt[3] = 0xb4;
 
 	tcp_header->th_off += 1;
-	return tcp_header->th_off*4;
+	return tcp_header->th_off * 4;
 }
 
 void make_udp_header(struct udphdr *udp_header, uint16_t len)
@@ -241,20 +242,11 @@ char *make_ip_str(uint32_t ip)
 }
 
 const char *icmp_unreach_strings[] = {
-    "network unreachable",
-	"host unreachable",
-    "protocol unreachable",
-	"port unreachable",
-    "fragments required",
-	"source route failed",
-    "network unknown",
-	"host unknown",
-    "source host isolated",
-	"network admin. prohibited",
-    "host admin. prohibited",
-	"network unreachable TOS",
-    "host unreachable TOS",
-	"communication admin. prohibited",
-    "host presdence violation",
-	"precedence cutoff"
-};
+    "network unreachable",	"host unreachable",
+    "protocol unreachable",	"port unreachable",
+    "fragments required",	"source route failed",
+    "network unknown",		"host unknown",
+    "source host isolated",	"network admin. prohibited",
+    "host admin. prohibited",	"network unreachable TOS",
+    "host unreachable TOS",	"communication admin. prohibited",
+    "host presdence violation", "precedence cutoff"};

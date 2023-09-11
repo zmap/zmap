@@ -34,28 +34,32 @@
 #define PRINT_PACKET_SEP                                                       \
 	"------------------------------------------------------\n"
 
-#define CLASSIFICATION_SUCCESS_FIELDSET_FIELDS \
-    {.name = "classification", \
-     .type = "string", \
-     .desc = "packet classification"}, \
-    {.name = "success", \
-     .type = "bool", \
-     .desc = "is response considered success"}
+#define CLASSIFICATION_SUCCESS_FIELDSET_FIELDS                                 \
+	{.name = "classification",                                             \
+	 .type = "string",                                                     \
+	 .desc = "packet classification"},                                     \
+	{                                                                      \
+		.name = "success", .type = "bool",                             \
+		.desc = "is response considered success"                       \
+	}
 
 #define CLASSIFICATION_SUCCESS_FIELDSET_LEN 2
 
-#define ICMP_FIELDSET_FIELDS \
-    {.name = "icmp_responder", \
-     .type = "string", \
-     .desc = "Source IP of ICMP_UNREACH messages"}, \
-    {.name = "icmp_type", .type = "int", .desc = "icmp message type"}, \
-    {.name = "icmp_code", .type = "int", .desc = "icmp message sub type code"}, \
-    {.name = "icmp_unreach_str", \
-     .type = "string", \
-     .desc = "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)"}
+#define ICMP_FIELDSET_FIELDS                                                                             \
+	{.name = "icmp_responder",                                                                       \
+	 .type = "string",                                                                               \
+	 .desc = "Source IP of ICMP_UNREACH messages"},                                                  \
+	    {.name = "icmp_type", .type = "int", .desc = "icmp message type"},                           \
+	    {.name = "icmp_code",                                                                        \
+	     .type = "int",                                                                              \
+	     .desc = "icmp message sub type code"},                                                      \
+	{                                                                                                \
+		.name = "icmp_unreach_str", .type = "string",                                            \
+		.desc =                                                                                  \
+		    "for icmp_unreach responses, the string version of icmp_code (e.g. network-unreach)" \
+	}
 
 #define ICMP_FIELDSET_LEN 4
-
 
 typedef unsigned short __attribute__((__may_alias__)) alias_unsigned_short;
 
@@ -76,7 +80,7 @@ static inline unsigned short in_checksum(unsigned short *ip_pkt, int len)
 		sum += *ip_pkt++;
 	}
 	if (len % 2 == 1) {
-		sum += *((unsigned char *) ip_pkt);
+		sum += *((unsigned char *)ip_pkt);
 	}
 	sum = (sum >> 16) + (sum & 0xffff);
 	return (unsigned short)(~sum);
@@ -89,29 +93,24 @@ static inline unsigned short in_icmp_checksum(unsigned short *ip_pkt, int len)
 		sum += *ip_pkt++;
 	}
 	if (len % 2 == 1) {
-		sum += *((unsigned char *) ip_pkt);
+		sum += *((unsigned char *)ip_pkt);
 	}
 	sum = (sum >> 16) + (sum & 0xffff);
 	return (unsigned short)(~sum);
 }
 
-static inline unsigned short
-zmap_ip_checksum(unsigned short *buf)
+static inline unsigned short zmap_ip_checksum(unsigned short *buf)
 {
 	return in_checksum(buf, (int)sizeof(struct ip));
 }
 
-
-static inline unsigned short
-icmp_checksum(unsigned short *buf, size_t buflen)
+static inline unsigned short icmp_checksum(unsigned short *buf, size_t buflen)
 {
 	return in_icmp_checksum(buf, buflen);
 }
 
-static inline uint16_t tcp_checksum(unsigned short len_tcp,
-						     uint32_t saddr,
-						     uint32_t daddr,
-						     struct tcphdr *tcp_pkt)
+static inline uint16_t tcp_checksum(unsigned short len_tcp, uint32_t saddr,
+				    uint32_t daddr, struct tcphdr *tcp_pkt)
 {
 	alias_unsigned_short *src_addr = (alias_unsigned_short *)&saddr;
 	alias_unsigned_short *dest_addr = (alias_unsigned_short *)&daddr;
@@ -146,8 +145,8 @@ static inline uint16_t tcp_checksum(unsigned short len_tcp,
 }
 
 // Returns 0 if dst_port is outside the expected valid range, non-zero otherwise
-static inline int
-check_dst_port(uint16_t port, int num_ports, uint32_t *validation)
+static inline int check_dst_port(uint16_t port, int num_ports,
+				 uint32_t *validation)
 {
 	if (port > zconf.source_port_last || port < zconf.source_port_first) {
 		return 0;
@@ -159,15 +158,14 @@ check_dst_port(uint16_t port, int num_ports, uint32_t *validation)
 	return (((max - min) % num_ports) >= ((to_validate - min) % num_ports));
 }
 
-static inline uint16_t
-get_src_port(int num_ports, int probe_num, uint32_t *validation)
+static inline uint16_t get_src_port(int num_ports, int probe_num,
+				    uint32_t *validation)
 {
 	return zconf.source_port_first +
 	       ((validation[1] + probe_num) % num_ports);
 }
 
-static inline int
-check_src_port(uint16_t port, const struct port_conf *ports)
+static inline int check_src_port(uint16_t port, const struct port_conf *ports)
 {
 	return bm_check(ports->port_bitmap, port);
 }
@@ -211,9 +209,9 @@ static inline struct icmp *get_icmp_header(const struct ip *ip_hdr,
 }
 
 static inline uint8_t *get_udp_payload(const struct udphdr *udp,
-				    UNUSED uint32_t len)
+				       UNUSED uint32_t len)
 {
-	return (uint8_t*)(&udp[1]);
+	return (uint8_t *)(&udp[1]);
 }
 
 static inline struct ip *get_inner_ip_header(const struct icmp *icmp,

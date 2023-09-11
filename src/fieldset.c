@@ -90,8 +90,9 @@ static inline void fs_add_word(fieldset_t *fs, const char *name, int type,
 	// if we have a fieldset definition, then we can validate that the name
 	// of the field is as expected
 	if (fs->fds && strcmp(fs->fds->fielddefs[fs->len].name, name)) {
-		log_fatal("fieldset", "added field (%s) is not next expected field (%s).",
-				name, fs->fds->fielddefs[fs->len].name);
+		log_fatal("fieldset",
+			  "added field (%s) is not next expected field (%s).",
+			  name, fs->fds->fielddefs[fs->len].name);
 	}
 
 	fs->len++;
@@ -118,7 +119,7 @@ static void fs_modify_word(fieldset_t *fs, const char *name, int type,
 			return;
 		}
 	}
-	// TODO(ZD): We need to test, but this is really unsafe to just add because it 
+	// TODO(ZD): We need to test, but this is really unsafe to just add because it
 	// will all but guarantee that it's in the wrong place
 	//fs_add_word(fs, name, type, free_, len, value);
 	log_fatal("fs", "attempting to modify non-existent field");
@@ -294,7 +295,7 @@ void fs_modify_string(fieldset_t *fs, const char *name, char *value, int free_)
 
 void fs_modify_constchar(fieldset_t *fs, const char *name, const char *value)
 {
-	field_val_t val = {.ptr = (char*) value};
+	field_val_t val = {.ptr = (char *)value};
 	fs_modify_word(fs, name, FS_STRING, 0, strlen(value), val);
 }
 

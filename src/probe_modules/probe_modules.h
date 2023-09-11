@@ -49,8 +49,10 @@ typedef int (*probe_thread_init_cb)(void *packetbuf, macaddr_t *src_mac,
 // get_src_port function which takes probe_num and validation as parameters.
 //
 typedef int (*probe_make_packet_cb)(void *packetbuf, size_t *buf_len,
-		ipaddr_n_t src_ip, ipaddr_n_t dst_ip, port_n_t dst_port, uint8_t ttl,
-		uint32_t *validation, int probe_num, void *arg);
+				    ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
+				    port_n_t dst_port, uint8_t ttl,
+				    uint32_t *validation, int probe_num,
+				    void *arg);
 
 typedef void (*probe_print_packet_cb)(FILE *, void *packetbuf);
 
@@ -58,10 +60,12 @@ typedef int (*probe_close_cb)(struct state_conf *, struct state_send *,
 			      struct state_recv *);
 
 typedef int (*probe_validate_packet_cb)(const struct ip *ip_hdr, uint32_t len,
-					uint32_t *src_ip, uint32_t *validation, const struct port_conf *ports);
+					uint32_t *src_ip, uint32_t *validation,
+					const struct port_conf *ports);
 
 typedef void (*probe_classify_packet_cb)(const u_char *packetbuf, uint32_t len,
-					 fieldset_t *, uint32_t *validation, const struct timespec ts);
+					 fieldset_t *, uint32_t *validation,
+					 const struct timespec ts);
 
 typedef struct probe_module {
 	const char *name;

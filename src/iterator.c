@@ -55,27 +55,31 @@ void shard_complete(uint8_t thread_id, void *arg)
 	pthread_mutex_unlock(&it->mutex);
 }
 
-static uint64_t bits_needed(uint64_t n) {
+static uint64_t bits_needed(uint64_t n)
+{
 	n -= 1;
 	int r = 0;
-	while (n)
-	{
-	    r++;
-	    n >>= 1;
+	while (n) {
+		r++;
+		n >>= 1;
 	}
 	return r;
 }
 
-
 iterator_t *iterator_init(uint8_t num_threads, uint16_t shard,
-			  uint16_t num_shards, uint64_t num_addrs, uint32_t num_ports)
+			  uint16_t num_shards, uint64_t num_addrs,
+			  uint32_t num_ports)
 {
 	uint8_t bits_for_ip = bits_needed(num_addrs);
-	log_debug("iterator", "bits needed for %u addresses: %u", num_addrs, bits_for_ip);
+	log_debug("iterator", "bits needed for %u addresses: %u", num_addrs,
+		  bits_for_ip);
 	uint8_t bits_for_port = bits_needed(num_ports);
-	log_debug("iterator", "bits needed for %u ports: %u", num_ports, bits_for_port);
-	uint64_t group_min_size = ((uint64_t)1) << (bits_for_ip + bits_for_port);
-	log_debug("iterator", "minimum elements to iterate over: %llu", group_min_size);
+	log_debug("iterator", "bits needed for %u ports: %u", num_ports,
+		  bits_for_port);
+	uint64_t group_min_size = ((uint64_t)1)
+				  << (bits_for_ip + bits_for_port);
+	log_debug("iterator", "minimum elements to iterate over: %llu",
+		  group_min_size);
 	iterator_t *it = xmalloc(sizeof(struct iterator));
 	const cyclic_group_t *group = get_group(group_min_size);
 	if (num_addrs > (1LL << 32)) {

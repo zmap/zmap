@@ -75,11 +75,11 @@ typedef struct node {
 #define RADIX_LENGTH 20
 
 struct _constraint {
-	node_t *root;     // root node of the tree
+	node_t *root;	  // root node of the tree
 	uint32_t *radix;  // array of prefixes (/RADIX_LENGTH) that are painted
 			  // paint_value
 	size_t radix_len; // number of prefixes in radix array
-	int painted;      // have we precomputed counts for each node?
+	int painted;	  // have we precomputed counts for each node?
 	value_t paint_value; // value for which we precomputed counts
 };
 

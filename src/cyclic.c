@@ -55,68 +55,69 @@
 // Note: this list should remain ordered by size (primes) ascending.
 
 static cyclic_group_t groups[] = {
-	{// 2^8 + 1
-	 .prime = 257,
-	 .known_primroot = 3,
-	 .prime_factors = {2},
-	 .num_prime_factors = 1},
-	{// 2^16 + 1
-	 .prime = 65537,
-	 .known_primroot = 3,
-	 .prime_factors = {2},
-	 .num_prime_factors = 1},
-	{// 2^24 + 43
-	 .prime = 16777259,
-	 .known_primroot = 2,
-	 .prime_factors = {2, 23, 103, 3541},
-	 .num_prime_factors = 4},
-	{// 2^28 + 3
-	 .prime = 268435459,
-	 .known_primroot = 2,
-	 .prime_factors = {2, 3, 19, 87211},
-	 .num_prime_factors = 4},
-	{// 2^32 + 15
-	 .prime = 4294967311,
-	 .known_primroot = 3,
-	 .prime_factors = {2, 3, 5, 131, 364289},
-	 .num_prime_factors = 5},
-	{// 2^33 + 17
-	 .prime = 8589934609,
-	 .known_primroot = 19,
-	 .prime_factors = {2, 3, 59, 3033169},
-	 .num_prime_factors = 4},
-	{// 2^34 + 25
-	 .prime = 17179869209,
-	 .known_primroot = 3,
-	 .prime_factors = {2, 83, 1277, 20261},
-	 .num_prime_factors = 4},
-	{// 2^36 + 31
-	 .prime = 68719476767,
-	 .known_primroot = 5,
-	 .prime_factors = {2, 163, 883, 238727},
-	 .num_prime_factors = 4},
-	{// 2^40 + 15
-	 .prime = 1099511627791,
-	 .known_primroot = 3,
-	 .prime_factors = {2, 3, 5, 36650387593},
-	 .num_prime_factors = 4},
-	{// 2^44 + 7
-	 .prime = 17592186044423,
-	  .known_primroot = 5,
-	  .prime_factors = {2, 11, 53, 97, 155542661},
-	  .num_prime_factors = 5},
-	{// 2^48 + 23
-	 .prime = 281474976710677,
-	 .known_primroot = 6,
-	 .prime_factors = {2, 3, 7, 1361, 2462081249},
-	 .num_prime_factors = 5},
+    {// 2^8 + 1
+     .prime = 257,
+     .known_primroot = 3,
+     .prime_factors = {2},
+     .num_prime_factors = 1},
+    {// 2^16 + 1
+     .prime = 65537,
+     .known_primroot = 3,
+     .prime_factors = {2},
+     .num_prime_factors = 1},
+    {// 2^24 + 43
+     .prime = 16777259,
+     .known_primroot = 2,
+     .prime_factors = {2, 23, 103, 3541},
+     .num_prime_factors = 4},
+    {// 2^28 + 3
+     .prime = 268435459,
+     .known_primroot = 2,
+     .prime_factors = {2, 3, 19, 87211},
+     .num_prime_factors = 4},
+    {// 2^32 + 15
+     .prime = 4294967311,
+     .known_primroot = 3,
+     .prime_factors = {2, 3, 5, 131, 364289},
+     .num_prime_factors = 5},
+    {// 2^33 + 17
+     .prime = 8589934609,
+     .known_primroot = 19,
+     .prime_factors = {2, 3, 59, 3033169},
+     .num_prime_factors = 4},
+    {// 2^34 + 25
+     .prime = 17179869209,
+     .known_primroot = 3,
+     .prime_factors = {2, 83, 1277, 20261},
+     .num_prime_factors = 4},
+    {// 2^36 + 31
+     .prime = 68719476767,
+     .known_primroot = 5,
+     .prime_factors = {2, 163, 883, 238727},
+     .num_prime_factors = 4},
+    {// 2^40 + 15
+     .prime = 1099511627791,
+     .known_primroot = 3,
+     .prime_factors = {2, 3, 5, 36650387593},
+     .num_prime_factors = 4},
+    {// 2^44 + 7
+     .prime = 17592186044423,
+     .known_primroot = 5,
+     .prime_factors = {2, 11, 53, 97, 155542661},
+     .num_prime_factors = 5},
+    {// 2^48 + 23
+     .prime = 281474976710677,
+     .known_primroot = 6,
+     .prime_factors = {2, 3, 7, 1361, 2462081249},
+     .num_prime_factors = 5},
 };
 
 // Return a (random) number coprime with (p - 1) of the group,
 // which is a generator of the additive group mod (p - 1)
 static uint32_t find_primroot(const cyclic_group_t *group, aesrand_t *aes)
 {
-	uint32_t candidate = (uint32_t)((aesrand_getword(aes) & 0xFFFFFFFF) % group->prime);
+	uint32_t candidate =
+	    (uint32_t)((aesrand_getword(aes) & 0xFFFFFFFF) % group->prime);
 	uint64_t retv = 0;
 
 	// The maximum primitive root we can return needs to be small enough such
@@ -184,4 +185,3 @@ cycle_t make_cycle(const cyclic_group_t *group, aesrand_t *aes)
 	cycle.order = group->prime - 1;
 	return cycle;
 }
-

@@ -26,16 +26,17 @@ void validate_init(void)
 	if (!random_bytes(key, AES_KEY_BYTES)) {
 		log_fatal("validate", "couldn't get random bytes");
 	}
-	if (rijndaelKeySetupEnc(aes_sched, key, AES_KEY_BYTES * 8) != AES_ROUNDS) {
+	if (rijndaelKeySetupEnc(aes_sched, key, AES_KEY_BYTES * 8) !=
+	    AES_ROUNDS) {
 		log_fatal("validate", "couldn't initialize AES key");
 	}
 	inited = 1;
 }
 
-void validate_gen(const uint32_t src, const uint32_t dst, const uint16_t dst_port,
-		  uint8_t output[VALIDATE_BYTES])
+void validate_gen(const uint32_t src, const uint32_t dst,
+		  const uint16_t dst_port, uint8_t output[VALIDATE_BYTES])
 {
-	validate_gen_ex(src, dst, (uint32_t) dst_port, 0, output);
+	validate_gen_ex(src, dst, (uint32_t)dst_port, 0, output);
 }
 
 void validate_gen_ex(const uint32_t input0, const uint32_t input1,

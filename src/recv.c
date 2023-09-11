@@ -46,7 +46,8 @@ void handle_packet(uint32_t buflen, const u_char *bytes,
 	uint32_t src_ip = ip_hdr->ip_src.s_addr;
 	uint16_t src_port = 0;
 
-	uint32_t len_ip_and_payload = buflen - (zconf.send_ip_pkts ? 0 : sizeof(struct ether_header));
+	uint32_t len_ip_and_payload =
+	    buflen - (zconf.send_ip_pkts ? 0 : sizeof(struct ether_header));
 	// extract port if TCP or UDP packet to both generate validation data and to
 	// check if the response is a duplicate
 	if (ip_hdr->ip_p == IPPROTO_TCP) {
@@ -68,9 +69,7 @@ void handle_packet(uint32_t buflen, const u_char *bytes,
 		     (uint8_t *)validation);
 
 	if (!zconf.probe_module->validate_packet(
-		ip_hdr,
-		len_ip_and_payload,
-		&src_ip, validation, zconf.ports)) {
+		ip_hdr, len_ip_and_payload, &src_ip, validation, zconf.ports)) {
 		zrecv.validation_failed++;
 		return;
 	} else {
@@ -80,12 +79,12 @@ void handle_packet(uint32_t buflen, const u_char *bytes,
 	int is_repeat = 0;
 	if (zconf.dedup_method == DEDUP_METHOD_FULL) {
 		is_repeat = pbm_check(seen, ntohl(src_ip));
-	} else if (zconf.dedup_method == DEDUP_METHOD_WINDOW){
+	} else if (zconf.dedup_method == DEDUP_METHOD_WINDOW) {
 		target_t t = {.ip = src_ip, .port = src_port, .status = 0};
 		if (cachehash_get(ch, &t, sizeof(target_t))) {
 			is_repeat = 1;
 		} else {
-			cachehash_put(ch, &t, sizeof(target_t), (void*)1);
+			cachehash_put(ch, &t, sizeof(target_t), (void *)1);
 		}
 	}
 	// track whether this is the first packet in an IP fragment.

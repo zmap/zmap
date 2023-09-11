@@ -123,5 +123,4 @@ output_module_t module_csv_file = {
 	"probe module does not filter out duplicates or limit to successful fields, "
 	"but rather includes all received packets. Fields can be controlled by "
 	"setting --output-fields. Filtering out failures and duplicate packets can "
-	"be achieved by setting an --output-filter."
-};
+	"be achieved by setting an --output-filter."};

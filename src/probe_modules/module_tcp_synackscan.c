@@ -41,7 +41,8 @@ static int synackscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	make_eth_header(eth_header, src, gw);
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
-	uint16_t len = htons(sizeof(struct ip) + ZMAP_TCP_SYNACKSCAN_TCP_HEADER_LEN);
+	uint16_t len =
+	    htons(sizeof(struct ip) + ZMAP_TCP_SYNACKSCAN_TCP_HEADER_LEN);
 	make_ip_header(ip_header, IPPROTO_TCP, len);
 	struct tcphdr *tcp_header = (struct tcphdr *)(&ip_header[1]);
 	make_tcp_header(tcp_header, TH_SYN | TH_ACK);
@@ -50,8 +51,9 @@ static int synackscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 }
 
 static int synackscan_make_packet(void *buf, UNUSED size_t *buf_len,
-				  ipaddr_n_t src_ip, ipaddr_n_t dst_ip, port_n_t dport,
-				  uint8_t ttl, uint32_t *validation, int probe_num,
+				  ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
+				  port_n_t dport, uint8_t ttl,
+				  uint32_t *validation, int probe_num,
 				  UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -71,9 +73,9 @@ static int synackscan_make_packet(void *buf, UNUSED size_t *buf_len,
 	tcp_header->th_seq = tcp_seq;
 	tcp_header->th_ack = tcp_ack;
 	tcp_header->th_sum = 0;
-	tcp_header->th_sum =
-	    tcp_checksum(ZMAP_TCP_SYNACKSCAN_TCP_HEADER_LEN, ip_header->ip_src.s_addr,
-			 ip_header->ip_dst.s_addr, tcp_header);
+	tcp_header->th_sum = tcp_checksum(ZMAP_TCP_SYNACKSCAN_TCP_HEADER_LEN,
+					  ip_header->ip_src.s_addr,
+					  ip_header->ip_dst.s_addr, tcp_header);
 
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
@@ -83,8 +85,9 @@ static int synackscan_make_packet(void *buf, UNUSED size_t *buf_len,
 }
 
 static int synackscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
-				      UNUSED uint32_t *src_ip, uint32_t *validation,
-					  const struct port_conf *ports)
+				      UNUSED uint32_t *src_ip,
+				      uint32_t *validation,
+				      const struct port_conf *ports)
 {
 
 	if (ip_hdr->ip_p == IPPROTO_TCP) {
@@ -95,7 +98,7 @@ static int synackscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		uint16_t sport = ntohs(tcp->th_sport);
 		uint16_t dport = ntohs(tcp->th_dport);
 		// validate source port
-		if(!check_src_port(sport, ports)) {
+		if (!check_src_port(sport, ports)) {
 			return PACKET_INVALID;
 		}
 		// validate destination port
@@ -141,11 +144,11 @@ static int synackscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		// responding on a different port
 		uint16_t sport = ntohs(tcp->th_sport);
 		uint16_t dport = ntohs(tcp->th_dport);
-		if(!check_src_port(dport, ports)) {
+		if (!check_src_port(dport, ports)) {
 			return PACKET_INVALID;
 		}
 		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
-				tcp->th_dport, (uint8_t *)validation);
+			     tcp->th_dport, (uint8_t *)validation);
 		if (!check_dst_port(sport, num_ports, validation)) {
 			return PACKET_INVALID;
 		}
@@ -155,8 +158,7 @@ static int synackscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	return PACKET_VALID;
 }
 
-static void synackscan_process_packet(const u_char *packet,
-				      UNUSED uint32_t len,
+static void synackscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 				      fieldset_t *fs,
 				      UNUSED uint32_t *validation,
 				      UNUSED struct timespec ts)
@@ -220,5 +222,4 @@ probe_module_t module_tcp_synackscan = {
 		"is considered a success.",
     .output_type = OUTPUT_TYPE_STATIC,
     .fields = fields,
-    .numfields = sizeof(fields) / sizeof(fields[0])
-};
+    .numfields = sizeof(fields) / sizeof(fields[0])};

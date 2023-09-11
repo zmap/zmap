@@ -31,7 +31,7 @@
 #define DEDUP_METHOD_FULL 2
 #define DEDUP_METHOD_WINDOW 3
 
-extern const char* const DEDUP_METHOD_NAMES[];
+extern const char *const DEDUP_METHOD_NAMES[];
 
 struct probe_module;
 struct output_module;
@@ -209,9 +209,8 @@ extern struct state_recv zrecv;
 
 struct port_conf {
 	int port_count;
-	uint16_t ports[0xFFFF+1];
+	uint16_t ports[0xFFFF + 1];
 	uint8_t *port_bitmap;
 };
-
 
 #endif // _STATE_H

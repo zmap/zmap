@@ -11,7 +11,8 @@
 
 #include <stdint.h>
 
-void handle_packet(uint32_t buflen, const uint8_t *bytes, const struct timespec ts);
+void handle_packet(uint32_t buflen, const uint8_t *bytes,
+		   const struct timespec ts);
 void recv_init(void);
 void recv_packets(void);
 void recv_cleanup(void);

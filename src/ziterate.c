@@ -220,11 +220,12 @@ int main(int argc, char **argv)
 
 	uint64_t num_addrs = blocklist_count_allowed();
 	if (zconf.list_of_ips_filename) {
-		log_debug("send", "forcing max group size for compatibility with -I");
+		log_debug("send",
+			  "forcing max group size for compatibility with -I");
 		num_addrs = 0xFFFFFFFF;
 	}
 	iterator_t *it = iterator_init(1, conf.shard_num, conf.total_shards,
-			num_addrs, zconf.ports->port_count);
+				       num_addrs, zconf.ports->port_count);
 	shard_t *shard = get_shard(it, 0);
 
 	target_t current = shard_get_cur_target(shard);

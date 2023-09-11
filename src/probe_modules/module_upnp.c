@@ -76,10 +76,8 @@ int upnp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 				      num_ports, SRC_PORT_VALIDATION, ports);
 }
 
-
-void upnp_process_packet(const u_char *packet,
-			 UNUSED uint32_t len, fieldset_t *fs,
-			 UNUSED uint32_t *validation,
+void upnp_process_packet(const u_char *packet, UNUSED uint32_t len,
+			 fieldset_t *fs, UNUSED uint32_t *validation,
 			 UNUSED struct timespec ts)
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];

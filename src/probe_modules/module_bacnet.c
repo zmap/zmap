@@ -21,7 +21,9 @@
 
 #define ICMP_UNREACH_HEADER_SIZE 8
 
-#define ZMAP_BACNET_PACKET_LEN (sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr) + 0x11)
+#define ZMAP_BACNET_PACKET_LEN                                                 \
+	(sizeof(struct ether_header) + sizeof(struct ip) +                     \
+	 sizeof(struct udphdr) + 0x11)
 
 probe_module_t module_bacnet;
 
@@ -72,10 +74,9 @@ int bacnet_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw, void **arg)
 	return EXIT_SUCCESS;
 }
 
-int bacnet_make_packet(void *buf, size_t *buf_len,
-               ipaddr_n_t src_ip, ipaddr_n_t dst_ip, port_n_t dport,
-			   uint8_t ttl, uint32_t *validation, int probe_num,
-		       UNUSED void *arg)
+int bacnet_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
+		       ipaddr_n_t dst_ip, port_n_t dport, uint8_t ttl,
+		       uint32_t *validation, int probe_num, UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
@@ -106,7 +107,8 @@ int bacnet_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	// this will reject packets that aren't UDP or ICMP and fully process ICMP
 	// packets
 	if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports,
-				  SRC_PORT_VALIDATION, ports) == PACKET_INVALID) {
+				   SRC_PORT_VALIDATION,
+				   ports) == PACKET_INVALID) {
 		return PACKET_INVALID;
 	}
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
@@ -129,7 +131,8 @@ int bacnet_validate_packet(const struct ip *ip_hdr, uint32_t len,
 }
 
 void bacnet_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
-			   UNUSED uint32_t *validation, UNUSED struct timespec ts)
+			   UNUSED uint32_t *validation,
+			   UNUSED struct timespec ts)
 {
 	struct ip *ip_hdr = get_ip_header(packet, len);
 	assert(ip_hdr);
@@ -141,12 +144,14 @@ void bacnet_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		fs_add_constchar(fs, "classification", "bacnet");
 		fs_add_bool(fs, "success", 1);
 		fs_add_null_icmp(fs);
-		uint32_t udp_offset = sizeof(struct ether_header) + ip_hdr->ip_hl * 4;
+		uint32_t udp_offset =
+		    sizeof(struct ether_header) + ip_hdr->ip_hl * 4;
 		uint32_t payload_offset = udp_offset + sizeof(struct udphdr);
 		assert(payload_offset < len);
 		uint8_t *payload = get_udp_payload(udp, len);
 		uint32_t payload_len = len - payload_offset;
-		fs_add_binary(fs, "udp_payload", payload_len, (void *)payload, 0);
+		fs_add_binary(fs, "udp_payload", payload_len, (void *)payload,
+			      0);
 		fs_add_null_icmp(fs);
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		fs_add_null(fs, "sport");
@@ -172,19 +177,19 @@ static fielddef_t fields[] = {
     ICMP_FIELDSET_FIELDS,
 };
 
-probe_module_t module_bacnet = {
-    .name = "bacnet",
-    .max_packet_length = ZMAP_BACNET_PACKET_LEN,
-    .pcap_filter = "udp || icmp",
-    .pcap_snaplen = 1500,
-    .port_args = 1,
-    .thread_initialize = &bacnet_init_perthread,
-    .global_initialize = &bacnet_global_initialize,
-    .make_packet = &bacnet_make_packet,
-    .print_packet = &udp_print_packet,
-    .validate_packet = &bacnet_validate_packet,
-    .process_packet = &bacnet_process_packet,
-    .close = &udp_global_cleanup,
-    .output_type = OUTPUT_TYPE_STATIC,
-    .fields = fields,
-    .numfields = sizeof(fields) / sizeof(fields[0])};
+probe_module_t module_bacnet = {.name = "bacnet",
+				.max_packet_length = ZMAP_BACNET_PACKET_LEN,
+				.pcap_filter = "udp || icmp",
+				.pcap_snaplen = 1500,
+				.port_args = 1,
+				.thread_initialize = &bacnet_init_perthread,
+				.global_initialize = &bacnet_global_initialize,
+				.make_packet = &bacnet_make_packet,
+				.print_packet = &udp_print_packet,
+				.validate_packet = &bacnet_validate_packet,
+				.process_packet = &bacnet_process_packet,
+				.close = &udp_global_cleanup,
+				.output_type = OUTPUT_TYPE_STATIC,
+				.fields = fields,
+				.numfields =
+				    sizeof(fields) / sizeof(fields[0])};

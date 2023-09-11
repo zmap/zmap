@@ -41,8 +41,8 @@ void json_metadata(FILE *file)
 	char recv_end_time[STRTIME_LEN + 1];
 	assert(dstrftime(recv_end_time, STRTIME_LEN, "%Y-%m-%dT%H:%M:%S%z",
 			 zrecv.finish));
-	double hitrate =
-	    ((double)100 * zrecv.success_unique) / ((double)zsend.targets_scanned);
+	double hitrate = ((double)100 * zrecv.success_unique) /
+			 ((double)zsend.targets_scanned);
 
 	json_object *obj = json_object_new_object();
 
@@ -65,11 +65,12 @@ void json_metadata(FILE *file)
 		}
 	}
 	if (zconf.ports) {
-		json_object_object_add(obj, "source_port_first",
-				       json_object_new_int(zconf.source_port_first));
-		json_object_object_add(obj, "source_port_last",
-				       json_object_new_int(zconf.source_port_last));
-
+		json_object_object_add(
+		    obj, "source_port_first",
+		    json_object_new_int(zconf.source_port_first));
+		json_object_object_add(
+		    obj, "source_port_last",
+		    json_object_new_int(zconf.source_port_last));
 
 		json_object *target_ports = json_object_new_array();
 		for (int i = 0; i < zconf.ports->port_count; i++) {
@@ -77,8 +78,7 @@ void json_metadata(FILE *file)
 			    target_ports,
 			    json_object_new_int(zconf.ports->ports[i]));
 		}
-		json_object_object_add(obj, "target_ports",
-				       target_ports);
+		json_object_object_add(obj, "target_ports", target_ports);
 	}
 	json_object_object_add(obj, "max_targets",
 			       json_object_new_int(zconf.max_targets));
@@ -219,9 +219,8 @@ void json_metadata(FILE *file)
 		    json_object_new_string(zconf.probe_args));
 	}
 	if (zconf.probe_ttl) {
-		json_object_object_add(
-		    obj, "probe_ttl",
-		    json_object_new_int(zconf.probe_ttl));
+		json_object_object_add(obj, "probe_ttl",
+				       json_object_new_int(zconf.probe_ttl));
 	}
 	if (zconf.output_args) {
 		json_object_object_add(
@@ -302,11 +301,13 @@ void json_metadata(FILE *file)
 	json_object_object_add(obj, "log_level",
 			       json_object_new_int(zconf.log_level));
 
-	json_object_object_add(obj, "deduplication_method",
-			       json_object_new_string(DEDUP_METHOD_NAMES[zconf.dedup_method]));
+	json_object_object_add(
+	    obj, "deduplication_method",
+	    json_object_new_string(DEDUP_METHOD_NAMES[zconf.dedup_method]));
 	if (zconf.dedup_method == DEDUP_METHOD_WINDOW) {
-		json_object_object_add(obj, "deduplication_window_size",
-			       json_object_new_int(zconf.dedup_window_size));
+		json_object_object_add(
+		    obj, "deduplication_window_size",
+		    json_object_new_int(zconf.dedup_window_size));
 	}
 
 	// parse out JSON metadata that was supplied on the command-line

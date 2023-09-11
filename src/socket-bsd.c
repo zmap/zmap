@@ -29,7 +29,7 @@ sock_t get_socket(UNUSED uint32_t id)
 	sock_t ret;
 	ret.sock = -1;
 
-	if(zconf.send_ip_pkts && !zconf.dryrun) {
+	if (zconf.send_ip_pkts && !zconf.dryrun) {
 		log_fatal("socket", "iplayer not supported on bsd");
 	}
 
