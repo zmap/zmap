@@ -168,14 +168,19 @@ static uint32_t find_primroot(const cyclic_group_t *group, aesrand_t *aes)
 			mpz_init_set_ui(power, k);
 			mpz_init(res);
 			mpz_powm(res, base, power, prime);
-			if (mpz_get_ui(res) == 1) {
+			uint64_t res_ui = mpz_get_ui(res);
+			if (res_ui == 1) {
 				ok = 0;
 			}
+			mpz_clear(base);
+			mpz_clear(power);
+			mpz_clear(res);
 		}
 		if (ok) {
-			return candidate;
+			retv = candidate;
+			break;
 		}
-	} while (retv > max_root);
+	} while (1);
 	log_debug("zmap", "Isomorphism: %llu", retv);
 	return retv;
 }
