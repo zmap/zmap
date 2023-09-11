@@ -160,7 +160,7 @@ static uint32_t find_primroot(const cyclic_group_t *group, aesrand_t *aes)
 		mpz_t prime;
 		mpz_init_set_ui(prime, group->prime);
 		int ok = 1;
-		for (size_t i = 0; i < group->num_prime_factors; ++i && ok) {
+		for (size_t i = 0; i < group->num_prime_factors && ok; ++i) {
 			const uint64_t q = group->prime_factors[i];
 			const uint64_t k = (group->prime - 1) / q;
 			mpz_t base, power, res;
