@@ -52,7 +52,7 @@ RUN apt-get update \
     && apt-get install -y \
     libpcap0.8 \
     libjson-c4 \
-    libjudy \
+    libjudydebian1 \
     libhiredis0.14 \
     libgmp10 \
     dumb-init \
