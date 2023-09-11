@@ -112,29 +112,6 @@ static cyclic_group_t groups[] = {
 	 .num_prime_factors = 5},
 };
 
-#define COPRIME 1
-#define NOT_COPRIME 0
-
-// Check whether an integer is coprime with (p - 1)
-static int check_coprime(uint64_t check, const cyclic_group_t *group)
-{
-	if (check == 0 || check == 1) {
-		return NOT_COPRIME;
-	}
-	for (unsigned i = 0; i < group->num_prime_factors; i++) {
-		if (group->prime_factors[i] > check &&
-			!(group->prime_factors[i] % check)) {
-			return NOT_COPRIME;
-		} else if (group->prime_factors[i] < check &&
-			   !(check % group->prime_factors[i])) {
-			return NOT_COPRIME;
-		} else if (group->prime_factors[i] == check) {
-			return NOT_COPRIME;
-		}
-	}
-	return COPRIME;
-}
-
 // Return a (random) number coprime with (p - 1) of the group,
 // which is a generator of the additive group mod (p - 1)
 static uint32_t find_primroot(const cyclic_group_t *group, aesrand_t *aes)
@@ -208,19 +185,3 @@ cycle_t make_cycle(const cyclic_group_t *group, aesrand_t *aes)
 	return cycle;
 }
 
-uint64_t isomorphism(uint64_t additive_elt, const cyclic_group_t *mult_group)
-{
-	assert(additive_elt < mult_group->prime);
-	mpz_t base, power, prime, primroot;
-	mpz_init_set_ui(base, mult_group->known_primroot);
-	mpz_init_set_ui(power, additive_elt);
-	mpz_init_set_ui(prime, mult_group->prime);
-	mpz_init(primroot);
-	mpz_powm(primroot, base, power, prime);
-	uint64_t retv = (uint64_t)mpz_get_ui(primroot);
-	mpz_clear(base);
-	mpz_clear(power);
-	mpz_clear(prime);
-	mpz_clear(primroot);
-	return retv;
-}
