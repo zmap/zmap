@@ -26,6 +26,13 @@
 #define MAX_PACKET_SIZE 4096
 #define MAC_ADDR_LEN_BYTES 6
 
+#define DEDUP_METHOD_DEFAULT 0
+#define DEDUP_METHOD_NONE 1
+#define DEDUP_METHOD_FULL 2
+#define DEDUP_METHOD_WINDOW 3
+
+extern const char* const DEDUP_METHOD_NAMES[];
+
 struct probe_module;
 struct output_module;
 
@@ -46,11 +53,11 @@ struct state_conf {
 	port_h_t source_port_last;
 	// maximum number of packets that the scanner will send before
 	// terminating
-	uint32_t max_targets;
+	uint64_t max_targets;
 	// maximum number of seconds that scanner will run before terminating
 	uint32_t max_runtime;
 	// maximum number of results before terminating
-	uint32_t max_results;
+	uint64_t max_results;
 	// name of network interface that
 	// will be utilized for sending/receiving
 	char *iface;
@@ -126,6 +133,8 @@ struct state_conf {
 	int data_link_size;
 	int default_mode;
 	int no_header_row;
+	int dedup_method;
+	int dedup_window_size;
 #ifdef PFRING
 	struct {
 		pfring_zc_cluster *cluster;
@@ -146,15 +155,14 @@ struct state_send {
 	double start;
 	double finish;
 	uint64_t packets_sent;
-	uint64_t hosts_scanned;
-	uint64_t blocklisted;
-	uint64_t allowlisted;
+	uint64_t targets_scanned;
 	int warmup;
 	int complete;
 	uint32_t first_scanned;
 	uint32_t max_targets;
 	uint32_t sendto_failures;
 	uint32_t max_index;
+	uint16_t max_port_index;
 	uint8_t **list_of_ips_pbm;
 };
 extern struct state_send zsend;
@@ -200,7 +208,9 @@ struct state_recv {
 extern struct state_recv zrecv;
 
 struct port_conf {
-	uint16_t target_port;
+	int port_count;
+	uint16_t ports[0xFFFF+1];
+	uint8_t *port_bitmap;
 };
 
 

@@ -33,6 +33,7 @@
 
 #include "aesrand.h"
 #include "constants.h"
+#include "ports.h"
 #include "zopt.h"
 #include "send.h"
 #include "recv.h"
@@ -415,8 +416,7 @@ int main(int argc, char *argv[])
 		zconf.output_module = get_output_module_by_name("csv");
 		zconf.output_module_name = strdup("csv");
 	} else {
-		zconf.output_module =
-		    get_output_module_by_name(args.output_module_arg);
+		zconf.output_module = get_output_module_by_name(args.output_module_arg);
 		if (!zconf.output_module) {
 			log_fatal(
 			    "zmap",
@@ -487,6 +487,16 @@ int main(int argc, char *argv[])
 	if (cmdline_parser_required(&args, CMDLINE_PARSER_PACKAGE) != 0) {
 		exit(EXIT_FAILURE);
 	}
+
+	if (!args.target_ports_given) {
+		log_fatal(
+		    "zmap",
+		    "target ports (-p) required for this type of probe");
+	}
+	zconf.ports = xmalloc(sizeof(struct port_conf));
+	zconf.ports->port_bitmap=bm_init();
+	parse_ports(args.target_ports_arg, zconf.ports);
+
 	// now that we know the probe module, let's find what it supports
 	memset(&zconf.fsconf, 0, sizeof(struct fieldset_conf));
 	// the set of fields made available to a user is constructed
@@ -529,7 +539,11 @@ int main(int argc, char *argv[])
 	if (args.output_fields_given) {
 		zconf.raw_output_fields = args.output_fields_arg;
 	} else {
-		zconf.raw_output_fields = "saddr";
+		if (zconf.ports->port_count > 1) {
+			zconf.raw_output_fields = "saddr,sport";
+		} else {
+			zconf.raw_output_fields = "saddr";
+		}
 	}
 	// add all fields if wildcard received
 	if (!strcmp(zconf.raw_output_fields, "*")) {
@@ -556,6 +570,7 @@ int main(int argc, char *argv[])
 		    &zconf.fsconf.translation, &zconf.fsconf.defs,
 		    zconf.output_fields, zconf.output_fields_len);
 	}
+
 	// default filtering behavior is to drop unsuccessful and duplicates
 	if (zconf.default_mode) {
 		log_debug(
@@ -585,6 +600,45 @@ int main(int argc, char *argv[])
 				"following: --output-filter=\"success=1 && repeat=0\".");
 	}
 	zconf.ignore_invalid_hosts = args.ignore_blocklist_errors_given;
+
+	if (args.dedup_method_given) {
+		if (!strcmp(args.dedup_method_arg, "default")) {
+			if (zconf.ports->port_count > 1) {
+				zconf.dedup_method = DEDUP_METHOD_WINDOW;
+			} else {
+				zconf.dedup_method = DEDUP_METHOD_FULL;
+			}
+		} else if (!strcmp(args.dedup_method_arg, "none")) {
+			zconf.dedup_method = DEDUP_METHOD_NONE;
+		} else if (!strcmp(args.dedup_method_arg, "full")) {
+			zconf.dedup_method = DEDUP_METHOD_FULL;
+		} else if (!strcmp(args.dedup_method_arg, "window")) {
+			zconf.dedup_method = DEDUP_METHOD_WINDOW;
+		} else {
+			log_fatal("dedup", "Invalid dedup option provided. Legal options are: default, none, full, window.");
+		}
+	} else {
+		if (zconf.ports->port_count > 1) {
+			zconf.dedup_method = DEDUP_METHOD_WINDOW;
+		} else {
+			zconf.dedup_method = DEDUP_METHOD_FULL;
+		}
+	}
+	if (zconf.dedup_method == DEDUP_METHOD_FULL && zconf.ports->port_count > 1) {
+		log_fatal("dedup", "full response de-duplication is not supported for multiple ports");
+	}
+	if (zconf.dedup_method == DEDUP_METHOD_WINDOW) {
+		if (args.dedup_window_size_given) {
+			zconf.dedup_window_size = args.dedup_window_size_arg;
+		} else {
+			zconf.dedup_window_size = 1000000;
+		}
+		log_info("dedup", "Response deduplication method is %s with size %u",
+				DEDUP_METHOD_NAMES[zconf.dedup_method],
+				zconf.dedup_window_size);
+	} else {
+		log_info("dedup", "Response deduplication method is %s", DEDUP_METHOD_NAMES[zconf.dedup_method]);
+	}
 
 	SET_BOOL(zconf.dryrun, dryrun);
 	SET_BOOL(zconf.quiet, quiet);
@@ -698,14 +752,6 @@ int main(int argc, char *argv[])
 				zconf.source_port_last = port;
 			}
 		}
-		if (!args.target_port_given) {
-			log_fatal(
-			    "zmap",
-			    "target port (-p) is required for this type of probe");
-		}
-		enforce_range("target-port", args.target_port_arg, 0, 0xFFFF);
-		zconf.ports = xmalloc(sizeof(struct port_conf));
-		zconf.ports->target_port = args.target_port_arg;
 	}
 	if (args.source_ip_given) {
 		parse_source_ip_addresses(args.source_ip_arg);

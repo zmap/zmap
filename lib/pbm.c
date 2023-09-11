@@ -40,14 +40,21 @@ uint8_t **pbm_init(void)
 	return retv;
 }
 
-static inline int bm_check(uint8_t *bm, uint16_t v)
+uint8_t *bm_init(void)
+{
+	uint8_t *bm = xmalloc(PAGE_SIZE_IN_BYTES);
+	memset(bm, 0, PAGE_SIZE_IN_BYTES);
+	return bm;
+}
+
+int bm_check(uint8_t *bm, uint16_t v)
 {
 	uint16_t page_idx = (v >> 3);
 	uint8_t bit_idx = (uint8_t)(v & 0x07);
 	return bm[page_idx] & (1 << bit_idx);
 }
 
-static inline void bm_set(uint8_t *bm, uint16_t v)
+void bm_set(uint8_t *bm, uint16_t v)
 {
 	uint16_t page_idx = (v >> 3);
 	uint8_t bit_idx = (uint8_t)(v & 0x07);
@@ -66,9 +73,7 @@ void pbm_set(uint8_t **b, uint32_t v)
 	uint16_t top = (uint16_t)(v >> 16);
 	uint16_t bottom = (uint16_t)(v & PAGE_MASK);
 	if (!b[top]) {
-		uint8_t *bm = xmalloc(PAGE_SIZE_IN_BYTES);
-		memset(bm, 0, PAGE_SIZE_IN_BYTES);
-		b[top] = bm;
+		b[top] = bm_init();
 	}
 	bm_set(b[top], bottom);
 }

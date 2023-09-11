@@ -41,8 +41,5 @@ cycle_t make_cycle(const cyclic_group_t *group, aesrand_t *aes);
 // Given known primitive root of (Z/pZ)* n, with x in (Z/pZ)+, do:
 //	f(x) = n^x mod p
 //
-// The isomorphism in the reverse direction is discrete log, and is
-// therefore hard.
-uint64_t isomorphism(uint64_t additive_elt, const cyclic_group_t *mult_group);
 
 #endif

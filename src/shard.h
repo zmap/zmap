@@ -14,17 +14,16 @@
 #include "cyclic.h"
 
 #define ZMAP_SHARD_DONE 0
+#define ZMAP_SHARD_OK 1
 
 typedef void (*shard_complete_cb)(uint8_t id, void *arg);
 
 typedef struct shard {
 	struct shard_state {
 		uint64_t packets_sent;
-		uint32_t hosts_scanned;
-		uint32_t max_hosts;
+		uint32_t targets_scanned;
+		uint32_t max_targets;
 		uint32_t max_packets;
-		uint32_t hosts_blocklisted;
-		uint32_t hosts_allowlisted;
 		uint32_t packets_failed;
 		uint32_t first_scanned;
 	} state;
@@ -37,16 +36,23 @@ typedef struct shard {
 	uint64_t current;
 	uint64_t iterations;
 	uint8_t thread_id;
+	uint8_t bits_for_port;
 	shard_complete_cb cb;
 	void *arg;
 } shard_t;
 
 void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 		uint8_t thread_idx, uint8_t num_threads,
-		uint32_t max_total_targets, const cycle_t *cycle,
+		uint32_t max_total_targets, uint8_t bits_for_port, const cycle_t *cycle,
 		shard_complete_cb cb, void *arg);
 
-uint32_t shard_get_cur_ip(shard_t *shard);
-uint32_t shard_get_next_ip(shard_t *shard);
+typedef struct target {
+	uint32_t ip;
+	uint16_t port;
+	uint8_t  status;
+} target_t;
+
+target_t shard_get_cur_target(shard_t *shard);
+target_t shard_get_next_target(shard_t *shard);
 
 #endif /* ZMAP_SHARD_H */

@@ -32,10 +32,10 @@ void validate_init(void)
 	inited = 1;
 }
 
-void validate_gen(const uint32_t src, const uint32_t dst,
+void validate_gen(const uint32_t src, const uint32_t dst, const uint16_t dst_port,
 		  uint8_t output[VALIDATE_BYTES])
 {
-	validate_gen_ex(src, dst, 0, 0, output);
+	validate_gen_ex(src, dst, (uint32_t) dst_port, 0, output);
 }
 
 void validate_gen_ex(const uint32_t input0, const uint32_t input1,

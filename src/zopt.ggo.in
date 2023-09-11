@@ -12,9 +12,9 @@ purpose "A fast Internet-wide scanner."
 
 section "Basic Arguments"
 
-option "target-port"            p "port number to scan (for TCP and UDP scans)"
-    typestr="port"
-    optional int
+option "target-ports"           p "comma-delimited list of ports and port ranges to scan (for TCP and UDP scans)"
+    typestr="ports"
+    optional string
 option "output-file"            o "Output file"
     typestr="name"
     optional string
@@ -104,16 +104,13 @@ option "probe-module"           M "Select probe module"
     typestr="name"
     default="tcp_synscan"
     optional string
-
 option "probe-args"             - "Arguments to pass to probe module"
     typestr="args"
     optional string
-
 option "probe-ttl"              - "Set TTL value for probe IP packets"
     typestr="n"
     default="255"
     optional int
-
 option "list-probe-modules"     - "List available probe modules"
         optional
 
@@ -137,6 +134,15 @@ option "list-output-fields"     - "List all fields that can be output by selecte
 option "no-header-row"          - "Precludes outputting any header rows in data (e.g., CSV headers)"
     optional
 
+
+section "Response Deduplication"
+option "dedup-method"           - "Specifices how response deduplication should be performed. Options: default, none, full, window"
+    typestr="method"
+    optional string
+option "dedup-window-size"      - "Specifices window size for how many recent responses to keep in memory for deuplication"
+    typestr="targets"
+    default="1000000"
+    optional int
 
 section "Logging and Metadata"
 option "verbosity"              v "Level of log detail (0-5)"
@@ -200,4 +206,5 @@ text "\nExamples:\n\
     zmap -p 80 (scan full IPv4 address space for hosts on TCP/80)\n\
     zmap -N 5 -B 10M -p 80 (find 5 HTTP servers, scanning at 10 Mb/s)\n\
     zmap -p 80 10.0.0.0/8 192.168.0.0/16 (scan both subnets on TCP/80)\n\
-    zmap -p 80 1.2.3.4 10.0.0.3 (scan 1.2.3.4, 10.0.0.3 on TCP/80)"
+    zmap -p 80 1.2.3.4 10.0.0.3 (scan 1.2.3.4, 10.0.0.3 on TCP/80)\n\
+    zmap -p 80,100-102 (scan full IPv4 on ports 80, 100, 101, 102)"
