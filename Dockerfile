@@ -29,6 +29,7 @@ RUN apt-get update \
     flex \
     byacc \
     libjson-c-dev \
+    libjudy-dev \
     pkg-config \
     libunistring-dev \
     && rm -rf /var/lib/apt/lists/*
@@ -41,7 +42,7 @@ RUN cd /usr/local/src \
     && mkdir -p /opt/zmap \
     && cmake . -DRESPECT_INSTALL_PREFIX_CONFIG=ON  \
     && cmake --build . --parallel "$(nproc)" \
-    && cmake --install . --prefix "/opt/zmap" 
+    && cmake --install . --prefix "/opt/zmap"
 
 FROM ubuntu:20.04
 
@@ -51,6 +52,7 @@ RUN apt-get update \
     && apt-get install -y \
     libpcap0.8 \
     libjson-c4 \
+    libjudy \
     libhiredis0.14 \
     libgmp10 \
     dumb-init \
