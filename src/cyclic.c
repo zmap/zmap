@@ -145,7 +145,7 @@ static uint32_t find_primroot(const cyclic_group_t *group, aesrand_t *aes)
 	// The maximum primitive root we can return needs to be small enough such
 	// that there is no overflow when multiplied by any element in the largest
 	// group in ZMap, which currently has p = 2^{32} + 15.
-	const uint64_t max_root = (UINT64_C(1) << 32) - 14;
+	const uint64_t max_root = (UINT64_C(1) << 22);
 
 	// Repeatedly find a generator until we hit one that is small enough. For
 	// the largest group, we have a very low probability of ever executing this
