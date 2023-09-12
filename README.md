@@ -32,7 +32,7 @@ A guide to using ZMap is found in our [GitHub Wiki](https://github.com/zmap/zmap
 License and Copyright
 ---------------------
 
-ZMap Copyright 2017 Regents of the University of Michigan
+ZMap Copyright 2023 Regents of the University of Michigan
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use
 this file except in compliance with the License. You may obtain a copy of the
