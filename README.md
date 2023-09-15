@@ -28,6 +28,14 @@ Usage
 
 A guide to using ZMap is found in our [GitHub Wiki](https://github.com/zmap/zmap/wiki).
 
+Architecture
+------------
+
+More information about ZMap's architecture and a comparison with other tools can be found in these two research papers:
+
+ * [ZMap: Fast Internet-Wide Scanning and its Security Applications](https://zmap.io/paper.pdf)
+ * [Zippier ZMap: Internet-Wide Scanning at 10 Gbps](https://jhalderm.com/pub/papers/zmap10gig-woot14.pdf)
+
 License and Copyright
 ---------------------
 
