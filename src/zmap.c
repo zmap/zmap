@@ -665,7 +665,8 @@ int main(int argc, char *argv[])
 	if (args.target_ports_given) {
 		parse_ports(args.target_ports_arg, zconf.ports);
 	} else {
-		parse_ports((char *)"0", zconf.ports);
+		char *line = strdup("0");
+		parse_ports(line, zconf.ports);
 	}
 
 	if (args.dedup_method_given) {
