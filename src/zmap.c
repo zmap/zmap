@@ -553,6 +553,7 @@ int main(int argc, char *argv[])
 	SET_IF_GIVEN(zconf.max_sendto_failures, max_sendto_failures);
 	SET_IF_GIVEN(zconf.min_hitrate, min_hitrate);
 
+
 	if (zconf.num_retries < 0) {
 		log_fatal("zmap", "Invalid retry count");
 	}
@@ -645,6 +646,19 @@ int main(int argc, char *argv[])
 				enforce_range("source-port", port, 0, 0xFFFF);
 				zconf.source_port_first = port;
 				zconf.source_port_last = port;
+			}
+			int num_source_ports = (zconf.source_port_last - zconf.source_port_first) + 1;
+			if (zconf.packet_streams > num_source_ports) {
+				log_fatal("zmap", "The number of probes sent to each target ip/port (%i) "
+						"must be smaller than the size of the source port range (%u-%u, size: %i). "
+						"Otherwise, some generated probe packets will be identical.", zconf.packet_streams,
+						zconf.source_port_first, zconf.source_port_last,
+						(zconf.source_port_last - zconf.source_port_first) + 1);
+			} else if (((float)zconf.packet_streams / (float)num_source_ports) < 0.1) {
+				log_warn("zmap", "ZMap is configured to use a relatively small number"
+						" of source ports (fewer than 10x the number of probe packets per target ip/port),"
+						" which limits the entropy that ZMap has available for "
+						" validating responses. We recommend that you use a larger port range.");
 			}
 		}
 		if (!args.target_ports_given) {
