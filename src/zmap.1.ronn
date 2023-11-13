@@ -187,7 +187,7 @@ targets.
      requires around 500MB of memory for a single port. We do not support full
      deduplication for multiple ports. Window uses a sliding window of a the last
      (user-defined) number of responses as set by --dedup-window-size. None will
-     prevent any duplication
+     prevent any deduplication.
 
    * `--dedup-window-size=targets`:
      Specifies the size of the sliding window of last n target responses to be
