@@ -82,7 +82,8 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
      Number of probes to send to each IP (default=1). Since ZMap composes Ethernet 
      frames directly, probes can be lost en-route to destination. Increasing the
      --probes increases the chance that an online host will receive a probe in an
-     unreliable network.
+     unreliable network. This is contrasted with --retries which just gives the 
+     number of attempts to send a single probe.
 
 
    * `--retries=n`:
