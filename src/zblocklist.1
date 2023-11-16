@@ -1,13 +1,13 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "ZBLACKLIST" "1" "June 2017" "ZMap" "zblocklist"
+.TH "ZBLOCKLIST" "1" "November 2023" "ZMap" "zblocklist"
 .
 .SH "NAME"
-\fBzblocklist\fR \- zmap IP blacklist tool
+\fBzblocklist\fR \- zmap IP blocklist tool
 .
 .SH "SYNOPSIS"
-zblocklist [ \-b <blacklist> ] [ \-w <allowlist> ] [ OPTIONS\.\.\. ]
+zblocklist [ \-b <blocklist> ] [ \-w <allowlist> ] [ OPTIONS\.\.\. ]
 .
 .SH "DESCRIPTION"
 \fIZBlacklist\fR is a network tool for limiting and deduplicating a list of IP addresses using a blocklist or allowlist\.
@@ -18,7 +18,7 @@ zblocklist [ \-b <blacklist> ] [ \-w <allowlist> ] [ OPTIONS\.\.\. ]
 .
 .TP
 \fB\-b\fR, \fB\-\-blocklist\-file=path\fR
-File of subnets to exclude, in CIDR notation, one\-per line\. It is recommended you use this to exclude RFC 1918 addresses, multicast, IANA reserved space, and other IANA special\-purpose addresses\. An example blocklist file \fBblacklist\.conf\fR for this purpose\.
+File of subnets to exclude, in CIDR notation, one\-per line\. It is recommended you use this to exclude RFC 1918 addresses, multicast, IANA reserved space, and other IANA special\-purpose addresses\. An example blocklist file \fBblocklist\.conf\fR for this purpose\.
 .
 .TP
 \fB\-w\fR, \fB\-\-allowlist\-file=name\fR

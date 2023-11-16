@@ -49,7 +49,7 @@ option "max-runtime"            t "Cap length of time for sending packets"
 option "max-results"            N "Cap number of results to return"
     typestr="n"
     optional int
-option "probes"                 P "Number of probes to send to each IP"
+option "probes"                 P "Number of probes to send to each IP/Port pair"
     typestr="n"
     default="1"
     optional int
