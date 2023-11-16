@@ -72,7 +72,7 @@
 
 <h2 id="SYNOPSIS">SYNOPSIS</h2>
 
-<p>zmap [ -p &lt;port> ] [ -o &lt;outfile&gt; ] [ OPTIONS... ] [ ip/hostname/range ]</p>
+<p>zmap [ -p &lt;port(s)&gt; ] [ -o &lt;outfile&gt; ] [ OPTIONS... ] [ ip/hostname/range ]</p>
 
 <h2 id="DESCRIPTION">DESCRIPTION</h2>
 
@@ -129,8 +129,8 @@ be excluded.</p></dd>
 <dt> <code>-P</code>, <code>--probes=n</code></dt><dd><p> Number of probes to send to each IP/Port pair (default=1). Since ZMap composes Ethernet
  frames directly, probes can be lost en-route to destination. Increasing the
  --probes increases the chance that an online host will receive a probe in an
- unreliable network. This is contrasted with --retries which just gives the
- number of attempts to send a single probe.</p></dd>
+ unreliable network. This is contrasted with <code>--retries</code> which just gives the
+ number of attempts to send a single probe on the source NIC.</p></dd>
 <dt> <code>--retries=n</code></dt><dd><p> Number of times to try resending a packet if the sendto call fails (default=10)</p></dd>
 <dt> <code>--batch=n</code></dt><dd><p> Number of packets to send in a burst between checks to the ratelimit. A
  batch size above 1 allows the sleep-based rate-limiter to be used with

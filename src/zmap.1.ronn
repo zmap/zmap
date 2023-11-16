@@ -3,7 +3,7 @@ zmap(1) - The Fast Internet Scanner
 
 ## SYNOPSIS
 
-zmap [ -p &lt;port> ] [ -o &lt;outfile&gt; ] [ OPTIONS... ] [ ip/hostname/range ]
+zmap [ -p &lt;port(s)&gt; ] [ -o &lt;outfile&gt; ] [ OPTIONS... ] [ ip/hostname/range ]
 
 ## DESCRIPTION
 
@@ -82,9 +82,8 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
      Number of probes to send to each IP/Port pair (default=1). Since ZMap composes Ethernet 
      frames directly, probes can be lost en-route to destination. Increasing the
      --probes increases the chance that an online host will receive a probe in an
-     unreliable network. This is contrasted with --retries which just gives the 
-     number of attempts to send a single probe.
-
+     unreliable network. This is contrasted with `--retries` which just gives the
+     number of attempts to send a single probe on the source NIC.
 
    * `--retries=n`:
      Number of times to try resending a packet if the sendto call fails (default=10)
