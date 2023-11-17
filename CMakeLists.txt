@@ -15,7 +15,6 @@ else()
     set(USING_GCC "YES")
 endif()
 
-message(CMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME})
 if("${CMAKE_SYSTEM_NAME}" MATCHES "FreeBSD" OR "${CMAKE_SYSTEM_NAME}" MATCHES "NetBSD" OR "${CMAKE_SYSTEM_NAME}" MATCHES "DragonFly")
     set(BSD "YES")
 endif()
