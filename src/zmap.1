@@ -168,7 +168,7 @@ Specify an output filter over the fields defined by the probe module\. See the o
 \fB\-\-no\-header\-row\fR
 Excludes any header rows (e\.g\., CSV header fields) from ZMap output\. This is useful if you\'re piping results into another application that expects only data\.
 .
-.SS "DEDUPLICATION OPTIONS"
+.SS "RESPONSE DEDUPLICATION"
 Hosts will oftentimes send multiple responses to a probe (either because the scanner doesn\'t send back a RST packet or because the host has a misimplemented TCP stack\. To address this, ZMap will attempt to deduplicate responsive (ip,port) targets\.
 .
 .TP

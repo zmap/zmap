@@ -176,7 +176,7 @@ fields, and write filters over the output fields.
      data.
 
 
-### DEDUPLICATION OPTIONS ###
+### RESPONSE DEDUPLICATION ###
 
 Hosts will oftentimes send multiple responses to a probe (either because the
 scanner doesn't send back a RST packet or because the host has a misimplemented
