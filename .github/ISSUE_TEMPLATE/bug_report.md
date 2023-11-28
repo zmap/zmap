@@ -7,6 +7,8 @@ assignees: ''
 
 ---
 
+> Notice: Please don't file a bug report for questions on how to use ZMap, etc. Check out our [Resources](https://github.com/zmap/zmap/tree/main#resources) section for FAQ and feel free to chime in on [Github Discussions](https://github.com/zmap/zmap/discussions) if you're still unclear and we'll be happy to assist!
+
 **Describe the bug**
 A clear and concise description of what the bug is. Inability to get ZMap to run on a specific platform or network is not considered a bug.
 

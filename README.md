@@ -47,6 +47,13 @@ If you use ZMap for published research, please cite the original research paper:
 }
 ```
 
+Resources
+---------
+
+Have questions? Check out our [FAQ page](https://github.com/zmap/zmap/wiki/FAQ) on the ZMap project Wiki
+
+Still have questions? Ask the community in [Github Discussions](https://github.com/zmap/zmap/discussions/categories/q-a)
+
 License and Copyright
 ---------------------
 
