@@ -87,7 +87,7 @@ static uint16_t *dns_packet_lens; // Not including udp header
 static uint16_t *qname_lens;
 static char **qnames;
 static uint16_t *qtypes;
-static int num_questions = 0;
+static int num_questions = 0; // How many probes sent to each IP
 
 /* Array of qtypes we support. Jumping through some hoops (1 level of
  * indirection) so the per-packet processing time is fast. Keep this in sync
@@ -579,8 +579,8 @@ static int dns_global_initialize(struct state_conf *conf)
 	num_questions = conf->packet_streams;
 	if (num_questions < 1) {
 		log_fatal("dns",
-			  "Invalid number of probes for the DNS module: %i",
-			  num_questions);
+			  "Invalid number of probes for the DNS module: %i. Probe count must be > 1",
+		    num_questions);
 	}
 
 	// Setup the global structures
@@ -597,6 +597,15 @@ static int dns_global_initialize(struct state_conf *conf)
 		domains[i] = (char *)default_domain;
 		qtypes[i] = default_qtype;
 	}
+
+	// find number of DNS records user is trying to query
+	int dns_record_count = 1; // Initialize count to 1 to account for the case when there's no ';'
+	for (int i = 0; i < strlen(conf->probe_args); i++) {
+		if (*(conf->probe_args + i) == ';') {
+			dns_record_count++;
+		}
+	}
+
 
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
 
@@ -621,7 +630,7 @@ static int dns_global_initialize(struct state_conf *conf)
 			    arg_pos + strlen(arg_pos) ==
 				(probe_q_delimiter_p + 1) ||
 			    (probe_arg_delimiter_p == NULL &&
-			     (i + 1) != num_questions)) {
+			     (i + 1) != dns_record_count)) {
 				log_fatal(
 				    "dns",
 				    "Invalid probe args. Format: \"A,google.com\" or \"A,google.com;A,example.com\"");
