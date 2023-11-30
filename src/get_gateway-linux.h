@@ -243,7 +243,7 @@ char *get_default_iface(void)
 		log_fatal(
 		    "send",
 		    "ZMap could not detect your default network interface. "
-		    "You likely do not privileges to open a raw packet socket. "
+		    "You likely do not have sufficient privileges to open a raw packet socket. "
 		    "Are you running as root or with the CAP_NET_RAW capability? If you are, you "
 		    "may need to manually set interface using the \"-i\" flag.");
 	} else {
