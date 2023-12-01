@@ -87,7 +87,7 @@ static uint16_t *dns_packet_lens; // Not including udp header
 static uint16_t *qname_lens;
 static char **qnames;
 static uint16_t *qtypes;
-static int num_questions = 0; // How many probes sent to each IP
+static int num_questions = 0; // How many probes sent to each IP. Note: There's a requirement that the num_questions = probes input by user
 
 /* Array of qtypes we support. Jumping through some hoops (1 level of
  * indirection) so the per-packet processing time is fast. Keep this in sync
@@ -598,13 +598,6 @@ static int dns_global_initialize(struct state_conf *conf)
 		qtypes[i] = default_qtype;
 	}
 
-	// find number of DNS records user is trying to query
-	int dns_record_count = 1; // Initialize count to 1 to account for the case when there's no ';'
-	for (int i = 0; i < strlen(conf->probe_args); i++) {
-		if (*(conf->probe_args + i) == ';') {
-			dns_record_count++;
-		}
-	}
 
 
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
@@ -616,21 +609,19 @@ static int dns_global_initialize(struct state_conf *conf)
 		char *arg_pos = conf->probe_args;
 
 		for (int i = 0; i < num_questions; i++) {
-			if (arg_pos >= (conf->probe_args + arg_strlen)) {
-				log_fatal(
-				    "dns",
-				    "More probes than questions configured. Add additional questions.");
-			}
-
 			char *probe_q_delimiter_p = strchr(arg_pos, ',');
 			char *probe_arg_delimiter_p = strchr(arg_pos, ';');
 
+			if ((probe_arg_delimiter_p == NULL && (i + 1) != num_questions) ||
+			    arg_pos >= (conf->probe_args + arg_strlen)) {
+				log_fatal(
+				    "dns",
+				    "Must have number of probes = number of questions. Format: -P 2 --probe-args=\"A,google.com;A,example.com\"");
+			}
+
 			if (probe_q_delimiter_p == NULL ||
 			    probe_q_delimiter_p == arg_pos ||
-			    arg_pos + strlen(arg_pos) ==
-				(probe_q_delimiter_p + 1) ||
-			    (probe_arg_delimiter_p == NULL &&
-			     (i + 1) != dns_record_count)) {
+			    arg_pos + strlen(arg_pos) == (probe_q_delimiter_p + 1)) {
 				log_fatal(
 				    "dns",
 				    "Invalid probe args. Format: \"A,google.com\" or \"A,google.com;A,example.com\"");
@@ -670,7 +661,7 @@ static int dns_global_initialize(struct state_conf *conf)
 		if (arg_pos != conf->probe_args + arg_strlen + 2) {
 			log_fatal(
 			    "dns",
-			    "More args than probes passed. Add additional probes.");
+			    "Must have number of probes = number of questions. Format: -P 2 --probe-args=\"A,google.com;A,example.com\"");
 		}
 	}
 	size_t max_payload_len;
