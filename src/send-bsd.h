@@ -13,6 +13,7 @@
 #include <sys/time.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
+#include "./send.h"
 
 #include "../lib/includes.h"
 
@@ -32,6 +33,13 @@ int send_run_init(UNUSED sock_t sock)
 int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 {
 	return write(sock.sock, buf, len);
+}
+
+int send_batch(sock_t sock, batch_t* batch) {
+	for (int i=0;i<batch->len;i++) {
+		send_packet(sock, batch->packets[i]->buf, batch->packets[i]->len, 0);
+	}
+
 }
 
 #endif /* ZMAP_SEND_BSD_H */

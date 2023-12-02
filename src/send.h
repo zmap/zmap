@@ -14,5 +14,15 @@
 
 iterator_t *send_init(void);
 int send_run(sock_t, shard_t *);
+typedef struct {
+	void* buf;
+	size_t len;
+}packet_t;
+
+typedef struct {
+	packet_t** packets;
+	size_t len;
+	int capacity;
+}batch_t;
 
 #endif // SEND_H
