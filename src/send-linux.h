@@ -9,11 +9,16 @@
 #ifndef ZMAP_SEND_LINUX_H
 #define ZMAP_SEND_LINUX_H
 
+#define _GNU_SOURCE
 #include "../lib/includes.h"
 #include "./send.h"
 #include <sys/ioctl.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <netinet/ip.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 #include <netpacket/packet.h>
 
@@ -63,21 +68,21 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 
 int send_batch(sock_t sock, batch_t* batch) {
 	printf("Entered send batch\n");
-	struct mmsghdr msgvec[batch->len]; // Array of multiple msg header structures
+	struct mmsghdr msgvec[BATCH_SIZE]; // Array of multiple msg header structures
 	printf("created msgvec\n");
 
 	for (int i = 0; i < batch->len; ++i) {
 		printf("loop iteration %d\n", i);
-		struct iovec iov = {batch->packets[i]->buf, batch->packets[i]->len};
+		struct iovec iov = {((void *)batch->packets) + (batch->lens[batch->len] * MAX_PACKET_SIZE), batch->lens[i]};
 		struct msghdr message;
 		memset(&message, 0, sizeof(struct msghdr));
 		message.msg_name = &sockaddr;
-		message.msg_namelen = sizeof(struct sockaddr_ll)
+		message.msg_namelen = sizeof(struct sockaddr_ll);
 		message.msg_iov = &iov;
 		message.msg_iovlen = 1;
 
 		msgvec[i].msg_hdr = message;
-		msgvec[i].msg_len = batch->packets[i]->len;
+		msgvec[i].msg_len = batch->lens[i];
 	}
 
 	// Use sendmmsg to send the batch of packets

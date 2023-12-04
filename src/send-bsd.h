@@ -36,10 +36,14 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 }
 
 int send_batch(sock_t sock, batch_t* batch) {
+	int errors = 0;
 	for (int i=0;i<batch->len;i++) {
-		send_packet(sock, batch->packets[i]->buf, batch->packets[i]->len, 0);
+		int rc = send_packet(sock, ((void *)batch->packets) + (batch->lens[batch->len] * MAX_PACKET_SIZE), batch->lens[i], 0);
+		if (rc < 0) {
+			errors += 1;
+		}
 	}
-
+	return errors;
 }
 
 #endif /* ZMAP_SEND_BSD_H */

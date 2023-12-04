@@ -11,18 +11,17 @@
 
 #include "iterator.h"
 #include "socket.h"
+#include "./probe_modules/packet.h"
+
+#define BATCH_SIZE 10
 
 iterator_t *send_init(void);
 int send_run(sock_t, shard_t *);
-typedef struct {
-	void* buf;
-	size_t len;
-}packet_t;
 
 typedef struct {
-	packet_t** packets;
-	size_t len;
-	int capacity;
+	char packets [MAX_PACKET_SIZE * BATCH_SIZE];
+	int lens[BATCH_SIZE];
+	uint8_t len;
 }batch_t;
 
 #endif // SEND_H
