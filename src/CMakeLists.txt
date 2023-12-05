@@ -47,7 +47,7 @@ set(SOURCES
     ports.c
     recv.c
     send.c
-    send-linux.c
+#    send-linux.c
     shard.c
     socket.c
     state.c
@@ -77,7 +77,7 @@ set(ZTESTSOURCES
     ports.c
     recv.c
     send.c
-    send-linux.c
+#    send-linux.c
     shard.c
     socket.c
     state.c
@@ -127,8 +127,8 @@ elseif (APPLE OR BSD)
     set(SOURCES ${SOURCES} socket-bsd.c)
     set(ZTESTSOURCES ${ZTESTSOURCES} socket-bsd.c)
 else()
-    set(SOURCES ${SOURCES} socket-linux.c)
-    set(ZTESTSOURCES ${ZTESTSOURCES} socket-linux.c)
+    set(SOURCES ${SOURCES} socket-linux.c send-linux.c)
+    set(ZTESTSOURCES ${ZTESTSOURCES} socket-linux.c send-linux.c)
 endif()
 
 # Handle various versions of recv
