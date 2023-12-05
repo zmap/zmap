@@ -47,6 +47,7 @@ set(SOURCES
     ports.c
     recv.c
     send.c
+    send-linux.c
     shard.c
     socket.c
     state.c
@@ -76,6 +77,7 @@ set(ZTESTSOURCES
     ports.c
     recv.c
     send.c
+    send-linux.c
     shard.c
     socket.c
     state.c

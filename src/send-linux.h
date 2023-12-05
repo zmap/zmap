@@ -5,20 +5,20 @@
  * use this file except in compliance with the License. You may obtain a copy
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
-
 #ifndef ZMAP_SEND_LINUX_H
 #define ZMAP_SEND_LINUX_H
 
-#define _GNU_SOURCE
-#include "../lib/includes.h"
-#include "./send.h"
-#include <sys/ioctl.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <netinet/ip.h>
 #include <string.h>
+
+#include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+
+#include "../lib/includes.h"
+#include "./send.h"
 
 #include <netpacket/packet.h>
 
@@ -56,7 +56,6 @@ int send_run_init(sock_t s)
 		sockaddr.sll_protocol = htons(ETHERTYPE_IP);
 	}
 	memcpy(sockaddr.sll_addr, zconf.gw_mac, ETH_ALEN);
-
 	return EXIT_SUCCESS;
 }
 
@@ -66,30 +65,6 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 		      sizeof(struct sockaddr_ll));
 }
 
-int send_batch(sock_t sock, batch_t* batch) {
-	printf("Entered send batch\n");
-	struct mmsghdr msgvec[BATCH_SIZE]; // Array of multiple msg header structures
-	printf("created msgvec\n");
-
-	for (int i = 0; i < batch->len; ++i) {
-		printf("loop iteration %d\n", i);
-		struct iovec iov = {((void *)batch->packets) + (batch->lens[batch->len] * MAX_PACKET_SIZE), batch->lens[i]};
-		struct msghdr message;
-		memset(&message, 0, sizeof(struct msghdr));
-		message.msg_name = &sockaddr;
-		message.msg_namelen = sizeof(struct sockaddr_ll);
-		message.msg_iov = &iov;
-		message.msg_iovlen = 1;
-
-		msgvec[i].msg_hdr = message;
-		msgvec[i].msg_len = batch->lens[i];
-	}
-
-	// Use sendmmsg to send the batch of packets
-	printf("about to sendmmsg\n");
-	int rv = sendmmsg(sock.sock, msgvec, batch->len, 0);
-	printf("send mmsg returned %d\n", rv);
-	return rv;
-}
+int send_batch(sock_t sock, batch_t* batch);
 
 #endif /* ZMAP_SEND_LINUX_H */
