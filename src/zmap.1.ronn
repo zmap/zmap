@@ -3,7 +3,7 @@ zmap(1) - The Fast Internet Scanner
 
 ## SYNOPSIS
 
-zmap [ -p &lt;port> ] [ -o &lt;outfile&gt; ] [ OPTIONS... ] [ ip/hostname/range ]
+zmap [ -p &lt;port(s)&gt; ] [ -o &lt;outfile&gt; ] [ OPTIONS... ] [ ip/hostname/range ]
 
 ## DESCRIPTION
 
@@ -79,7 +79,11 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
      addresses in the same order for multiple ZMap runs.
 
    * `-P`, `--probes=n`:
-     Number of probes to send to each IP (default=1)
+     Number of probes to send to each IP/Port pair (default=1). Since ZMap composes Ethernet 
+     frames directly, probes can be lost en-route to destination. Increasing the
+     --probes increases the chance that an online host will receive a probe in an
+     unreliable network. This is contrasted with `--retries` which just gives the
+     number of attempts to send a single probe on the source NIC.
 
    * `--retries=n`:
      Number of times to try resending a packet if the sendto call fails (default=10)
@@ -172,7 +176,7 @@ fields, and write filters over the output fields.
      data.
 
 
-### OUTPUT OPTIONS ###
+### RESPONSE DEDUPLICATION ###
 
 Hosts will oftentimes send multiple responses to a probe (either because the
 scanner doesn't send back a RST packet or because the host has a misimplemented
@@ -187,7 +191,7 @@ targets.
      requires around 500MB of memory for a single port. We do not support full
      deduplication for multiple ports. Window uses a sliding window of a the last
      (user-defined) number of responses as set by --dedup-window-size. None will
-     prevent any duplication
+     prevent any deduplication.
 
    * `--dedup-window-size=targets`:
      Specifies the size of the sliding window of last n target responses to be

@@ -6,12 +6,12 @@ ZMap operates on GNU/Linux, macOS, and BSD. The latest stable version may be ava
 
 | OS                                        |                         |
 | ----------------------------------------- | ----------------------- |
-| Fedora 19+ or EPEL 6+                     | `sudo yum install zmap` |
-| Debian 8+ or Ubuntu 14.04+                | `sudo apt install zmap` |
-| Gentoo                                    | `sudo emerge zmap`      |
+| Fedora 19+ or EPEL 6+                     | `yum install zmap` |
+| Debian 8+ or Ubuntu 14.04+                | `apt install zmap` |
+| Gentoo                                    | `emerge zmap`      |
 | macOS (using [Homebrew](https://brew.sh)) | `brew install zmap`     |
-| macOS (using [MacPorts](https://macports.org)) | `sudo port install zmap`|
-| Arch Linux                                | `sudo pacman -S zmap`   |
+| macOS (using [MacPorts](https://macports.org)) | `port install zmap`|
+| Arch Linux                                | `pacman -S zmap`   |
 
 ## Building from Source
 
@@ -39,7 +39,7 @@ Install the required dependencies with the following commands.
 
 * On RHEL- and Fedora-based systems (including CentOS):
    ```sh
-   sudo yum install cmake gmp-devel gengetopt libpcap-devel flex byacc json-c-devel libunistring-devel libjudy-devel
+   sudo yum install gcc cmake gmp-devel gengetopt libpcap-devel flex byacc json-c-devel libunistring-devel Judy-devel
    ```
 
 * On macOS systems (using [Homebrew](https://brew.sh/)):

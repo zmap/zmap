@@ -49,7 +49,7 @@ option "max-runtime"            t "Cap length of time for sending packets"
 option "max-results"            N "Cap number of results to return"
     typestr="n"
     optional int
-option "probes"                 P "Number of probes to send to each IP"
+option "probes"                 P "Number of probes to send to each IP/Port pair"
     typestr="n"
     default="1"
     optional int
@@ -136,10 +136,10 @@ option "no-header-row"          - "Precludes outputting any header rows in data 
 
 
 section "Response Deduplication"
-option "dedup-method"           - "Specifices how response deduplication should be performed. Options: default, none, full, window"
+option "dedup-method"           - "Specifies how response deduplication should be performed. Options: default, none, full, window"
     typestr="method"
     optional string
-option "dedup-window-size"      - "Specifices window size for how many recent responses to keep in memory for deuplication"
+option "dedup-window-size"      - "Specifies window size for how many recent responses to keep in memory for deuplication"
     typestr="targets"
     default="1000000"
     optional int

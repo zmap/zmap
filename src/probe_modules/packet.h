@@ -155,7 +155,11 @@ static inline int check_dst_port(uint16_t port, int num_ports,
 	int32_t min = validation[1] % num_ports;
 	int32_t max = (validation[1] + zconf.packet_streams - 1) % num_ports;
 
-	return (((max - min) % num_ports) >= ((to_validate - min) % num_ports));
+	if (min <= max) {
+		return (to_validate <= max && to_validate >= min);
+	} else {
+		return (to_validate <= max ^ to_validate >= min);
+	}
 }
 
 static inline uint16_t get_src_port(int num_ports, int probe_num,
