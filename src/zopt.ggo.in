@@ -24,7 +24,7 @@ option "blocklist-file"         b "File of subnets to exclude, in CIDR notation,
 option "allowlist-file"         w "File of subnets to constrain scan to, in CIDR notation, e.g. 192.168.0.0/16"
     typestr="path"
     optional string
-option "list-of-ips-file"       I "List of individual addresses to scan in random order. Use --white-list file unless >1 million IPs"
+option "list-of-ips-file"       I "List of individual addresses to scan in random order. Use --allowlist-file unless >1 million IPs"
     typestr="path"
     optional string
 
