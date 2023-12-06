@@ -29,35 +29,8 @@
 // Dummy sockaddr for sendto
 static struct sockaddr_ll sockaddr;
 
+// Moving this to `send-linux.c` was necessary for some reason, maybe sockaddr is static to the file? so it was only being modified in the `.h` file? idk
 int send_run_init(sock_t s);
-//{
-//	// Get the actual socket
-//	int sock = s.sock;
-//	// get source interface index
-//	struct ifreq if_idx;
-//	memset(&if_idx, 0, sizeof(struct ifreq));
-//	if (strlen(zconf.iface) >= IFNAMSIZ) {
-//		log_error("send", "device interface name (%s) too long\n",
-//			  zconf.iface);
-//		return EXIT_FAILURE;
-//	}
-//	strncpy(if_idx.ifr_name, zconf.iface, IFNAMSIZ - 1);
-//	if (ioctl(sock, SIOCGIFINDEX, &if_idx) < 0) {
-//		log_error("send", "%s", "SIOCGIFINDEX");
-//		return EXIT_FAILURE;
-//	}
-//	int ifindex = if_idx.ifr_ifindex;
-//
-//	// destination address for the socket
-//	memset((void *)&sockaddr, 0, sizeof(struct sockaddr_ll));
-//	sockaddr.sll_ifindex = ifindex;
-//	sockaddr.sll_halen = ETH_ALEN;
-//	if (zconf.send_ip_pkts) {
-//		sockaddr.sll_protocol = htons(ETHERTYPE_IP);
-//	}
-//	memcpy(sockaddr.sll_addr, zconf.gw_mac, ETH_ALEN);
-//	return EXIT_SUCCESS;
-//}
 
 int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx);
 //{

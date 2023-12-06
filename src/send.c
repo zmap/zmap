@@ -496,6 +496,8 @@ int send_run(sock_t st, shard_t *s)
 							//						    st, contents, length, idx);
 							int rc = send_batch(st, batch);
 							// TODO Phillip remove hard-coded
+							// whether batch succeeds or fails, this was the only attempt. Any re-tries are handled within batch
+							batch->len = 0;
 							if (rc < 0) {
 								struct in_addr addr;
 								addr.s_addr =
@@ -557,6 +559,7 @@ int send_run(sock_t st, shard_t *s)
 		}
 	}
 cleanup:
+	// TODO Phillip, this necessary?
 	free(batch);
 	s->cb(s->thread_id, s->arg);
 	if (zconf.dryrun) {

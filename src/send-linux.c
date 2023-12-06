@@ -26,9 +26,6 @@
 #include <netpacket/packet.h>
 
 
-//// Dummy sockaddr for sendto
-//static struct sockaddr_ll sockaddr;
-
 void printSllAddr(unsigned char *sll_addr, unsigned char sll_halen) {
 	printf("sll_addr: ");
 	for (int i = 0; i < sll_halen; ++i) {
@@ -89,41 +86,44 @@ int send_batch(sock_t sock, batch_t* batch) {
 	// TODO need to malloc this and make it dependent on batch size
 	struct mmsghdr msgvec [BATCH_SIZE]; // Array of multiple msg header structures
 	struct msghdr msgs[BATCH_SIZE];
+	struct iovec iovs[BATCH_SIZE];
+
 	printf("created msgvec\n");
 
 
 	for (int i = 0; i < batch->len; ++i) {
 		printf("loop iteration %d\n", i);
-		struct iovec iov = {((void *)batch->packets) + (i * MAX_PACKET_SIZE), batch->lens[i]};
-		struct msghdr msg = msgs[i];
-		memset(&msg, 0, sizeof(struct msghdr));
+		struct iovec *iov = &iovs[i];
+	    	iov->iov_base = ((void *)batch->packets) + (i * MAX_PACKET_SIZE);
+	       	iov->iov_len = batch->lens[i];
+		struct msghdr *msg = &msgs[i];
+		memset(msg, 0, sizeof(struct msghdr));
 		// necessary based on https://github.com/torvalds/linux/blob/master/net/socket.c#L2180
-		msg.msg_name = (struct sockaddr *)&sockaddr;
-		msg.msg_namelen = sizeof(struct sockaddr_ll);
-		msg.msg_iov = &iov;
-		msg.msg_iovlen = 1;
+		msg->msg_name = (struct sockaddr *)&sockaddr;
+		msg->msg_namelen = sizeof(struct sockaddr_ll);
+		msg->msg_iov = iov;
+		msg->msg_iovlen = 1;
 
-		msgvec[i].msg_hdr = msg;
+		msgvec[i].msg_hdr = *msg;
 		msgvec[i].msg_len = batch->lens[i];
 
-		printf("sending sendmsg\n");
-		int err = sendmsg(sock.sock, &msgvec[i], 0);
-		if (err < 0) {
-			perror("error in sendmsg");
-		}
 	}
-	return 0;
 
-//	// Use sendmmsg to send the batch of packets
-//	printf("about to sendmmsg\n");
-//	int rv = sendmmsg(sock.sock, msgvec, batch->len, 0);
-//	if (rv < 0) {
-//		perror("Error in sendmmsg");
+//	for (int i = 0; i<batch->len;++i) {
+//		printf("sending sendmsg\n");
+//		int err = sendmsg(sock.sock, &msgvec[i], 0);
+//		if (err < 0) {
+//			perror("error in sendmsg");
+//		}
 //	}
-//	printf("send mmsg returned %d\n", rv);
-//	return rv;
+//	return 0;
+
+	// Use sendmmsg to send the batch of packets
+	printf("about to sendmmsg\n");
+	int rv = sendmmsg(sock.sock, &msgvec, batch->len, 0);
+	if (rv < 0) {
+		perror("Error in sendmmsg");
+	}
+	printf("send mmsg returned %d\n", rv);
+	return rv;
 }
-
-
-
-
