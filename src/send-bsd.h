@@ -40,6 +40,7 @@ int send_batch(sock_t sock, batch_t* batch) {
 	for (int i=0;i<batch->len;i++) {
 		int rc = send_packet(sock, ((void *)batch->packets) + (batch->lens[batch->len] * MAX_PACKET_SIZE), batch->lens[i], 0);
 		if (rc < 0) {
+			perror("error in send_batch");
 			errors += 1;
 		}
 	}

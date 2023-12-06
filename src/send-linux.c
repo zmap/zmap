@@ -47,6 +47,9 @@ int send_batch(sock_t sock, batch_t* batch) {
 	// Use sendmmsg to send the batch of packets
 	printf("about to sendmmsg\n");
 	int rv = sendmmsg(sock.sock, msgvec, batch->len, 0);
+	if (rv < 0) {
+		perror("Error in sendmmsg");
+	}
 	printf("send mmsg returned %d\n", rv);
 	return rv;
 }
