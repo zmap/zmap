@@ -484,8 +484,8 @@ int send_run(sock_t st, shard_t *s)
 					int any_sends_successful = 0;
 					// check if batch has capacity
 					if (batch->len < BATCH_SIZE) {
-						// copy packet to buffer
-						memcpy(((void *)batch->packets) + (batch->lens[batch->len] * MAX_PACKET_SIZE), contents, length);
+						// copy packeh to buffer
+						memcpy(((void *)batch->packets) + (i * MAX_PACKET_SIZE), contents, length);
 						// set packet length
 						batch->lens[batch->len] = length;
 						// bump length of batch

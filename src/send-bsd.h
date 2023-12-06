@@ -38,7 +38,7 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 int send_batch(sock_t sock, batch_t* batch) {
 	int errors = 0;
 	for (int i=0;i<batch->len;i++) {
-		int rc = send_packet(sock, ((void *)batch->packets) + (batch->lens[batch->len] * MAX_PACKET_SIZE), batch->lens[i], 0);
+		int rc = send_packet(sock, ((void *)batch->packets) + (i * MAX_PACKET_SIZE), batch->lens[i], 0);
 		if (rc < 0) {
 			perror("error in send_batch");
 			errors += 1;
