@@ -26,18 +26,8 @@
 #include <netpacket/packet.h>
 
 
-void printSllAddr(unsigned char *sll_addr, unsigned char sll_halen) {
-	printf("sll_addr: ");
-	for (int i = 0; i < sll_halen; ++i) {
-		printf("%02x ", sll_addr[i]);
-	}
-	printf("\n");
-}
-
 int send_run_init(sock_t s)
 {
-	printSllAddr(sockaddr.sll_addr, sockaddr.sll_halen);
-	printf("sockaddr before init^\n");
 	// Get the actual socket
 	int sock = s.sock;
 	// get source interface index
@@ -63,8 +53,6 @@ int send_run_init(sock_t s)
 		sockaddr.sll_protocol = htons(ETHERTYPE_IP);
 	}
 	memcpy(sockaddr.sll_addr, zconf.gw_mac, ETH_ALEN);
-	printSllAddr(sockaddr.sll_addr, sockaddr.sll_halen);
-	printf("sockaddr after init^\n");
 	return EXIT_SUCCESS;
 }
 
