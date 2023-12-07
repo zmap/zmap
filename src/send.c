@@ -483,14 +483,13 @@ int send_run(sock_t st, shard_t *s)
 						   sizeof(struct ether_header));
 					int any_sends_successful = 0;
 					// check if batch has capacity
-					if (batch->len < BATCH_SIZE) {
-						// copy packeh to buffer
-						memcpy(((void *)batch->packets) + (i * MAX_PACKET_SIZE), contents, length);
-						// set packet length
-						batch->lens[batch->len] = length;
-						// bump length of batch
-						batch->len++;
-					} else {
+					// copy packeh to buffer
+					memcpy(((void *)batch->packets) + (batch->len * MAX_PACKET_SIZE), contents, length);
+					// set packet length
+					batch->lens[batch->len] = length;
+					// bump length of batch
+					batch->len++;
+					if (batch->len == BATCH_SIZE) {
 						for (int i = 0; i < attempts; ++i) {
 							//						int rc = send_packet(
 							//						    st, contents, length, idx);
@@ -529,6 +528,7 @@ int send_run(sock_t st, shard_t *s)
 						}
 						idx++;
 						idx &= 0xFF;
+
 					}
 				}
 				s->state.packets_sent++;
