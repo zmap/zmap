@@ -20,6 +20,7 @@ int send_run(sock_t, shard_t *);
 
 typedef struct {
 	char packets [MAX_PACKET_SIZE * BATCH_SIZE];
+	uint32_t ips[BATCH_SIZE];
 	int lens[BATCH_SIZE];
 	uint8_t len;
 }batch_t;

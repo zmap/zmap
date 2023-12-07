@@ -38,7 +38,7 @@
 
 // OS specific functions called by send_run
 static inline int send_packet(sock_t sock, void *buf, int len, uint32_t idx);
-static inline int send_batch(sock_t sock, batch_t *batch);
+static inline int send_batch(sock_t sock, batch_t *batch, int retries);
 static inline int send_run_init(sock_t sock);
 
 // Include the right implementations
@@ -214,73 +214,15 @@ static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
 					 zconf.number_source_ips];
 }
 
-
-//// Constructor for batch_t
-//// size_of_batch is number of packets supported in this batch
-//batch_t* create_batch(int size_of_batch) {
-//	batch_t* new_batch = (batch_t*)malloc(sizeof(batch_t));
-//	if (new_batch == NULL) {
-//		return NULL; // Allocation failed
-//	}
-//
-//	new_batch->packets = (packet_t**)malloc(size_of_batch * sizeof(packet_t*));
-//	if (new_batch->packets == NULL) {
-//		free(new_batch);
-//		return NULL; // Allocation failed
-//	}
-//
-//	new_batch->len = 0;
-//	new_batch->capacity = size_of_batch;
-//
-//	return new_batch;
-//}
-//
-//// Function to free memory allocated for batch_t and packets
-//void destroy_batch(batch_t* batch) {
-//	if (batch != NULL) {
-//		for (int i = 0; i < batch->len; ++i) {
-//			free(batch->packets[i]->buf);
-//			free(batch->packets[i]);
-//		}
-//		free(batch->packets);
-//		free(batch);
-//	}
-//}
-//
-//// Function to enqueue a packet to the batch
-//int enqueue_packet(batch_t* batch, void* data, int data_len) {
-//	if (batch == NULL || batch->len >= batch->capacity) {
-//		return -1; // Batch is full or invalid
-//	}
-//
-//	packet_t* new_packet = (packet_t*)malloc(sizeof(packet_t));
-//	if (new_packet == NULL) {
-//		return -1; // Allocation failed
-//	}
-//
-//	// TODO Phillip we're really doing 2 memcpy's here one in "enqueue" and one when we "create_packet". We could probably re-write this so create_packet directly modifies the packet in batch
-//	memcpy(new_packet->buf, data, data_len);
-//	new_packet->len = data_len;
-//
-//	batch->packets[batch->len] = new_packet;
-//	batch->len++;
-//
-//	return 0; // Enqueue successful
-//}
-
-// TODO Phillip This is a good start. However, there's an issue. The data/buffer that is being enqueued, the physical memory is being overwritten each time. We need to adjust this all a bit so enqueue_packet does the memcopy being done
-// here:char buf[MAX_PACKET_SIZE];
-// We need to change things a bit to use a batch of buffers that can be filled up.
-
 // one sender thread
 int send_run(sock_t st, shard_t *s)
 {
 	log_debug("send", "send thread started");
 	pthread_mutex_lock(&send_mutex);
-	// Create batch for packet batching
-	batch_t* batch = malloc(sizeof(batch_t));
 	// Allocate a buffer to hold the outgoing packet
 	char buf[MAX_PACKET_SIZE];
+	// Create batch for packet batching
+	batch_t* batch = malloc(sizeof(batch_t));
 	// Allocate a batch to take advantage of sendmmsg on Linux
 	memset(batch->packets, 0, MAX_PACKET_SIZE * BATCH_SIZE);
 	memset(batch->lens, 0, sizeof(int) * BATCH_SIZE);
@@ -305,7 +247,6 @@ int send_run(sock_t st, shard_t *s)
 	}
 	log_debug("send", "source MAC address %s", mac_buf);
 	void *probe_data;
-	// TODO Phillip: looks like thread_initialize expects to take in a buf and set it up, so I don't think we can change send_run to use an array of packets
 	if (zconf.probe_module->thread_initialize) {
 		zconf.probe_module->thread_initialize(
 		    buf, zconf.hw_mac, zconf.gw_mac, &probe_data);
@@ -482,20 +423,18 @@ int send_run(sock_t st, shard_t *s)
 					length -= (zconf.send_ip_pkts *
 						   sizeof(struct ether_header));
 					int any_sends_successful = 0;
-					// check if batch has capacity
-					// copy packeh to buffer
+					// copy packet from buffer to batch
 					memcpy(((void *)batch->packets) + (batch->len * MAX_PACKET_SIZE), contents, length);
 					// set packet length
 					batch->lens[batch->len] = length;
+					// set packet IP
+					batch->ips[batch->len] = current_ip;
 					// bump length of batch
 					batch->len++;
 					if (batch->len == BATCH_SIZE) {
+						// batch is full, sending
 						for (int i = 0; i < attempts; ++i) {
-							//						int rc = send_packet(
-							//						    st, contents, length, idx);
-							int rc = send_batch(st, batch);
-							// TODO Phillip remove hard-coded
-							// TODO Phillip, deal with attempts, can't just set len = 0
+							int rc = send_batch(st, batch, attempts);
 							// whether batch succeeds or fails, this was the only attempt. Any re-tries are handled within batch
 							batch->len = 0;
 							if (rc < 0) {
@@ -560,12 +499,8 @@ int send_run(sock_t st, shard_t *s)
 		}
 	}
 cleanup:
-	// TODO Phillip, this necessary?
-	printf("calling batch_send in cleanup\n");
-
-	int rc = send_batch(st, batch);
-	if (rc < 0) {
-		perror("error in send_batch-cleanup");
+	if (send_batch(st, batch, attempts) < 0) {
+		perror("error in cleanup, send_batch");
 	}
 	free(batch);
 	s->cb(s->thread_id, s->arg);

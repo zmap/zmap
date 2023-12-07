@@ -56,7 +56,7 @@ int send_run_init(sock_t s)
 	return EXIT_SUCCESS;
 }
 
-int send_batch(sock_t sock, batch_t* batch) {
+int send_batch(sock_t sock, batch_t* batch, int retries) {
 	// TODO need to malloc this and make it dependent on batch size
 	struct mmsghdr msgvec [BATCH_SIZE]; // Array of multiple msg header structures
 	struct msghdr msgs[BATCH_SIZE];
