@@ -13,7 +13,7 @@
 #include "socket.h"
 #include "./probe_modules/packet.h"
 
-#define BATCH_SIZE 4
+#define BATCH_SIZE 64
 
 iterator_t *send_init(void);
 int send_run(sock_t, shard_t *);

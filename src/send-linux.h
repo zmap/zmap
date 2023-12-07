@@ -32,12 +32,12 @@ static struct sockaddr_ll sockaddr;
 // Moving this to `send-linux.c` was necessary for some reason, maybe sockaddr is static to the file? so it was only being modified in the `.h` file? idk
 int send_run_init(sock_t s);
 
-int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx);
-//{
-//	return sendto(sock.sock, buf, len, 0, (struct sockaddr *)&sockaddr,
-//		      sizeof(struct sockaddr_ll));
-//}
-
+//int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx);
+////{
+////	return sendto(sock.sock, buf, len, 0, (struct sockaddr *)&sockaddr,
+////		      sizeof(struct sockaddr_ll));
+////}
+//
 int send_batch(sock_t sock, batch_t* batch);
 
 #endif /* ZMAP_SEND_LINUX_H */

@@ -69,30 +69,14 @@ int send_run_init(sock_t s)
 }
 
 int send_batch(sock_t sock, batch_t* batch) {
-	// BELOW WORKS
-//	printf("Entered send batch\n");
-//	printSllAddr(sockaddr.sll_addr, sockaddr.sll_halen);
-//	printf("sockaddr before batch^\n");
-//	for (int i = 0; i < batch->len; i++) {
-//		printf("loop iteration %d\n", i);
-//		int ret = sendto(sock.sock, ((void *)batch->packets) + (i * MAX_PACKET_SIZE), batch->lens[i], 0, (struct sockaddr *)&sockaddr,
-//				 		      sizeof(struct sockaddr_ll));
-//		if (ret < 0) {
-//			perror("error in sendto");
-//		}
-//	}
-//	return 0;
-
 	// TODO need to malloc this and make it dependent on batch size
 	struct mmsghdr msgvec [BATCH_SIZE]; // Array of multiple msg header structures
 	struct msghdr msgs[BATCH_SIZE];
 	struct iovec iovs[BATCH_SIZE];
-
-	printf("created msgvec\n");
-
+	// printf("send_batch called\n");
 
 	for (int i = 0; i < batch->len; ++i) {
-		printf("loop iteration %d\n", i);
+//		printf("loop iteration %d\n", i);
 		struct iovec *iov = &iovs[i];
 	    	iov->iov_base = ((void *)batch->packets) + (i * MAX_PACKET_SIZE);
 	       	iov->iov_len = batch->lens[i];
@@ -108,22 +92,10 @@ int send_batch(sock_t sock, batch_t* batch) {
 		msgvec[i].msg_len = batch->lens[i];
 
 	}
-
-//	for (int i = 0; i<batch->len;++i) {
-//		printf("sending sendmsg\n");
-//		int err = sendmsg(sock.sock, &msgvec[i], 0);
-//		if (err < 0) {
-//			perror("error in sendmsg");
-//		}
-//	}
-//	return 0;
-
 	// Use sendmmsg to send the batch of packets
-	printf("about to sendmmsg\n");
 	int rv = sendmmsg(sock.sock, &msgvec, batch->len, 0);
 	if (rv < 0) {
 		perror("Error in sendmmsg");
 	}
-	printf("send mmsg returned %d\n", rv);
 	return rv;
 }

@@ -496,6 +496,7 @@ int send_run(sock_t st, shard_t *s)
 							//						    st, contents, length, idx);
 							int rc = send_batch(st, batch);
 							// TODO Phillip remove hard-coded
+							// TODO Phillip, deal with attempts, can't just set len = 0
 							// whether batch succeeds or fails, this was the only attempt. Any re-tries are handled within batch
 							batch->len = 0;
 							if (rc < 0) {
@@ -560,6 +561,12 @@ int send_run(sock_t st, shard_t *s)
 	}
 cleanup:
 	// TODO Phillip, this necessary?
+	printf("calling batch_send in cleanup\n");
+
+	int rc = send_batch(st, batch);
+	if (rc < 0) {
+		perror("error in send_batch-cleanup");
+	}
 	free(batch);
 	s->cb(s->thread_id, s->arg);
 	if (zconf.dryrun) {
