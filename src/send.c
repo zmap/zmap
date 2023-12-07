@@ -422,52 +422,26 @@ int send_run(sock_t st, shard_t *s)
 						sizeof(struct ether_header);
 					length -= (zconf.send_ip_pkts *
 						   sizeof(struct ether_header));
-					int any_sends_successful = 0;
-					// copy packet from buffer to batch
+					// add packet to batch and update metadata
 					memcpy(((void *)batch->packets) + (batch->len * MAX_PACKET_SIZE), contents, length);
-					// set packet length
 					batch->lens[batch->len] = length;
-					// set packet IP
 					batch->ips[batch->len] = current_ip;
-					// bump length of batch
 					batch->len++;
 					if (batch->len == BATCH_SIZE) {
 						// batch is full, sending
-						for (int i = 0; i < attempts; ++i) {
-							int rc = send_batch(st, batch, attempts);
-							// whether batch succeeds or fails, this was the only attempt. Any re-tries are handled within batch
-							batch->len = 0;
-							if (rc < 0) {
-								struct in_addr addr;
-								addr.s_addr =
-								    current_ip;
-								char addr_str_buf
-								[INET_ADDRSTRLEN];
-								const char *addr_str =
-								    inet_ntop(
-									AF_INET, &addr,
-									addr_str_buf,
-									INET_ADDRSTRLEN);
-								if (addr_str != NULL) {
-									log_debug(
-									    "send",
-									    "send_packet failed for %s. %s",
-									    addr_str,
-									    strerror(
-										errno));
-								}
-							} else {
-								any_sends_successful =
-								    1;
-								break;
-							}
+						int rc = send_batch(st, batch, attempts);
+						// whether batch succeeds or fails, this was the only attempt. Any re-tries are handled within batch
+						if (rc < 0) {
+							// rc is the last error code if all packets couldn't be sent
+							s->state.packets_failed += batch->len;
+						} else {
+							// rc is number of packets sent successfully, if > 0
+							s->state.packets_failed += batch->len - rc;
 						}
-						if (!any_sends_successful) {
-							s->state.packets_failed++;
-						}
+						// reset batch length for next batch
+						batch->len = 0;
 						idx++;
 						idx &= 0xFF;
-
 					}
 				}
 				s->state.packets_sent++;

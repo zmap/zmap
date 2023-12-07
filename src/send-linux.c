@@ -57,33 +57,37 @@ int send_run_init(sock_t s)
 }
 
 int send_batch(sock_t sock, batch_t* batch, int retries) {
-	// TODO need to malloc this and make it dependent on batch size
 	struct mmsghdr msgvec [BATCH_SIZE]; // Array of multiple msg header structures
 	struct msghdr msgs[BATCH_SIZE];
 	struct iovec iovs[BATCH_SIZE];
-	// printf("send_batch called\n");
 
 	for (int i = 0; i < batch->len; ++i) {
-//		printf("loop iteration %d\n", i);
 		struct iovec *iov = &iovs[i];
 	    	iov->iov_base = ((void *)batch->packets) + (i * MAX_PACKET_SIZE);
 	       	iov->iov_len = batch->lens[i];
 		struct msghdr *msg = &msgs[i];
 		memset(msg, 0, sizeof(struct msghdr));
-		// necessary based on https://github.com/torvalds/linux/blob/master/net/socket.c#L2180
+		// based on https://github.com/torvalds/linux/blob/master/net/socket.c#L2180
 		msg->msg_name = (struct sockaddr *)&sockaddr;
 		msg->msg_namelen = sizeof(struct sockaddr_ll);
 		msg->msg_iov = iov;
 		msg->msg_iovlen = 1;
-
 		msgvec[i].msg_hdr = *msg;
 		msgvec[i].msg_len = batch->lens[i];
-
 	}
-	// Use sendmmsg to send the batch of packets
-	int rv = sendmmsg(sock.sock, &msgvec, batch->len, 0);
-	if (rv < 0) {
-		perror("Error in sendmmsg");
+	int rv = 0;
+	for (int i = 0; i < retries; i++) {
+		// according to manpages
+		// On success, sendmmsg() returns the number of messages sent from msgvec; if this is less than vlen, the
+		//       caller can retry with a further sendmmsg() call to send the remaining messages.
+		// On error, -1 is returned, and errno is set to indicate the error.
+		rv = sendmmsg(sock.sock, &msgvec, batch->len, 0);
+		if (rv < 0) {
+			// only retry if all messages failed to send
+			perror("error in sendmmsg");
+		} else {
+			break;
+		}
 	}
 	return rv;
 }
