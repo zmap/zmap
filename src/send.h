@@ -13,16 +13,18 @@
 #include "socket.h"
 #include "./probe_modules/packet.h"
 
-#define BATCH_SIZE 64
-
 iterator_t *send_init(void);
 int send_run(sock_t, shard_t *);
 
 typedef struct {
-	char packets [MAX_PACKET_SIZE * BATCH_SIZE];
-	uint32_t ips[BATCH_SIZE];
-	int lens[BATCH_SIZE];
+	char* packets;
+	uint32_t* ips;
+	int* lens;
 	uint8_t len;
+	uint8_t capacity;
 }batch_t;
+
+batch_t* create_packet_batch(uint8_t capacity);
+void free_packet_batch(batch_t* batch);
 
 #endif // SEND_H

@@ -221,12 +221,8 @@ int send_run(sock_t st, shard_t *s)
 	pthread_mutex_lock(&send_mutex);
 	// Allocate a buffer to hold the outgoing packet
 	char buf[MAX_PACKET_SIZE];
-	// Create batch for packet batching
-	batch_t* batch = malloc(sizeof(batch_t));
-	// Initialize batch
-	memset(batch->packets, 0, MAX_PACKET_SIZE * BATCH_SIZE);
-	memset(batch->lens, 0, sizeof(int) * BATCH_SIZE);
-	batch->len = 0;
+	// allocate batch
+	batch_t* batch = create_packet_batch(zconf.batch);
 
 	// OS specific per-thread init
 	if (send_run_init(st)) {
@@ -428,7 +424,7 @@ int send_run(sock_t st, shard_t *s)
 				batch->lens[batch->len] = length;
 				batch->ips[batch->len] = current_ip;
 				batch->len++;
-				if (batch->len == BATCH_SIZE) {
+				if (batch->len == batch->capacity) {
 					// batch is full, sending
 					int rc = send_batch(st, batch, attempts);
 					// whether batch succeeds or fails, this was the only attempt. Any re-tries are handled within batch
@@ -476,7 +472,7 @@ cleanup:
 	if (send_batch(st, batch, attempts) < 0) {
 		perror("error in cleanup, send_batch");
 	}
-	free(batch);
+	free_packet_batch(batch);
 	s->cb(s->thread_id, s->arg);
 	if (zconf.dryrun) {
 		lock_file(stdout);
@@ -485,4 +481,26 @@ cleanup:
 	}
 	log_debug("send", "thread %hu cleanly finished", s->thread_id);
 	return EXIT_SUCCESS;
+}
+
+batch_t* create_packet_batch(uint8_t capacity) {
+	batch_t* batch = malloc(sizeof(batch_t));
+	batch->capacity = capacity;
+	batch->len = 0;
+
+	batch->packets = malloc(MAX_PACKET_SIZE * batch->capacity);
+	batch->ips = malloc(sizeof(uint32_t) * batch->capacity);
+	batch->lens = malloc(sizeof(int) * batch->capacity);
+	// Initialize batch
+	memset(batch->packets, 0, MAX_PACKET_SIZE * batch->capacity);
+	memset(batch->ips, 0, sizeof(uint32_t) * batch->capacity);
+	memset(batch->lens, 0, sizeof(int) * batch->capacity);
+	return batch;
+}
+
+void free_packet_batch(batch_t* batch) {
+	free(batch->packets);
+	free(batch->ips);
+	free(batch->lens);
+	free(batch);
 }
