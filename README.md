@@ -15,6 +15,11 @@ large number of [UDP probes](https://github.com/zmap/zmap/blob/master/examples/u
 If you are looking to do more involved scans, e.g., banner grab or TLS handshake, 
 take a look at [ZGrab 2](https://github.com/zmap/zgrab2), ZMap's sister project that performs stateful application-layer handshakes.
 
+
+Getting Started Guide
+------------
+Consult the [Getting Started Guide](https://github.com/zmap/zmap/wiki/Getting-Started-Guide) on the GitHub Wiki if you'd like an in-depth, follow-along guide to basic scanning with ZMap.
+
 Installation
 ------------
 
