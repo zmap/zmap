@@ -263,7 +263,7 @@ int send_run(sock_t st, shard_t *s)
 	struct timespec ts, rem;
 	double send_rate =
 	    (double)zconf.rate /
-	    ((double)zconf.senders * zconf.batch * zconf.packet_streams);
+	    ((double)zconf.senders * zconf.packet_streams);
 	const double slow_rate = 50; // packets per seconds per thread
 	// at which it uses the slow methods
 	long nsec_per_sec = 1000 * 1000 * 1000;
@@ -280,9 +280,9 @@ int send_run(sock_t st, shard_t *s)
 				;
 			delay *= 1 / (steady_now() - last_time) /
 				 ((double)zconf.rate /
-				  ((double)zconf.senders * zconf.batch));
+				  (double)zconf.senders);
 			interval = ((double)zconf.rate /
-				    ((double)zconf.senders * zconf.batch)) /
+				    (double)zconf.senders) /
 				   20;
 			last_time = steady_now();
 		}
@@ -362,112 +362,109 @@ int send_run(sock_t st, shard_t *s)
 			goto cleanup;
 		}
 
-		// Actually send a packet.
-		for (int b = 0; b < zconf.batch; b++) {
-			// Check if we've finished this shard or thread before sending each
-			// packet, regardless of batch size.
-			if (s->state.max_targets &&
-			    s->state.targets_scanned >= s->state.max_targets) {
-				log_debug(
+		// Check if we've finished this shard or thread before sending each
+		// packet, regardless of batch size.
+		if (s->state.max_targets &&
+		    s->state.targets_scanned >= s->state.max_targets) {
+			log_debug(
+			    "send",
+			    "send thread %hhu finished (max targets of %u reached)",
+			    s->thread_id, s->state.max_targets);
+			goto cleanup;
+		}
+		if (s->state.max_packets &&
+		    s->state.packets_sent >= s->state.max_packets) {
+			log_debug(
+			    "send",
+			    "send thread %hhu finished (max packets of %u reached)",
+			    s->thread_id, s->state.max_packets);
+			goto cleanup;
+		}
+		if (current.status == ZMAP_SHARD_DONE) {
+			log_debug(
+			    "send",
+			    "send thread %hhu finished, shard depleted",
+			    s->thread_id);
+			goto cleanup;
+		}
+		for (int i = 0; i < zconf.packet_streams; i++) {
+			count++;
+			uint32_t src_ip = get_src_ip(current_ip, i);
+			uint32_t validation[VALIDATE_BYTES /
+					    sizeof(uint32_t)];
+			validate_gen(src_ip, current_ip,
+				     htons(current_port),
+				     (uint8_t *)validation);
+			uint8_t ttl = zconf.probe_ttl;
+			size_t length = 0;
+			zconf.probe_module->make_packet(
+			    buf, &length, src_ip, current_ip,
+			    htons(current_port), ttl, validation, i,
+			    probe_data);
+			if (length > MAX_PACKET_SIZE) {
+				log_fatal(
 				    "send",
-				    "send thread %hhu finished (max targets of %u reached)",
-				    s->thread_id, s->state.max_targets);
-				goto cleanup;
+				    "send thread %hhu set length (%zu) larger than MAX (%zu)",
+				    s->thread_id, length,
+				    MAX_PACKET_SIZE);
 			}
-			if (s->state.max_packets &&
-			    s->state.packets_sent >= s->state.max_packets) {
-				log_debug(
-				    "send",
-				    "send thread %hhu finished (max packets of %u reached)",
-				    s->thread_id, s->state.max_packets);
-				goto cleanup;
-			}
-			if (current.status == ZMAP_SHARD_DONE) {
-				log_debug(
-				    "send",
-				    "send thread %hhu finished, shard depleted",
-				    s->thread_id);
-				goto cleanup;
-			}
-			for (int i = 0; i < zconf.packet_streams; i++) {
-				count++;
-				uint32_t src_ip = get_src_ip(current_ip, i);
-				uint32_t validation[VALIDATE_BYTES /
-						    sizeof(uint32_t)];
-				validate_gen(src_ip, current_ip,
-					     htons(current_port),
-					     (uint8_t *)validation);
-				uint8_t ttl = zconf.probe_ttl;
-				size_t length = 0;
-				zconf.probe_module->make_packet(
-				    buf, &length, src_ip, current_ip,
-				    htons(current_port), ttl, validation, i,
-				    probe_data);
-				if (length > MAX_PACKET_SIZE) {
-					log_fatal(
-					    "send",
-					    "send thread %hhu set length (%zu) larger than MAX (%zu)",
-					    s->thread_id, length,
-					    MAX_PACKET_SIZE);
-				}
-				if (zconf.dryrun) {
-					lock_file(stdout);
-					zconf.probe_module->print_packet(stdout,
-									 buf);
-					unlock_file(stdout);
-				} else {
-					void *contents =
-					    buf +
-					    zconf.send_ip_pkts *
-						sizeof(struct ether_header);
-					length -= (zconf.send_ip_pkts *
-						   sizeof(struct ether_header));
-					// add packet to batch and update metadata
-					memcpy(((void *)batch->packets) + (batch->len * MAX_PACKET_SIZE), contents, length);
-					batch->lens[batch->len] = length;
-					batch->ips[batch->len] = current_ip;
-					batch->len++;
-					if (batch->len == BATCH_SIZE) {
-						// batch is full, sending
-						int rc = send_batch(st, batch, attempts);
-						// whether batch succeeds or fails, this was the only attempt. Any re-tries are handled within batch
-						if (rc < 0) {
-							// rc is the last error code if all packets couldn't be sent
-							s->state.packets_failed += batch->len;
-						} else {
-							// rc is number of packets sent successfully, if > 0
-							s->state.packets_failed += batch->len - rc;
-						}
-						// reset batch length for next batch
-						batch->len = 0;
-						idx++;
-						idx &= 0xFF;
+			if (zconf.dryrun) {
+				lock_file(stdout);
+				zconf.probe_module->print_packet(stdout,
+								 buf);
+				unlock_file(stdout);
+			} else {
+				void *contents =
+				    buf +
+				    zconf.send_ip_pkts *
+					sizeof(struct ether_header);
+				length -= (zconf.send_ip_pkts *
+					   sizeof(struct ether_header));
+				// add packet to batch and update metadata
+				memcpy(((void *)batch->packets) + (batch->len * MAX_PACKET_SIZE), contents, length);
+				batch->lens[batch->len] = length;
+				batch->ips[batch->len] = current_ip;
+				batch->len++;
+				if (batch->len == BATCH_SIZE) {
+					// batch is full, sending
+					int rc = send_batch(st, batch, attempts);
+					// whether batch succeeds or fails, this was the only attempt. Any re-tries are handled within batch
+					if (rc < 0) {
+						// rc is the last error code if all packets couldn't be sent
+						s->state.packets_failed += batch->len;
+					} else {
+						// rc is number of packets sent successfully, if > 0
+						s->state.packets_failed += batch->len - rc;
 					}
+					// reset batch length for next batch
+					batch->len = 0;
+					idx++;
+					idx &= 0xFF;
 				}
-				s->state.packets_sent++;
 			}
-			// Track the number of targets (ip,port)s we actually scanned.
-			s->state.targets_scanned++;
+			s->state.packets_sent++;
+		}
+		// Track the number of targets (ip,port)s we actually scanned.
+		s->state.targets_scanned++;
 
-			// Get the next IP to scan
-			current = shard_get_next_target(s);
-			current_ip = current.ip;
-			current_port = current.port;
-			if (zconf.list_of_ips_filename &&
-			    current.status != ZMAP_SHARD_DONE) {
-				// If we have a list of IPs bitmap, ensure the next IP
-				// to scan is on the list.
-				while (!pbm_check(zsend.list_of_ips_pbm,
-						  current_ip)) {
-					current = shard_get_next_target(s);
-					current_ip = current.ip;
-					if (current.status == ZMAP_SHARD_DONE) {
-						log_debug(
-						    "send",
-						    "send thread %hhu shard finished in get_next_ip_loop depleted",
-						    s->thread_id);
-						goto cleanup;
-					}
+		// Get the next IP to scan
+		current = shard_get_next_target(s);
+		current_ip = current.ip;
+		current_port = current.port;
+		if (zconf.list_of_ips_filename &&
+		    current.status != ZMAP_SHARD_DONE) {
+			// If we have a list of IPs bitmap, ensure the next IP
+			// to scan is on the list.
+			while (!pbm_check(zsend.list_of_ips_pbm,
+					  current_ip)) {
+				current = shard_get_next_target(s);
+				current_ip = current.ip;
+				if (current.status == ZMAP_SHARD_DONE) {
+					log_debug(
+					    "send",
+					    "send thread %hhu shard finished in get_next_ip_loop depleted",
+					    s->thread_id);
+					goto cleanup;
 				}
 			}
 		}
