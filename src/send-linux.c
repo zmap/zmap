@@ -57,9 +57,9 @@ int send_run_init(sock_t s)
 }
 
 int send_batch(sock_t sock, batch_t* batch, int retries) {
-	struct mmsghdr msgvec [BATCH_SIZE]; // Array of multiple msg header structures
-	struct msghdr msgs[BATCH_SIZE];
-	struct iovec iovs[BATCH_SIZE];
+	struct mmsghdr msgvec [batch->capacity]; // Array of multiple msg header structures
+	struct msghdr msgs[batch->capacity];
+	struct iovec iovs[batch->capacity];
 
 	for (int i = 0; i < batch->len; ++i) {
 		struct iovec *iov = &iovs[i];
