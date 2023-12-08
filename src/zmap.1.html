@@ -132,10 +132,9 @@ be excluded.</p></dd>
  unreliable network. This is contrasted with <code>--retries</code> which just gives the
  number of attempts to send a single probe on the source NIC.</p></dd>
 <dt> <code>--retries=n</code></dt><dd><p> Number of times to try resending a packet if the sendto call fails (default=10)</p></dd>
-<dt> <code>--batch=n</code></dt><dd><p> Number of packets to send in a burst between checks to the ratelimit. A
- batch size above 1 allows the sleep-based rate-limiter to be used with
- proportionally higher rates. This can reduce CPU usage, in exchange for a
- bursty send rate. (default=1)</p></dd>
+<dt> <code>--batch=n</code></dt><dd><p> Number of packets to batch before calling the appropriate syscall to send. Used
+ to take advantage of Linux's <code>sendmmsg</code> syscall to send the entire batch at once.
+ Only available on Linux, other OS's will send each packet individually. (default=64)</p></dd>
 </dl>
 
 
@@ -298,7 +297,7 @@ decreasing by 5%.</p>
 
   <ol class='man-decor man-foot man foot'>
     <li class='tl'>ZMap</li>
-    <li class='tc'>November 2023</li>
+    <li class='tc'>December 2023</li>
     <li class='tr'>zmap(1)</li>
   </ol>
 

@@ -1,7 +1,7 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "ZMAP" "1" "November 2023" "ZMap" "zmap"
+.TH "ZMAP" "1" "December 2023" "ZMap" "zmap"
 .
 .SH "NAME"
 \fBzmap\fR \- The Fast Internet Scanner
@@ -80,7 +80,7 @@ Number of times to try resending a packet if the sendto call fails (default=10)
 .
 .TP
 \fB\-\-batch=n\fR
-Number of packets to send in a burst between checks to the ratelimit\. A batch size above 1 allows the sleep\-based rate\-limiter to be used with proportionally higher rates\. This can reduce CPU usage, in exchange for a bursty send rate\. (default=1)
+Number of packets to batch before calling the appropriate syscall to send\. Used to take advantage of Linux\'s \fBsendmmsg\fR syscall to send the entire batch at once\. Only available on Linux, other OS\'s will send each packet individually\. (default=64)
 .
 .SS "SCAN SHARDING"
 .
