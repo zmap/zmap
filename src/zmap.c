@@ -901,9 +901,6 @@ int main(int argc, char *argv[])
 		zconf.batch = args.batch_arg;
 	} else if (args.batch_given) {
 		log_fatal("zmap", "batch size must be > 0");
-	} else {
-		// using default
-		zconf.batch = 64;
 	}
 
 	if (args.max_targets_given) {
