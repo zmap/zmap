@@ -951,7 +951,6 @@ int main(int argc, char *argv[])
 		    "too few targets relative to senders, dropping to one sender");
 		zconf.senders = 1;
 	}
-	log_warn("zmap", "num cores = %d\n", zconf.senders);
 #else
 	zconf.senders = args.sender_threads_arg;
 #endif
