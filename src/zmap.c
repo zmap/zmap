@@ -939,11 +939,19 @@ int main(int argc, char *argv[])
 		zsend.max_targets = zconf.max_targets;
 	}
 #ifndef PFRING
-	// Set the correct number of threads, default to min(4, number of cores on host)
+	// Set the correct number of threads, default to min(4, number of cores on host - 1, as available)
 	if (args.sender_threads_given) {
 		zconf.senders = args.sender_threads_arg;
 	} else {
-		zconf.senders = min_int(get_num_cores(), 4);
+		// use one fewer than the number of cores on the machine such that the
+		// receiver thread can use a core for processing responses
+		int available_cores = get_num_cores();
+		if (available_cores > 1) {
+			available_cores--;
+		}
+		int senders = min_int(available_cores, 4);
+		zconf.senders = senders;
+		log_debug("zmap", "will use %i sender threads based on core availability", senders);
 	}
 	if (2 * zconf.senders >= zsend.max_targets) {
 		log_warn(
