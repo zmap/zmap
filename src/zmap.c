@@ -943,7 +943,7 @@ int main(int argc, char *argv[])
 	if (args.sender_threads_given) {
 		zconf.senders = args.sender_threads_arg;
 	} else {
-		zconf.senders = MIN(get_num_cores(), 4);
+		zconf.senders = min_int(get_num_cores(), 4);
 	}
 	if (2 * zconf.senders >= zsend.max_targets) {
 		log_warn(
