@@ -221,7 +221,7 @@ Inject user\-specified JSON metadata into scan metadata
 .
 .TP
 \fB\-T\fR, \fB\-\-sender\-threads=n\fR
-Threads used to send packets\. ZMap will attempt to detect the optimal number of send threads based on the number of processor cores\.
+Threads used to send packets\. ZMap will attempt to detect the optimal number of send threads based on the number of processor cores\. Defaults to min(4, number of processor cores on host \- 1)\.
 .
 .TP
 \fB\-C\fR, \fB\-\-config=filename\fR

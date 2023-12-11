@@ -79,7 +79,7 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
      addresses in the same order for multiple ZMap runs.
 
    * `-P`, `--probes=n`:
-     Number of probes to send to each IP/Port pair (default=1). Since ZMap composes Ethernet 
+     Number of probes to send to each IP/Port pair (default=1). Since ZMap composes Ethernet
      frames directly, probes can be lost en-route to destination. Increasing the
      --probes increases the chance that an online host will receive a probe in an
      unreliable network. This is contrasted with `--retries` which just gives the
@@ -229,7 +229,8 @@ targets.
 
    * `-T`, `--sender-threads=n`:
      Threads used to send packets. ZMap will attempt to detect the optimal
-     number of send threads based on the number of processor cores.
+     number of send threads based on the number of processor cores. Defaults to
+     min(4, number of processor cores on host - 1).
 
    * `-C`, `--config=filename`:
      Read a configuration file, which can specify any other options.

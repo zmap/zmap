@@ -190,7 +190,7 @@ option "min-hitrate"            - "Minimum hitrate that scan can hit before scan
 
 option "sender-threads"         T "Threads used to send packets"
     typestr="n"
-    default="1"
+    default="4"
     optional int
 
 option "cores"                  - "Comma-separated list of cores to pin to"
