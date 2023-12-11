@@ -61,6 +61,10 @@ static int32_t distrib_func(pfring_zc_pkt_buff *pkt, pfring_zc_queue *in_queue,
 
 pthread_mutex_t recv_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+int get_num_cores(void) {
+	return sysconf(_SC_NPROCESSORS_ONLN);
+}
+
 typedef struct send_arg {
 	uint32_t cpu;
 	sock_t sock;
@@ -935,11 +939,19 @@ int main(int argc, char *argv[])
 		zsend.max_targets = zconf.max_targets;
 	}
 #ifndef PFRING
-	// Set the correct number of threads, default to num_cores - 1
+	// Set the correct number of threads, default to min(4, number of cores on host - 1, as available)
 	if (args.sender_threads_given) {
 		zconf.senders = args.sender_threads_arg;
 	} else {
-		zconf.senders = 1;
+		// use one fewer than the number of cores on the machine such that the
+		// receiver thread can use a core for processing responses
+		int available_cores = get_num_cores();
+		if (available_cores > 1) {
+			available_cores--;
+		}
+		int senders = min_int(available_cores, 4);
+		zconf.senders = senders;
+		log_debug("zmap", "will use %i sender threads based on core availability", senders);
 	}
 	if (2 * zconf.senders >= zsend.max_targets) {
 		log_warn(
@@ -962,7 +974,7 @@ int main(int argc, char *argv[])
 			zconf.pin_cores[i] = atoi(core_list[i]);
 		}
 	} else {
-		int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+		int num_cores = get_num_cores();
 		zconf.pin_cores_len = (uint32_t)num_cores;
 		zconf.pin_cores =
 		    xcalloc(zconf.pin_cores_len, sizeof(uint32_t));
