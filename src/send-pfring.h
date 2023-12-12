@@ -16,9 +16,9 @@
 #error "Don't include send-bsd.h or send-linux.h with send-pfring.h"
 #endif
 
-int send_run_init(anonymous struct socket, int i, struct shard *pShard)
+int send_run_init(sock_t socket)
 {
-	(void)sock;
+	(void)socket;
 
 	// All init for pfring happens in get_socket
 	return 0;
