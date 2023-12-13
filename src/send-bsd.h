@@ -42,9 +42,9 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 // Returns last error code if no packets could be sent successfully
 int send_batch(sock_t sock, batch_t* batch, int retries) {
 	int packets_sent = 0;
-	int retry_ct = 0;
 	int rc = 0;
 	for (int i=0;i<batch->len;i++) {
+		int retry_ct = 0;
 		for (retry_ct = 0; retry_ct < retries; retry_ct++) {
 			rc = send_packet(sock, ((void *)batch->packets) + (i * MAX_PACKET_SIZE), batch->lens[i], 0);
 			if (rc >= 0) {
