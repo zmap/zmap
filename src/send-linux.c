@@ -15,28 +15,25 @@
  */
 
 #define _GNU_SOURCE
-#include <sys/socket.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/types.h>
 
 #include <netpacket/packet.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/time.h>
 #include <linux/netlink.h>
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 
 #include "../lib/includes.h"
+#include "../lib/logger.h"
 #include "./send.h"
 #include "./send-linux.h"
-
-#include <netpacket/packet.h>
-
 
 int send_run_init(sock_t s)
 {
@@ -96,7 +93,7 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 		rv = sendmmsg(sock.sock, &msgvec, batch->len, 0);
 		if (rv < 0) {
 			// only retry if all messages failed to send
-			perror("error in sendmmsg");
+			log_error("batch send", "error in sendmmsg: %s", strerror(errno));
 		} else {
 			break;
 		}
