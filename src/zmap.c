@@ -553,12 +553,12 @@ int main(int argc, char *argv[])
 	SET_IF_GIVEN(zconf.rate, rate);
 	SET_IF_GIVEN(zconf.packet_streams, probes);
 	SET_IF_GIVEN(zconf.status_updates_file, status_updates_file);
-	SET_IF_GIVEN(zconf.num_retries, retries);
+	SET_IF_GIVEN(zconf.retries, retries);
 	SET_IF_GIVEN(zconf.max_sendto_failures, max_sendto_failures);
 	SET_IF_GIVEN(zconf.min_hitrate, min_hitrate);
 
 
-	if (zconf.num_retries < 0) {
+	if (zconf.retries < 0) {
 		log_fatal("zmap", "Invalid retry count");
 	}
 
