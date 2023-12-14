@@ -576,11 +576,25 @@ static bool process_response_answer(char **data, uint16_t *data_len,
 
 static int dns_global_initialize(struct state_conf *conf)
 {
-	num_questions = conf->packet_streams;
-	if (num_questions < 1) {
-		log_fatal("dns",
-			  "Invalid number of probes for the DNS module: %i. Probe count must be > 1",
-		    num_questions);
+	// default number of questions is 1, if the user doesn't input any probe_args
+	num_questions = 1;
+	// find how many probe_args the user wants to query
+	char question_delimitor = ';';
+	if (conf->probe_args) {
+		int arg_strlen = strlen(conf->probe_args);
+		for (int i = 0; i < arg_strlen; i++) {
+			if(*(conf->probe_args + i) == question_delimitor) {
+				num_questions++;
+			}
+		}
+	}
+
+	if (num_questions != conf->packet_streams) {
+		// warn user that their supplied value for --probes is going to be overridden
+		log_warn("dns",
+			  "The DNS module sends a single probe for every DNS question you query. "
+			 "The supplied value of --probes = %d doesn't equal the number of questions = %d, overriding and setting --probes = %d",
+		    conf->packet_streams, num_questions, num_questions);
 	}
 
 	// Setup the global structures
@@ -638,7 +652,9 @@ static int dns_global_initialize(struct state_conf *conf)
 			} else {
 				domain_len = strlen(probe_q_delimiter_p);
 			}
-			assert(domain_len > 0);
+			if (domain_len <= 0) {
+				log_fatal("dns", "Invalid probe args. Format: \"A,google.com\" or \"A,google.com;A,example.com\"");
+			}
 
 			domains[i] = xmalloc(domain_len + 1);
 			strncpy(domains[i], probe_q_delimiter_p + 1,
@@ -1086,7 +1102,8 @@ probe_module_t module_dns = {
 	"This module sends out DNS queries and parses basic responses. "
 	"By default, the module will perform an A record lookup for "
 	"google.com. You can specify other queries using the --probe-args "
-	"argument in the form: 'type,query', e.g. 'A,google.com'. The module "
+	"argument in the form: 'type,query', e.g. 'A,google.com'. The --probes/-P "
+	"flag has no effect, this module always sends 1 probe per question. The module "
 	"supports sending the the following types: of queries: A, NS, CNAME, SOA, "
 	"PTR, MX, TXT, AAAA, RRSIG, and ALL. The module will accept and attempt "
 	"to parse all DNS responses. There is currently support for parsing out "
