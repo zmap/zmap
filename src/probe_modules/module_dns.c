@@ -626,6 +626,9 @@ static int dns_global_initialize(struct state_conf *conf)
 				    "dns",
 				    "Invalid probe args. Format: \"A,google.com\" or \"A,google.com;A,example.com\"");
 			}
+			if (probe_arg_delimiter_p == NULL && (i + 1) != num_questions) {
+				log_fatal("dns", "Probe count must match question count. Ex. 'A,google.com;AAAA,cloudflare.com', probes = 2");
+			}
 
 			int domain_len = 0;
 
