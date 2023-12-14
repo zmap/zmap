@@ -50,8 +50,8 @@ struct state_conf zconf = {
     .output_args = NULL,
     .output_fields = NULL,
     .output_fields_len = 0,
-    .output_field_str = NULL,
     .output_filename = NULL,
+    .output_filter_str = NULL,
     .output_module = NULL,
     .packet_streams = 1,
     .ports = NULL,
@@ -59,6 +59,7 @@ struct state_conf zconf = {
     .probe_module = NULL,
     .probe_ttl = MAXTTL,
     .quiet = 0,
+    .rate = -1,
     .raw_output_fields = NULL,
     .recv_ready = 0,
     .retries = 10,
@@ -69,7 +70,7 @@ struct state_conf zconf = {
     .source_port_first = 32768, // (these are the default
     .source_port_last = 61000, //   ephemeral range on Linux),
     .status_updates_file = NULL,
-    .syslog = 1,};
+    .syslog = 1};
 
 void init_empty_global_configuration(struct state_conf *c)
 {
