@@ -12,16 +12,12 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "../lib/includes.h"
-
-#ifdef PFRING
-#include <pfring_zc.h>
-#endif
-
 #include "aesrand.h"
 #include "fieldset.h"
 #include "filter.h"
 #include "types.h"
+
+#include "../lib/includes.h"
 
 #define MAX_PACKET_SIZE 4096
 #define MAC_ADDR_LEN_BYTES 6
@@ -135,16 +131,6 @@ struct state_conf {
 	int no_header_row;
 	int dedup_method;
 	int dedup_window_size;
-#ifdef PFRING
-	struct {
-		pfring_zc_cluster *cluster;
-		pfring_zc_queue *send;
-		pfring_zc_queue *recv;
-		pfring_zc_queue **queues;
-		pfring_zc_pkt_buff **buffers;
-		pfring_zc_buffer_pool *prefetches;
-	} pf;
-#endif
 };
 extern struct state_conf zconf;
 

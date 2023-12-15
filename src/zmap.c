@@ -47,18 +47,6 @@
 #include "output_modules/output_modules.h"
 #include "probe_modules/probe_modules.h"
 
-#ifdef PFRING
-#include <pfring_zc.h>
-static int32_t distrib_func(pfring_zc_pkt_buff *pkt, pfring_zc_queue *in_queue,
-			    void *arg)
-{
-	(void)pkt;
-	(void)in_queue;
-	(void)arg;
-	return 0;
-}
-#endif
-
 pthread_mutex_t recv_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 int get_num_cores(void) {
@@ -216,13 +204,6 @@ static void start_zmap(void)
 			pthread_mutex_unlock(&recv_ready_mutex);
 		}
 	}
-#ifdef PFRING
-	pfring_zc_worker *zw = pfring_zc_run_balancer(
-	    zconf.pf.queues, &zconf.pf.send, zconf.senders, 1,
-	    zconf.pf.prefetches, round_robin_bursts_policy, NULL, distrib_func,
-	    NULL, 0, zconf.pin_cores[cpu & zconf.pin_cores_len]);
-	cpu += 1;
-#endif
 	tsend = xmalloc(zconf.senders * sizeof(pthread_t));
 	for (uint8_t i = 0; i < zconf.senders; i++) {
 		sock_t sock;
@@ -257,11 +238,6 @@ static void start_zmap(void)
 			exit(EXIT_FAILURE);
 		}
 	}
-
-#ifndef PFRING
-	drop_privs();
-#endif
-
 	// wait for completion
 	for (uint8_t i = 0; i < zconf.senders; i++) {
 		int r = pthread_join(tsend[i], NULL);
@@ -271,11 +247,6 @@ static void start_zmap(void)
 		}
 	}
 	log_debug("zmap", "senders finished");
-#ifdef PFRING
-	pfring_zc_kill_worker(zw);
-	pfring_zc_sync_queue(zconf.pf.send, tx_only);
-	log_debug("zmap", "send queue flushed");
-#endif
 	// no receiving or monitoring thread is started in dry run mode
 	if (!zconf.dryrun) {
 		r = pthread_join(trecv, NULL);
@@ -303,9 +274,6 @@ static void start_zmap(void)
 	if (zconf.probe_module && zconf.probe_module->close) {
 		zconf.probe_module->close(&zconf, &zsend, &zrecv);
 	}
-#ifdef PFRING
-	pfring_zc_destroy_cluster(zconf.pf.cluster);
-#endif
 	log_info("zmap", "completed");
 }
 
@@ -938,7 +906,6 @@ int main(int argc, char *argv[])
 	if (zconf.max_targets) {
 		zsend.max_targets = zconf.max_targets;
 	}
-#ifndef PFRING
 	// Set the correct number of threads, default to min(4, number of cores on host - 1, as available)
 	if (args.sender_threads_given) {
 		zconf.senders = args.sender_threads_arg;
@@ -959,9 +926,6 @@ int main(int argc, char *argv[])
 		    "too few targets relative to senders, dropping to one sender");
 		zconf.senders = 1;
 	}
-#else
-	zconf.senders = args.sender_threads_arg;
-#endif
 	// Figure out what cores to bind to
 	if (args.cores_given) {
 		const char **core_list = NULL;
@@ -982,68 +946,6 @@ int main(int argc, char *argv[])
 			zconf.pin_cores[i] = i;
 		}
 	}
-
-// PFRING
-#ifdef PFRING
-#define MAX_CARD_SLOTS 32768
-#define QUEUE_LEN 8192
-#define ZMAP_PF_BUFFER_SIZE 1536
-#define ZMAP_PF_ZC_CLUSTER_ID 9627
-	uint32_t user_buffers = zconf.senders * 256;
-	uint32_t queue_buffers = zconf.senders * QUEUE_LEN;
-	uint32_t card_buffers = 2 * MAX_CARD_SLOTS;
-	uint32_t total_buffers =
-	    user_buffers + queue_buffers + card_buffers + 2;
-	uint32_t metadata_len = 0;
-	uint32_t numa_node = 0; // TODO
-	zconf.pf.cluster = pfring_zc_create_cluster(
-	    ZMAP_PF_ZC_CLUSTER_ID, ZMAP_PF_BUFFER_SIZE, metadata_len,
-	    total_buffers, numa_node, NULL, NULL);
-	if (zconf.pf.cluster == NULL) {
-		log_fatal("zmap", "Could not create zc cluster: %s",
-			  strerror(errno));
-	}
-
-	zconf.pf.buffers = xcalloc(user_buffers, sizeof(pfring_zc_pkt_buff *));
-	for (uint32_t i = 0; i < user_buffers; ++i) {
-		zconf.pf.buffers[i] =
-		    pfring_zc_get_packet_handle(zconf.pf.cluster);
-		if (zconf.pf.buffers[i] == NULL) {
-			log_fatal("zmap", "Could not get ZC packet handle");
-		}
-	}
-
-	zconf.pf.send =
-	    pfring_zc_open_device(zconf.pf.cluster, zconf.iface, tx_only, 0);
-	if (zconf.pf.send == NULL) {
-		log_fatal("zmap", "Could not open device %s for TX. [%s]",
-			  zconf.iface, strerror(errno));
-	}
-
-	zconf.pf.recv =
-	    pfring_zc_open_device(zconf.pf.cluster, zconf.iface, rx_only, 0);
-	if (zconf.pf.recv == NULL) {
-		log_fatal("zmap", "Could not open device %s for RX. [%s]",
-			  zconf.iface, strerror(errno));
-	}
-
-	zconf.pf.queues = xcalloc(zconf.senders, sizeof(pfring_zc_queue *));
-	for (uint32_t i = 0; i < zconf.senders; ++i) {
-		zconf.pf.queues[i] =
-		    pfring_zc_create_queue(zconf.pf.cluster, QUEUE_LEN);
-		if (zconf.pf.queues[i] == NULL) {
-			log_fatal("zmap", "Could not create queue: %s",
-				  strerror(errno));
-		}
-	}
-
-	zconf.pf.prefetches = pfring_zc_create_buffer_pool(zconf.pf.cluster, 8);
-	if (zconf.pf.prefetches == NULL) {
-		log_fatal("zmap", "Could not open prefetch pool: %s",
-			  strerror(errno));
-	}
-#endif
-
 	// resume scan if requested
 
 	start_zmap();

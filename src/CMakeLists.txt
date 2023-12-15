@@ -46,6 +46,7 @@ set(SOURCES
     monitor.c
     ports.c
     recv.c
+    recv-pcap.c
     send.c
     shard.c
     socket.c
@@ -75,6 +76,7 @@ set(ZTESTSOURCES
     monitor.c
     ports.c
     recv.c
+    recv-pcap.c
     send.c
     shard.c
     socket.c
@@ -118,24 +120,12 @@ set(ZTEESOURCES
 )
 
 # Handle various versions of socket
-if(WITH_PFRING)
-    set(SOURCES ${SOURCES} socket-pfring.c)
-    set(ZTESTSOURCES ${ZTESTSOURCES} socket-pfring.c)
-elseif (APPLE OR BSD)
+if (APPLE OR BSD)
     set(SOURCES ${SOURCES} socket-bsd.c)
     set(ZTESTSOURCES ${ZTESTSOURCES} socket-bsd.c)
 else()
     set(SOURCES ${SOURCES} socket-linux.c)
     set(ZTESTSOURCES ${ZTESTSOURCES} socket-linux.c)
-endif()
-
-# Handle various versions of recv
-if(WITH_PFRING)
-    set(SOURCES ${SOURCES} recv-pfring.c)
-    set(ZTESTSOURCES ${ZTESTSOURCES} recv-pfring.c)
-else()
-    set(SOURCES ${SOURCES} recv-pcap.c)
-    set(ZTESTSOURCES ${ZTESTSOURCES} recv-pcap.c)
 endif()
 
 # Set configure time zmap version
@@ -218,7 +208,6 @@ endif()
 target_link_libraries(
     zmap
     zmaplib
-    ${PFRING_LIBRARIES}
     pcap gmp m unistring
     ${DNET_LIBRARIES}
     ${JSON_LIBRARIES}
@@ -247,7 +236,6 @@ target_link_libraries(
 target_link_libraries(
     ztests
     zmaplib
-    ${PFRING_LIBRARIES}
     pcap gmp m unistring
     ${DNET_LIBRARIES}
     ${JSON_LIBRARIES}

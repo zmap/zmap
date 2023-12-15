@@ -6,7 +6,6 @@ option(ENABLE_DEVELOPMENT "Enable development specific compiler and linker flags
 option(ENABLE_LOG_TRACE "Enable log trace messages" OFF)
 option(RESPECT_INSTALL_PREFIX_CONFIG "Respect CMAKE_INSTALL_PREFIX for /etc" OFF)
 option(WITH_WERROR "Build with -Werror" OFF)
-option(WITH_PFRING "Build with PF_RING ZC for send (10 GigE)" OFF)
 option(FORCE_CONF_INSTALL "Overwrites existing configuration files at install" OFF)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
@@ -75,11 +74,6 @@ else()
 endif()
 string(REPLACE ";" " " JSON_CFLAGS "${JSON_CFLAGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${JSON_CFLAGS}")
-
-if(WITH_PFRING)
-    add_definitions("-DPFRING")
-    set(PFRING_LIBRARIES pfring rt numa)
-endif()
 
 set(JUDY_LIBRARIES "Judy")
 
