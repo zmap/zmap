@@ -238,6 +238,9 @@ static void start_zmap(void)
 			exit(EXIT_FAILURE);
 		}
 	}
+
+	drop_privs();
+
 	// wait for completion
 	for (uint8_t i = 0; i < zconf.senders; i++) {
 		int r = pthread_join(tsend[i], NULL);
