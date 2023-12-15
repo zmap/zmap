@@ -576,10 +576,27 @@ static bool process_response_answer(char **data, uint16_t *data_len,
 
 static int dns_global_initialize(struct state_conf *conf)
 {
+	// if a user inputs a single query "AAAA,google.com;", the semicolon will break
+	// the question-counting logic below. Strip any leading/trailing semicolons
+	char question_delimitor = ';';
+	if (*conf->probe_args == question_delimitor && strlen(conf->probe_args) == 1) {
+		// user only input ";" as probe-args, error immediately
+		log_fatal("dns",
+			  "Invalid probe args (%s). Format: \"A,google.com\" or \"A,google.com;A,example.com\"", conf->probe_args);
+	}
+	if (*conf->probe_args == question_delimitor) {
+		// user input a leading semi-colon, strip it off
+		log_debug("dns", "Probe args (%s) contains leading semicolon. Stripping.", conf->probe_args);
+		conf->probe_args = conf->probe_args + 1;
+	}
+	if (*(conf->probe_args + (strlen(conf->probe_args) - 1)) == question_delimitor) {
+		log_debug("dns", "Probe args (%s) contains trailing semicolon. Stripping.", conf->probe_args);
+
+		conf->probe_args[strlen(conf->probe_args) - 1] = '\n';
+	}
 	// default number of questions is 1, if the user doesn't input any probe_args
 	num_questions = 1;
 	// find how many probe_args the user wants to query
-	char question_delimitor = ';';
 	if (conf->probe_args) {
 		int arg_strlen = strlen(conf->probe_args);
 		for (int i = 0; i < arg_strlen; i++) {
