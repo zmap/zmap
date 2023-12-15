@@ -88,6 +88,7 @@ static uint16_t *qname_lens;
 static char **qnames;
 static uint16_t *qtypes;
 static int num_questions = 0; // How many DNS questions to query. Note: There's a requirement that the num_questions = probes input by user
+static char probe_arg_delimitor = ';';
 static void find_num_dns_questions(struct state_conf *);
 
 /* Array of qtypes we support. Jumping through some hoops (1 level of
@@ -604,7 +605,7 @@ static int dns_global_initialize(struct state_conf *conf)
 
 		for (int i = 0; i < num_questions; i++) {
 			char *probe_q_delimiter_p = strchr(arg_pos, ',');
-			char *probe_arg_delimiter_p = strchr(arg_pos, ';');
+			char *probe_arg_delimiter_p = strchr(arg_pos, probe_arg_delimitor);
 
 			if (probe_q_delimiter_p == NULL ||
 			    probe_q_delimiter_p == arg_pos ||
@@ -1087,18 +1088,17 @@ static void find_num_dns_questions(struct state_conf *conf) {
 
 	// if a user inputs a single query "AAAA,google.com;", the semicolon will break
 	// the question-counting logic below. Strip any leading/trailing semicolons
-	char question_delimitor = ';';
-	if (*conf->probe_args == question_delimitor && strlen(conf->probe_args) == 1) {
+	if (*conf->probe_args == probe_arg_delimitor && strlen(conf->probe_args) == 1) {
 		// user only input ";" as probe-args, error immediately
 		log_fatal("dns",
 			  "Invalid probe args (%s). Format: \"A,google.com\" or \"A,google.com;A,example.com\"", conf->probe_args);
 	}
-	if (*conf->probe_args == question_delimitor) {
+	if (*conf->probe_args == probe_arg_delimitor) {
 		// user input a leading semi-colon, strip it off
 		log_debug("dns", "Probe args (%s) contains leading semicolon. Stripping.", conf->probe_args);
 		conf->probe_args = conf->probe_args + 1;
 	}
-	if (conf->probe_args[strlen(conf->probe_args) - 1] == question_delimitor) {
+	if (conf->probe_args[strlen(conf->probe_args) - 1] == probe_arg_delimitor) {
 		log_debug("dns", "Probe args (%s) contains trailing semicolon. Stripping.", conf->probe_args);
 
 		conf->probe_args[strlen(conf->probe_args) - 1] = '\n';
@@ -1107,7 +1107,7 @@ static void find_num_dns_questions(struct state_conf *conf) {
 	if (conf->probe_args) {
 		int arg_strlen = strlen(conf->probe_args);
 		for (int i = 0; i < arg_strlen; i++) {
-			if(*(conf->probe_args + i) == question_delimitor) {
+			if(*(conf->probe_args + i) == probe_arg_delimitor) {
 				num_questions++;
 			}
 		}
