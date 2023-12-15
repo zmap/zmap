@@ -605,13 +605,6 @@ static int dns_global_initialize(struct state_conf *conf)
 			char *probe_q_delimiter_p = strchr(arg_pos, ',');
 			char *probe_arg_delimiter_p = strchr(arg_pos, ';');
 
-			if ((probe_arg_delimiter_p == NULL && (i + 1) != num_questions) ||
-			    arg_pos >= (conf->probe_args + arg_strlen)) {
-				log_fatal(
-				    "dns",
-				    "Must have number of probes = number of questions. Format: -P 2 --probe-args=\"A,google.com;A,example.com\"");
-			}
-
 			if (probe_q_delimiter_p == NULL ||
 			    probe_q_delimiter_p == arg_pos ||
 			    arg_pos + strlen(arg_pos) == (probe_q_delimiter_p + 1)) {
