@@ -578,6 +578,7 @@ static bool process_response_answer(char **data, uint16_t *data_len,
 static int dns_global_initialize(struct state_conf *conf)
 {
 	find_num_dns_questions(conf);
+	log_debug("dns", "number of dns questions: %d", num_questions);
 	// Setup the global structures
 	dns_packets = xmalloc(sizeof(char *) * num_questions);
 	dns_packet_lens = xmalloc(sizeof(uint16_t) * num_questions);
@@ -1077,6 +1078,13 @@ probe_module_t module_dns = {
 // find_num_dns_questions parses the --probe-args supplied by the user and finds how many DNS questions they want to probe
 // Sets the global static num_questions
 static void find_num_dns_questions(struct state_conf *conf) {
+	// default number of questions is 1, if the user doesn't input any probe_args
+	num_questions = 1;
+	if (!conf->probe_args) {
+		// user didn't input any probe args, we'll default to google.com
+		return;
+	}
+
 	// if a user inputs a single query "AAAA,google.com;", the semicolon will break
 	// the question-counting logic below. Strip any leading/trailing semicolons
 	char question_delimitor = ';';
@@ -1095,8 +1103,6 @@ static void find_num_dns_questions(struct state_conf *conf) {
 
 		conf->probe_args[strlen(conf->probe_args) - 1] = '\n';
 	}
-	// default number of questions is 1, if the user doesn't input any probe_args
-	num_questions = 1;
 	// find how many probe_args the user wants to query
 	if (conf->probe_args) {
 		int arg_strlen = strlen(conf->probe_args);
