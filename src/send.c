@@ -305,7 +305,7 @@ int send_run(sock_t st, shard_t *s)
 			}
 		}
 	}
-	int attempts = zconf.num_retries + 1;
+	int attempts = zconf.retries + 1;
 	uint32_t idx = 0;
 	while (1) {
 		// Adaptive timing delay
