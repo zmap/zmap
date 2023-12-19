@@ -32,7 +32,7 @@
 //
 // We also support multiple questions, of the form:
 // "A,example.com;AAAA,www.example.com" This requires --probes=X, where X
-// matches the number of questions in --probe-args, and either
+// is a multiple of the number of questions in --probe-args, and either
 // --output-filter="" or --output-module=csv to remove the implicit
 // "filter_duplicates" configuration flag.
 //
@@ -40,7 +40,6 @@
 #include "module_dns.h"
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdint.h>
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
@@ -55,7 +54,6 @@
 #include "../fieldset.h"
 
 #define DNS_PAYLOAD_LEN_LIMIT 512 // This is arbitrary
-#define UDP_HEADER_LEN 8
 #define PCAP_SNAPLEN 1500 // This is even more arbitrary
 #define MAX_QTYPE 255
 #define ICMP_UNREACH_HEADER_SIZE 8
@@ -87,9 +85,9 @@ static uint16_t *dns_packet_lens; // Not including udp header
 static uint16_t *qname_lens;
 static char **qnames;
 static uint16_t *qtypes;
-static int num_questions = 0; // How many DNS questions to query. Note: There's a requirement that the num_questions = probes input by user
-static char probe_arg_delimitor = ';';
-static void find_num_dns_questions(struct state_conf *);
+static int num_questions = 0; // How many DNS questions to query. Note: There's a requirement that probes is a multiple of DNS questions
+static const char probe_arg_delimitor = ';';
+static void set_num_dns_questions(struct state_conf *);
 
 /* Array of qtypes we support. Jumping through some hoops (1 level of
  * indirection) so the per-packet processing time is fast. Keep this in sync
@@ -155,8 +153,7 @@ static uint16_t domain_to_qname(char **qname_handle, const char *domain)
 	return len;
 }
 
-static int build_global_dns_packets(char *domains[], int num_domains,
-				    size_t *max_len)
+static int build_global_dns_packets(char *domains[], int num_domains, size_t *max_len)
 {
 	size_t _max_len = 0;
 	for (int i = 0; i < num_domains; i++) {
@@ -578,8 +575,13 @@ static bool process_response_answer(char **data, uint16_t *data_len,
 
 static int dns_global_initialize(struct state_conf *conf)
 {
-	find_num_dns_questions(conf);
+	set_num_dns_questions(conf);
 	log_debug("dns", "number of dns questions: %d", num_questions);
+	if (conf->packet_streams % num_questions != 0) {
+		// probe count must be a multiple of the number of DNS questions
+		log_fatal("dns", "number of probes (%d) must be a multiple of the number of DNS questions (%d)."
+				 "Example: '-P 4 --probe-args \"A,google.com;AAAA,cloudflare.com\"'", conf->packet_streams, num_questions);
+	}
 	// Setup the global structures
 	dns_packets = xmalloc(sizeof(char *) * num_questions);
 	dns_packet_lens = xmalloc(sizeof(uint16_t) * num_questions);
@@ -600,7 +602,6 @@ static int dns_global_initialize(struct state_conf *conf)
 	setup_qtype_str_map();
 
 	if (conf->probe_args) {
-		int arg_strlen = strlen(conf->probe_args);
 		char *arg_pos = conf->probe_args;
 
 		for (int i = 0; i < num_questions; i++) {
@@ -720,6 +721,20 @@ int dns_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	return EXIT_SUCCESS;
 }
 
+// get_dns_question_index_by_probe_num - Find the dns question associated with this probe number
+// We allow users to enter a probe count that is a multiple of the number of DNS questions.
+// send.c will iterate with this probe count, sending a packet for each probe number
+// Ex. -P 4 --probe-args="A,google.com;AAAA,cloudflare.com" - send 2 probes for each question
+// Probe_num  |   num_questions   =   dns_index
+//      0     |       2           =       0
+//      1     |       2           =       1
+//      2     |       2           =       0
+//      3     |       2           =       1
+int get_dns_question_index_by_probe_num(int probe_num) {
+	assert(probe_num >= 0);
+	return probe_num % num_questions;
+}
+
 int dns_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 		    ipaddr_n_t dst_ip, port_n_t dport, uint8_t ttl,
 		    uint32_t *validation, int probe_num, UNUSED void *arg)
@@ -731,29 +746,32 @@ int dns_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	// For num_questions == 0, we handle this in per-thread init. Do less
 	// work
 	if (num_questions > 0) {
-
+		int dns_index = get_dns_question_index_by_probe_num(probe_num);
 		uint16_t encoded_len =
 		    htons(sizeof(struct ip) + sizeof(struct udphdr) +
-			  dns_packet_lens[probe_num]);
+			  dns_packet_lens[dns_index]);
 		make_ip_header(ip_header, IPPROTO_UDP, encoded_len);
 
 		encoded_len =
-		    sizeof(struct udphdr) + dns_packet_lens[probe_num];
+		    sizeof(struct udphdr) + dns_packet_lens[dns_index];
 		make_udp_header(udp_header, encoded_len);
 
 		char *payload = (char *)(&udp_header[1]);
 		*buf_len = sizeof(struct ether_header) + sizeof(struct ip) +
-			   sizeof(struct udphdr) + dns_packet_lens[probe_num];
+			   sizeof(struct udphdr) + dns_packet_lens[dns_index];
 
 		assert(*buf_len <= MAX_PACKET_SIZE);
 
-		memcpy(payload, dns_packets[probe_num],
-		       dns_packet_lens[probe_num]);
+		memcpy(payload, dns_packets[dns_index],
+		       dns_packet_lens[dns_index]);
 	}
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
 	ip_header->ip_ttl = ttl;
+	// Above we wanted to look up the dns question index (so we could send 2 probes for the same DNS query)
+	// Here we want the port to be unique regardless of if this is the 2nd probe to the same DNS query so using
+	// probe_num itself to set the unique UDP source port.
 	udp_header->uh_sport =
 	    htons(get_src_port(num_ports, probe_num, validation));
 	udp_header->uh_dport = dport;
@@ -1067,7 +1085,7 @@ probe_module_t module_dns = {
 	"By default, the module will perform an A record lookup for "
 	"google.com. You can specify other queries using the --probe-args "
 	"argument in the form: 'type,query', e.g. 'A,google.com'. The --probes/-P "
-	"flag has no effect, this module always sends 1 probe per question. The module "
+	"flag must be set to a multiple of the number of DNS questions. The module "
 	"supports sending the the following types: of queries: A, NS, CNAME, SOA, "
 	"PTR, MX, TXT, AAAA, RRSIG, and ALL. The module will accept and attempt "
 	"to parse all DNS responses. There is currently support for parsing out "
@@ -1078,7 +1096,7 @@ probe_module_t module_dns = {
 
 // find_num_dns_questions parses the --probe-args supplied by the user and finds how many DNS questions they want to probe
 // Sets the global static num_questions
-static void find_num_dns_questions(struct state_conf *conf) {
+static void set_num_dns_questions(struct state_conf *conf) {
 	// default number of questions is 1, if the user doesn't input any probe_args
 	num_questions = 1;
 	if (!conf->probe_args) {
@@ -1094,13 +1112,11 @@ static void find_num_dns_questions(struct state_conf *conf) {
 			  "Invalid probe args (%s). Format: \"A,google.com\" or \"A,google.com;A,example.com\"", conf->probe_args);
 	}
 	if (*conf->probe_args == probe_arg_delimitor) {
-		// user input a leading semi-colon, strip it off
 		log_debug("dns", "Probe args (%s) contains leading semicolon. Stripping.", conf->probe_args);
 		conf->probe_args = conf->probe_args + 1;
 	}
 	if (conf->probe_args[strlen(conf->probe_args) - 1] == probe_arg_delimitor) {
 		log_debug("dns", "Probe args (%s) contains trailing semicolon. Stripping.", conf->probe_args);
-
 		conf->probe_args[strlen(conf->probe_args) - 1] = '\n';
 	}
 	// find how many probe_args the user wants to query
@@ -1111,13 +1127,5 @@ static void find_num_dns_questions(struct state_conf *conf) {
 				num_questions++;
 			}
 		}
-	}
-
-	if (num_questions != conf->packet_streams) {
-		// warn user that their supplied value for --probes is going to be overridden
-		log_warn("dns",
-			 "The DNS module sends a single probe for every DNS question you query. "
-			 "The supplied value of --probes = %d doesn't equal the number of questions = %d, overriding and setting --probes = %d",
-			 conf->packet_streams, num_questions, num_questions);
 	}
 }
