@@ -484,23 +484,26 @@ cleanup:
 }
 
 batch_t* create_packet_batch(uint8_t capacity) {
-	batch_t* batch = malloc(sizeof(batch_t));
+	// calculate how many bytes are needed for each component of a batch
+	int size_of_packet_array = MAX_PACKET_SIZE * capacity;
+	int size_of_ips_array = sizeof(uint32_t) * capacity;
+	int size_of_lens_array = sizeof(int) * capacity;
+
+	// allocating batch and associated data structures in single calloc for cache locality
+	void* batch_and_batch_arrs = calloc(sizeof(batch_t) + size_of_packet_array + size_of_ips_array + size_of_lens_array, sizeof(char));
+	// chunk off parts of batch
+	batch_t* batch = batch_and_batch_arrs;
+	batch->packets = (char *)batch + sizeof(batch_t);
+	batch->ips = (uint32_t *)(batch->packets + size_of_packet_array);
+	batch->lens = (int *) ((char *)batch->ips + size_of_ips_array);
+
 	batch->capacity = capacity;
 	batch->len = 0;
 
-	batch->packets = malloc(MAX_PACKET_SIZE * batch->capacity);
-	batch->ips = malloc(sizeof(uint32_t) * batch->capacity);
-	batch->lens = malloc(sizeof(int) * batch->capacity);
-	// Initialize batch
-	memset(batch->packets, 0, MAX_PACKET_SIZE * batch->capacity);
-	memset(batch->ips, 0, sizeof(uint32_t) * batch->capacity);
-	memset(batch->lens, 0, sizeof(int) * batch->capacity);
 	return batch;
 }
 
 void free_packet_batch(batch_t* batch) {
-	free(batch->packets);
-	free(batch->ips);
-	free(batch->lens);
+	// batch was created with a single calloc, so this will free all the component arrays too
 	free(batch);
 }
