@@ -484,6 +484,9 @@ cleanup:
 		fflush(stdout);
 		unlock_file(stdout);
 	}
+	if (send_run_cleanup() != 0) {
+		log_warn("send", "thread %hu did not finish cleanly", s->thread_id);
+	}
 	log_debug("send", "thread %hu cleanly finished", s->thread_id);
 	return EXIT_SUCCESS;
 }
