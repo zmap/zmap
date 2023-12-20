@@ -10,9 +10,10 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <netinet/ip.h>
 #include <string.h>
 
+#include <netinet/ip.h>
+#include <netpacket/packet.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -20,7 +21,6 @@
 #include "../lib/includes.h"
 #include "./send.h"
 
-#include <netpacket/packet.h>
 
 #ifdef ZMAP_SEND_BSD_H
 #error "Don't include both send-bsd.h and send-linux.h"
