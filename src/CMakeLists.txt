@@ -212,6 +212,7 @@ target_link_libraries(
     ${DNET_LIBRARIES}
     ${JSON_LIBRARIES}
 	${JUDY_LIBRARIES}
+    ${LIBURING_LIBRARIES}
 )
 
 target_link_libraries(
@@ -240,6 +241,7 @@ target_link_libraries(
     ${DNET_LIBRARIES}
     ${JSON_LIBRARIES}
 	${JUDY_LIBRARIES}
+    ${LIBURING_LIBRARIES}
 )
 
 # Install binary
