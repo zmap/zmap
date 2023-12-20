@@ -107,6 +107,8 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 		}
 		// batch send was only partially successful, we'll retry if we have retries available
 		log_warn("batch send", "only successfully sent %d packets out of a batch of %d packets", total_packets_sent, batch->len);
+		// per the manpages for sendmmsg, packets are sent sequentially and the call returns upon a
+		// failure, returning the number of packets successfully sent
 		// remove successfully sent packets from batch for retry
 		current_msg_vec = &msgvec[total_packets_sent];
 		num_of_packets_in_batch = batch->len - total_packets_sent;
