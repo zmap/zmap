@@ -31,11 +31,22 @@
 // Dummy sockaddr for sendto
 static struct sockaddr_ll sockaddr;
 
+// Each thread will send packets using its own liburing variables to avoid needing locks/increasing contention
 // io_uring instance for each thread
 __thread struct io_uring ring;
-#define RING_CAPACITY 512
 __thread uint16_t submission_ring_len = 0;
 #define QUEUE_DEPTH 512
+// The io_uring is an async I/O package. In send_packet, the caller passes in a pointer to a buffer. We'll create a submission queue entry (sqe) using this buffer and put it on the sqe ring buffer.
+// However, then we return to the caller which re-uses this buffer. If we didn't copy the buffer into another data structure, we'd lose data.
+// Get a chunk of memory to copy packets into, this will function as a ring buffer similar to the SQE/CQE ring buffers.
+struct data_and_metadata
+{
+    char buf[MAX_PACKET_SIZE];
+    struct msghdr msg;
+    struct iovec iov;
+};
+__thread struct data_and_metadata* data_arr;
+__thread uint16_t data_arr_index;
 
 int send_run_init(sock_t s)
 {
@@ -71,26 +82,27 @@ int send_run_init(sock_t s)
 		// TODO Phillip handle error
 		fprintf(stderr, "Error initializing io_uring: %s\n", strerror(-ret));
 	}
+        data_arr = calloc(QUEUE_DEPTH, sizeof(struct data_and_metadata));
+	// points to an open buffer in buf_array
+	data_arr_index = 0;
+
+
+
 
 	return EXIT_SUCCESS;
 }
 
 int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 {
-//	return sendto(sock.sock, buf, len, 0, (struct sockaddr *)&sockaddr,
-//		      sizeof(struct sockaddr_ll));
-	struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
-	if (!sqe) {
-		fprintf(stderr, "Error getting submission queue entry\n");
-		// Handle error
-	}
-
-	// create msg
-	// TODO Phillip optimiztion would be to allocate a "ring" buffer of msg's and iovec's and free in cleanup Otherwise you're going to have tons of I/O
-	struct iovec *iov = calloc(sizeof(struct iovec), 1);
-	iov->iov_base = buf;
+	// get next data entry in ring buffer
+	struct data_and_metadata d = data_arr[data_arr_index];
+	// copy buf into data_arr so caller can re-use the buf pointer after we return
+	memcpy(d.buf, buf, len);
+	// setup msg/iov structs for sendmsg
+	struct iovec *iov = &d.iov;
+	iov->iov_base = d.buf;
 	iov->iov_len = len;
-	struct msghdr *msg = calloc(sizeof(struct msghdr), 1);
+	struct msghdr *msg = &d.msg;
 	// based on https://github.com/torvalds/linux/blob/master/net/socket.c#L2180
 	msg->msg_name = (struct sockaddr *)&sockaddr;
 	msg->msg_namelen = sizeof(struct sockaddr_ll);
@@ -98,8 +110,15 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 	msg->msg_iovlen = 1;
 
 	// Initialize the SQE for sending a packet
+	struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
+	if (!sqe) {
+		fprintf(stderr, "Error getting submission queue entry\n");
+		// Handle error
+	}
+	// add msg to sqe
 	io_uring_prep_sendmsg(sqe, sock.sock, msg, 0);
 
+	// notify kernel we have sqes ready for processing (this is a syscall)
 	int ret = io_uring_submit(&ring);
 	if (ret < 0) {
 		fprintf(stderr, "Error submitting operation: %s\n", strerror(-ret));
@@ -116,11 +135,12 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 	if (cqe->res < 0) {
 		fprintf(stderr, "Error in completion: %s\n", strerror(cqe->res));
 		// Handle error
-	} //else {
-//		printf("WOOOO sent packet");
-//	}
+	}
 
 	io_uring_cqe_seen(&ring, cqe);
+
+	// increment arr ptr index
+	data_arr_index = (data_arr_index + 1) % QUEUE_DEPTH;
 }
 
 int send_run_cleanup(void) {
