@@ -87,19 +87,18 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 
 	// create msg
 	// TODO Phillip optimiztion would be to allocate a "ring" buffer of msg's and iovec's and free in cleanup Otherwise you're going to have tons of I/O
-//	struct iovec *iov = calloc;
-//	iov->iov_base = ((void *)batch->packets) + (i * MAX_PACKET_SIZE);
-//	iov->iov_len = batch->lens[i];
-//	struct msghdr *msg = &msgs[i];
-//	memset(msg, 0, sizeof(struct msghdr));
-//	// based on https://github.com/torvalds/linux/blob/master/net/socket.c#L2180
-//	msg->msg_name = (struct sockaddr *)&sockaddr;
-//	msg->msg_namelen = sizeof(struct sockaddr_ll);
-//	msg->msg_iov = iov;
-//	msg->msg_iovlen = 1;
+	struct iovec *iov = calloc(sizeof(struct iovec), 1);
+	iov->iov_base = buf;
+	iov->iov_len = len;
+	struct msghdr *msg = calloc(sizeof(struct msghdr), 1);
+	// based on https://github.com/torvalds/linux/blob/master/net/socket.c#L2180
+	msg->msg_name = (struct sockaddr *)&sockaddr;
+	msg->msg_namelen = sizeof(struct sockaddr_ll);
+	msg->msg_iov = iov;
+	msg->msg_iovlen = 1;
 
 	// Initialize the SQE for sending a packet
-	io_uring_prep_send(sqe, sock.sock, buf, len, 0);
+	io_uring_prep_sendmsg(sqe, sock.sock, msg, 0);
 
 	int ret = io_uring_submit(&ring);
 	if (ret < 0) {
@@ -117,14 +116,15 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 	if (cqe->res < 0) {
 		fprintf(stderr, "Error in completion: %s\n", strerror(cqe->res));
 		// Handle error
-	} else {
-		printf("WOOOO sent packet");
-	}
+	} //else {
+//		printf("WOOOO sent packet");
+//	}
 
 	io_uring_cqe_seen(&ring, cqe);
 }
 
 int send_run_cleanup(void) {
+	log_warn("send", "send run cleanuped!");
 	io_uring_queue_exit(&ring);
 	return 0;
 }
