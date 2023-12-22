@@ -34,8 +34,8 @@ static struct sockaddr_ll sockaddr;
 // Each thread will send packets using its own liburing variables to avoid needing locks/increasing contention
 // io_uring instance for each thread
 __thread struct io_uring ring;
-#define QUEUE_DEPTH 512 // how deep the liburing's should be
-#define LIBRING_SUBMIT_FREQ 1 // after how many sqe's being prepped should we make a submit syscall
+#define QUEUE_DEPTH 4098 // how deep the liburing's should be
+#define LIBRING_SUBMIT_FREQ 64 // after how many sqe's being prepped should we make a submit syscall
 // The io_uring is an async I/O package. In send_packet, the caller passes in a pointer to a buffer. We'll create a submission queue entry (sqe) using this buffer and put it on the sqe ring buffer.
 // However, then we return to the caller which re-uses this buffer. If we didn't copy the buffer into another data structure, we'd lose data.
 // Get a chunk of memory to copy packets into, this will function as a ring buffer similar to the SQE/CQE ring buffers.
@@ -48,7 +48,8 @@ struct data_and_metadata
 __thread struct data_and_metadata* data_arr;
 // points to an open buffer in buf_array
 __thread uint data_arr_index = 0;
-__thread uint msgs_sent_since_last_submit_and_wait = 0;
+__thread uint16_t msgs_sent_since_last_submit = 0;
+__thread uint16_t msgs_added_to_queue = 0;
 __thread struct io_uring_cqe* cqe;
 int wait_for_cqes(uint num_cqe);
 
@@ -93,14 +94,14 @@ int send_run_init(sock_t s)
 int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 {
 	// get next data entry in ring buffer
-	struct data_and_metadata d = data_arr[data_arr_index];
+	struct data_and_metadata* d = &data_arr[data_arr_index];
 	// copy buf into data_arr so caller can re-use the buf pointer after we return
-	memcpy(d.buf, buf, len);
+	memcpy(d->buf, buf, len);
 	// setup msg/iov structs for sendmsg
-	struct iovec *iov = &d.iov;
-	iov->iov_base = d.buf;
+	struct iovec *iov = &d->iov;
+	iov->iov_base = d->buf;
 	iov->iov_len = len;
-	struct msghdr *msg = &d.msg;
+	struct msghdr *msg = &d->msg;
 	// based on https://github.com/torvalds/linux/blob/master/net/socket.c#L2180
 	msg->msg_name = (struct sockaddr *)&sockaddr;
 	msg->msg_namelen = sizeof(struct sockaddr_ll);
@@ -118,28 +119,32 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 
 	// sqe ready to send, increment arr ptr index to next data
 	data_arr_index = (data_arr_index + 1) % QUEUE_DEPTH;
-	msgs_sent_since_last_submit_and_wait++;
+	msgs_sent_since_last_submit++;
+	msgs_added_to_queue++;
 
 	// io_uring_submit and its different flavors are syscalls. We'll call this every batch to amortize the syscall cost
-	if (msgs_sent_since_last_submit_and_wait % LIBRING_SUBMIT_FREQ == 0) {
+	if (msgs_sent_since_last_submit % LIBRING_SUBMIT_FREQ == 0) {
 		int ret = io_uring_submit(&ring);
 		if (ret < 0) {
-			fprintf(stderr, "Error submitting operation: %s\n", strerror(-ret));
+			fprintf(stderr, "Error submitting operation: %s\n",
+				strerror(-ret));
 			// Handle error
+		} else {
+//			log_warn("send", "submitted %d entries", ret);
 		}
+		msgs_sent_since_last_submit = 0;
 	}
 
 
-	if (msgs_sent_since_last_submit_and_wait < QUEUE_DEPTH) {
+	if (msgs_added_to_queue < QUEUE_DEPTH) {
 		// still have room on the queue, no need to wait for cqe's
 		return 0;
 	}
-	// sqe ring is full, let's check how many cqe's are ready to be removed
-	uint cqes_avail = io_uring_cq_ready(&ring);
-	// remove cqes from the queue
-	uint cqes_removed = wait_for_cqes(cqes_avail);
+	// sqe ring is full, let's check how many cqe's can be culled
+	uint num_cqes_avail = io_uring_cq_ready(&ring);
+	uint cqes_removed = wait_for_cqes(num_cqes_avail);
 	// decrement counter
-	msgs_sent_since_last_submit_and_wait -= cqes_removed;
+	msgs_added_to_queue -= cqes_removed;
 }
 
 int send_run_cleanup(void) {
@@ -149,13 +154,12 @@ int send_run_cleanup(void) {
 		log_fatal("send cleanup", "send_run_cleanup: io_uring submit failed: %s", strerror(errno));
 	}
 
-	log_warn("send-cleanup", "%d cqe's ready to be removed, out of %d submitted", io_uring_cq_ready(&ring), msgs_sent_since_last_submit_and_wait);
-	wait_for_cqes(msgs_sent_since_last_submit_and_wait);
-	log_warn("send cleanup", "%d cqe's ready to be removed, out of %d submitted", io_uring_cq_ready(&ring), msgs_sent_since_last_submit_and_wait);
+	log_warn("send-cleanup", "%d cqe's ready to be removed, out of %d submitted", io_uring_cq_ready(&ring), msgs_added_to_queue);
+	wait_for_cqes(msgs_added_to_queue);
+	log_warn("send cleanup", "%d cqe's ready to be removed, out of %d submitted", io_uring_cq_ready(&ring), msgs_added_to_queue);
 	log_warn("send cleanup", "send run cleanuped!");
 	// free up data structures
 	free(data_arr);
-//	free(cqe);
 	io_uring_queue_exit(&ring);
 	return 0;
 }
@@ -163,7 +167,7 @@ int send_run_cleanup(void) {
 int wait_for_cqes(uint num_cqe) {
 	int num_successful = 0;
 	// check all completed cqe's for their status
-	for (uint i = 0; i < msgs_sent_since_last_submit_and_wait; i++) {
+	for (uint i = 0; i < num_cqe; i++) {
 		// wait for all remaining cqe's to complete
 		int ret = io_uring_wait_cqe(&ring, &cqe);
 		if (ret < 0) {
@@ -171,7 +175,7 @@ int wait_for_cqes(uint num_cqe) {
 		}
 		if (!cqe) {
 			// cqe is empty, warn user and continue
-			log_warn("send cleanup", "%d of %d cqe's was null", i, msgs_sent_since_last_submit_and_wait);
+			log_warn("send cleanup", "%d of %d cqe's was null", i, num_cqe);
 			continue;
 		}
 		if (cqe->res < 0) {
