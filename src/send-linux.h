@@ -50,6 +50,7 @@ __thread struct data_and_metadata* data_arr;
 __thread uint data_arr_index = 0;
 __thread uint msgs_sent_since_last_submit_and_wait = 0;
 __thread struct io_uring_cqe* cqe;
+int wait_for_cqes(uint num_cqe);
 
 int send_run_init(sock_t s)
 {
@@ -86,8 +87,6 @@ int send_run_init(sock_t s)
 		fprintf(stderr, "Error initializing io_uring: %s\n", strerror(-ret));
 	}
         data_arr = calloc(QUEUE_DEPTH, sizeof(struct data_and_metadata));
-//	cqe = malloc(sizeof(struct io_uring_cqe*));
-
 	return EXIT_SUCCESS;
 }
 
@@ -137,26 +136,10 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 	}
 	// sqe ring is full, let's check how many cqe's are ready to be removed
 	uint cqes_avail = io_uring_cq_ready(&ring);
-	for (uint i = 0; i < cqes_avail; i++) {
-		// wait for all remaining cqe's to complete
-		int ret = io_uring_wait_cqe(&ring, &cqe);
-		if (ret < 0) {
-			log_fatal("send", "send_run: io_uring wait failed: %s", strerror(errno));
-		}
-		if (!cqe) {
-			// cqe is empty, warn user and continue
-			log_warn("send", "%d of %d cqe's was null", i, cqes_avail);
-			continue;
-		}
-		if (cqe->res < 0) {
-			log_fatal("send", "send_run_cleanup: cqe %d failed: %s", i, strerror(errno));
-			// TODO Phillip, you'll probably want to figure out how to handle retries :(
-		}
-		// notify kernel that we've seen this cqe
-		// TODO Phillip ADD A DEBUG LOG HERE and lower log level
-		io_uring_cqe_seen(&ring, cqe);
-		msgs_sent_since_last_submit_and_wait--;
-	}
+	// remove cqes from the queue
+	uint cqes_removed = wait_for_cqes(cqes_avail);
+	// decrement counter
+	msgs_sent_since_last_submit_and_wait -= cqes_removed;
 }
 
 int send_run_cleanup(void) {
@@ -167,10 +150,22 @@ int send_run_cleanup(void) {
 	}
 
 	log_warn("send-cleanup", "%d cqe's ready to be removed, out of %d submitted", io_uring_cq_ready(&ring), msgs_sent_since_last_submit_and_wait);
+	wait_for_cqes(msgs_sent_since_last_submit_and_wait);
+	log_warn("send cleanup", "%d cqe's ready to be removed, out of %d submitted", io_uring_cq_ready(&ring), msgs_sent_since_last_submit_and_wait);
+	log_warn("send cleanup", "send run cleanuped!");
+	// free up data structures
+	free(data_arr);
+//	free(cqe);
+	io_uring_queue_exit(&ring);
+	return 0;
+}
+
+int wait_for_cqes(uint num_cqe) {
+	int num_successful = 0;
 	// check all completed cqe's for their status
 	for (uint i = 0; i < msgs_sent_since_last_submit_and_wait; i++) {
 		// wait for all remaining cqe's to complete
-		ret = io_uring_wait_cqe(&ring, &cqe);
+		int ret = io_uring_wait_cqe(&ring, &cqe);
 		if (ret < 0) {
 			log_fatal("send cleanup", "send_run_cleanup: io_uring wait failed: %s", strerror(errno));
 		}
@@ -185,14 +180,9 @@ int send_run_cleanup(void) {
 		}
 		// notify kernel that we've seen this cqe
 		io_uring_cqe_seen(&ring, cqe);
+		num_successful++;
 	}
-	log_warn("send cleanup", "%d cqe's ready to be removed, out of %d submitted", io_uring_cq_ready(&ring), msgs_sent_since_last_submit_and_wait);
-	log_warn("send cleanup", "send run cleanuped!");
-	// free up data structures
-	free(data_arr);
-//	free(cqe);
-	io_uring_queue_exit(&ring);
-	return 0;
+	return num_successful;
 }
 
 #endif /* ZMAP_SEND_LINUX_H */
