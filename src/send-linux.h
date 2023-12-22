@@ -35,7 +35,7 @@ static struct sockaddr_ll sockaddr;
 // io_uring instance for each thread
 __thread struct io_uring ring;
 #define QUEUE_DEPTH 4098 // how deep the liburing's should be
-#define LIBRING_SUBMIT_FREQ 64 // after how many sqe's being prepped should we make a submit syscall
+#define LIBRING_SUBMIT_FREQ 128 // after how many sqe's being prepped should we make a submit syscall
 // The io_uring is an async I/O package. In send_packet, the caller passes in a pointer to a buffer. We'll create a submission queue entry (sqe) using this buffer and put it on the sqe ring buffer.
 // However, then we return to the caller which re-uses this buffer. If we didn't copy the buffer into another data structure, we'd lose data.
 // Get a chunk of memory to copy packets into, this will function as a ring buffer similar to the SQE/CQE ring buffers.
@@ -47,7 +47,6 @@ struct data_and_metadata
 };
 __thread struct data_and_metadata* data_arr;
 // points to an open buffer in buf_array
-__thread uint data_arr_index = 0;
 __thread uint16_t msgs_sent_since_last_submit = 0;
 __thread uint16_t msgs_added_to_queue = 0;
 __thread struct io_uring_cqe* cqe;
@@ -82,19 +81,22 @@ int send_run_init(sock_t s)
 	memcpy(sockaddr.sll_addr, zconf.gw_mac, ETH_ALEN);
 
 	// initialize io_uring and relevant datastructures
+	// Using the submission queue polling feature to avoid syscall overhead incurred by submitting SQE's to the kernel
+	// Details available here: https://unixism.net/loti/tutorial/sq_poll.html#sq-poll
 	int ret = io_uring_queue_init(QUEUE_DEPTH, &ring, 0);
 	if (ret < 0) {
 		// TODO Phillip handle error
 		fprintf(stderr, "Error initializing io_uring: %s\n", strerror(-ret));
 	}
-        data_arr = calloc(QUEUE_DEPTH, sizeof(struct data_and_metadata));
+	// Once the SQE's are submitted, the memory can be re-used according to the docs for liburing
+        data_arr = calloc(LIBRING_SUBMIT_FREQ, sizeof(struct data_and_metadata));
 	return EXIT_SUCCESS;
 }
 
 int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 {
 	// get next data entry in ring buffer
-	struct data_and_metadata* d = &data_arr[data_arr_index];
+	struct data_and_metadata* d = &data_arr[msgs_sent_since_last_submit];
 	// copy buf into data_arr so caller can re-use the buf pointer after we return
 	memcpy(d->buf, buf, len);
 	// setup msg/iov structs for sendmsg
@@ -118,7 +120,6 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 	io_uring_prep_sendmsg(sqe, sock.sock, msg, 0);
 
 	// sqe ready to send, increment arr ptr index to next data
-	data_arr_index = (data_arr_index + 1) % QUEUE_DEPTH;
 	msgs_sent_since_last_submit++;
 	msgs_added_to_queue++;
 
@@ -129,8 +130,6 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 			fprintf(stderr, "Error submitting operation: %s\n",
 				strerror(-ret));
 			// Handle error
-		} else {
-//			log_warn("send", "submitted %d entries", ret);
 		}
 		msgs_sent_since_last_submit = 0;
 	}
