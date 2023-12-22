@@ -34,8 +34,10 @@ static struct sockaddr_ll sockaddr;
 // Each thread will send packets using its own liburing variables to avoid needing locks/increasing contention
 // io_uring instance for each thread
 __thread struct io_uring ring;
-#define QUEUE_DEPTH 4098 // how deep the liburing's should be
-#define LIBRING_SUBMIT_FREQ 128 // after how many sqe's being prepped should we make a submit syscall
+#define QUEUE_DEPTH 4096 // how deep the liburing's should be
+#define CULL_DEPTH 512 // how many CQE's to cull (blocking) if the SQE buffer fills up
+#define LIBRING_SUBMIT_FREQ 1 // after how many sqe's being prepped should we make a submit syscall
+#define SQ_POLLING_IDLE_TIMEOUT 3000 // how long kernel thread will wait before timing out
 // The io_uring is an async I/O package. In send_packet, the caller passes in a pointer to a buffer. We'll create a submission queue entry (sqe) using this buffer and put it on the sqe ring buffer.
 // However, then we return to the caller which re-uses this buffer. If we didn't copy the buffer into another data structure, we'd lose data.
 // Get a chunk of memory to copy packets into, this will function as a ring buffer similar to the SQE/CQE ring buffers.
@@ -47,9 +49,11 @@ struct data_and_metadata
 };
 __thread struct data_and_metadata* data_arr;
 // points to an open buffer in buf_array
-__thread uint16_t msgs_sent_since_last_submit = 0;
+__thread uint16_t free_buffer_ptr = 0;
 __thread uint16_t msgs_added_to_queue = 0;
 __thread struct io_uring_cqe* cqe;
+__thread int fd; // socket file descriptor
+uint packets_sent =0;
 int wait_for_cqes(uint num_cqe);
 
 int send_run_init(sock_t s)
@@ -83,20 +87,37 @@ int send_run_init(sock_t s)
 	// initialize io_uring and relevant datastructures
 	// Using the submission queue polling feature to avoid syscall overhead incurred by submitting SQE's to the kernel
 	// Details available here: https://unixism.net/loti/tutorial/sq_poll.html#sq-poll
-	int ret = io_uring_queue_init(QUEUE_DEPTH, &ring, 0);
+	if (geteuid()) {
+		log_fatal("send", "You need root privileges to run this program");
+	}
+
+	struct io_uring_params params;
+	memset(&params, 0, sizeof(params));
+	params.flags |= IORING_SETUP_SQPOLL;
+	params.sq_thread_idle = SQ_POLLING_IDLE_TIMEOUT;
+
+	int ret = io_uring_queue_init_params(QUEUE_DEPTH, &ring, &params);
 	if (ret < 0) {
 		// TODO Phillip handle error
 		fprintf(stderr, "Error initializing io_uring: %s\n", strerror(-ret));
 	}
+	// register socket
+        fd = sock;
+	ret = io_uring_register_files(&ring, &fd, 1);
+	if (ret < 0) {
+		// TODO Phillip handle error
+		log_fatal("send_init", "Error registering file descriptor: %s", strerror(-ret));
+	}
 	// Once the SQE's are submitted, the memory can be re-used according to the docs for liburing
-        data_arr = calloc(LIBRING_SUBMIT_FREQ, sizeof(struct data_and_metadata));
+	// TODO Phillip trying to get polling working
+        data_arr = calloc(QUEUE_DEPTH, sizeof(struct data_and_metadata));
 	return EXIT_SUCCESS;
 }
 
 int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 {
 	// get next data entry in ring buffer
-	struct data_and_metadata* d = &data_arr[msgs_sent_since_last_submit];
+	struct data_and_metadata* d = &data_arr[free_buffer_ptr];
 	// copy buf into data_arr so caller can re-use the buf pointer after we return
 	memcpy(d->buf, buf, len);
 	// setup msg/iov structs for sendmsg
@@ -112,27 +133,36 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 
 	// Initialize the SQE for sending a packet
 	struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
-	if (!sqe) {
-		fprintf(stderr, "Error getting submission queue entry\n");
-		// Handle error
+	while(!sqe) {
+		// submission queue is full, we need to block to let the kernel send traffic and cull some CQE's
+		// TODO Phillip IDEA cull the max(CULL_DEPTH, available cqe's)
+		int cqes_to_cull = max_int(CULL_DEPTH, io_uring_cq_ready(&ring));
+		uint cqes_removed = wait_for_cqes(cqes_to_cull);
+//                log_warn("send", "sqe is null: able to purge %d entries, %d packets sent", cqes_removed, packets_sent);
+		// decrement counter
+		msgs_added_to_queue -= cqes_removed;
+		sqe = io_uring_get_sqe(&ring);
 	}
 	// add msg to sqe
-	io_uring_prep_sendmsg(sqe, sock.sock, msg, 0);
+	io_uring_prep_sendmsg(sqe, 0, msg, 0);
+//	io_uring_prep_write(sqe, 0, d->buf, len, 0);
+	sqe->flags |= IOSQE_FIXED_FILE;
 
 	// sqe ready to send, increment arr ptr index to next data
-	msgs_sent_since_last_submit++;
+	free_buffer_ptr = (free_buffer_ptr + 1) % QUEUE_DEPTH;
 	msgs_added_to_queue++;
+	packets_sent++;
 
 	// io_uring_submit and its different flavors are syscalls. We'll call this every batch to amortize the syscall cost
-	if (msgs_sent_since_last_submit % LIBRING_SUBMIT_FREQ == 0) {
+//	if (msgs_sent_since_last_submit % LIBRING_SUBMIT_FREQ == 0) {
 		int ret = io_uring_submit(&ring);
 		if (ret < 0) {
 			fprintf(stderr, "Error submitting operation: %s\n",
 				strerror(-ret));
 			// Handle error
 		}
-		msgs_sent_since_last_submit = 0;
-	}
+//		msgs_sent_since_last_submit = 0;
+//	}
 
 
 	if (msgs_added_to_queue < QUEUE_DEPTH) {
@@ -142,6 +172,9 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 	// sqe ring is full, let's check how many cqe's can be culled
 	uint num_cqes_avail = io_uring_cq_ready(&ring);
 	uint cqes_removed = wait_for_cqes(num_cqes_avail);
+	// TODO Phillip, this might not be necessary if we decide to go with the polling approach since we cull above
+	// TODO Phillip remove
+//	log_warn("send", "able to purge %d entries", cqes_removed);
 	// decrement counter
 	msgs_added_to_queue -= cqes_removed;
 }
