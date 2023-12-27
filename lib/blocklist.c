@@ -10,11 +10,9 @@
 #include <errno.h>
 #include <stdio.h>
 #include <assert.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include "xalloc.h"
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -24,6 +22,7 @@
 #include "blocklist.h"
 #include "constraint.h"
 #include "logger.h"
+#include "xalloc.h"
 
 #define ADDR_DISALLOWED 0
 #define ADDR_ALLOWED 1
@@ -105,31 +104,31 @@ void allowlist_prefix(char *ip, int prefix_len)
 }
 
 static int is_ip_ipv6(char *ip) {
+	// get length of string including the null-byte
+	int length = strlen(ip) + 1;
 	// don't modify the input string
-	int length = strlen(ip);
-	char *new_str = (char*)malloc(length);
-	if (new_str == NULL) {
-		log_fatal("blocklist", "could not allocate memory for IPv6 validation");
-	}
-	strncpy(new_str, ip, length);
+	char *new_str = strndup(ip, length);
 	// check if there's a subnet maskChar
 	char *maskChar = strchr(new_str, '/');
 	if (maskChar != NULL) {
-		// set maskChar char to NULL char so we can check if subnet is valid IPv6
+		// set maskChar char to NULL char, so we can check if subnet is valid IPv6
 		*maskChar = '\0';
 	}
 	// attempt conversion of IP into IPv6 struct to check if IP is an IPv6 address
 	struct in6_addr ipv6_addr;
 	if (inet_pton(AF_INET6, new_str, &ipv6_addr) == 1) {
+		free(new_str);
 		return true;
 	}
+	free(new_str);
 	return false;
 }
 
 static int init_from_string(char *ip, int value)
 {
 	if (is_ip_ipv6(ip)) {
-		log_fatal("constraint", "%s IPv6 subnets are not supported", ip);
+		log_debug("constraint", "ignoring IPv6 IP/subnet: %s", ip);
+		return 0;
 	}
 	int prefix_len = 32;
 	char *slash = strchr(ip, '/');
