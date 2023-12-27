@@ -39,14 +39,13 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 // However, the behavior in sendmmsg is to send as many packets as possible until one fails, and then return the number of sent packets.
 // Following the same pattern for consistency
 // Returns - number of packets sent
-// Returns last error code if no packets could be sent successfully
+// Returns -1 and sets errno if no packets could be sent successfully
 int send_batch(sock_t sock, batch_t* batch, int retries) {
 	int packets_sent = 0;
 	int rc = 0;
-	for (int i=0;i<batch->len;i++) {
-		int retry_ct = 0;
-		for (retry_ct = 0; retry_ct < retries; retry_ct++) {
-			rc = send_packet(sock, ((void *)batch->packets) + (i * MAX_PACKET_SIZE), batch->lens[i], 0);
+	for (int packet_num = 0; packet_num < batch->len; packet_num++) {
+		for (int retry_ct = 0; retry_ct < retries; retry_ct++) {
+			rc = send_packet(sock, ((void *)batch->packets) + (packet_num * MAX_PACKET_SIZE), batch->lens[packet_num], 0);
 			if (rc >= 0) {
 				packets_sent++;
 				break;
@@ -55,7 +54,7 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 		if (rc < 0) {
 			// packet couldn't be sent in retries number of attempts
 			struct in_addr addr;
-			addr.s_addr = batch->ips[i];
+			addr.s_addr = batch->ips[packet_num];
 			char addr_str_buf
 			    [INET_ADDRSTRLEN];
 			const char *addr_str =
@@ -64,17 +63,15 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 				addr_str_buf,
 				INET_ADDRSTRLEN);
 			if (addr_str != NULL) {
-				log_debug(
-				    "send",
-				    "send_packet failed for %s. %s",
-				    addr_str,
-				    strerror(
-					errno));
+				log_debug( "send", "send_packet failed for %s. %s", addr_str,
+				    strerror( errno));
 			}
 		}
 	}
 	if (packets_sent == 0) {
-		return rc;
+		// simulating the return behaviour of the Linux send_mmsg sys call on error. Returns -1 and leaves
+		// errno as set by send_packet
+		return -1;
 	}
 	return packets_sent;
 }
