@@ -31,5 +31,5 @@ static struct sockaddr_ll sockaddr;
 
 int send_run_init(sock_t s);
 int send_batch(sock_t sock, batch_t* batch, int retries);
-t
+
 #endif /* ZMAP_SEND_LINUX_H */
