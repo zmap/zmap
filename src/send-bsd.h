@@ -71,6 +71,8 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 	if (packets_sent == 0) {
 		// simulating the return behaviour of the Linux send_mmsg sys call on error. Returns -1 and leaves
 		// errno as set by send_packet
+		log_error("send", "send_batch failed and no packets were able to be sent: "
+				  "%s", strerror(errno));
 		return -1;
 	}
 	return packets_sent;
