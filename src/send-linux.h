@@ -17,6 +17,7 @@
 #include <liburing.h>
 #include <netpacket/packet.h>
 #include <sys/ioctl.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 
 #include "../lib/includes.h"
@@ -31,13 +32,20 @@
 // Dummy sockaddr for sendto
 static struct sockaddr_ll sockaddr;
 
+int io_uring_enter(int ring_fd, unsigned int to_submit,
+		   unsigned int min_complete, unsigned int flags)
+{
+	return (int) syscall(__NR_io_uring_enter, ring_fd, to_submit, min_complete,
+			    flags, NULL, 0);
+}
+
 // Each thread will send packets using its own liburing variables to avoid needing locks/increasing contention
 // io_uring instance for each thread
 __thread struct io_uring ring;
 #define QUEUE_DEPTH 4096 // how deep the liburing's should be
 #define CULL_DEPTH 512 // how many CQE's to cull (blocking) if the SQE buffer fills up
 #define LIBRING_SUBMIT_FREQ 1 // after how many sqe's being prepped should we make a submit syscall
-#define SQ_POLLING_IDLE_TIMEOUT 3000 // how long kernel thread will wait before timing out
+#define SQ_POLLING_IDLE_TIMEOUT 15000 // how long kernel thread will wait before timing out
 // The io_uring is an async I/O package. In send_packet, the caller passes in a pointer to a buffer. We'll create a submission queue entry (sqe) using this buffer and put it on the sqe ring buffer.
 // However, then we return to the caller which re-uses this buffer. If we didn't copy the buffer into another data structure, we'd lose data.
 // Get a chunk of memory to copy packets into, this will function as a ring buffer similar to the SQE/CQE ring buffers.
@@ -54,7 +62,8 @@ __thread uint16_t msgs_added_to_queue = 0;
 __thread struct io_uring_cqe* cqe;
 __thread int fd; // socket file descriptor
 uint packets_sent =0;
-int wait_for_cqes(uint num_cqe);
+uint to_submit = 0;
+int clear_cqe_ring(struct io_uring *ring);
 
 int send_run_init(sock_t s)
 {
@@ -135,59 +144,63 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 	struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
 	while(!sqe) {
 		// submission queue is full, we need to block to let the kernel send traffic and cull some CQE's
-		// TODO Phillip IDEA cull the max(CULL_DEPTH, available cqe's)
-		int cqes_to_cull = max_int(CULL_DEPTH, io_uring_cq_ready(&ring));
-		uint cqes_removed = wait_for_cqes(cqes_to_cull);
-//                log_warn("send", "sqe is null: able to purge %d entries, %d packets sent", cqes_removed, packets_sent);
-		// decrement counter
-		msgs_added_to_queue -= cqes_removed;
+//		int ret = io_uring_enter(ring.ring_fd, to_submit, CULL_DEPTH, IORING_ENTER_GETEVENTS);
+//		if (ret < 0) {
+//			log_fatal("send cleanup", "send_run_cleanup: io_uring enter failed: %s", strerror(errno));
+//		}
+		int cqes_cleared = clear_cqe_ring(&ring);
+		to_submit -= cqes_cleared;
 		sqe = io_uring_get_sqe(&ring);
 	}
 	// add msg to sqe
-	io_uring_prep_sendmsg(sqe, 0, msg, 0);
+	io_uring_prep_sendmsg(sqe, sock.sock, msg, 0);
+	io_uring_submit(&ring);
 //	io_uring_prep_write(sqe, 0, d->buf, len, 0);
-	sqe->flags |= IOSQE_FIXED_FILE;
+//	sqe->flags |= IOSQE_FIXED_FILE;
 
 	// sqe ready to send, increment arr ptr index to next data
 	free_buffer_ptr = (free_buffer_ptr + 1) % QUEUE_DEPTH;
 	msgs_added_to_queue++;
 	packets_sent++;
+	to_submit++;
 
 	// io_uring_submit and its different flavors are syscalls. We'll call this every batch to amortize the syscall cost
-//	if (msgs_sent_since_last_submit % LIBRING_SUBMIT_FREQ == 0) {
-		int ret = io_uring_submit(&ring);
-		if (ret < 0) {
-			fprintf(stderr, "Error submitting operation: %s\n",
-				strerror(-ret));
-			// Handle error
-		}
-//		msgs_sent_since_last_submit = 0;
+////	if (msgs_sent_since_last_submit % LIBRING_SUBMIT_FREQ == 0) {
+//		int ret = io_uring_submit(&ring);
+//		if (ret < 0) {
+//			fprintf(stderr, "Error submitting operation: %s\n",
+//				strerror(-ret));
+//			// Handle error
+//		}
+////		msgs_sent_since_last_submit = 0;
+////	}
+//
+//
+//	if (msgs_added_to_queue < QUEUE_DEPTH) {
+//		// still have room on the queue, no need to wait for cqe's
+//		return 0;
 //	}
-
-
-	if (msgs_added_to_queue < QUEUE_DEPTH) {
-		// still have room on the queue, no need to wait for cqe's
-		return 0;
-	}
-	// sqe ring is full, let's check how many cqe's can be culled
-	uint num_cqes_avail = io_uring_cq_ready(&ring);
-	uint cqes_removed = wait_for_cqes(num_cqes_avail);
-	// TODO Phillip, this might not be necessary if we decide to go with the polling approach since we cull above
-	// TODO Phillip remove
-//	log_warn("send", "able to purge %d entries", cqes_removed);
-	// decrement counter
-	msgs_added_to_queue -= cqes_removed;
+//	// sqe ring is full, let's check how many cqe's can be culled
+//	uint num_cqes_avail = io_uring_cq_ready(&ring);
+//	uint cqes_removed = wait_for_cqes(num_cqes_avail);
+//	// TODO Phillip, this might not be necessary if we decide to go with the polling approach since we cull above
+//	// TODO Phillip remove
+////	log_warn("send", "able to purge %d entries", cqes_removed);
+//	// decrement counter
+//	msgs_added_to_queue -= cqes_removed;
 }
 
 int send_run_cleanup(void) {
 	// notify kernel of unsubmitted sqe's
-        int ret = io_uring_submit(&ring);
+//        int ret = io_uring_submit(&ring);
+	int ret = io_uring_enter(ring.ring_fd, to_submit, to_submit, IORING_ENTER_GETEVENTS);
 	if (ret < 0) {
-		log_fatal("send cleanup", "send_run_cleanup: io_uring submit failed: %s", strerror(errno));
+		log_fatal("send cleanup", "send_run_cleanup: io_uring enter failed: %s", strerror(errno));
 	}
 
 	log_warn("send-cleanup", "%d cqe's ready to be removed, out of %d submitted", io_uring_cq_ready(&ring), msgs_added_to_queue);
-	wait_for_cqes(msgs_added_to_queue);
+//	wait_for_cqes(msgs_added_to_queue);
+	clear_cqe_ring(&ring);
 	log_warn("send cleanup", "%d cqe's ready to be removed, out of %d submitted", io_uring_cq_ready(&ring), msgs_added_to_queue);
 	log_warn("send cleanup", "send run cleanuped!");
 	// free up data structures
@@ -196,29 +209,44 @@ int send_run_cleanup(void) {
 	return 0;
 }
 
-int wait_for_cqes(uint num_cqe) {
-	int num_successful = 0;
-	// check all completed cqe's for their status
-	for (uint i = 0; i < num_cqe; i++) {
-		// wait for all remaining cqe's to complete
-		int ret = io_uring_wait_cqe(&ring, &cqe);
-		if (ret < 0) {
-			log_fatal("send cleanup", "send_run_cleanup: io_uring wait failed: %s", strerror(errno));
-		}
-		if (!cqe) {
-			// cqe is empty, warn user and continue
-			log_warn("send cleanup", "%d of %d cqe's was null", i, num_cqe);
-			continue;
-		}
+//int wait_for_cqes(uint num_cqe) {
+//	int num_successful = 0;
+//	// check all completed cqe's for their status
+//	for (uint i = 0; i < num_cqe; i++) {
+//		// wait for all remaining cqe's to complete
+//		int ret = io_uring_wait_cqe(&ring, &cqe);
+//		if (ret < 0) {
+//			log_fatal("send cleanup", "send_run_cleanup: io_uring wait failed: %s", strerror(errno));
+//		}
+//		if (!cqe) {
+//			// cqe is empty, warn user and continue
+//			log_warn("send cleanup", "%d of %d cqe's was null", i, num_cqe);
+//			continue;
+//		}
+//		if (cqe->res < 0) {
+//			log_fatal("send", "send_run_cleanup: cqe %d failed: %s", i, strerror(errno));
+//			// TODO Phillip, you'll probably want to figure out how to handle retries :(
+//		}
+//		// notify kernel that we've seen this cqe
+//		io_uring_cqe_seen(&ring, cqe);
+//		num_successful++;
+//	}
+//	return num_successful;
+//}
+
+int clear_cqe_ring(struct io_uring *ring) {
+	unsigned head;
+	unsigned i = 0;
+
+	io_uring_for_each_cqe(ring, head, cqe) {
+		/* handle completion */
 		if (cqe->res < 0) {
 			log_fatal("send", "send_run_cleanup: cqe %d failed: %s", i, strerror(errno));
-			// TODO Phillip, you'll probably want to figure out how to handle retries :(
 		}
-		// notify kernel that we've seen this cqe
-		io_uring_cqe_seen(&ring, cqe);
-		num_successful++;
+		i++;
 	}
-	return num_successful;
+	io_uring_cq_advance(ring, i);
+	return i;
 }
 
 #endif /* ZMAP_SEND_LINUX_H */
