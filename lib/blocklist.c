@@ -103,15 +103,13 @@ void allowlist_prefix(char *ip, int prefix_len)
 }
 
 static int is_ip_ipv6(char *ip) {
-	// get length of string including the null-byte
-	int length = strlen(ip) + 1;
 	// don't modify the input string
-	char *new_str = strndup(ip, length);
-	// check if there's a subnet maskChar
-	char *maskChar = strchr(new_str, '/');
-	if (maskChar != NULL) {
-		// set maskChar char to NULL char, so we can check if subnet is valid IPv6
-		*maskChar = '\0';
+	char *new_str = strdup(ip);
+	// check if there's a subnet mask_char
+	char *mask_char = strchr(new_str, '/');
+	if (mask_char != NULL) {
+		// set mask_char char to NULL char, so we can check if subnet is valid IPv6
+		*mask_char = '\0';
 	}
 	// attempt conversion of IP into IPv6 struct to check if IP is an IPv6 address
 	struct in6_addr ipv6_addr;
