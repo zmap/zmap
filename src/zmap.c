@@ -900,9 +900,13 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
-	if (args.batch_given) {
+
+	if (args.batch_given && args.batch_arg >= 1) {
 		zconf.batch = args.batch_arg;
+	} else if (args.batch_given) {
+		log_fatal("zmap", "batch size must be > 0");
 	}
+
 	if (args.max_targets_given) {
 		zconf.max_targets = parse_max_hosts(args.max_targets_arg);
 	}
