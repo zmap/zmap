@@ -42,7 +42,7 @@ int io_uring_enter(int ring_fd, unsigned int to_submit,
 // Each thread will send packets using its own liburing variables to avoid needing locks/increasing contention
 // io_uring instance for each thread
 __thread struct io_uring ring;
-#define QUEUE_DEPTH 4096 // how deep the liburing's should be
+#define QUEUE_DEPTH 10000 // how deep the liburing's should be
 #define CULL_DEPTH 512 // how many CQE's to cull (blocking) if the SQE buffer fills up
 #define LIBRING_SUBMIT_FREQ 1 // after how many sqe's being prepped should we make a submit syscall
 #define SQ_POLLING_IDLE_TIMEOUT 15000 // how long kernel thread will wait before timing out
@@ -60,10 +60,20 @@ __thread struct data_and_metadata* data_arr;
 __thread uint16_t free_buffer_ptr = 0;
 __thread uint16_t msgs_added_to_queue = 0;
 __thread struct io_uring_cqe* cqe;
-__thread int fd; // socket file descriptor
-uint packets_sent =0;
+__thread int fds[1]; // socket file descriptor
+// packets_sent tracks how many packets have been sent over the whole scan, for debugging
+uint packets_sent = 0;
+// to_submit is the sqe's that have been queued but not culled from the cqe ring
 uint to_submit = 0;
-int clear_cqe_ring(struct io_uring *ring);
+int clear_cqe_ring(void);
+
+void print_sq_poll_kernel_thread_status(void) {
+
+	if (system("ps --ppid 2 | grep io_uring-sq" ) == 0)
+		printf("Kernel thread io_uring-sq found running...\n");
+	else
+		printf("Kernel thread io_uring-sq is not running.\n");
+}
 
 int send_run_init(sock_t s)
 {
@@ -104,19 +114,19 @@ int send_run_init(sock_t s)
 	memset(&params, 0, sizeof(params));
 	params.flags |= IORING_SETUP_SQPOLL;
 	params.sq_thread_idle = SQ_POLLING_IDLE_TIMEOUT;
-
+	// register socket
+	fds[0] = sock;
 	int ret = io_uring_queue_init_params(QUEUE_DEPTH, &ring, &params);
 	if (ret < 0) {
 		// TODO Phillip handle error
 		fprintf(stderr, "Error initializing io_uring: %s\n", strerror(-ret));
 	}
-	// register socket
-        fd = sock;
-	ret = io_uring_register_files(&ring, &fd, 1);
+	ret = io_uring_register_files(&ring, fds, 1);
 	if (ret < 0) {
 		// TODO Phillip handle error
-		log_fatal("send_init", "Error registering file descriptor: %s", strerror(-ret));
+		log_fatal("send_init", "Error registering file descriptor: %s/%d", strerror(-ret), ret);
 	}
+
 	// Once the SQE's are submitted, the memory can be re-used according to the docs for liburing
 	// TODO Phillip trying to get polling working
         data_arr = calloc(QUEUE_DEPTH, sizeof(struct data_and_metadata));
@@ -148,12 +158,17 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 //		if (ret < 0) {
 //			log_fatal("send cleanup", "send_run_cleanup: io_uring enter failed: %s", strerror(errno));
 //		}
-		int cqes_cleared = clear_cqe_ring(&ring);
+		int cqes_cleared = clear_cqe_ring();
 		to_submit -= cqes_cleared;
 		sqe = io_uring_get_sqe(&ring);
 	}
 	// add msg to sqe
-	io_uring_prep_sendmsg(sqe, sock.sock, msg, 0);
+	// since we registered the file descriptor, we can just use the index.
+	// There's only one fd, so index = 0
+//	sqe->flags = IOSQE_FIXED_FILE;
+	io_uring_prep_sendmsg(sqe, 0, msg, 0);
+	sqe->flags |= IOSQE_FIXED_FILE;
+
 	io_uring_submit(&ring);
 //	io_uring_prep_write(sqe, 0, d->buf, len, 0);
 //	sqe->flags |= IOSQE_FIXED_FILE;
@@ -200,7 +215,7 @@ int send_run_cleanup(void) {
 
 	log_warn("send-cleanup", "%d cqe's ready to be removed, out of %d submitted", io_uring_cq_ready(&ring), msgs_added_to_queue);
 //	wait_for_cqes(msgs_added_to_queue);
-	clear_cqe_ring(&ring);
+	clear_cqe_ring();
 	log_warn("send cleanup", "%d cqe's ready to be removed, out of %d submitted", io_uring_cq_ready(&ring), msgs_added_to_queue);
 	log_warn("send cleanup", "send run cleanuped!");
 	// free up data structures
@@ -234,18 +249,18 @@ int send_run_cleanup(void) {
 //	return num_successful;
 //}
 
-int clear_cqe_ring(struct io_uring *ring) {
+int clear_cqe_ring() {
 	unsigned head;
-	unsigned i = 0;
+	int i = 0;
 
-	io_uring_for_each_cqe(ring, head, cqe) {
+	io_uring_for_each_cqe(&ring, head, cqe) {
 		/* handle completion */
 		if (cqe->res < 0) {
 			log_fatal("send", "send_run_cleanup: cqe %d failed: %s", i, strerror(errno));
 		}
 		i++;
 	}
-	io_uring_cq_advance(ring, i);
+	io_uring_cq_advance(&ring, i);
 	return i;
 }
 
