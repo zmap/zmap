@@ -39,9 +39,16 @@ int io_uring_enter(int ring_fd, unsigned int to_submit,
 			    flags, NULL, 0);
 }
 
+// io_uring/liburing resources
+// Great high-level introduction - https://www.scylladb.com/2020/05/05/how-io_uring-and-ebpf-will-revolutionize-programming-in-linux/
+// Blog with good explanations and examples, it is 2 years old tho and some things have changed with liburing - https://unixism.net/loti/
+// Consult the manpages for io_uring... (man -k io_uring). This has the most up-to-date info for the version of liburing that ships with your distro
+// Note: Liburing is under active development, and new features have been added and documentation has changed. Something to keep in mind when you look at examples, both newer/older.
+// Ubuntu 23.04 ships with liburing v2.3 - https://packages.ubuntu.com/lunar/liburing-dev , v.2.5 is the latest - https://github.com/axboe/liburing
+
 // Each thread will send packets using its own liburing variables to avoid needing locks/increasing contention
 __thread struct io_uring ring;
-#define QUEUE_DEPTH 5000 // how deep the liburing's should be
+#define QUEUE_DEPTH 2048 // ring buffer size for liburing's submission queue
 #define SQ_POLLING_IDLE_TIMEOUT 15000 // how long kernel thread will wait before timing out
 // The io_uring is an async I/O package. In send_packet, the caller passes in a pointer to a buffer. We'll create a submission queue entry (sqe) using this buffer and put it on the sqe ring buffer.
 // However, then we return to the caller which re-uses this buffer. If we didn't copy the buffer into another data structure, we'd lose data.
@@ -102,6 +109,9 @@ int send_run_init(sock_t s)
 	struct io_uring_params params;
 	memset(&params, 0, sizeof(params));
 	params.flags |= IORING_SETUP_SQPOLL;
+	// adding these seems to kill multi-threaded performance, but at expense of hitrate????
+//	params.flags |= IORING_FEAT_NODROP;
+//	params.flags |= IORING_FEAT_SUBMIT_STABLE;
 	params.sq_thread_idle = SQ_POLLING_IDLE_TIMEOUT;
 //	params.flags |= IORING_SETUP_SQ_AFF;
 //	params.sq_thread_cpu = 9;
