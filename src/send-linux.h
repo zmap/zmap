@@ -32,13 +32,6 @@
 // Dummy sockaddr for sendto
 static struct sockaddr_ll sockaddr;
 
-int io_uring_enter(int ring_fd, unsigned int to_submit,
-		   unsigned int min_complete, unsigned int flags)
-{
-	return (int) syscall(__NR_io_uring_enter, ring_fd, to_submit, min_complete,
-			    flags, NULL, 0);
-}
-
 // io_uring/liburing resources
 // Great high-level introduction - https://www.scylladb.com/2020/05/05/how-io_uring-and-ebpf-will-revolutionize-programming-in-linux/
 // Blog with good explanations and examples, it is 2 years old tho and some things have changed with liburing - https://unixism.net/loti/
@@ -102,9 +95,6 @@ int send_run_init(sock_t s)
 	// initialize io_uring and relevant datastructures
 	// Using the submission queue polling feature to avoid syscall overhead incurred by submitting SQE's to the kernel
 	// Details available here: https://unixism.net/loti/tutorial/sq_poll.html#sq-poll
-	if (geteuid()) {
-		log_fatal("send", "You need root privileges to run this program");
-	}
 
 	struct io_uring_params params;
 	memset(&params, 0, sizeof(params));
@@ -186,10 +176,10 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 }
 
 int send_run_cleanup(void) {
-	// notify kernel of unsubmitted sqe's
-	int ret = io_uring_enter(ring.ring_fd, to_submit, to_submit, IORING_ENTER_GETEVENTS);
-	if (ret < 0) {
-		log_fatal("send cleanup", "send_run_cleanup: io_uring enter failed: %s", strerror(errno));
+	// wait for submission q to empty
+	while (io_uring_sq_ready(&ring) != 0) {
+		// might be a better way than busy-waiting
+		sleep(1);
 	}
 
 	clear_cqe_ring();
