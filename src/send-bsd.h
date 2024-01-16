@@ -23,7 +23,7 @@
 #error "Don't include both send-bsd.h and send-linux.h"
 #endif
 
-int send_run_init(UNUSED sock_t sock)
+int send_run_init(UNUSED sock_t sock, UNUSED uint32_t kernel_cpu)
 {
 	// Don't need to do anything on BSD-like variants
 	return EXIT_SUCCESS;

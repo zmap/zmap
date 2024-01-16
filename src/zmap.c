@@ -55,6 +55,7 @@ int get_num_cores(void) {
 
 typedef struct send_arg {
 	uint32_t cpu;
+    uint32_t kernel_cpu; // used for io_uring's kernel thread to be pinned to a given core
 	sock_t sock;
 	shard_t *shard;
 } send_arg_t;
@@ -82,7 +83,7 @@ static void *start_send(void *arg)
 	send_arg_t *s = (send_arg_t *)arg;
 	log_debug("zmap", "Pinning a send thread to core %u", s->cpu);
 	set_cpu(s->cpu);
-	int ret = send_run(s->sock, s->shard);
+	int ret = send_run(s->sock, s->shard, s->kernel_cpu);
 	free(s);
 	if (ret != EXIT_SUCCESS) {
 		log_fatal("send", "send_run failed, terminating");
@@ -218,6 +219,8 @@ static void start_zmap(void)
 		arg->shard = get_shard(it, i);
 		arg->cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
 		cpu += 1;
+        arg->kernel_cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
+        cpu += 1;
 		int r = pthread_create(&tsend[i], NULL, start_send, arg);
 		if (r != 0) {
 			log_fatal("zmap", "unable to create send thread");

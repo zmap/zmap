@@ -64,7 +64,31 @@ __thread uint packets_sent = 0;
 __thread uint to_submit = 0;
 int clear_cqe_ring(void);
 
-int send_run_init(sock_t s)
+// TODO Phillip - used for debugging
+void print_ring_features() {
+    if (ring.features & IORING_FEAT_CQE_SKIP) {
+        log_warn("send_init", "io_uring supports CQE_SKIP");
+    } else {
+        log_warn("send_init", "io_uring does NOT support CQE_SKIP");
+    }
+    if (ring.features & IORING_FEAT_NATIVE_WORKERS) {
+        log_warn("send_init", "io_uring supports Native Workers");
+    } else {
+        log_warn("send_init", "io_uring does NOT support Native Workers");
+    }
+    if (ring.features & IORING_FEAT_SUBMIT_STABLE) {
+        log_warn("send_init", "io_uring supports Submit Stable");
+    } else {
+        log_warn("send_init", "io_uring does NOT support Submit Stable");
+    }
+    if (ring.features & IORING_FEAT_NODROP) {
+        log_warn("send_init", "io_uring supports No Drop");
+    } else {
+        log_warn("send_init", "io_uring does NOT support No Drop");
+    }
+}
+
+int send_run_init(sock_t s, uint32_t kernel_cpu)
 {
 	// Get the actual socket
 	int sock = s.sock;
@@ -99,12 +123,12 @@ int send_run_init(sock_t s)
 	struct io_uring_params params;
 	memset(&params, 0, sizeof(params));
 	params.flags |= IORING_SETUP_SQPOLL;
-	// adding these seems to kill multi-threaded performance, but at expense of hitrate????
-//	params.flags |= IORING_FEAT_NODROP;
-//	params.flags |= IORING_FEAT_SUBMIT_STABLE;
 	params.sq_thread_idle = SQ_POLLING_IDLE_TIMEOUT;
-//	params.flags |= IORING_SETUP_SQ_AFF;
-//	params.sq_thread_cpu = 9;
+    log_debug("send_init", "Pinning a kernel polling thread for send events to core %u", kernel_cpu);
+	params.flags |= IORING_SETUP_SQ_AFF;
+	params.sq_thread_cpu = kernel_cpu;
+    // From manpages - By default, io_uring will interrupt a task running in userspace when a completion event comes in. This is to ensure that completions run in a timely manner. For a lot of use cases, this is overkill and can cause reduced performance
+//    params.flags |= IORING_SETUP_COOP_TASKRUN;
 	// register socket
 	fds[0] = sock;
 	int ret = io_uring_queue_init_params(QUEUE_DEPTH, &ring, &params);
@@ -122,6 +146,7 @@ int send_run_init(sock_t s)
 	// TODO Phillip trying to get polling working
         data_arr = calloc(QUEUE_DEPTH, sizeof(struct data_and_metadata));
 	log_warn("io_uring_setup", "size of sqe = %d, size of cqe=%d", params.sq_entries, params.cq_entries);
+    print_ring_features();
 	return EXIT_SUCCESS;
 }
 
@@ -168,6 +193,8 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 	// There's only one fd, so index = 0
 	io_uring_prep_sendmsg(sqe, 0, msg, 0);
 	sqe->flags |= IOSQE_FIXED_FILE;
+	// Set the flag IOSQE_CQE_SKIP_SUCCESS to skip completion for successful events
+    sqe->flags |= IOSQE_CQE_SKIP_SUCCESS;
 	io_uring_submit(&ring);
 	// sqe ready to send, increment arr ptr index to next data
 	free_buffer_ptr = (free_buffer_ptr + 1) % QUEUE_DEPTH;
