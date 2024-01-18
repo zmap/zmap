@@ -186,7 +186,7 @@ static int build_global_dns_packets(char *domains[], int num_domains, size_t *ma
 
 		// All other header fields should be 0. Except id, which we set
 		// per thread. Please recurse as needed.
-		dns_header_p->rd = 1; // Is one bit. Don't need htons
+		dns_header_p->rd = 0; // Is one bit. Don't need htons
 		// We have 1 question
 		dns_header_p->qdcount = htons(1);
 		memcpy(qname_p, qnames[i], qname_lens[i]);
