@@ -81,13 +81,17 @@ static int num_ports;
 
 const char default_domain[] = "www.google.com";
 const uint16_t default_qtype = DNS_QTYPE_A;
+const uint8_t default_rdbit = 1;
 
 static char **dns_packets;
 static uint16_t *dns_packet_lens; // Not including udp header
 static uint16_t *qname_lens;
 static char **qnames;
 static uint16_t *qtypes;
+static uint8_t *rdbits;
 static int num_questions = 0;
+
+const char *qopts_rn = "rn";
 
 /* Array of qtypes we support. Jumping through some hoops (1 level of
  * indirection) so the per-packet processing time is fast. Keep this in sync
@@ -186,7 +190,8 @@ static int build_global_dns_packets(char *domains[], int num_domains, size_t *ma
 
 		// All other header fields should be 0. Except id, which we set
 		// per thread. Please recurse as needed.
-		dns_header_p->rd = 0; // Is one bit. Don't need htons
+		dns_header_p->rd = htons(rdbits[i]);
+
 		// We have 1 question
 		dns_header_p->qdcount = htons(1);
 		memcpy(qname_p, qnames[i], qname_lens[i]);
@@ -588,13 +593,16 @@ static int dns_global_initialize(struct state_conf *conf)
 	qname_lens = xmalloc(sizeof(uint16_t) * num_questions);
 	qnames = xmalloc(sizeof(char *) * num_questions);
 	qtypes = xmalloc(sizeof(uint16_t) * num_questions);
+	rdbits = xmalloc(sizeof(uint8_t) * num_questions);
 
 	char *qtype_str = NULL;
+	char *qopts_str = NULL;
 	char **domains = (char **)xmalloc(sizeof(char *) * num_questions);
 
 	for (int i = 0; i < num_questions; i++) {
 		domains[i] = (char *)default_domain;
 		qtypes[i] = default_qtype;
+		rdbits[i] = default_rdbit;
 	}
 
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
@@ -614,16 +622,18 @@ static int dns_global_initialize(struct state_conf *conf)
 
 			char *probe_q_delimiter_p = strchr(arg_pos, ',');
 			char *probe_arg_delimiter_p = strchr(arg_pos, ';');
+			char *probe_opt_delimiter_p = strchr(arg_pos, ':');
 
 			if (probe_q_delimiter_p == NULL ||
 			    probe_q_delimiter_p == arg_pos ||
 			    arg_pos + strlen(arg_pos) ==
 				(probe_q_delimiter_p + 1) ||
 			    (probe_arg_delimiter_p == NULL &&
-			     (i + 1) != num_questions)) {
+			     (i + 1) != num_questions) ||
+				probe_opt_delimiter_p > probe_q_delimiter_p) {
 				log_fatal(
 				    "dns",
-				    "Invalid probe args. Format: \"A,google.com\" or \"A,google.com;A,example.com\"");
+				    "Invalid probe args. Format: \"A,google.com\" or \"A,google.com;A,example.com\" or \"A:rn,google.com\"");
 			}
 
 			int domain_len = 0;
@@ -640,11 +650,29 @@ static int dns_global_initialize(struct state_conf *conf)
 			strncpy(domains[i], probe_q_delimiter_p + 1,
 				domain_len);
 			domains[i][domain_len] = '\0';
+			
+			
+			if (probe_opt_delimiter_p) {
+				int qopts_str_len = probe_q_delimiter_p - probe_opt_delimiter_p;
+				qopts_str = xmalloc(qopts_str_len);
+				strncpy(qopts_str, probe_opt_delimiter_p + 1, qopts_str_len - 1);
+				qopts_str[qopts_str_len - 1] = '\0';
 
-			qtype_str = xmalloc(probe_q_delimiter_p - arg_pos + 1);
-			strncpy(qtype_str, arg_pos,
-				probe_q_delimiter_p - arg_pos);
-			qtype_str[probe_q_delimiter_p - arg_pos] = '\0';
+				if (strcmp(qopts_str, qopts_rn) == 0) {
+					rdbits[i] = 0;
+				}
+			}
+
+			int qtype_str_len = 0;
+			if (probe_opt_delimiter_p) {
+				qtype_str_len = probe_opt_delimiter_p - arg_pos + 1;
+			} else {
+				qtype_str_len = probe_q_delimiter_p - arg_pos + 1;
+			}
+
+			qtype_str = xmalloc(qtype_str_len);
+			strncpy(qtype_str, arg_pos, qtype_str_len - 1);
+			qtype_str[qtype_str_len - 1] = '\0';
 
 			qtypes[i] = qtype_str_to_code(qtype_str);
 			free(qtype_str);
