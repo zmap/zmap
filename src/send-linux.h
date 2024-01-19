@@ -169,7 +169,6 @@ int send_run_cleanup(void) {
 int clear_cqe_ring(void) {
 	unsigned head;
 	int i = 0;
-	// iterates thru all
 	io_uring_for_each_cqe(&ring, head, cqe) {
 		/* handle completion */
 		if (cqe->res < 0) {
