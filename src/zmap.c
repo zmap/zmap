@@ -219,8 +219,8 @@ static void start_zmap(void)
 		arg->shard = get_shard(it, i);
 		arg->cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
 		cpu += 1;
-        arg->kernel_cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
-        cpu += 1;
+                arg->kernel_cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
+                cpu += 1;
 		int r = pthread_create(&tsend[i], NULL, start_send, arg);
 		if (r != 0) {
 			log_fatal("zmap", "unable to create send thread");
