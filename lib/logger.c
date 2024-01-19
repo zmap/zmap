@@ -30,7 +30,7 @@ static int color = 0;
 static int log_to_syslog = 0;
 
 static const char *log_level_name[] = {"FATAL", "ERROR", "WARN",
-				       "INFO",  "DEBUG", "TRACE"};
+				       "INFO",	"DEBUG", "TRACE"};
 
 #define RED "\x1b[31m"
 #define GREEN "\x1b[32m"

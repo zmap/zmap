@@ -13,14 +13,14 @@
 
 /* Static helper functions */
 
-static node_t *alloc_node();
+static node_t *alloc_node(void);
 static int eval_gt_node(node_t *node, fieldset_t *fields);
 static int eval_lt_node(node_t *node, fieldset_t *fields);
 static int eval_eq_node(node_t *node, fieldset_t *fields);
 static int eval_lt_eq_node(node_t *node, fieldset_t *fields);
 static int eval_gt_eq_node(node_t *node, fieldset_t *fields);
 
-static node_t *alloc_node()
+static node_t *alloc_node(void)
 {
 	node_t *node = xmalloc(sizeof(node_t));
 	return node;

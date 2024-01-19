@@ -37,7 +37,7 @@ typedef struct zqueue {
 	pthread_cond_t empty;
 } zqueue_t;
 
-zqueue_t *queue_init();
+zqueue_t *queue_init(void);
 int is_empty(zqueue_t *queue);
 void push_back(char *data, zqueue_t *queue);
 znode_t *pop_front(zqueue_t *queue);

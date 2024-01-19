@@ -105,7 +105,8 @@ json_object *fs_to_jsonobj(fieldset_t *fs)
 	for (int i = 0; i < fs->len; i++) {
 		field_t *f = &(fs->fields[i]);
 		if (f->type != FS_NULL) {
-			json_object_object_add(obj, f->name, field_to_jsonobj(f));
+			json_object_object_add(obj, f->name,
+					       field_to_jsonobj(f));
 		}
 	}
 	return obj;
@@ -117,7 +118,8 @@ int json_output_to_file(fieldset_t *fs)
 		return EXIT_SUCCESS;
 	}
 	json_object *record = fs_to_jsonobj(fs);
-	fprintf(file, "%s\n", json_object_to_json_string_ext(record, JSON_C_TO_STRING_PLAIN));
+	fprintf(file, "%s\n",
+		json_object_to_json_string_ext(record, JSON_C_TO_STRING_PLAIN));
 	fflush(file);
 	check_and_log_file_error(file, "json");
 	json_object_put(record);

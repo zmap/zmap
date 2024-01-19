@@ -12,5 +12,6 @@ RUN apt-get install -y -qq \
     libjson-c-dev \
     libpcap-dev \
     libunistring-dev \
+    libjudy-dev \
     pkg-config \
     python3

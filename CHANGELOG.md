@@ -119,3 +119,45 @@
 * CMakeLists.txt is now much more sane and packager-friendly
 * Switch CHANGELOG and INSTALL to Markdown
 * Generate `*.ggo` files from `*.ggo.in` files that define ZMap version as a macro
+
+# 3.0.0 2923-06-23
+We're happy to provide ZMap 3.0.0, only slightly under six years late. We recommend using this release over any previous 2.x release.
+
+ZMap 3.0.0 represents several years of development and contains more than a hundred small bug fixes from ZMap 2.1.1., including many fixes for UDP modules, sharding, and progress calculation. Below, are some of the most important changes:
+
+## BUGFIX
+
+* Fix send rate calculations
+* Accept RST packets for SEQ+0 (per RFC)
+* Packets per second is packets per second now instead of IPs per second
+* MaxResults is now the number of packets that pass the output filter (#502)
+* Try all routing tables in Linux
+* Fix crash on invalid UDP packets
+* Fix failed initialize on single-question DNS probes
+* Fix inaccurate blocklist warning
+* Use monotonic OS clocks for monitoring and rate estimation
+* Fix bugs in UDP template arguments
+* Increase UDP PCAP snaplen to prevent packet truncation
+* Exit on failed sends
+* Fix incorrect time remaining calculations on sharded scans
+
+## FEATURE
+
+* Added --list-of-ips feature which allows scanning a large number (e.g., hundreds of millions or billons) of individual IPS
+* Improved user messages when network settings can't be automatically discovered
+* Consistent ICMP support and handling across all probe modules (#470)
+* Set TCP MSS flags to avoid filtering by destination hosts (#673)
+* Sane default behavior that can be explained with other CLI flags
+* Non-Flat Result output and JSON result encoding
+* IP Fragment Checking
+* DNS, TCP SYN-ACK, and Bacnet Probe Module
+* Change Whitelist/Blacklist terms to Allowlist/Blocklist
+* Add extended validation bytes for probe modules that can use greater entropy
+* Support non-continuous source IP's (#516)
+* Add NetBSD and DragonFly BSD compatibility code (#411)
+* Improved ICMP validation based on returned packet (#419)
+
+## REMOVED
+
+* Drop Redis and MongoDB support (#661)
+

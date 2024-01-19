@@ -6,19 +6,19 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#include "blocklist.h"
-
 #include <errno.h>
 #include <stdio.h>
 #include <assert.h>
-#include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
+
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 
+#include "blocklist.h"
 #include "constraint.h"
 #include "logger.h"
 #include "xalloc.h"
@@ -102,8 +102,31 @@ void allowlist_prefix(char *ip, int prefix_len)
 	_add_constraint(addr, prefix_len, ADDR_ALLOWED);
 }
 
+static int is_ip_ipv6(char *ip) {
+	// don't modify the input string
+	char *new_str = strdup(ip);
+	// check if there's a subnet mask_char
+	char *mask_char = strchr(new_str, '/');
+	if (mask_char != NULL) {
+		// set mask_char char to NULL char, so we can check if subnet is valid IPv6
+		*mask_char = '\0';
+	}
+	// attempt conversion of IP into IPv6 struct to check if IP is an IPv6 address
+	struct in6_addr ipv6_addr;
+	if (inet_pton(AF_INET6, new_str, &ipv6_addr) == 1) {
+		free(new_str);
+		return true;
+	}
+	free(new_str);
+	return false;
+}
+
 static int init_from_string(char *ip, int value)
 {
+	if (is_ip_ipv6(ip)) {
+		log_debug("constraint", "ignoring IPv6 IP/subnet: %s", ip);
+		return 0;
+	}
 	int prefix_len = 32;
 	char *slash = strchr(ip, '/');
 	if (slash) { // split apart network and prefix length
@@ -115,7 +138,7 @@ static int init_from_string(char *ip, int value)
 		if (end == len || errno != 0 || prefix_len < 0 ||
 		    prefix_len > 32) {
 			log_fatal("constraint",
-				  "'%s' is not a valid prefix length", len);
+				  "'%s' is not a valid IPv4 prefix length", len);
 			return -1;
 		}
 	}
@@ -173,7 +196,7 @@ static int init_from_file(char *file, const char *name, int value,
 		}
 		// hostnames can be up to 255 bytes
 		char ip[256];
-		if ((sscanf(line, "%256s", ip)) == EOF) {
+		if ((sscanf(line, "%255s", ip)) == EOF) {
 			continue;
 		}
 		if (init_from_string(ip, value)) {

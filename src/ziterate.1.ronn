@@ -14,6 +14,11 @@ order similar to how ZMap generates random addresses to be scanned.
 
 ### BASIC OPTIONS ###
 
+   * `-p`, `--target-ports=port(s)`:
+     List of TCP/UDP ports and/or port ranges to scan. (e.g., 80,443,100-105).
+     Use '*' to scan all ports, including port 0. If no port is specified,
+     ziterate will output only IPs.
+
    * `-b`, `--blocklist-file=path`:
      File of subnets to exclude, in CIDR notation, one-per line. It is
      recommended you use this to exclude RFC 1918 addresses, multicast, IANA

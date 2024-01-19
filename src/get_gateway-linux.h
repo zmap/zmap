@@ -21,19 +21,6 @@
 
 #define GW_BUFFER_SIZE 64000
 
-char *get_default_iface(void)
-{
-	char errbuf[PCAP_ERRBUF_SIZE];
-	char *iface = pcap_lookupdev(errbuf);
-	if (iface == NULL) {
-		log_fatal("send", "ZMap could not detect your default network interface. "
-				"You likely do not privileges to open a raw packet socket. "
-				"Are you running as root or with the CAP_NET_RAW capability? If you are, you "
-				"may need to manually set interface using the \"-i\" flag.");
-	}
-	return iface;
-}
-
 int read_nl_sock(int sock, char *buf, int buf_len)
 {
 	int msg_len = 0;
@@ -244,6 +231,26 @@ int _get_default_gw(struct in_addr *gw, char *iface)
 	return -1;
 }
 
+char *get_default_iface(void)
+{
+	struct in_addr gw;
+	char *iface;
+
+	iface = malloc(IF_NAMESIZE);
+	memset(iface, 0, IF_NAMESIZE);
+
+	if(_get_default_gw(&gw, iface)) {
+		log_fatal(
+		    "send",
+		    "ZMap could not detect your default network interface. "
+		    "You likely do not have sufficient privileges to open a raw packet socket. "
+		    "Are you running as root or with the CAP_NET_RAW capability? If you are, you "
+		    "may need to manually set interface using the \"-i\" flag.");
+	} else {
+		return iface;
+	}
+}
+
 int get_default_gw(struct in_addr *gw, char *iface)
 {
 	char _iface[IF_NAMESIZE];
@@ -255,8 +262,9 @@ int get_default_gw(struct in_addr *gw, char *iface)
 		    "get-gateway",
 		    "The specified network (\"%s\") does not match "
 		    "the interface associated with the default gateway (%s). You will "
-			"need to manually specify the MAC address of your gateway using "
-			"the \"--gateway-mac\" flag.", iface, _iface);
+		    "need to manually specify the MAC address of your gateway using "
+		    "the \"--gateway-mac\" flag.",
+		    iface, _iface);
 	}
 	return EXIT_SUCCESS;
 }
@@ -276,12 +284,15 @@ int get_iface_ip(char *iface, struct in_addr *ip)
 
 	if (ioctl(sock, SIOCGIFADDR, &ifr) < 0) {
 		close(sock);
-		log_fatal("get-iface-ip", "Unable to automatically identify the correct "
-				"source address for %s interface. ioctl failure: %s. "
-				"If this is the unexpected interface, you can manually specify "
-				"the correct interface with \"-i\" flag. If this is the correct "
-				"interface, you likely need to manually specify the source IP "
-				"address to use with the \"-S\" flag.", iface, strerror(errno));
+		log_fatal(
+		    "get-iface-ip",
+		    "Unable to automatically identify the correct "
+		    "source address for %s interface. ioctl failure: %s. "
+		    "If this is the unexpected interface, you can manually specify "
+		    "the correct interface with \"-i\" flag. If this is the correct "
+		    "interface, you likely need to manually specify the source IP "
+		    "address to use with the \"-S\" flag.",
+		    iface, strerror(errno));
 	}
 	ip->s_addr = ((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr.s_addr;
 	close(sock);

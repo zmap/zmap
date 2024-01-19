@@ -1,7 +1,7 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "ZITERATE" "1" "June 2017" "ZMap" "ziterate"
+.TH "ZITERATE" "1" "September 2023" "ZMap" "ziterate"
 .
 .SH "NAME"
 \fBziterate\fR \- ZMap IP permutation generation file
@@ -17,8 +17,12 @@ ziterate [ \-b <blocklist> ] [ \-w <allowlist> ] [ OPTIONS\.\.\. ]
 .SS "BASIC OPTIONS"
 .
 .TP
+\fB\-p\fR, \fB\-\-target\-ports=port(s)\fR
+List of TCP/UDP ports and/or port ranges to scan\. (e\.g\., 80,443,100\-105)\. Use \'*\' to scan all ports, including port 0\. If no port is specified, ziterate will output only IPs\.
+.
+.TP
 \fB\-b\fR, \fB\-\-blocklist\-file=path\fR
-File of subnets to exclude, in CIDR notation, one\-per line\. It is recommended you use this to exclude RFC 1918 addresses, multicast, IANA reserved space, and other IANA special\-purpose addresses\. An example blocklist file \fBblacklist\.conf\fR for this purpose\.
+File of subnets to exclude, in CIDR notation, one\-per line\. It is recommended you use this to exclude RFC 1918 addresses, multicast, IANA reserved space, and other IANA special\-purpose addresses\. An example blocklist file \fBblocklist\.conf\fR for this purpose\.
 .
 .TP
 \fB\-w\fR, \fB\-\-allowlist\-file=name\fR

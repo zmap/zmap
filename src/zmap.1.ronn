@@ -3,7 +3,7 @@ zmap(1) - The Fast Internet Scanner
 
 ## SYNOPSIS
 
-zmap [ -p &lt;port> ] [ -o &lt;outfile&gt; ] [ OPTIONS... ] [ ip/hostname/range ]
+zmap [ -p &lt;port(s)&gt; ] [ -o &lt;outfile&gt; ] [ OPTIONS... ] [ ip/hostname/range ]
 
 ## DESCRIPTION
 
@@ -19,8 +19,9 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
      IP addresses or DNS hostnames to scan. Accepts IP ranges in CIDR block
      notation. Defaults to 0.0.0/8
 
-   * `-p`, `--target-port=port`:
-     TCP or UDP port number to scan (for SYN scans and basic UDP scans)
+   * `-p`, `--target-ports=port(s)`:
+     List of TCP/UDP ports and/or port ranges to scan (e.g., 80,443,100-105).
+     Use '*' to scan all ports, including port 0.
 
    * `-o`, `--output-file=name`:
      When using an output module that uses a file, write results to this file.
@@ -78,16 +79,19 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
      addresses in the same order for multiple ZMap runs.
 
    * `-P`, `--probes=n`:
-     Number of probes to send to each IP (default=1)
+     Number of probes to send to each IP/Port pair (default=1). Since ZMap composes Ethernet
+     frames directly, probes can be lost en-route to destination. Increasing the
+     --probes increases the chance that an online host will receive a probe in an
+     unreliable network. This is contrasted with `--retries` which just gives the
+     number of attempts to send a single probe on the source NIC.
 
    * `--retries=n`:
      Number of times to try resending a packet if the sendto call fails (default=10)
 
    * `--batch=n`:
-     Number of packets to send in a burst between checks to the ratelimit. A
-     batch size above 1 allows the sleep-based rate-limiter to be used with
-     proportionally higher rates. This can reduce CPU usage, in exchange for a
-     bursty send rate. (default=1)
+     Number of packets to batch before calling the appropriate syscall to send. Used
+     to take advantage of Linux's `sendmmsg` syscall to send the entire batch at once.
+     Only available on Linux, other OS's will send each packet individually. (default=64)
 
 ### SCAN SHARDING ###
 
@@ -170,6 +174,28 @@ fields, and write filters over the output fields.
      useful if you're piping results into another application that expects only
      data.
 
+
+### RESPONSE DEDUPLICATION ###
+
+Hosts will oftentimes send multiple responses to a probe (either because the
+scanner doesn't send back a RST packet or because the host has a misimplemented
+TCP stack. To address this, ZMap will attempt to deduplicate responsive (ip,port)
+targets.
+
+
+   * `--dedup-method`:
+     Specifies the method ZMap will use to deduplicate responses. Options are:
+     full, window, and none. Full deduplication uses a 32-bit bitmap and
+     guarantees that no duplicates will be emitted. However, full-deduplication
+     requires around 500MB of memory for a single port. We do not support full
+     deduplication for multiple ports. Window uses a sliding window of a the last
+     (user-defined) number of responses as set by --dedup-window-size. None will
+     prevent any deduplication.
+
+   * `--dedup-window-size=targets`:
+     Specifies the size of the sliding window of last n target responses to be
+     used for deduplication. Only applicable if using window deduplication.
+
 ### LOGGING AND METADATA OPTIONS ###
 
    * `-q`, `--quiet`:
@@ -203,7 +229,8 @@ fields, and write filters over the output fields.
 
    * `-T`, `--sender-threads=n`:
      Threads used to send packets. ZMap will attempt to detect the optimal
-     number of send threads based on the number of processor cores.
+     number of send threads based on the number of processor cores. Defaults to
+     min(4, number of processor cores on host - 1).
 
    * `-C`, `--config=filename`:
      Read a configuration file, which can specify any other options.

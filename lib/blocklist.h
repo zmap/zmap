@@ -38,9 +38,9 @@ int blocklist_init(char *allowlist, char *blocklist, char **allowlist_entries,
 		   size_t allowlist_entries_len, char **blocklist_entries,
 		   size_t blocklist_entries_len, int ignore_invalid_hosts);
 
-uint64_t blocklist_count_allowed();
+uint64_t blocklist_count_allowed(void);
 
-uint64_t blocklist_count_not_allowed();
+uint64_t blocklist_count_not_allowed(void);
 
 uint32_t blocklist_ip_to_index(uint32_t ip);
 

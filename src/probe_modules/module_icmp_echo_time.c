@@ -35,7 +35,6 @@ struct icmp_payload_for_rtt {
 };
 
 static int icmp_echo_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-				    UNUSED port_h_t dst_port,
 				    UNUSED void **arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
@@ -53,10 +52,10 @@ static int icmp_echo_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	return EXIT_SUCCESS;
 }
 
-static int icmp_echo_make_packet(void *buf, size_t *buf_len,
-				 ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
-				 uint32_t *validation, UNUSED int probe_num,
-				 UNUSED void *arg)
+static int icmp_echo_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
+				 ipaddr_n_t dst_ip, UNUSED port_n_t dport,
+				 uint8_t ttl, uint32_t *validation,
+				 UNUSED int probe_num, UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
@@ -85,7 +84,8 @@ static int icmp_echo_make_packet(void *buf, size_t *buf_len,
 	    icmp_checksum((unsigned short *)icmp_header, sizeof(struct icmp));
 
 	// Update the IP and UDP headers to match the new payload length
-	size_t ip_len = sizeof(struct ip) + ICMP_MINLEN + sizeof(struct icmp_payload_for_rtt);
+	size_t ip_len = sizeof(struct ip) + ICMP_MINLEN +
+			sizeof(struct icmp_payload_for_rtt);
 	ip_header->ip_len = htons(ip_len);
 
 	ip_header->ip_sum = 0;
@@ -113,7 +113,8 @@ static void icmp_echo_print_packet(FILE *fp, void *packet)
 }
 
 static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
-				uint32_t *src_ip, uint32_t *validation)
+				uint32_t *src_ip, uint32_t *validation,
+				UNUSED const struct port_conf *ports)
 {
 	if (ip_hdr->ip_p != IPPROTO_ICMP) {
 		return 0;
@@ -148,7 +149,7 @@ static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		icmp_idnum = icmp_inner->icmp_id;
 		icmp_seqnum = icmp_inner->icmp_seq;
 		*src_ip = ip_inner->ip_dst.s_addr;
-		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
+		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr, 0,
 			     (uint8_t *)validation);
 	}
 	// validate icmp id and seqnum
@@ -162,8 +163,7 @@ static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	return 1;
 }
 
-static void icmp_echo_process_packet(const u_char *packet,
-				     UNUSED uint32_t len,
+static void icmp_echo_process_packet(const u_char *packet, UNUSED uint32_t len,
 				     fieldset_t *fs,
 				     UNUSED uint32_t *validation,
 				     UNUSED struct timespec ts)
@@ -178,8 +178,19 @@ static void icmp_echo_process_packet(const u_char *packet,
 
 	struct icmp_payload_for_rtt *payload =
 	    (struct icmp_payload_for_rtt *)(((char *)icmp_hdr) + 8);
-	fs_add_uint64(fs, "sent_timestamp_ts", (uint64_t)payload->sent_tv_sec);
-	fs_add_uint64(fs, "sent_timestamp_us", (uint64_t)payload->sent_tv_usec);
+
+	uint64_t sent_timestamp_ts = (uint64_t)payload->sent_tv_sec;
+	uint64_t sent_timestamp_us = (uint64_t)payload->sent_tv_usec;
+	uint64_t recv_timestamp_ts = (uint64_t)ts.tv_sec;
+	uint64_t recv_timestamp_us = (uint64_t)ts.tv_nsec / 1000;
+	uint64_t rtt_us = (recv_timestamp_ts * 1000000 + recv_timestamp_us) -
+			  (sent_timestamp_ts * 1000000 + sent_timestamp_us);
+
+	fs_add_uint64(fs, "sent_timestamp_ts", sent_timestamp_ts);
+	fs_add_uint64(fs, "sent_timestamp_us", sent_timestamp_us);
+	fs_add_uint64(fs, "recv_timestamp_ts", recv_timestamp_ts);
+	fs_add_uint64(fs, "recv_timestamp_us", recv_timestamp_us);
+	fs_add_uint64(fs, "rtt_us", rtt_us);
 	fs_add_uint64(fs, "dst_raw", (uint64_t)payload->dst);
 
 	switch (icmp_hdr->icmp_type) {
@@ -221,6 +232,15 @@ static fielddef_t fields[] = {
     {.name = "sent_timestamp_us",
      .type = "int",
      .desc = "microsecond part of sent timestamp"},
+    {.name = "recv_timestamp_ts",
+     .type = "int",
+     .desc = "timestamp of receive probe in seconds since Epoch"},
+    {.name = "recv_timestamp_us",
+     .type = "int",
+     .desc = "microsecond part of receive timestamp"},
+    {.name = "rtt_us",
+     .type = "int",
+     .desc = "round-trip time in microseconds"},
     {.name = "dst_raw",
      .type = "int",
      .desc = "raw destination IP address of sent probe"},
@@ -245,4 +265,4 @@ probe_module_t module_icmp_echo_time = {
     .close = NULL,
     .output_type = OUTPUT_TYPE_STATIC,
     .fields = fields,
-    .numfields = 9};
+    .numfields = 12};
