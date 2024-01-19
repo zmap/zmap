@@ -81,7 +81,7 @@ static int num_ports;
 
 const char default_domain[] = "www.google.com";
 const uint16_t default_qtype = DNS_QTYPE_A;
-const uint8_t default_rdbit = 1;
+const uint8_t default_rdbit = 0xFF;
 
 static char **dns_packets;
 static uint16_t *dns_packet_lens; // Not including udp header
@@ -190,7 +190,7 @@ static int build_global_dns_packets(char *domains[], int num_domains, size_t *ma
 
 		// All other header fields should be 0. Except id, which we set
 		// per thread. Please recurse as needed.
-		dns_header_p->rd = htons(rdbits[i]);
+		dns_header_p->rd = rdbits[i];
 
 		// We have 1 question
 		dns_header_p->qdcount = htons(1);
@@ -623,14 +623,16 @@ static int dns_global_initialize(struct state_conf *conf)
 			char *probe_q_delimiter_p = strchr(arg_pos, ',');
 			char *probe_arg_delimiter_p = strchr(arg_pos, ';');
 			char *probe_opt_delimiter_p = strchr(arg_pos, ':');
+			if (probe_opt_delimiter_p > probe_q_delimiter_p) {
+				probe_opt_delimiter_p = NULL; // probe opt delimiter applies to one of the next questions
+			}
 
 			if (probe_q_delimiter_p == NULL ||
 			    probe_q_delimiter_p == arg_pos ||
 			    arg_pos + strlen(arg_pos) ==
 				(probe_q_delimiter_p + 1) ||
 			    (probe_arg_delimiter_p == NULL &&
-			     (i + 1) != num_questions) ||
-				probe_opt_delimiter_p > probe_q_delimiter_p) {
+			     (i + 1) != num_questions)) {
 				log_fatal(
 				    "dns",
 				    "Invalid probe args. Format: \"A,google.com\" or \"A,google.com;A,example.com\" or \"A:rn,google.com\"");
@@ -651,11 +653,11 @@ static int dns_global_initialize(struct state_conf *conf)
 				domain_len);
 			domains[i][domain_len] = '\0';
 			
-			
+			int qopts_str_len = 0;
 			if (probe_opt_delimiter_p) {
-				int qopts_str_len = probe_q_delimiter_p - probe_opt_delimiter_p;
+				qopts_str_len = probe_q_delimiter_p - probe_opt_delimiter_p + 1;
 				qopts_str = xmalloc(qopts_str_len);
-				strncpy(qopts_str, probe_opt_delimiter_p + 1, qopts_str_len - 1);
+				strncpy(qopts_str, probe_opt_delimiter_p + 1, qopts_str_len - 2);
 				qopts_str[qopts_str_len - 1] = '\0';
 
 				if (strcmp(qopts_str, qopts_rn) == 0) {
