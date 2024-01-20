@@ -12,13 +12,16 @@ ZMap can scan the IPv4 address space in under 5 minutes.
 ZMap operates on GNU/Linux, Mac OS, and BSD. ZMap currently has fully implemented
 probe modules for TCP SYN scans, ICMP, DNS queries, UPnP, BACNET, and can send a
 large number of [UDP probes](https://github.com/zmap/zmap/blob/master/examples/udp-probes/README).
-If you are looking to do more involved scans, e.g., banner grab or TLS handshake, 
+If you are looking to do more involved scans (e.g., banner grab or TLS handshake), 
 take a look at [ZGrab 2](https://github.com/zmap/zgrab2), ZMap's sister project that performs stateful application-layer handshakes.
 
 
-Getting Started Guide
-------------
-Consult the [Getting Started Guide](https://github.com/zmap/zmap/wiki/Getting-Started-Guide) on the GitHub Wiki if you'd like an in-depth, follow-along guide to basic scanning with ZMap.
+Using ZMap
+----------
+
+If you haven't used ZMap before, we have a step-by-step [Getting Started Guide](https://github.com/zmap/zmap/wiki/Getting-Started-Guide) that details how to perform basic scans. Documentation about all of ZMap's options and more advanced functionality can be found in our [GitHub Wiki](https://github.com/zmap/zmap/wiki). 
+
+If you have questions, please first check our [FAQ](https://github.com/zmap/zmap/wiki/FAQ). Still have questions? Ask the community in [Github Discussions](https://github.com/zmap/zmap/discussions/categories/q-a). Please do not create an Issue for usage or support questions.
 
 Installation
 ------------
@@ -28,10 +31,6 @@ BSD. ZMap [4.0.0-RC1](https://github.com/zmap/zmap/releases/tag/v4.0.0-RC1) adds
 
 **Instructions on building ZMap from source** can be found in [INSTALL](INSTALL.md).
 
-Usage
------
-
-A guide to using ZMap is found in our [GitHub Wiki](https://github.com/zmap/zmap/wiki).
 
 Architecture
 ------------
@@ -52,12 +51,8 @@ If you use ZMap for published research, please cite the original research paper:
 }
 ```
 
-Resources
----------
+Citing the ZMap paper helps us to track ZMap usage within the research community and to pursue funding for continued development.
 
-Have questions? Check out our [FAQ page](https://github.com/zmap/zmap/wiki/FAQ) on the ZMap project Wiki
-
-Still have questions? Ask the community in [Github Discussions](https://github.com/zmap/zmap/discussions/categories/q-a)
 
 License and Copyright
 ---------------------
