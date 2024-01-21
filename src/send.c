@@ -471,7 +471,7 @@ int send_run(sock_t st, shard_t *s)
 	}
 cleanup:
 	if (!zconf.dryrun && send_batch(st, batch, attempts) < 0) {
-		log_error("send_batch cleanup", "could not clear out remaining batch packets: %s", strerror(errno));
+		log_error("send_batch cleanup", "could not send remaining batch packets: %s", strerror(errno));
 	}
 	free_packet_batch(batch);
 	s->cb(s->thread_id, s->arg);
