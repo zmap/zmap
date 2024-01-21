@@ -429,6 +429,7 @@ int send_run(sock_t st, shard_t *s)
 					int rc = send_batch(st, batch, attempts);
 					// whether batch succeeds or fails, this was the only attempt. Any re-tries are handled within batch
 					if (rc < 0) {
+						log_error("send_batch", "could not send any batch packets: %s", strerror(errno));
 						// rc is the last error code if all packets couldn't be sent
 						s->state.packets_failed += batch->len;
 					} else {
