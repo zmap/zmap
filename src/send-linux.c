@@ -66,6 +66,10 @@ int send_run_init(sock_t s)
 }
 
 int send_batch(sock_t sock, batch_t* batch, int retries) {
+	if (batch->len == 0) {
+		// nothing to send
+		return EXIT_SUCCESS;
+	}
 	struct mmsghdr msgvec [batch->capacity]; // Array of multiple msg header structures
 	struct msghdr msgs[batch->capacity];
 	struct iovec iovs[batch->capacity];
