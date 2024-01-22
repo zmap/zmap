@@ -53,7 +53,7 @@ int get_num_cores(void) {
 
 typedef struct send_arg {
 	uint32_t cpu;
-	bool liburing_emabled;
+	bool liburing_enabled;
 	uint32_t kernel_cpu; // used for io_uring's kernel thread to be pinned to a given core
 	sock_t sock;
 	shard_t *shard;
@@ -82,7 +82,7 @@ static void *start_send(void *arg)
 	send_arg_t *s = (send_arg_t *)arg;
 	log_debug("zmap", "Pinning a send thread to core %u", s->cpu);
 	set_cpu(s->cpu);
-	int ret = send_run(s->sock, s->shard, s->kernel_cpu, s->liburing_emabled);
+	int ret = send_run(s->sock, s->shard, s->kernel_cpu, s->liburing_enabled);
 	free(s);
 	if (ret != EXIT_SUCCESS) {
 		log_fatal("send", "send_run failed, terminating");
@@ -219,7 +219,7 @@ static void start_zmap(void)
 		arg->cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
 		cpu += 1;
                 arg->kernel_cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
-		arg->liburing_emabled = zconf.enable_liburing;
+		arg->liburing_enabled = zconf.enable_liburing;
                 cpu += 1;
 		int r = pthread_create(&tsend[i], NULL, start_send, arg);
 		if (r != 0) {
