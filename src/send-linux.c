@@ -135,40 +135,44 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 // send_batch_with_liburing_helper uses the liburing library to async send packets
 // will be much more performant than synchronous alternatives
 int send_batch_with_liburing_helper(sock_t sock, batch_t* batch) {
-	// get next data entry in data ring buffer
-	struct data_and_metadata* d = &data_arr[free_buffer_ptr];
-	// copy buf into data_arr so caller can re-use the buf pointer after we return
-	memcpy(d->buf, buf, len);
-	// setup msg/iov structs for sendmsg
-	struct iovec *iov = &d->iov;
-	iov->iov_base = d->buf;
-	iov->iov_len = len;
-	struct msghdr *msg = &d->msg;
-	msg->msg_name = (struct sockaddr *)&sockaddr;
-	msg->msg_namelen = sizeof(struct sockaddr_ll);
-	msg->msg_iov = iov;
-	msg->msg_iovlen = 1;
+	for (int i = 0; i < batch->len; i++) {
+		char *buf = ((void *)batch->packets) + (i * MAX_PACKET_SIZE);
+		int len = batch->lens[i];
+		// get next data entry in data ring buffer
+		struct data_and_metadata* d = &data_arr[free_buffer_ptr];
+		// copy buf into data_arr so caller can re-use the buf pointer after we return
+		memcpy(d->buf, buf, len);
+		// setup msg/iov structs for sendmsg
+		struct iovec *iov = &d->iov;
+		iov->iov_base = d->buf;
+		iov->iov_len = len;
+		struct msghdr *msg = &d->msg;
+		msg->msg_name = (struct sockaddr *)&sockaddr;
+		msg->msg_namelen = sizeof(struct sockaddr_ll);
+		msg->msg_iov = iov;
+		msg->msg_iovlen = 1;
 
-	// initialize the SQE for sending a packet
-	struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
-	int has_cleared = 0;
-	while(!sqe) {
-		// submission queue is full, we need to block to let the kernel send traffic and cull some CQE's
-		// since we submit with IOSQE_CQE_SKIP_SUCCESS, the only completion events expected are for errors.
-		check_cqe_ring_for_send_errs();
-		// wait for space in ring buffer to open up
-		io_uring_sqring_wait(&ring);
-		// reattempt to get a new sqe
-		sqe = io_uring_get_sqe(&ring);
+		// initialize the SQE for sending a packet
+		struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
+		int has_cleared = 0;
+		while(!sqe) {
+			// submission queue is full, we need to block to let the kernel send traffic and cull some CQE's
+			// since we submit with IOSQE_CQE_SKIP_SUCCESS, the only completion events expected are for errors.
+			check_cqe_ring_for_send_errs();
+			// wait for space in ring buffer to open up
+			io_uring_sqring_wait(&ring);
+			// reattempt to get a new sqe
+			sqe = io_uring_get_sqe(&ring);
+		}
+		// Optimization: ZMap doesn't do anything when a packet is sent successfully
+		// We'll log any errors but if a packet is successfully sent, tell io_uring
+		// it doesn't need to notify us.
+		sqe->flags |= IOSQE_CQE_SKIP_SUCCESS;
+		io_uring_prep_sendmsg(sqe, sock.sock, msg, 0);
+		io_uring_submit(&ring);
+		// increment arr ptr index to next data for next send_packet
+		free_buffer_ptr = (free_buffer_ptr + 1) % QUEUE_DEPTH;
 	}
-	// Optimization: ZMap doesn't do anything when a packet is sent successfully
-	// We'll log any errors but if a packet is successfully sent, tell io_uring
-	// it doesn't need to notify us.
-	sqe->flags |= IOSQE_CQE_SKIP_SUCCESS;
-	io_uring_prep_sendmsg(sqe, sock.sock, msg, 0);
-	io_uring_submit(&ring);
-	// increment arr ptr index to next data for next send_packet
-	free_buffer_ptr = (free_buffer_ptr + 1) % QUEUE_DEPTH;
 }
 
 // check_cqe_ring_for_send_errs Since each sqe is submitted with CQE_SKIP_SUCCESS,
