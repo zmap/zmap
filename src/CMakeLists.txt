@@ -124,8 +124,8 @@ if (APPLE OR BSD)
     set(SOURCES ${SOURCES} socket-bsd.c)
     set(ZTESTSOURCES ${ZTESTSOURCES} socket-bsd.c)
 else()
-    set(SOURCES ${SOURCES} socket-linux.c send-linux.c)
-    set(ZTESTSOURCES ${ZTESTSOURCES} socket-linux.c send-linux.c)
+    set(SOURCES ${SOURCES} socket-linux.c send-linux.c send-liburing.c)
+    set(ZTESTSOURCES ${ZTESTSOURCES} socket-linux.c send-linux.c send-liburing.c)
 endif()
 
 # Set configure time zmap version

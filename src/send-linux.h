@@ -13,9 +13,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <errno.h>
-#include <liburing.h>
-#include <netinet/ip.h>
 #include <netpacket/packet.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
