@@ -6,6 +6,8 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
+#include <stdbool.h>
+
 #include "state.h"
 #include "../lib/logger.h"
 
@@ -24,12 +26,13 @@ struct state_conf zconf = {
     .dedup_method = 0,
     .dedup_window_size = 0,
     .dryrun = 0,
-    .hw_mac = {0},
-    .hw_mac_set = 0,
     .gw_ip = 0,
     .gw_mac = {0},
     .gw_mac_set = 0,
+    .hw_mac = {0},
+    .hw_mac_set = 0,
     .iface = NULL,
+    .enable_liburing = false,
     .list_of_ips_count = 0,
     .list_of_ips_filename = NULL,
     .log_directory = NULL,

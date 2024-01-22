@@ -9,6 +9,7 @@
 #define ZMAP_SEND_LINUX_H
 
 #include <string.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -52,11 +53,7 @@ __thread struct data_and_metadata* data_arr;
 __thread uint16_t free_buffer_ptr = 0;
 __thread struct io_uring_cqe* cqe;
 
-int clear_cqe_ring(void);
-void print_debug_ring_features(void);
-
-
-int send_run_init(sock_t s, uint32_t kernel_cpu, bool use_liburing);
+int send_run_init(sock_t s, uint32_t kernel_cpu, bool is_liburing_enabled);
 int send_batch(sock_t sock, batch_t* batch, int retries);
 int send_run_cleanup(void);
 

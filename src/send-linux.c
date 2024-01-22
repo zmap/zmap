@@ -35,11 +35,10 @@
 #include "./send.h"
 #include "./send-linux.h"
 
-void clear_cqe_ring(void);
-void check_cqe_ring_for_send_errs(void);
+int check_cqe_ring_for_send_errs(void);
 void print_debug_ring_features(void);
 
-int send_run_init(sock_t s, uint32_t kernel_cpu, bool use_liburing)
+int send_run_init(sock_t s, uint32_t kernel_cpu, bool is_liburing_enabled)
 {
 	// Get the actual socket
 	int sock = s.sock;
@@ -67,7 +66,10 @@ int send_run_init(sock_t s, uint32_t kernel_cpu, bool use_liburing)
 	}
 	memcpy(sockaddr.sll_addr, zconf.gw_mac, ETH_ALEN);
 
+	// set static bool so we can check it in other functions
+	use_liburing = is_liburing_enabled;
 	if (!use_liburing) {
+		// nothing left to initialize
 		return EXIT_SUCCESS;
 	}
 	// initialize io_uring and relevant datastructures
@@ -97,27 +99,29 @@ int send_run_init(sock_t s, uint32_t kernel_cpu, bool use_liburing)
 	return EXIT_SUCCESS;
 }
 
-int send_run_cleanup(bool use_liburing) {
-	// TODO PHILLIP GATE LIBURING IMPLEMENTATION HERE
+int send_run_cleanup(void) {
+	if (!use_liburing) {
+		// nothing to be freed if not using liburing
+		return EXIT_SUCCESS;
+	}
 	// wait for submission q to empty
 	while (io_uring_sq_ready(&ring) != 0) {
 		sleep(1);
 	}
 	// check for any send errors
-	clear_cqe_ring();
+	check_cqe_ring_for_send_errs();
 	// free up data structures
 	free(data_arr);
 	io_uring_queue_exit(&ring);
-	return 0;
+	return EXIT_SUCCESS;
 }
 
 // send_batch uses either the liburing or sendmmsg helpers depending on CLI arguments
-int send_batch(sock_t sock, batch_t* batch, int retries, bool use_liburing) {
+int send_batch(sock_t sock, batch_t* batch, int retries) {
 	if (use_liburing) {
         	return send_batch_with_liburing_helper(sock, batch);
-	} else {
-		return send_batch_with_sendmmsg_helper(sock, batch, retries);
 	}
+	return send_batch_with_sendmmsg_helper(sock, batch, retries);
 }
 
 
@@ -151,7 +155,7 @@ int send_batch_with_liburing_helper(sock_t sock, batch_t* batch) {
 	while(!sqe) {
 		// submission queue is full, we need to block to let the kernel send traffic and cull some CQE's
 		// since we submit with IOSQE_CQE_SKIP_SUCCESS, the only completion events expected are for errors.
-		clear_cqe_ring();
+		check_cqe_ring_for_send_errs();
 		// wait for space in ring buffer to open up
 		io_uring_sqring_wait(&ring);
 		// reattempt to get a new sqe
@@ -169,6 +173,7 @@ int send_batch_with_liburing_helper(sock_t sock, batch_t* batch) {
 
 // check_cqe_ring_for_send_errs Since each sqe is submitted with CQE_SKIP_SUCCESS,
 // the only completion events are for errors. We'll log any packet send errors
+// Return: number of cqe's cleared from cqe ring
 int check_cqe_ring_for_send_errs(void) {
 	unsigned head;
 	int i = 0;

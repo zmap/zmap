@@ -131,6 +131,7 @@ struct state_conf {
 	int no_header_row;
 	int dedup_method;
 	int dedup_window_size;
+	int enable_liburing;
 };
 extern struct state_conf zconf;
 

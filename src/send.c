@@ -6,8 +6,7 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#include "send.h"
-
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -32,6 +31,7 @@
 #include "iterator.h"
 #include "probe_modules/packet.h"
 #include "probe_modules/probe_modules.h"
+#include "send.h"
 #include "shard.h"
 #include "state.h"
 #include "validate.h"
@@ -39,7 +39,8 @@
 // OS specific functions called by send_run
 static inline int send_packet(sock_t sock, void *buf, int len, uint32_t idx);
 static inline int send_batch(sock_t sock, batch_t *batch, int retries);
-static inline int send_run_init(sock_t sock, uint32_t kernel_cpu);
+static inline int send_run_init(sock_t sock, uint32_t kernel_cpu, bool is_liburing_enabled);
+static inline int send_run_cleanup(void);
 
 // Include the right implementations
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) ||     \
@@ -213,7 +214,7 @@ static inline ipaddr_n_t get_src_ip(ipaddr_n_t dst, int local_offset)
 }
 
 // one sender thread
-int send_run(sock_t st, shard_t *s, uint32_t kernel_cpu)
+int send_run(sock_t st, shard_t *s, uint32_t kernel_cpu, bool is_liburing_enabled)
 {
 	log_debug("send", "send thread started");
 	pthread_mutex_lock(&send_mutex);
@@ -223,7 +224,7 @@ int send_run(sock_t st, shard_t *s, uint32_t kernel_cpu)
 	batch_t* batch = create_packet_batch(zconf.batch);
 
 	// OS specific per-thread init
-	if (send_run_init(st, kernel_cpu)) {
+	if (send_run_init(st, kernel_cpu, is_liburing_enabled)) {
 		pthread_mutex_unlock(&send_mutex);
 		return EXIT_FAILURE;
 	}

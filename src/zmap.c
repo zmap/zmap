@@ -8,20 +8,18 @@
 
 #define _GNU_SOURCE
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
 #include <assert.h>
-#include <sched.h>
 #include <errno.h>
-#include <pwd.h>
-#include <time.h>
-
-#include <pcap/pcap.h>
 #include <json.h>
-
+#include <pcap/pcap.h>
 #include <pthread.h>
+#include <pwd.h>
+#include <sched.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
 
 #include "../lib/includes.h"
 #include "../lib/blocklist.h"
@@ -55,7 +53,8 @@ int get_num_cores(void) {
 
 typedef struct send_arg {
 	uint32_t cpu;
-    uint32_t kernel_cpu; // used for io_uring's kernel thread to be pinned to a given core
+	bool liburing_emabled;
+	uint32_t kernel_cpu; // used for io_uring's kernel thread to be pinned to a given core
 	sock_t sock;
 	shard_t *shard;
 } send_arg_t;
@@ -83,7 +82,7 @@ static void *start_send(void *arg)
 	send_arg_t *s = (send_arg_t *)arg;
 	log_debug("zmap", "Pinning a send thread to core %u", s->cpu);
 	set_cpu(s->cpu);
-	int ret = send_run(s->sock, s->shard, s->kernel_cpu);
+	int ret = send_run(s->sock, s->shard, s->kernel_cpu, s->liburing_emabled);
 	free(s);
 	if (ret != EXIT_SUCCESS) {
 		log_fatal("send", "send_run failed, terminating");
@@ -220,6 +219,7 @@ static void start_zmap(void)
 		arg->cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
 		cpu += 1;
                 arg->kernel_cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
+		arg->liburing_emabled = zconf.enable_liburing;
                 cpu += 1;
 		int r = pthread_create(&tsend[i], NULL, start_send, arg);
 		if (r != 0) {
@@ -514,6 +514,7 @@ int main(int argc, char *argv[])
 	SET_BOOL(zconf.dryrun, dryrun);
 	SET_BOOL(zconf.quiet, quiet);
 	SET_BOOL(zconf.no_header_row, no_header_row);
+	SET_BOOL(zconf.enable_liburing, enable_liburing);
 	zconf.cooldown_secs = args.cooldown_time_arg;
 	SET_IF_GIVEN(zconf.output_filename, output_file);
 	SET_IF_GIVEN(zconf.blocklist_filename, blocklist_file);

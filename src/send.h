@@ -9,12 +9,14 @@
 #ifndef SEND_H
 #define SEND_H
 
+#include <stdbool.h>
+
 #include "iterator.h"
 #include "socket.h"
 #include "./probe_modules/packet.h"
 
 iterator_t *send_init(void);
-int send_run(sock_t, shard_t *, uint32_t kernel_cpu);
+int send_run(sock_t, shard_t *, uint32_t kernel_cpu, bool is_liburing_enabled);
 
 typedef struct {
 	char* packets;
