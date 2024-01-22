@@ -36,22 +36,6 @@ static struct sockaddr_ll sockaddr;
 
 // Used internally to decide to send packets with liburing or send_mmsg
 static bool use_liburing;
-__thread struct io_uring ring;
-#define QUEUE_DEPTH 128 // ring buffer size for liburing's submission queue
-#define SQ_POLLING_IDLE_TIMEOUT 1000 // how long kernel thread will wait before timing out
-// io_uring is an async I/O package. In send_packet, the caller passes in a pointer to a buffer. We'll create a submission queue entry (sqe) using this buffer and put it on the sqe ring buffer.
-// However, then we then immediately return to the caller which re-uses this buffer.
-// We need to create a data-structure to persist this data so it can be sent async and the caller can reuse the buffer
-struct data_and_metadata
-{
-    char buf[MAX_PACKET_SIZE];
-    struct msghdr msg;
-    struct iovec iov;
-};
-__thread struct data_and_metadata* data_arr;
-// points to an open buffer in buf_array
-__thread uint16_t free_buffer_ptr = 0;
-__thread struct io_uring_cqe* cqe;
 
 int send_run_init(sock_t s, uint32_t kernel_cpu, bool is_liburing_enabled);
 int send_batch(sock_t sock, batch_t* batch, int retries);

@@ -35,8 +35,29 @@
 #include "./send.h"
 #include "./send-linux.h"
 
+// TODO Phillip start liburing compilation zone
+__thread struct io_uring ring;
+#define QUEUE_DEPTH 128 // ring buffer size for liburing's submission queue
+#define SQ_POLLING_IDLE_TIMEOUT 1000 // how long kernel thread will wait before timing out
+// io_uring is an async I/O package. In send_packet, the caller passes in a pointer to a buffer. We'll create a submission queue entry (sqe) using this buffer and put it on the sqe ring buffer.
+// However, then we then immediately return to the caller which re-uses this buffer.
+// We need to create a data-structure to persist this data so it can be sent async and the caller can reuse the buffer
+struct data_and_metadata
+{
+	char buf[MAX_PACKET_SIZE];
+	struct msghdr msg;
+	struct iovec iov;
+};
+__thread struct data_and_metadata* data_arr;
+// points to an open buffer in buf_array
+__thread uint16_t free_buffer_ptr = 0;
+__thread struct io_uring_cqe* cqe;
+
 int check_cqe_ring_for_send_errs(void);
 void print_debug_ring_features(void);
+int send_batch_liburing_helper(sock_t sock, batch_t* batch);
+// TODO Phillip end liburing compilation zone
+int send_batch_mmsg_helper(sock_t sock, batch_t* batch, int retries);
 
 int send_run_init(sock_t s, uint32_t kernel_cpu, bool is_liburing_enabled)
 {
@@ -119,9 +140,9 @@ int send_run_cleanup(void) {
 // send_batch uses either the liburing or sendmmsg helpers depending on CLI arguments
 int send_batch(sock_t sock, batch_t* batch, int retries) {
 	if (use_liburing) {
-        	return send_batch_with_liburing_helper(sock, batch);
+        	return send_batch_liburing_helper(sock, batch);
 	}
-	return send_batch_with_sendmmsg_helper(sock, batch, retries);
+	return send_batch_mmsg_helper(sock, batch, retries);
 }
 
 
@@ -132,9 +153,9 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 // Note: Liburing is under active development, and new features have been added and documentation has changed. Something to keep in mind when you look at examples, both newer/older.
 // Ubuntu 23.04 ships with liburing v2.3 - https://packages.ubuntu.com/lunar/liburing-dev , v.2.5 is the latest - https://github.com/axboe/liburing
 
-// send_batch_with_liburing_helper uses the liburing library to async send packets
+// send_batch_liburing_helper uses the liburing library to async send packets
 // will be much more performant than synchronous alternatives
-int send_batch_with_liburing_helper(sock_t sock, batch_t* batch) {
+int send_batch_liburing_helper(sock_t sock, batch_t* batch) {
 	for (int i = 0; i < batch->len; i++) {
 		char *buf = ((void *)batch->packets) + (i * MAX_PACKET_SIZE);
 		int len = batch->lens[i];
