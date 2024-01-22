@@ -65,29 +65,34 @@ int send_run_init(sock_t s, uint32_t kernel_cpu, bool is_liburing_enabled)
 		sockaddr.sll_protocol = htons(ETHERTYPE_IP);
 	}
 	memcpy(sockaddr.sll_addr, zconf.gw_mac, ETH_ALEN);
-//#if LIBURING_FOU
+#if WITH_LIBURING
 	if (is_liburing_enabled) {
 		// set static variable to track this in send_run/send_run_cleanup
 		use_liburing = is_liburing_enabled;
 		// need to initialize liburing related structures
 		return send_run_init_liburing(kernel_cpu);
 	}
+#endif
 	// set static bool so we can check it in other functions
 	return EXIT_SUCCESS;
 }
 
 // send_batch uses either the liburing or sendmmsg helpers depending on CLI arguments
 int send_batch(sock_t sock, batch_t* batch, int retries) {
+#if WITH_LIBURING
 	if (use_liburing) {
 		return send_batch_liburing_helper(sock, batch);
 	}
+#endif
 	return send_batch_mmsg_helper(sock, batch, retries);
 }
 
 int send_run_cleanup(void) {
+#if WITH_LIBURING
 	if (use_liburing) {
 		return send_run_cleanup_liburing();
 	}
+#endif
 	return EXIT_SUCCESS;
 }
 
