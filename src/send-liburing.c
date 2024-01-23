@@ -30,7 +30,14 @@
 #include "./send.h"
 #include "./send-liburing.h"
 #include "./send-linux.h"
-#warning "send-liburing.c compiled!"
+
+
+// io_uring/liburing resources
+// Great high-level introduction - https://www.scylladb.com/2020/05/05/how-io_uring-and-ebpf-will-revolutionize-programming-in-linux/
+// Blog with good explanations and examples, it is 2 years old tho and some things have changed with liburing - https://unixism.net/loti/
+// Consult the manpages for io_uring... (man -k io_uring). This has the most up-to-date info for the version of liburing that ships with your distro
+// Note: Liburing is under active development, and new features have been added and documentation has changed. Something to keep in mind when you look at examples, both newer/older.
+// Ubuntu 23.04 ships with liburing v2.3 - https://packages.ubuntu.com/lunar/liburing-dev , v.2.5 is the latest - https://github.com/axboe/liburing
 
 __thread struct io_uring ring;
 #define QUEUE_DEPTH 128 // ring buffer size for liburing's submission queue
@@ -52,7 +59,6 @@ __thread struct io_uring_cqe* cqe;
 
 int check_cqe_ring_for_send_errs(void);
 void print_debug_ring_features(void);
-
 
 int send_run_init_liburing(uint32_t kernel_cpu)
 {
@@ -96,13 +102,6 @@ int send_run_cleanup_liburing(void) {
 	return EXIT_SUCCESS;
 }
 
-
-// io_uring/liburing resources
-// Great high-level introduction - https://www.scylladb.com/2020/05/05/how-io_uring-and-ebpf-will-revolutionize-programming-in-linux/
-// Blog with good explanations and examples, it is 2 years old tho and some things have changed with liburing - https://unixism.net/loti/
-// Consult the manpages for io_uring... (man -k io_uring). This has the most up-to-date info for the version of liburing that ships with your distro
-// Note: Liburing is under active development, and new features have been added and documentation has changed. Something to keep in mind when you look at examples, both newer/older.
-// Ubuntu 23.04 ships with liburing v2.3 - https://packages.ubuntu.com/lunar/liburing-dev , v.2.5 is the latest - https://github.com/axboe/liburing
 
 // send_batch_liburing_helper uses the liburing library to async send packets
 // will be much more performant than synchronous alternatives
@@ -154,7 +153,7 @@ int check_cqe_ring_for_send_errs(void) {
 	unsigned head;
 	int i = 0;
 	io_uring_for_each_cqe(&ring, head, cqe) {
-		/* handle completion */
+		// since we created the sqe's with CQE_SKIP_SUCCESS, the only CQE's we get should be errors
 		if (cqe->res < 0) {
 			log_warn("send", "send_run_cleanup: cqe %d failed: %s", i, strerror(errno));
 		}

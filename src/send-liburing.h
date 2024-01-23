@@ -7,9 +7,10 @@
  */
 #ifndef ZMAP_DEV_SEND_LIBURING_H
 #define ZMAP_DEV_SEND_LIBURING_H
-#warning "compiling liburing.h"
 
 #include <sys/socket.h>
+
+#include <./send.h>
 
 int send_run_init_liburing(uint32_t kernel_cpu);
 int send_batch_liburing_helper(sock_t sock, batch_t* batch);
