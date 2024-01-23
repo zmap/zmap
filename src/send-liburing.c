@@ -31,21 +31,14 @@
 #include "./send-liburing.h"
 #include "./send-linux.h"
 
-
-// io_uring/liburing resources
-// Great high-level introduction - https://www.scylladb.com/2020/05/05/how-io_uring-and-ebpf-will-revolutionize-programming-in-linux/
-// Blog with good explanations and examples, it is 2 years old tho and some things have changed with liburing - https://unixism.net/loti/
-// Consult the manpages for io_uring... (man -k io_uring). This has the most up-to-date info for the version of liburing that ships with your distro
-// Note: Liburing is under active development, and new features have been added and documentation has changed. Something to keep in mind when you look at examples, both newer/older.
-// Ubuntu 23.04 ships with liburing v2.3 - https://packages.ubuntu.com/lunar/liburing-dev , v.2.5 is the latest - https://github.com/axboe/liburing
-
 __thread struct io_uring ring;
-#define QUEUE_DEPTH 128 // ring buffer size for liburing's submission queue
+#define QUEUE_DEPTH 512 // ring buffer size for liburing's submission queue
 #define SQ_POLLING_IDLE_TIMEOUT 1000 // how long kernel thread will wait before timing out
 
-// io_uring is an async I/O package. In send_packet, the caller passes in a pointer to a buffer. We'll create a submission queue entry (sqe) using this buffer and put it on the sqe ring buffer.
-// However, then we then immediately return to the caller which re-uses this buffer.
-// We need to create a data-structure to persist this data so it can be sent async and the caller can reuse the buffer
+// io_uring is an async I/O package. In send_packet, the caller passes in a pointer to a buffer. We'll create a
+// submission queue entry (sqe) using this buffer and put it on the sqe ring buffer. However, then we then immediately
+// return to the caller which re-uses this buffer.  We need to create a data-structure to persist this data so it can
+// be sent async and the caller can reuse the buffer.
 struct data_and_metadata
 {
 	char buf[MAX_PACKET_SIZE];
@@ -69,9 +62,9 @@ int send_run_init_liburing(uint32_t kernel_cpu)
 	// details available here: https://unixism.net/loti/tutorial/sq_poll.html#sq-poll
 	params.flags |= IORING_SETUP_SQPOLL;
 	// If no sqe's were submitted for SQ_POLLING_IDLE_TIMEOUT, the kernel thread would be killed and need to be restarted.
-	// This wouldn't be expected to happen since ZMap is constantly sending packets, but is best practice to define.
+	// This isn't expected to happen since ZMap is constantly sending packets, but is best practice to define.
 	params.sq_thread_idle = SQ_POLLING_IDLE_TIMEOUT;
-	log_debug("send_init", "Pinning a kernel polling thread for send events to core %u", kernel_cpu);
+	log_debug("send_init", "pinning a kernel polling thread for send events to core %u", kernel_cpu);
 	// assign the kernel thread to a given core
 	params.flags |= IORING_SETUP_SQ_AFF;
 	params.sq_thread_cpu = kernel_cpu;
@@ -104,7 +97,7 @@ int send_run_cleanup_liburing(void) {
 
 
 // send_batch_liburing_helper uses the liburing library to async send packets
-// will be much more performant than synchronous alternatives
+// This will be much more performant than synchronous alternatives.
 int send_batch_liburing_helper(sock_t sock, batch_t* batch) {
 	for (int i = 0; i < batch->len; i++) {
 		char *buf = ((void *)batch->packets) + (i * MAX_PACKET_SIZE);
@@ -127,7 +120,7 @@ int send_batch_liburing_helper(sock_t sock, batch_t* batch) {
 		struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
 		int has_cleared = 0;
 		while(!sqe) {
-			// submission queue is full, we need to block to let the kernel send traffic and cull some CQE's
+			// submission queue is full, we need to block to let the kernel send traffic and cull any CQE's
 			// since we submit with IOSQE_CQE_SKIP_SUCCESS, the only completion events expected are for errors.
 			check_cqe_ring_for_send_errs();
 			// wait for space in ring buffer to open up

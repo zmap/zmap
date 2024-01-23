@@ -10,13 +10,13 @@
 #define ZMAP_SEND_BSD_H
 
 #include <stdbool.h>
-
-#include <netinet/in.h>
 #include <net/bpf.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/ioctl.h>
+
 #include <fcntl.h>
+#include <netinet/in.h>
 
 #include "send.h"
 #include "../lib/includes.h"
