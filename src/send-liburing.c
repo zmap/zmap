@@ -104,6 +104,8 @@ int send_batch_liburing_helper(sock_t sock, batch_t* batch) {
 		int len = batch->lens[i];
 		// get next data entry in data ring buffer
 		struct data_and_metadata* d = &data_arr[free_buffer_ptr];
+		memset(&d->iov, 0, sizeof(struct iovec));
+		memset(&d->msg, 0, sizeof(struct msghdr));
 		// copy buf into data_arr so caller can re-use the buf pointer after we return
 		memcpy(d->buf, buf, len);
 		// setup msg/iov structs for sendmsg
@@ -136,6 +138,7 @@ int send_batch_liburing_helper(sock_t sock, batch_t* batch) {
 		// increment arr ptr index to next data for next send_packet
 		free_buffer_ptr = (free_buffer_ptr + 1) % QUEUE_DEPTH;
 	}
+	return batch->len;
 }
 
 // check_cqe_ring_for_send_errs Since each sqe is submitted with CQE_SKIP_SUCCESS,
