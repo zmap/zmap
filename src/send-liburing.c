@@ -104,8 +104,6 @@ int send_batch_liburing_helper(sock_t sock, batch_t* batch) {
 		int len = batch->lens[i];
 		// get next data entry in data ring buffer
 		struct data_and_metadata* d = &data_arr[free_buffer_ptr];
-		memset(&d->iov, 0, sizeof(struct iovec));
-		memset(&d->msg, 0, sizeof(struct msghdr));
 		// copy buf into data_arr so caller can re-use the buf pointer after we return
 		memcpy(d->buf, buf, len);
 		// setup msg/iov structs for sendmsg
