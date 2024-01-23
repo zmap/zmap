@@ -305,6 +305,7 @@ int send_run(sock_t st, shard_t *s, uint32_t kernel_cpu, bool is_liburing_enable
 		}
 	}
 	int attempts = zconf.retries + 1;
+	uint32_t idx = 0;
 	while (1) {
 		// Adaptive timing delay
 		if (count && delay > 0) {

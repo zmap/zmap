@@ -93,6 +93,12 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
      to take advantage of Linux's `sendmmsg` syscall to send the entire batch at once.
      Only available on Linux, other OS's will send each packet individually. (default=64)
 
+   * `--enable-liburing`:
+     Enable using the async I/O library, `liburing`. This drastically increases send performance if
+     your hardware and internet connection can support it. This is only available in newer Linux
+     kernels after installing `liburing-dev`. You'll need (2 * N) + 2 cores (where N is the number of
+     `--sender-threads`) to fully take advantage of the performance. More details in `10gigE.md`.
+
 ### SCAN SHARDING ###
 
    * `--shards=N`:
