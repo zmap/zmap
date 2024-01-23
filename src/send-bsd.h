@@ -43,6 +43,10 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 // Returns - number of packets sent
 // Returns -1 and sets errno if no packets could be sent successfully
 int send_batch(sock_t sock, batch_t* batch, int retries) {
+	if (batch->len == 0) {
+		// nothing to send
+		return EXIT_SUCCESS;
+	}
 	int packets_sent = 0;
 	int rc = 0;
 	for (int packet_num = 0; packet_num < batch->len; packet_num++) {
@@ -73,8 +77,6 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 	if (packets_sent == 0) {
 		// simulating the return behaviour of the Linux send_mmsg sys call on error. Returns -1 and leaves
 		// errno as set by send_packet
-		log_error("send", "send_batch failed and no packets were able to be sent: "
-				  "%s", strerror(errno));
 		return -1;
 	}
 	return packets_sent;

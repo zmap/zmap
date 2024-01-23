@@ -79,6 +79,10 @@ int send_run_init(sock_t s, uint32_t kernel_cpu, bool is_liburing_enabled)
 
 // send_batch uses either the liburing or sendmmsg helpers depending on CLI arguments
 int send_batch(sock_t sock, batch_t* batch, int retries) {
+	if (batch->len == 0) {
+		// nothing to send
+		return EXIT_SUCCESS;
+	}
 #if WITH_LIBURING
 	if (use_liburing) {
 		return send_batch_liburing_helper(sock, batch);
@@ -146,4 +150,3 @@ int send_batch_mmsg_helper(sock_t sock, batch_t* batch, int retries) {
 	}
 	return total_packets_sent;
 }
-
