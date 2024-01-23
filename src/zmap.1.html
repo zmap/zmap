@@ -135,6 +135,10 @@ be excluded.</p></dd>
 <dt> <code>--batch=n</code></dt><dd><p> Number of packets to batch before calling the appropriate syscall to send. Used
  to take advantage of Linux's <code>sendmmsg</code> syscall to send the entire batch at once.
  Only available on Linux, other OS's will send each packet individually. (default=64)</p></dd>
+<dt> <code>--enable-liburing</code></dt><dd><p> Enable using the async I/O library, <code>liburing</code>. This drastically increases send performance if
+ your hardware and internet connection can support it. This is only available in newer Linux
+ kernels after installing <code>liburing-dev</code>. You'll need (2 * N) + 2 cores (where N is the number of
+ <code>--sender-threads</code>) to fully take advantage of the performance. More details in <code>10gigE.md</code>.</p></dd>
 </dl>
 
 
@@ -298,7 +302,7 @@ decreasing by 5%.</p>
 
   <ol class='man-decor man-foot man foot'>
     <li class='tl'>ZMap</li>
-    <li class='tc'>December 2023</li>
+    <li class='tc'>January 2024</li>
     <li class='tr'>zmap(1)</li>
   </ol>
 

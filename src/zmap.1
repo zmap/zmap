@@ -1,7 +1,7 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "ZMAP" "1" "December 2023" "ZMap" "zmap"
+.TH "ZMAP" "1" "January 2024" "ZMap" "zmap"
 .
 .SH "NAME"
 \fBzmap\fR \- The Fast Internet Scanner
@@ -81,6 +81,10 @@ Number of times to try resending a packet if the sendto call fails (default=10)
 .TP
 \fB\-\-batch=n\fR
 Number of packets to batch before calling the appropriate syscall to send\. Used to take advantage of Linux\'s \fBsendmmsg\fR syscall to send the entire batch at once\. Only available on Linux, other OS\'s will send each packet individually\. (default=64)
+.
+.TP
+\fB\-\-enable\-liburing\fR
+Enable using the async I/O library, \fBliburing\fR\. This drastically increases send performance if your hardware and internet connection can support it\. This is only available in newer Linux kernels after installing \fBliburing\-dev\fR\. You\'ll need (2 * N) + 2 cores (where N is the number of \fB\-\-sender\-threads\fR) to fully take advantage of the performance\. More details in \fB10gigE\.md\fR\.
 .
 .SS "SCAN SHARDING"
 .
