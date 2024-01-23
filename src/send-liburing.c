@@ -118,7 +118,6 @@ int send_batch_liburing_helper(sock_t sock, batch_t* batch) {
 
 		// initialize the SQE for sending a packet
 		struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
-		int has_cleared = 0;
 		while(!sqe) {
 			// submission queue is full, we need to block to let the kernel send traffic and cull any CQE's
 			// since we submit with IOSQE_CQE_SKIP_SUCCESS, the only completion events expected are for errors.
