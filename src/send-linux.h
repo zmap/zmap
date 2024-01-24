@@ -37,6 +37,7 @@ static bool use_liburing;
 int send_run_init(sock_t s, uint32_t kernel_cpu, bool is_liburing_enabled);
 int send_batch(sock_t sock, batch_t* batch, int retries);
 int send_run_cleanup(void);
+struct sockaddr_ll* get_sock(void);
 
 
 

@@ -150,3 +150,8 @@ int send_batch_mmsg_helper(sock_t sock, batch_t* batch, int retries) {
 	}
 	return total_packets_sent;
 }
+
+// get_sock let's other files access this global variable. Specifically, send-liburing.c
+struct sockaddr_ll* get_sock(void) {
+	return &sockaddr;
+}

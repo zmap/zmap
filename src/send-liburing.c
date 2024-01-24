@@ -111,7 +111,7 @@ int send_batch_liburing_helper(sock_t sock, batch_t* batch) {
 		iov->iov_base = d->buf;
 		iov->iov_len = len;
 		struct msghdr *msg = &d->msg;
-		msg->msg_name = (struct sockaddr *)&sockaddr;
+                msg->msg_name = (struct sockaddr *)get_sock();
 		msg->msg_namelen = sizeof(struct sockaddr_ll);
 		msg->msg_iov = iov;
 		msg->msg_iovlen = 1;
