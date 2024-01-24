@@ -472,7 +472,6 @@ cleanup:
 	if (!zconf.dryrun && send_batch(st, batch, attempts) < 0) {
 		log_error("send_batch cleanup", "could not send remaining batch packets: %s", strerror(errno));
 	}
-	free_packet_batch(batch);
 	s->cb(s->thread_id, s->arg);
 	if (zconf.dryrun) {
 		lock_file(stdout);
@@ -482,6 +481,7 @@ cleanup:
 	if (send_run_cleanup() != 0) {
 		log_warn("send", "thread %hu did not finish cleanly", s->thread_id);
 	}
+	free_packet_batch(batch);
 	log_debug("send", "thread %hu cleanly finished", s->thread_id);
 	return EXIT_SUCCESS;
 }
