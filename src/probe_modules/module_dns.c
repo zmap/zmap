@@ -86,7 +86,10 @@ static uint16_t *qname_lens;
 static char **qnames;
 static uint16_t *qtypes;
 static int num_questions = 0; // How many DNS questions to query. Note: There's a requirement that probes is a multiple of DNS questions
-static const char probe_arg_delimitor = ';';
+// necessary to null-terminate these since strtrk_r can take multiple delimitors as a char*, and since these are contiguous in memory,
+// they were being used jointly when the intention is to use only one at a time.
+static const char* probe_arg_delimitor = ";\0";
+static const char* domain_qtype_delimitor = ",\0";
 static void set_num_dns_questions(struct state_conf *);
 
 /* Array of qtypes we support. Jumping through some hoops (1 level of
@@ -573,10 +576,82 @@ static bool process_response_answer(char **data, uint16_t *data_len,
  * Start of required zmap exports.
  */
 
+
+
 static int dns_global_initialize(struct state_conf *conf)
 {
-	set_num_dns_questions(conf);
-	log_debug("dns", "number of dns questions: %d", num_questions);
+	setup_qtype_str_map();
+	// strip off any leading or trailing semicolons
+	if (*conf->probe_args == probe_arg_delimitor) {
+		log_debug("dns", "Probe args (%s) contains leading semicolon. Stripping.", conf->probe_args);
+		conf->probe_args = conf->probe_args + 1;
+	}
+	if (conf->probe_args[strlen(conf->probe_args) - 1] == probe_arg_delimitor) {
+		log_debug("dns", "Probe args (%s) contains trailing semicolon. Stripping.", conf->probe_args);
+		conf->probe_args[strlen(conf->probe_args) - 1] = '\n';
+	}
+
+	char **domains = NULL;
+	num_questions = 0;
+
+	if (conf->probe_args) {
+		char* questions_ctx;
+		char* domain_ctx;
+		char* domain_and_qtype = strtok_r(conf->probe_args, probe_arg_delimitor, &questions_ctx);
+
+		// Process each pair
+		while (domain_and_qtype != NULL) {
+			// Tokenize pair based on comma
+			char *qtype_token = strtok_r(domain_and_qtype, domain_qtype_delimitor, &domain_ctx);
+			char *domain_token = strtok_r(NULL, domain_qtype_delimitor, &domain_ctx);
+			if (domain_token == NULL || qtype_token == NULL) {
+				log_fatal( "dns", "Invalid probe args (%s). Format: \"A,google.com\" "
+						 "or \"A,google.com;A,example.com\"", conf->probe_args);
+			}
+			if (strlen(domain_token) == 0) {
+				log_fatal( "dns", "Invalid domain, domain %s cannot be empty.", domain_token);
+			}
+			uint domain_len = strlen(domain_token);
+			// add space for the null terminator
+			char* domain_ptr = xmalloc(domain_len + 1);
+			strncpy(domain_ptr, domain_token, domain_len);
+			// add null terminator
+			domain_ptr[domain_len] = '\0';
+
+			// resize the array to accommodate the new pair
+			domains = xrealloc(domains, (num_questions + 1) * sizeof(char *));
+			qtypes = xrealloc(qtypes, (num_questions + 1) * sizeof(uint16_t));
+
+			// add the new pair to the array
+			domains[num_questions] = domain_ptr;
+			qtypes[num_questions] = qtype_str_to_code(qtype_token);
+
+			if (!qtypes[num_questions]) {
+				log_fatal("dns", "Incorrect qtype supplied. %s", qtype_token);
+			}
+
+			// move to the next pair of domain/qtype
+			domain_and_qtype = strtok_r(NULL, probe_arg_delimitor, &questions_ctx);
+			num_questions++;
+		}
+	}
+
+	if (num_questions == 0) {
+		// user didn't provide any questions, setting up a default
+		log_warn("dns", "no dns questions provided, using default domain (%s) and qtype (%s)", default_domain, qtype_strs[qtype_qtype_to_strid[default_qtype]]);
+		// Resize the array to accommodate the new pair
+		domains = xrealloc(domains, (num_questions + 1) * sizeof(char *));
+		qtypes = xrealloc(qtypes, (num_questions + 1) * sizeof(uint16_t));
+
+		// Add the new pair to the array
+		domains[num_questions] = strdup(default_domain);
+		qtypes[num_questions] = default_qtype;
+
+		num_questions = 1;
+	} else {
+		log_debug("dns", "number of dns questions: %d", num_questions);
+	}
+
 	if (conf->packet_streams % num_questions != 0) {
 		// probe count must be a multiple of the number of DNS questions
 		log_fatal("dns", "number of probes (%d) must be a multiple of the number of DNS questions (%d)."
@@ -587,73 +662,12 @@ static int dns_global_initialize(struct state_conf *conf)
 	dns_packet_lens = xmalloc(sizeof(uint16_t) * num_questions);
 	qname_lens = xmalloc(sizeof(uint16_t) * num_questions);
 	qnames = xmalloc(sizeof(char *) * num_questions);
-	qtypes = xmalloc(sizeof(uint16_t) * num_questions);
-
-	char *qtype_str = NULL;
-	char **domains = (char **)xmalloc(sizeof(char *) * num_questions);
-
-	for (int i = 0; i < num_questions; i++) {
-		domains[i] = (char *)default_domain;
-		qtypes[i] = default_qtype;
-	}
 
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
 
-	setup_qtype_str_map();
-
-	if (conf->probe_args) {
-		char *arg_pos = conf->probe_args;
-
-		for (int i = 0; i < num_questions; i++) {
-			char *probe_q_delimiter_p = strchr(arg_pos, ',');
-			char *probe_arg_delimiter_p = strchr(arg_pos, probe_arg_delimitor);
-
-			if (probe_q_delimiter_p == NULL ||
-			    probe_q_delimiter_p == arg_pos ||
-			    arg_pos + strlen(arg_pos) == (probe_q_delimiter_p + 1)) {
-				log_fatal(
-				    "dns",
-				    "Invalid probe args. Format: \"A,google.com\" or \"A,google.com;A,example.com\"");
-			}
-			int domain_len = 0;
-
-			if (probe_arg_delimiter_p) {
-				domain_len = probe_arg_delimiter_p -
-					     probe_q_delimiter_p - 1;
-			} else {
-				domain_len = strlen(probe_q_delimiter_p);
-			}
-			if (domain_len <= 0) {
-				log_fatal("dns", "Invalid probe args. Format: \"A,google.com\" or \"A,google.com;A,example.com\"");
-			}
-
-			domains[i] = xmalloc(domain_len + 1);
-			strncpy(domains[i], probe_q_delimiter_p + 1,
-				domain_len);
-			domains[i][domain_len] = '\0';
-
-			qtype_str = xmalloc(probe_q_delimiter_p - arg_pos + 1);
-			strncpy(qtype_str, arg_pos,
-				probe_q_delimiter_p - arg_pos);
-			qtype_str[probe_q_delimiter_p - arg_pos] = '\0';
-
-			qtypes[i] = qtype_str_to_code(qtype_str);
-			free(qtype_str);
-			if (!qtypes[i]) {
-				log_fatal("dns", "Incorrect qtype supplied. %s",
-					  qtype_str);
-				return EXIT_FAILURE;
-			}
-
-			arg_pos = probe_q_delimiter_p + domain_len + 2;
-		}
-	}
 	size_t max_payload_len;
-	int ret =
-	    build_global_dns_packets(domains, num_questions, &max_payload_len);
-	module_dns.max_packet_length =
-	    max_payload_len + sizeof(struct ether_header) + sizeof(struct ip) +
-	    sizeof(struct udphdr);
+	int ret = build_global_dns_packets(domains, num_questions, &max_payload_len);
+	module_dns.max_packet_length = max_payload_len + sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr);
 	return ret;
 }
 
@@ -1093,39 +1107,3 @@ probe_module_t module_dns = {
 	"output in raw form."
 
 };
-
-// find_num_dns_questions parses the --probe-args supplied by the user and finds how many DNS questions they want to probe
-// Sets the global static num_questions
-static void set_num_dns_questions(struct state_conf *conf) {
-	// default number of questions is 1, if the user doesn't input any probe_args
-	num_questions = 1;
-	if (!conf->probe_args) {
-		// user didn't input any probe args, we'll default to google.com
-		return;
-	}
-
-	// if a user inputs a single query "AAAA,google.com;", the semicolon will break
-	// the question-counting logic below. Strip any leading/trailing semicolons
-	if (*conf->probe_args == probe_arg_delimitor && strlen(conf->probe_args) == 1) {
-		// user only input ";" as probe-args, error immediately
-		log_fatal("dns",
-			  "Invalid probe args (%s). Format: \"A,google.com\" or \"A,google.com;A,example.com\"", conf->probe_args);
-	}
-	if (*conf->probe_args == probe_arg_delimitor) {
-		log_debug("dns", "Probe args (%s) contains leading semicolon. Stripping.", conf->probe_args);
-		conf->probe_args = conf->probe_args + 1;
-	}
-	if (conf->probe_args[strlen(conf->probe_args) - 1] == probe_arg_delimitor) {
-		log_debug("dns", "Probe args (%s) contains trailing semicolon. Stripping.", conf->probe_args);
-		conf->probe_args[strlen(conf->probe_args) - 1] = '\n';
-	}
-	// find how many probe_args the user wants to query
-	if (conf->probe_args) {
-		int arg_strlen = strlen(conf->probe_args);
-		for (int i = 0; i < arg_strlen; i++) {
-			if(*(conf->probe_args + i) == probe_arg_delimitor) {
-				num_questions++;
-			}
-		}
-	}
-}
