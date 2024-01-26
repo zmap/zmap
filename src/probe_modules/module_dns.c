@@ -79,6 +79,7 @@ static int num_ports;
 
 const char default_domain[] = "www.google.com";
 const uint16_t default_qtype = DNS_QTYPE_A;
+const uint8_t default_rdbit = 0xFF;
 
 static char **dns_packets;
 static uint16_t *dns_packet_lens; // Not including udp header
@@ -90,7 +91,10 @@ static int num_questions = 0; // How many DNS questions to query. Note: There's 
 // they were being used jointly when the intention is to use only one at a time.
 static const char* probe_arg_delimitor = ";\0";
 static const char* domain_qtype_delimitor = ",\0";
-static void set_num_dns_questions(struct state_conf *);
+static const char* rn_delimitor = ":\0";
+
+static uint8_t *rdbits;
+const char *qopts_rn = "nr"; // used in query to disable recursion bit in DNS header
 
 /* Array of qtypes we support. Jumping through some hoops (1 level of
  * indirection) so the per-packet processing time is fast. Keep this in sync
@@ -189,7 +193,8 @@ static int build_global_dns_packets(char *domains[], int num_domains, size_t *ma
 
 		// All other header fields should be 0. Except id, which we set
 		// per thread. Please recurse as needed.
-		dns_header_p->rd = 1; // Is one bit. Don't need htons
+		dns_header_p->rd = rdbits[i];
+
 		// We have 1 question
 		dns_header_p->qdcount = htons(1);
 		memcpy(qname_p, qnames[i], qname_lens[i]);
@@ -601,9 +606,24 @@ static int dns_global_initialize(struct state_conf *conf)
 
 		// Process each pair
 		while (domain_and_qtype != NULL) {
+			// resize the array to accommodate the new pair
+			domains = xrealloc(domains, (num_questions + 1) * sizeof(char *));
+			qtypes = xrealloc(qtypes, (num_questions + 1) * sizeof(uint16_t));
+			rdbits = xrealloc(rdbits, (num_questions + 1) * sizeof(uint8_t));
+			rdbits[num_questions] = default_rdbit;
+
 			// Tokenize pair based on comma
 			char *qtype_token = strtok_r(domain_and_qtype, domain_qtype_delimitor, &domain_ctx);
 			char *domain_token = strtok_r(NULL, domain_qtype_delimitor, &domain_ctx);
+			if (strchr(qtype_token, rn_delimitor[0]) != NULL) {
+				// need to check if user supplied the no-recursion bit
+				char* rbit_ctx;
+				char *recurse_token = strtok_r(qtype_token, rn_delimitor, &rbit_ctx);
+				recurse_token = strtok_r(NULL, rn_delimitor, &rbit_ctx);
+				if (strcmp(recurse_token, qopts_rn) == 0) {
+					rdbits[num_questions] = 0;
+				}
+			}
 			if (domain_token == NULL || qtype_token == NULL) {
 				log_fatal( "dns", "Invalid probe args (%s). Format: \"A,google.com\" "
 						 "or \"A,google.com;A,example.com\"", conf->probe_args);
@@ -618,9 +638,6 @@ static int dns_global_initialize(struct state_conf *conf)
 			// add null terminator
 			domain_ptr[domain_len] = '\0';
 
-			// resize the array to accommodate the new pair
-			domains = xrealloc(domains, (num_questions + 1) * sizeof(char *));
-			qtypes = xrealloc(qtypes, (num_questions + 1) * sizeof(uint16_t));
 
 			// add the new pair to the array
 			domains[num_questions] = domain_ptr;
@@ -662,9 +679,22 @@ static int dns_global_initialize(struct state_conf *conf)
 	dns_packet_lens = xmalloc(sizeof(uint16_t) * num_questions);
 	qname_lens = xmalloc(sizeof(uint16_t) * num_questions);
 	qnames = xmalloc(sizeof(char *) * num_questions);
-
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
 
+//	qtypes = xmalloc(sizeof(uint16_t) * num_questions);
+//
+//	char *qtype_str = NULL;
+//	char *qopts_str = NULL;
+//	char **domains = (char **)xmalloc(sizeof(char *) * num_questions);
+//
+//	for (int i = 0; i < num_questions; i++) {
+//		domains[i] = (char *)default_domain;
+//		qtypes[i] = default_qtype;
+//		rdbits[i] = default_rdbit;
+//	}
+//				if (strcmp(qopts_str, qopts_rn) == 0) {
+//					rdbits[i] = 0;
+//				}
 	size_t max_payload_len;
 	int ret = build_global_dns_packets(domains, num_questions, &max_payload_len);
 	module_dns.max_packet_length = max_payload_len + sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr);
@@ -1100,8 +1130,10 @@ probe_module_t module_dns = {
 	"google.com. You can specify other queries using the --probe-args "
 	"argument in the form: 'type,query', e.g. 'A,google.com'. The --probes/-P "
 	"flag must be set to a multiple of the number of DNS questions. The module "
-	"supports sending the the following types: of queries: A, NS, CNAME, SOA, "
-	"PTR, MX, TXT, AAAA, RRSIG, and ALL. The module will accept and attempt "
+	"supports sending the the following types of queries: A, NS, CNAME, SOA, "
+	"PTR, MX, TXT, AAAA, RRSIG, and ALL. In order to send queries with the "
+	"'recursion desired' bit set to 0, append the suffix ':nr' to the query "
+	"type, e.g. 'A:nr,google.com'. The module will accept and attempt "
 	"to parse all DNS responses. There is currently support for parsing out "
 	"full data from A, NS, CNAME, MX, TXT, and AAAA. Any other types will be "
 	"output in raw form."
