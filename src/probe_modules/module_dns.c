@@ -625,8 +625,7 @@ static int dns_global_initialize(struct state_conf *conf)
 				}
 			}
 			if (domain_token == NULL || qtype_token == NULL) {
-				log_fatal( "dns", "Invalid probe args (%s). Format: \"A,google.com\" "
-						 "or \"A,google.com;A,example.com\"", conf->probe_args);
+				log_fatal( "dns", "Invalid probe args (%s). Format: \"A,google.com\" " "or \"A,google.com;A,example.com\"", conf->probe_args);
 			}
 			if (strlen(domain_token) == 0) {
 				log_fatal( "dns", "Invalid domain, domain %s cannot be empty.", domain_token);
@@ -681,20 +680,6 @@ static int dns_global_initialize(struct state_conf *conf)
 	qnames = xmalloc(sizeof(char *) * num_questions);
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
 
-//	qtypes = xmalloc(sizeof(uint16_t) * num_questions);
-//
-//	char *qtype_str = NULL;
-//	char *qopts_str = NULL;
-//	char **domains = (char **)xmalloc(sizeof(char *) * num_questions);
-//
-//	for (int i = 0; i < num_questions; i++) {
-//		domains[i] = (char *)default_domain;
-//		qtypes[i] = default_qtype;
-//		rdbits[i] = default_rdbit;
-//	}
-//				if (strcmp(qopts_str, qopts_rn) == 0) {
-//					rdbits[i] = 0;
-//				}
 	size_t max_payload_len;
 	int ret = build_global_dns_packets(domains, num_questions, &max_payload_len);
 	module_dns.max_packet_length = max_payload_len + sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct udphdr);
