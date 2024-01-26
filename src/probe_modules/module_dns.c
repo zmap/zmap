@@ -582,11 +582,11 @@ static int dns_global_initialize(struct state_conf *conf)
 {
 	setup_qtype_str_map();
 	// strip off any leading or trailing semicolons
-	if (*conf->probe_args == probe_arg_delimitor) {
+	if (*conf->probe_args == probe_arg_delimitor[0]) {
 		log_debug("dns", "Probe args (%s) contains leading semicolon. Stripping.", conf->probe_args);
-		conf->probe_args = conf->probe_args + 1;
+		conf->probe_args++;
 	}
-	if (conf->probe_args[strlen(conf->probe_args) - 1] == probe_arg_delimitor) {
+	if (conf->probe_args[strlen(conf->probe_args) - 1] == probe_arg_delimitor[0]) {
 		log_debug("dns", "Probe args (%s) contains trailing semicolon. Stripping.", conf->probe_args);
 		conf->probe_args[strlen(conf->probe_args) - 1] = '\n';
 	}
