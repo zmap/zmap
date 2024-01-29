@@ -22,7 +22,20 @@
 #include "validate.h"
 
 #define ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN 24
+// #define ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN 32
 #define ZMAP_TCP_SYNSCAN_PACKET_LEN 58
+
+#define TCP_OPTION_KIND_END 0
+#define TCP_OPTION_KIND_MSS 2
+#define TCP_OPTION_KIND_WINDOW_SCALE 3
+#define TCP_OPTION_KIND_SACK_PERMITTED 4
+#define TCP_OPTION_KIND_TIMESTAMP 8
+
+// Define the lengths of the TCP options
+#define TCP_OPTION_LENGTH_MSS 4
+#define TCP_OPTION_LENGTH_WINDOW_SCALE 3
+#define TCP_OPTION_LENGTH_SACK_PERMITTED 2
+#define TCP_OPTION_LENGTH_TIMESTAMP 10
 
 probe_module_t module_tcp_synscan;
 
@@ -55,19 +68,77 @@ static int synscan_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 			       uint32_t *validation, int probe_num,
 			       UNUSED void *arg)
 {
+	printf("Starting packet creation...\n");
+
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
 	struct tcphdr *tcp_header = (struct tcphdr *)(&ip_header[1]);
 	uint32_t tcp_seq = validation[0];
 
+	printf("Ethernet header created.\n");
+
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
 	ip_header->ip_ttl = ttl;
+
+	printf("IP header set: src_ip=%s, dst_ip=%s, ttl=%d\n",
+	       inet_ntoa(*(struct in_addr *)&src_ip),
+	       inet_ntoa(*(struct in_addr *)&dst_ip), ttl);
 
 	port_h_t sport = get_src_port(num_source_ports, probe_num, validation);
 	tcp_header->th_sport = htons(sport);
 	tcp_header->th_dport = dport;
 	tcp_header->th_seq = tcp_seq;
+
+	printf("TCP header set: src_port=%d, dst_port=%d, seq_num=%u\n",
+	       ntohs(sport), ntohs(dport), tcp_seq);
+
+	// BEGIN JA4TS IMPLEMENTATION
+	// tcp_header->th_off =
+	//     5 + (TCP_OPTION_LENGTH_MSS + TCP_OPTION_LENGTH_WINDOW_SCALE +
+	// 	 TCP_OPTION_LENGTH_SACK_PERMITTED +
+	// 	 TCP_OPTION_LENGTH_TIMESTAMP + 1) /
+	// 	    4; // data offset
+
+	// // Start setting TCP options right after the TCP header
+	// unsigned char *tcp_options = (unsigned char *)(tcp_header + 1);
+	// int option_index = 0;
+
+	// // Set Maximum Segment Size option
+	// tcp_options[option_index++] = TCP_OPTION_KIND_MSS;
+	// tcp_options[option_index++] = TCP_OPTION_LENGTH_MSS;
+	// *(uint16_t *)(tcp_options + option_index) =
+	//     htons(1460); // example MSS value
+	// option_index += 2;
+
+	// // Set Window Scale option
+	// tcp_options[option_index++] = TCP_OPTION_KIND_WINDOW_SCALE;
+	// tcp_options[option_index++] = TCP_OPTION_LENGTH_WINDOW_SCALE;
+	// tcp_options[option_index++] = 4; // example scale factor
+
+	// // Set SACK Permitted option
+	// tcp_options[option_index++] = TCP_OPTION_KIND_SACK_PERMITTED;
+	// tcp_options[option_index++] = TCP_OPTION_LENGTH_SACK_PERMITTED;
+
+	// // Set Timestamps option
+	// tcp_options[option_index++] = TCP_OPTION_KIND_TIMESTAMP;
+	// tcp_options[option_index++] = TCP_OPTION_LENGTH_TIMESTAMP;
+	// // Timestamp value and echo reply (8 bytes total)
+	// *(uint32_t *)(tcp_options + option_index) =
+	//     htonl(12345678); // example timestamp
+	// option_index += 4;
+	// *(uint32_t *)(tcp_options + option_index) =
+	//     0; // example echo reply (usually 0 in SYN)
+	// option_index += 4;
+
+	// // End of option list
+	// tcp_options[option_index++] = TCP_OPTION_KIND_END;
+
+	// // Adjust packet length to include TCP options
+	// *buf_len = ((unsigned char *)tcp_header - (unsigned char *)buf) +
+	// 	   sizeof(struct tcphdr) + option_index;
+
+	// END JA4TS IMPLEMENTATION
 	// checksum value must be zero when calculating packet's checksum
 	tcp_header->th_sum = 0;
 	tcp_header->th_sum = tcp_checksum(ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN,
@@ -78,6 +149,13 @@ static int synscan_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
 
 	*buf_len = ZMAP_TCP_SYNSCAN_PACKET_LEN;
+	printf("Packet creation completed. Packet length: %zu\n", *buf_len);
+	// print ip_header
+	printf("ip_header: ");
+	for (int i = 0; i < sizeof(struct ip); i++)
+	{
+		printf("%02x ", ((unsigned char *)ip_header)[i]);
+	}
 	return EXIT_SUCCESS;
 }
 
