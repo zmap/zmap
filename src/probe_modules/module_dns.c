@@ -631,7 +631,7 @@ static int dns_global_initialize(struct state_conf *conf)
 				log_fatal( "dns", "Invalid probe args (%s). Format: \"A,google.com\" " "or \"A,google.com;A,example.com\"", conf->probe_args);
 			}
 			if (strlen(domain_token) == 0) {
-				log_fatal( "dns", "Invalid domain, domain %s cannot be empty.", domain_token);
+				log_fatal( "dns", "Invalid domain, domain cannot be empty.");
 			}
 			uint domain_len = strlen(domain_token);
 			// add space for the null terminator
@@ -641,6 +641,13 @@ static int dns_global_initialize(struct state_conf *conf)
 			domain_ptr[domain_len] = '\0';
 
 
+			// print debug info
+			if (rdbits[num_questions] == 0) {
+				// recursion disabled
+				log_debug("dns", "parsed user input to scan domain (%s), for qtype (%s) w/o recursion", domain_ptr, qtype_token);
+			} else {
+				log_debug("dns", "parsed user input to scan domain (%s), for qtype (%s) with recursion", domain_ptr, qtype_token);
+			}
 			// add the new pair to the array
 			domains[num_questions] = domain_ptr;
 			qtypes[num_questions] = qtype_str_to_code(qtype_token);
