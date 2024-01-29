@@ -615,13 +615,16 @@ static int dns_global_initialize(struct state_conf *conf)
 			// Tokenize pair based on comma
 			char *qtype_token = strtok_r(domain_and_qtype, domain_qtype_delimitor, &domain_ctx);
 			char *domain_token = strtok_r(NULL, domain_qtype_delimitor, &domain_ctx);
-			if (strchr(qtype_token, rn_delimitor[0]) != NULL) {
+ 			if (strchr(qtype_token, rn_delimitor[0]) != NULL) {
 				// need to check if user supplied the no-recursion bit
 				char* rbit_ctx;
 				char *recurse_token = strtok_r(qtype_token, rn_delimitor, &rbit_ctx);
 				recurse_token = strtok_r(NULL, rn_delimitor, &rbit_ctx);
+				// check if the no-recursion field matches the expected value ("nr")
 				if (strcmp(recurse_token, qopts_rn) == 0) {
 					rdbits[num_questions] = 0;
+				} else {
+					log_warn("dns", "invalid text after DNS query type (%s). no recursion set with \"nr\"", recurse_token);
 				}
 			}
 			if (domain_token == NULL || qtype_token == NULL) {
