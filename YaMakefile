@@ -1,0 +1,8 @@
+build:
+    cmake -DENABLE_DEVELOPMENT=ON .
+    make -j4
+    make install
+
+zmap:
+    sudo zmap -N 5 -B 10M -p 80 -o output.csv --output-fields=saddr,window
+
