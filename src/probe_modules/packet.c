@@ -116,6 +116,38 @@ void make_tcp_header(struct tcphdr *tcp_header, uint16_t th_flags)
 	tcp_header->th_urp = 0;
 }
 
+size_t set_additional_options(struct tcphdr *tcp_header)
+{
+	size_t header_size = tcp_header->th_off * 4;
+	uint8_t *base = (uint8_t *)tcp_header;
+	uint8_t *last_opt = (uint8_t *)base + header_size;
+
+	// Add the Window Scale (Kind 3) option with scaling factor of 2
+	last_opt[0] = 3; // Option Kind for Window Scale
+	last_opt[1] = 3; // Option Length (typically 3 bytes)
+	last_opt[2] = 7; // Scaling Factor (0 to 14)
+
+	// Add the Sack Permitted (Kind 4) option
+	last_opt[3] = 4; // Option Kind for Sack Permitted
+	last_opt[4] = 2; // Option Length (typically 2 bytes)
+
+	// Add the Timestamp (Kind 8) option
+	last_opt[5] = 8;  // Option Kind for Timestamp
+	last_opt[6] = 10; // Option Length (typically 10 bytes)
+
+	// Timestamp Value (4 bytes)
+	uint32_t timestamp_value = htonl((uint32_t)time(NULL));
+	memcpy(&last_opt[7], &timestamp_value, sizeof(uint32_t));
+
+	// Timestamp Echo Reply (4 bytes)
+	uint32_t timestamp_echo_reply = 0; // You can set this value as needed
+	memcpy(&last_opt[11], &timestamp_echo_reply, sizeof(uint32_t));
+
+	// Update the header length
+	tcp_header->th_off += 4;
+	return tcp_header->th_off * 4;
+}
+
 size_t set_mss_option(struct tcphdr *tcp_header)
 {
 	// This only sets MSS, which is a single-word option.

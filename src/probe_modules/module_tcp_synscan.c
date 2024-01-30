@@ -21,25 +21,35 @@
 #include "packet.h"
 #include "validate.h"
 
-#define ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN 24
-// #define ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN 32
-#define ZMAP_TCP_SYNSCAN_PACKET_LEN 58
+// #define ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN 24
+// #define ZMAP_TCP_SYNSCAN_PACKET_LEN 58
+#define ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN 40
+#define ZMAP_TCP_SYNSCAN_PACKET_LEN 74
 
-#define TCP_OPTION_KIND_END 0
-#define TCP_OPTION_KIND_MSS 2
-#define TCP_OPTION_KIND_WINDOW_SCALE 3
-#define TCP_OPTION_KIND_SACK_PERMITTED 4
-#define TCP_OPTION_KIND_TIMESTAMP 8
+// TCP Option Kind Values
+#define TCP_OPTION_KIND_END 0 // End of Option List (used to terminate options)
+#define TCP_OPTION_KIND_NO_OPERATION 1	 // No-Operation (used for padding)
+#define TCP_OPTION_KIND_MSS 2		 // Maximum Segment Size
+#define TCP_OPTION_KIND_WINDOW_SCALE 3	 // Window Scale
+#define TCP_OPTION_KIND_SACK_PERMITTED 4 // SACK Permitted
+#define TCP_OPTION_KIND_SACK 5		 // Selective Acknowledgment (SACK)
+#define TCP_OPTION_KIND_TIMESTAMP 8	 // Timestamps
 
-// Define the lengths of the TCP options
-#define TCP_OPTION_LENGTH_MSS 4
-#define TCP_OPTION_LENGTH_WINDOW_SCALE 3
-#define TCP_OPTION_LENGTH_SACK_PERMITTED 2
-#define TCP_OPTION_LENGTH_TIMESTAMP 10
+// TCP Option Lengths (excluding Kind and Length fields)
+#define TCP_OPTION_LENGTH_MSS 4		 // Maximum Segment Size (2 bytes data)
+#define TCP_OPTION_LENGTH_WINDOW_SCALE 3 // Window Scale (1 byte data)
+#define TCP_OPTION_LENGTH_SACK_PERMITTED 2 // SACK Permitted (0 bytes data)
+#define TCP_OPTION_LENGTH_TIMESTAMP 10	   // Timestamps (8 bytes data)
 
 probe_module_t module_tcp_synscan;
 
 static uint16_t num_source_ports;
+
+// Comparison function for qsort
+static int compare_uint8_t(const void *a, const void *b)
+{
+	return (*(uint8_t *)a - *(uint8_t *)b);
+}
 
 static int synscan_global_initialize(struct state_conf *state)
 {
@@ -60,6 +70,8 @@ static int synscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	struct tcphdr *tcp_header = (struct tcphdr *)(&ip_header[1]);
 	make_tcp_header(tcp_header, TH_SYN);
 	set_mss_option(tcp_header);
+	set_additional_options(tcp_header);
+	printf("TCP header length: %d\n", tcp_header->th_off * 4);
 	return EXIT_SUCCESS;
 }
 
@@ -68,77 +80,33 @@ static int synscan_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 			       uint32_t *validation, int probe_num,
 			       UNUSED void *arg)
 {
-	printf("Starting packet creation...\n");
+	// printf("Starting packet creation...\n");
 
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
 	struct tcphdr *tcp_header = (struct tcphdr *)(&ip_header[1]);
 	uint32_t tcp_seq = validation[0];
 
-	printf("Ethernet header created.\n");
+	// printf("Ethernet header created.\n");
+	uint8_t *tcp_options =
+	    (uint8_t *)(&tcp_header[1]); // Points to the start of TCP options
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
 	ip_header->ip_ttl = ttl;
 
-	printf("IP header set: src_ip=%s, dst_ip=%s, ttl=%d\n",
-	       inet_ntoa(*(struct in_addr *)&src_ip),
-	       inet_ntoa(*(struct in_addr *)&dst_ip), ttl);
+	// printf("IP header set: src_ip=%s, dst_ip=%s, ttl=%d\n",
+	//        inet_ntoa(*(struct in_addr *)&src_ip),
+	//        inet_ntoa(*(struct in_addr *)&dst_ip), ttl);
 
 	port_h_t sport = get_src_port(num_source_ports, probe_num, validation);
 	tcp_header->th_sport = htons(sport);
 	tcp_header->th_dport = dport;
 	tcp_header->th_seq = tcp_seq;
 
-	printf("TCP header set: src_port=%d, dst_port=%d, seq_num=%u\n",
-	       ntohs(sport), ntohs(dport), tcp_seq);
+	// printf("TCP header set: src_port=%d, dst_port=%d, seq_num=%u\n",
+	//        ntohs(sport), ntohs(dport), tcp_seq);
 
-	// BEGIN JA4TS IMPLEMENTATION
-	// tcp_header->th_off =
-	//     5 + (TCP_OPTION_LENGTH_MSS + TCP_OPTION_LENGTH_WINDOW_SCALE +
-	// 	 TCP_OPTION_LENGTH_SACK_PERMITTED +
-	// 	 TCP_OPTION_LENGTH_TIMESTAMP + 1) /
-	// 	    4; // data offset
-
-	// // Start setting TCP options right after the TCP header
-	// unsigned char *tcp_options = (unsigned char *)(tcp_header + 1);
-	// int option_index = 0;
-
-	// // Set Maximum Segment Size option
-	// tcp_options[option_index++] = TCP_OPTION_KIND_MSS;
-	// tcp_options[option_index++] = TCP_OPTION_LENGTH_MSS;
-	// *(uint16_t *)(tcp_options + option_index) =
-	//     htons(1460); // example MSS value
-	// option_index += 2;
-
-	// // Set Window Scale option
-	// tcp_options[option_index++] = TCP_OPTION_KIND_WINDOW_SCALE;
-	// tcp_options[option_index++] = TCP_OPTION_LENGTH_WINDOW_SCALE;
-	// tcp_options[option_index++] = 4; // example scale factor
-
-	// // Set SACK Permitted option
-	// tcp_options[option_index++] = TCP_OPTION_KIND_SACK_PERMITTED;
-	// tcp_options[option_index++] = TCP_OPTION_LENGTH_SACK_PERMITTED;
-
-	// // Set Timestamps option
-	// tcp_options[option_index++] = TCP_OPTION_KIND_TIMESTAMP;
-	// tcp_options[option_index++] = TCP_OPTION_LENGTH_TIMESTAMP;
-	// // Timestamp value and echo reply (8 bytes total)
-	// *(uint32_t *)(tcp_options + option_index) =
-	//     htonl(12345678); // example timestamp
-	// option_index += 4;
-	// *(uint32_t *)(tcp_options + option_index) =
-	//     0; // example echo reply (usually 0 in SYN)
-	// option_index += 4;
-
-	// // End of option list
-	// tcp_options[option_index++] = TCP_OPTION_KIND_END;
-
-	// // Adjust packet length to include TCP options
-	// *buf_len = ((unsigned char *)tcp_header - (unsigned char *)buf) +
-	// 	   sizeof(struct tcphdr) + option_index;
-
-	// END JA4TS IMPLEMENTATION
 	// checksum value must be zero when calculating packet's checksum
 	tcp_header->th_sum = 0;
 	tcp_header->th_sum = tcp_checksum(ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN,
@@ -149,13 +117,13 @@ static int synscan_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
 
 	*buf_len = ZMAP_TCP_SYNSCAN_PACKET_LEN;
-	printf("Packet creation completed. Packet length: %zu\n", *buf_len);
-	// print ip_header
-	printf("ip_header: ");
-	for (int i = 0; i < sizeof(struct ip); i++)
-	{
-		printf("%02x ", ((unsigned char *)ip_header)[i]);
-	}
+	// printf("Packet creation completed. Packet length: %zu\n", *buf_len);
+	// // print ip_header
+	// printf("ip_header: ");
+	// for (int i = 0; i < sizeof(struct ip); i++)
+	// {
+	// 	printf("%02x ", ((unsigned char *)ip_header)[i]);
+	// }
 	return EXIT_SUCCESS;
 }
 
@@ -249,14 +217,185 @@ static void synscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 {
 	struct ip *ip_hdr = get_ip_header(packet, len);
 	assert(ip_hdr);
+	// print status check
+	synscan_print_packet(stdout, (void *)packet);
 	if (ip_hdr->ip_p == IPPROTO_TCP) {
 		struct tcphdr *tcp = get_tcp_header(ip_hdr, len);
 		assert(tcp);
+
+		// JA4TS IMPLEMENTATION
+		// Pointer to the start of TCP options
+		// +1 because the 'tcp' variable points to the TCP header
+		uint8_t *tcp_options = (uint8_t *)(tcp + 1);
+
+		// Length of TCP options field in 32-bit words (DWORDs)
+		// th_off is the offset in 32-bit words
+		int options_length = (tcp->th_off - 5) * 4;
+		printf("options_length: %d\n", options_length);
+
+		for (int i = 0; i < options_length; i++) {
+			printf("%02x ", tcp_options[i]);
+		}
+
+		printf("\n"); // Print a newline to separate the output
+
+		// PARSE OPTIONS
+		// Remaining length to process
+		int remaining_length = options_length;
+		// Offset to track the current position in options
+		int offset = 0;
+
+		// initialize variables
+		uint16_t mss_value = 0;
+		uint8_t scaling_factor = 0;
+		// Define an array to store option kinds
+		uint8_t option_kinds[100]; // Adjust the size as needed
+		// Counter to keep track of the number of option kinds
+		int num_option_kinds = 0;
+
+		while (remaining_length > 0) {
+			// Calculate the option length in bytes (including Kind and Length fields)
+			uint8_t option_length = tcp_options
+			    [offset +
+			     1]; // Length field immediately follows Kind field
+			printf("Option Length: %d\n", option_length);
+			uint8_t option_kind =
+			    tcp_options[offset]; // Get the option kind
+			printf("Option Kind: %d\n", option_kind);
+			// Append the option kind to the option_kinds array
+			option_kinds[num_option_kinds] = option_kind;
+			num_option_kinds++;
+
+			// Handle each option kind using a switch statement
+			switch (option_kind) {
+			case TCP_OPTION_KIND_END:
+				// Handle End of Option List
+				// No additional data for this option
+				printf("End of Option List\n");
+				break;
+
+			case TCP_OPTION_KIND_NO_OPERATION:
+				printf("No Operation\n");
+				// Handle No-Operation
+				// No additional data for this option
+				break;
+
+			case TCP_OPTION_KIND_MSS:
+				// Handle Maximum Segment Size (MSS)
+				// The MSS value is 2 bytes following the Kind and Length fields
+				mss_value = ntohs(
+				    *(uint16_t *)(tcp_options + offset + 2));
+				printf("MSS Value: %d\n", mss_value);
+				break;
+
+			case TCP_OPTION_KIND_WINDOW_SCALE:
+				// Handle Window Scale
+				// The scaling factor is 1 byte following the Kind and Length fields
+				scaling_factor = tcp_options[offset + 2];
+				printf("Window Scale Factor: %d\n",
+				       scaling_factor);
+				break;
+
+			case TCP_OPTION_KIND_SACK_PERMITTED:
+				// Handle SACK Permitted
+				// No additional data for this option
+				break;
+
+			case TCP_OPTION_KIND_SACK:
+				// Handle Selective Acknowledgment (SACK)
+				// Handle SACK data based on the option length
+				// You can extract SACK data here if needed
+				// The length of SACK data depends on the option length
+				// Use 'option_length' to process the data
+				break;
+
+			case TCP_OPTION_KIND_TIMESTAMP:
+				printf("Timestamp\n");
+				// Handle Timestamps
+				// Extract timestamp values based on the option length
+				// The length of timestamp data depends on the option length
+				// Use 'option_length' to process the data
+				break;
+
+			default:
+				// Handle unknown or unsupported option kinds
+				// You can log or handle these options as needed
+				break;
+			}
+
+			// Update the remaining length and offset for the next option
+			remaining_length -= option_length;
+			offset += option_length;
+		}
+
+		// Sort the option_kinds array in ascending order
+		qsort(option_kinds, num_option_kinds, sizeof(uint8_t),
+		      compare_uint8_t);
+
+		// Build the sorted option kinds string
+		char option_kinds_str[100]; // Adjust the size as needed
+		option_kinds_str[0] = '\0';
+
+		for (int i = 0; i < num_option_kinds; i++) {
+			// Convert the current option kind to a string
+			char option_kind_str[5]; // Adjust the size as needed
+			snprintf(option_kind_str, sizeof(option_kind_str), "%d",
+				 option_kinds[i]);
+
+			// If the option_kinds_str is not empty, append a hyphen separator
+			if (option_kinds_str[0] != '\0') {
+				strncat(option_kinds_str, "-",
+					sizeof(option_kinds_str) -
+					    strlen(option_kinds_str) - 1);
+			}
+
+			// Append the current sorted option kind
+			strncat(option_kinds_str, option_kind_str,
+				sizeof(option_kinds_str) -
+				    strlen(option_kinds_str) - 1);
+		}
+
+		// Now, option_kinds_str contains the sorted concatenated option kinds separated by hyphens
+		printf("Sorted Option Kinds: %s\n", option_kinds_str);
+
+		char ja4ts_str[120];
+
+		// a: window size
+		uint16_t window_size = ntohs(tcp->th_win);
+		snprintf(ja4ts_str, sizeof(ja4ts_str), "%05u_", window_size);
+
+		// b: TCP Parameters
+		strncat(ja4ts_str, option_kinds_str,
+			sizeof(ja4ts_str) - strlen(ja4ts_str) - 1);
+		strncat(ja4ts_str, "_",
+			sizeof(ja4ts_str) - strlen(ja4ts_str) - 1);
+
+		// c: MSS mss_value
+		char mss_str[10];
+		snprintf(mss_str, sizeof(mss_str), "%04u_", mss_value);
+		strncat(ja4ts_str, mss_str,
+			sizeof(ja4ts_str) - strlen(ja4ts_str) - 1);
+
+		// d: Window Scale
+		char window_scale_str[10];
+		snprintf(window_scale_str, sizeof(window_scale_str), "%02u_",
+			 scaling_factor);
+		strncat(ja4ts_str, window_scale_str,
+			sizeof(ja4ts_str) - strlen(ja4ts_str) - 1);
+
+		// e: Time since last synack-Time since last synack...
+		strncat(ja4ts_str, "00",
+			sizeof(ja4ts_str) - strlen(ja4ts_str) - 1);
+
+		printf("\n");
+		printf("JA4TS: %s\n", ja4ts_str);
+
 		fs_add_uint64(fs, "sport", (uint64_t)ntohs(tcp->th_sport));
 		fs_add_uint64(fs, "dport", (uint64_t)ntohs(tcp->th_dport));
 		fs_add_uint64(fs, "seqnum", (uint64_t)ntohl(tcp->th_seq));
 		fs_add_uint64(fs, "acknum", (uint64_t)ntohl(tcp->th_ack));
 		fs_add_uint64(fs, "window", (uint64_t)ntohs(tcp->th_win));
+		fs_add_constchar(fs, "ja4ts", ja4ts_str);
 		if (tcp->th_flags & TH_RST) { // RST packet
 			fs_add_constchar(fs, "classification", "rst");
 			fs_add_bool(fs, "success", 0);
@@ -272,6 +411,7 @@ static void synscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 		fs_add_null(fs, "seqnum");
 		fs_add_null(fs, "acknum");
 		fs_add_null(fs, "window");
+		fs_add_null(fs, "ja4ts");
 		// global
 		fs_add_constchar(fs, "classification", "icmp");
 		fs_add_bool(fs, "success", 0);
@@ -286,6 +426,7 @@ static fielddef_t fields[] = {
     {.name = "seqnum", .type = "int", .desc = "TCP sequence number"},
     {.name = "acknum", .type = "int", .desc = "TCP acknowledgement number"},
     {.name = "window", .type = "int", .desc = "TCP window"},
+    {.name = "ja4ts", .type = "string", .desc = "TCP JA3 hash"},
     CLASSIFICATION_SUCCESS_FIELDSET_FIELDS,
     ICMP_FIELDSET_FIELDS,
 };
