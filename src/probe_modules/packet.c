@@ -119,13 +119,19 @@ void make_tcp_header(struct tcphdr *tcp_header, uint16_t th_flags)
 size_t set_mss_option(struct tcphdr *tcp_header)
 {
 	// This only sets MSS, which is a single-word option.
-	size_t header_size = tcp_header->th_off * 4;
+	// seems like assumption here is that word-size = 32 bits
+	// MSS field
+	// 0 byte = TCP Option Kind = 0x2
+	// 1 byte = Length of entire MSS field = 4
+	// 2-3 byte = Value of MSS
+
+	size_t header_size = tcp_header->th_off * 4; // What is this 4 doing, th_off = 5. Always 20 bytes of non-options in TCP
 	uint8_t *base = (uint8_t *)tcp_header;
 	uint8_t *last_opt = (uint8_t *)base + header_size;
 
 	// TCP Option "header"
-	last_opt[0] = 2; // MSS
-	last_opt[1] = 4; // MSS is 4 bytes long
+	last_opt[0] = 2; // the value in the TCP options spec denoting this as MSS
+	last_opt[1] = 4; // MSS is 4 bytes long, length goes here
 
 	// Default Linux MSS is 1460, which 0x05b4
 	last_opt[2] = 0x05;
