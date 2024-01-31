@@ -140,7 +140,7 @@ size_t set_additional_options(struct tcphdr *tcp_header)
 	memcpy(&last_opt[7], &timestamp_value, sizeof(uint32_t));
 
 	// Timestamp Echo Reply (4 bytes)
-	uint32_t timestamp_echo_reply = 0; // You can set this value as needed
+	uint32_t timestamp_echo_reply = 0;
 	memcpy(&last_opt[11], &timestamp_echo_reply, sizeof(uint32_t));
 
 	// Update the header length

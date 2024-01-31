@@ -20,45 +20,59 @@
 #include "probe_modules.h"
 #include "packet.h"
 #include "validate.h"
+#include "module_tcp_synscan.h"
 
-#define ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN 24
-#define ZMAP_TCP_SYNSCAN_PACKET_LEN 58
+#define ZMAP_JA4TS_TCP_HEADER_LEN 40
+#define ZMAP_JA4TS_PACKET_LEN 74
 
-probe_module_t module_tcp_synscan;
+// TCP Option Kind Values
+#define TCP_OPTION_KIND_MSS 2
+#define TCP_OPTION_KIND_WINDOW_SCALE 3
+
 
 static uint16_t num_source_ports;
 
-static int synscan_global_initialize(struct state_conf *state)
+// Comparison function for qsort
+static int compare_uint8_t(const void *a, const void *b)
+{
+	return (*(uint8_t *)a - *(uint8_t *)b);
+}
+
+static int ja4tscan_global_initialize(struct state_conf *state)
 {
 	num_source_ports =
 	    state->source_port_last - state->source_port_first + 1;
 	return EXIT_SUCCESS;
 }
 
-static int synscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-				  UNUSED void **arg_ptr)
+static int ja4tscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
+				   UNUSED void **arg_ptr)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	make_eth_header(eth_header, src, gw);
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
-	uint16_t len =
-	    htons(sizeof(struct ip) + ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN);
+	uint16_t len = htons(sizeof(struct ip) + ZMAP_JA4TS_TCP_HEADER_LEN);
 	make_ip_header(ip_header, IPPROTO_TCP, len);
 	struct tcphdr *tcp_header = (struct tcphdr *)(&ip_header[1]);
 	make_tcp_header(tcp_header, TH_SYN);
 	set_mss_option(tcp_header);
+	set_additional_options(tcp_header);
 	return EXIT_SUCCESS;
 }
 
-static int synscan_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
-			       ipaddr_n_t dst_ip, port_n_t dport, uint8_t ttl,
-			       uint32_t *validation, int probe_num,
-			       UNUSED void *arg)
+static int ja4tscan_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
+				ipaddr_n_t dst_ip, port_n_t dport, uint8_t ttl,
+				uint32_t *validation, int probe_num,
+				UNUSED void *arg)
 {
+
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
 	struct tcphdr *tcp_header = (struct tcphdr *)(&ip_header[1]);
 	uint32_t tcp_seq = validation[0];
+
+	uint8_t *tcp_options =
+	    (uint8_t *)(&tcp_header[1]); // Points to the start of TCP options
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
@@ -68,37 +82,23 @@ static int synscan_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	tcp_header->th_sport = htons(sport);
 	tcp_header->th_dport = dport;
 	tcp_header->th_seq = tcp_seq;
+
 	// checksum value must be zero when calculating packet's checksum
 	tcp_header->th_sum = 0;
-	tcp_header->th_sum = tcp_checksum(ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN,
-					  ip_header->ip_src.s_addr,
-					  ip_header->ip_dst.s_addr, tcp_header);
+	tcp_header->th_sum =
+	    tcp_checksum(ZMAP_JA4TS_TCP_HEADER_LEN, ip_header->ip_src.s_addr,
+			 ip_header->ip_dst.s_addr, tcp_header);
 	// checksum value must be zero when calculating packet's checksum
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
 
-	*buf_len = ZMAP_TCP_SYNSCAN_PACKET_LEN;
+	*buf_len = ZMAP_JA4TS_PACKET_LEN;
 	return EXIT_SUCCESS;
 }
 
-// not static because used by synack scan
-void synscan_print_packet(FILE *fp, void *packet)
-{
-	struct ether_header *ethh = (struct ether_header *)packet;
-	struct ip *iph = (struct ip *)&ethh[1];
-	struct tcphdr *tcph = (struct tcphdr *)&iph[1];
-	fprintf(fp,
-		"tcp { source: %u | dest: %u | seq: %u | checksum: %#04X }\n",
-		ntohs(tcph->th_sport), ntohs(tcph->th_dport),
-		ntohl(tcph->th_seq), ntohs(tcph->th_sum));
-	fprintf_ip_header(fp, iph);
-	fprintf_eth_header(fp, ethh);
-	fprintf(fp, PRINT_PACKET_SEP);
-}
-
-static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
-				   uint32_t *src_ip, uint32_t *validation,
-				   const struct port_conf *ports)
+static int ja4tscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
+				    uint32_t *src_ip, uint32_t *validation,
+				    const struct port_conf *ports)
 {
 	if (ip_hdr->ip_p == IPPROTO_TCP) {
 		struct tcphdr *tcp = get_tcp_header(ip_hdr, len);
@@ -165,20 +165,134 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	return PACKET_VALID;
 }
 
-static void synscan_process_packet(const u_char *packet, UNUSED uint32_t len,
-				   fieldset_t *fs, UNUSED uint32_t *validation,
-				   UNUSED struct timespec ts)
+static void ja4tscan_process_packet(const u_char *packet, UNUSED uint32_t len,
+				    fieldset_t *fs, UNUSED uint32_t *validation,
+				    UNUSED struct timespec ts)
 {
 	struct ip *ip_hdr = get_ip_header(packet, len);
 	assert(ip_hdr);
 	if (ip_hdr->ip_p == IPPROTO_TCP) {
 		struct tcphdr *tcp = get_tcp_header(ip_hdr, len);
 		assert(tcp);
+
+		// JA4TS IMPLEMENTATION
+		// Pointer to the start of TCP options
+		// +1 because the 'tcp' variable points to the TCP header
+		uint8_t *tcp_options = (uint8_t *)(tcp + 1);
+
+		// Length of TCP options field in 32-bit words (DWORDs)
+		// th_off is the offset in 32-bit words
+		int options_length = (tcp->th_off - 5) * 4;
+
+		// PARSE OPTIONS
+		int remaining_length = options_length;
+		int offset = 0;
+
+		// initialize variables
+		uint16_t mss_value = 0;
+		uint8_t scaling_factor = 0;
+		uint8_t option_kinds[100];
+		int num_option_kinds = 0;
+
+		while (remaining_length > 0) {
+			// Calculate the option length in bytes (including Kind and Length fields)
+			// Length field immediately follows Kind field
+			uint8_t option_length = tcp_options[offset + 1];
+			uint8_t option_kind = tcp_options[offset];
+
+			option_kinds[num_option_kinds] = option_kind;
+			num_option_kinds++;
+
+			switch (option_kind) {
+			case TCP_OPTION_KIND_MSS:
+				// The MSS value is 2 bytes following the Kind and Length fields
+				mss_value = ntohs(
+				    *(uint16_t *)(tcp_options + offset + 2));
+				break;
+
+			case TCP_OPTION_KIND_WINDOW_SCALE:
+				// The scaling factor is 1 byte following the Kind and Length fields
+				scaling_factor = tcp_options[offset + 2];
+				break;
+
+			default:
+				break;
+			}
+
+			// Update the remaining length and offset for the next option
+			remaining_length -= option_length;
+			offset += option_length;
+		}
+
+		// Sort the option_kinds array in ascending order
+		qsort(option_kinds, num_option_kinds, sizeof(uint8_t),
+		      compare_uint8_t);
+
+		// Build the sorted option kinds string
+		char option_kinds_str[100]; // Adjust the size as needed
+		option_kinds_str[0] = '\0';
+
+		for (int i = 0; i < num_option_kinds; i++) {
+			// Convert the current option kind to a string
+			char option_kind_str[5];
+			snprintf(option_kind_str, sizeof(option_kind_str), "%d",
+				 option_kinds[i]);
+
+			// If the option_kinds_str is not empty, append a hyphen separator
+			if (option_kinds_str[0] != '\0') {
+				strncat(option_kinds_str, "-",
+					sizeof(option_kinds_str) -
+					    strlen(option_kinds_str) - 1);
+			}
+
+			// Append the current sorted option kind
+			strncat(option_kinds_str, option_kind_str,
+				sizeof(option_kinds_str) -
+				    strlen(option_kinds_str) - 1);
+		}
+
+		// a: window size
+		uint16_t window_size = ntohs(tcp->th_win);
+
+		// b: TCP Parameters
+        char option_kinds_str_fmt[100];
+		if (strlen(option_kinds_str) == 0) {
+			snprintf(option_kinds_str_fmt, sizeof(option_kinds_str_fmt), "%s", "00");
+        } else {
+            snprintf(option_kinds_str_fmt, sizeof(option_kinds_str_fmt), "%s", option_kinds_str);
+		}
+
+		// Calculate the required size for ja4ts_str
+		int required_size =
+		    snprintf(NULL, 0, "%05u", window_size) +
+		    strlen(option_kinds_str_fmt) + // For b: TCP Parameters
+		    strlen("_") +	       // Separator between b and c
+		    sizeof(mss_value) +	       // For c: MSS mss_value
+		    strlen("_") +	       // Separator between c and d
+		    sizeof(scaling_factor) + // For d: Window Scale
+		    strlen("_") +	       // Separator between d and e
+		    sizeof("00") + 1;	       // For e: Time since last synack
+
+		// Allocate memory for ja4ts_str
+		char *ja4ts_str = (char *)malloc(required_size);
+
+		// Construct ja4ts_str
+		snprintf(ja4ts_str, required_size, "%05u_%s_%04u_%02u_00",
+			 window_size, option_kinds_str_fmt, mss_value,
+			 scaling_factor);
+
+
+		printf("JA4TS: %s\n", ja4ts_str);
+
+		// Don't forget to free the dynamically allocated memory when done
+		free(ja4ts_str);
+
 		fs_add_uint64(fs, "sport", (uint64_t)ntohs(tcp->th_sport));
 		fs_add_uint64(fs, "dport", (uint64_t)ntohs(tcp->th_dport));
 		fs_add_uint64(fs, "seqnum", (uint64_t)ntohl(tcp->th_seq));
 		fs_add_uint64(fs, "acknum", (uint64_t)ntohl(tcp->th_ack));
 		fs_add_uint64(fs, "window", (uint64_t)ntohs(tcp->th_win));
+		fs_add_string(fs, "ja4ts", ja4ts_str, 0);
 		if (tcp->th_flags & TH_RST) { // RST packet
 			fs_add_constchar(fs, "classification", "rst");
 			fs_add_bool(fs, "success", 0);
@@ -194,6 +308,7 @@ static void synscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 		fs_add_null(fs, "seqnum");
 		fs_add_null(fs, "acknum");
 		fs_add_null(fs, "window");
+		fs_add_null(fs, "ja4ts");
 		// global
 		fs_add_constchar(fs, "classification", "icmp");
 		fs_add_bool(fs, "success", 0);
@@ -208,22 +323,23 @@ static fielddef_t fields[] = {
     {.name = "seqnum", .type = "int", .desc = "TCP sequence number"},
     {.name = "acknum", .type = "int", .desc = "TCP acknowledgement number"},
     {.name = "window", .type = "int", .desc = "TCP window"},
+    {.name = "ja4ts", .type = "string", .desc = "TCP JA3 hash"},
     CLASSIFICATION_SUCCESS_FIELDSET_FIELDS,
     ICMP_FIELDSET_FIELDS,
 };
 
-probe_module_t module_tcp_synscan = {
-    .name = "tcp_synscan",
-    .max_packet_length = ZMAP_TCP_SYNSCAN_PACKET_LEN,
+probe_module_t module_ja4ts = {
+    .name = "ja4ts",
+    .max_packet_length = ZMAP_JA4TS_PACKET_LEN,
     .pcap_filter = "(tcp && tcp[13] & 4 != 0 || tcp[13] == 18) || icmp",
     .pcap_snaplen = 96,
     .port_args = 1,
-    .global_initialize = &synscan_global_initialize,
-    .thread_initialize = &synscan_init_perthread,
-    .make_packet = &synscan_make_packet,
+    .global_initialize = &ja4tscan_global_initialize,
+    .thread_initialize = &ja4tscan_init_perthread,
+    .make_packet = &ja4tscan_make_packet,
     .print_packet = &synscan_print_packet,
-    .process_packet = &synscan_process_packet,
-    .validate_packet = &synscan_validate_packet,
+    .process_packet = &ja4tscan_process_packet,
+    .validate_packet = &ja4tscan_validate_packet,
     .close = NULL,
     .helptext = "Probe module that sends a TCP SYN packet to a specific "
 		"port. Possible classifications are: synack and rst. A "
