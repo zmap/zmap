@@ -125,7 +125,7 @@ size_t set_mss_option(struct tcphdr *tcp_header)
 	// 1 byte = Length of entire MSS field = 4
 	// 2-3 byte = Value of MSS
 
-	size_t header_size = tcp_header->th_off * 4; // What is this 4 doing, th_off = 5. Always 20 bytes of non-options in TCP
+	size_t header_size = tcp_header->th_off * 4; // 4 is word size
 	uint8_t *base = (uint8_t *)tcp_header;
 	uint8_t *last_opt = (uint8_t *)base + header_size;
 
@@ -138,6 +138,39 @@ size_t set_mss_option(struct tcphdr *tcp_header)
 	last_opt[3] = 0xb4;
 
 	tcp_header->th_off += 1;
+	return tcp_header->th_off * 4;
+}
+
+// set_linux_tcp_options adds the relevant TCP options so ZMap-sent packets have the same TCP header as linux-sent ones
+size_t set_linux_tcp_options(struct tcphdr *tcp_header)
+{
+	// 20 bytes total
+	// MSS = 4 bytes
+	size_t header_size = set_mss_option(tcp_header);
+	uint8_t *last_opt = (uint8_t *)tcp_header + header_size;
+	// SACKPermitted = 2 bytes
+	// SACKPermitted is TCP Options kind = 0x04
+	last_opt[0] = 0x04; // kind for SACKPermitted
+	last_opt[1] = 0x02; // set the length
+	last_opt += 2; // increment pointer
+
+	// Timestamps = 10 bytes
+	// exact method of getting this timestamp isn't important, only that it is a 4 byte value - RFC 7323
+	uint32_t now = time(NULL);
+	last_opt[0] = 0x08; // kind for timestamp field
+	last_opt[1] = 0x0a; // length for timestamp field
+	*(uint32_t *)(last_opt + 2) = htonl(now); // set current time in correct byte order
+	// final 4 bytes of timestamp field are left zeroed for the timestamp echo value
+	last_opt += 10; // update our pointer 10 bytes ahead
+	// NOP = 1 byte
+	last_opt[0] = 0x01; // kind for NOP
+	last_opt += 1;
+	// WindowScale = 3 bytes
+	last_opt[0] = 0x03; // kind for WindowScale field
+	last_opt[1] = 0x03; // length for WindowScale field
+	last_opt[2] = 0x07; // 7 is used as the linux default WindowScale. It represents 2^7 = x128 window size multiplier
+	// Update tcp header size
+	tcp_header->th_off += 4; // Sum of lengths for SACKPermitted, Timestamp, NOP, and WindowScale
 	return tcp_header->th_off * 4;
 }
 

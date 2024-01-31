@@ -21,8 +21,8 @@
 #include "packet.h"
 #include "validate.h"
 
-#define ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN 24
-#define ZMAP_TCP_SYNSCAN_PACKET_LEN 58
+#define ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN 40
+#define ZMAP_TCP_SYNSCAN_PACKET_LEN 74
 
 probe_module_t module_tcp_synscan;
 
@@ -46,6 +46,7 @@ static int synscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	make_ip_header(ip_header, IPPROTO_TCP, len);
 	struct tcphdr *tcp_header = (struct tcphdr *)(&ip_header[1]);
 	make_tcp_header(tcp_header, TH_SYN);
+	set_linux_tcp_options(tcp_header);
 	return EXIT_SUCCESS;
 }
 
