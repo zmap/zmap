@@ -21,8 +21,8 @@
 #include "packet.h"
 #include "validate.h"
 
-#define ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN 24
-#define ZMAP_TCP_SYNSCAN_PACKET_LEN 58
+#define ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN 20
+#define ZMAP_TCP_SYNSCAN_PACKET_LEN 54
 
 probe_module_t module_tcp_synscan;
 
