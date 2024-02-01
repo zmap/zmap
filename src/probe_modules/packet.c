@@ -144,33 +144,70 @@ size_t set_mss_option(struct tcphdr *tcp_header)
 // set_linux_tcp_options adds the relevant TCP options so ZMap-sent packets have the same TCP header as linux-sent ones
 size_t set_linux_tcp_options(struct tcphdr *tcp_header)
 {
-	// 20 bytes total
+	uint8_t options_bitmap = 0x00;
+	uint8_t MSS_SELECT = 0x1;
+	uint8_t WINDOW_SELECT = 0x2;
+	uint8_t TIMESTAMP_SELECT = 0x4;
+	uint8_t SACK_SELECT = 0x8;
+
+	size_t header_size = tcp_header->th_off * 4;
 	// MSS = 4 bytes
-	size_t header_size = set_mss_option(tcp_header);
+	if (options_bitmap & MSS_SELECT) {
+		// MSS should be enabled
+		header_size = set_mss_option(tcp_header);
+	}
 	uint8_t *last_opt = (uint8_t *)tcp_header + header_size;
 	// SACKPermitted = 2 bytes
 	// SACKPermitted is TCP Options kind = 0x04
-	last_opt[0] = 0x04; // kind for SACKPermitted
-	last_opt[1] = 0x02; // set the length
-	last_opt += 2; // increment pointer
+	if (options_bitmap & WINDOW_SELECT) {
+		// NOP = 1 byte
+		last_opt[0] = 0x01; // kind for NOP
+		last_opt += 1;
+		// WindowScale = 3 bytes
+		last_opt[0] = 0x03; // kind for WindowScale field
+		last_opt[1] = 0x03; // length for WindowScale field
+		last_opt[2] = 0x07; // 7 is used as the linux default WindowScale. It represents 2^7 = x128 window size multiplier
+		last_opt += 3;
+		// Update tcp header size
+		tcp_header->th_off += 1;
+	}
+	if (options_bitmap & TIMESTAMP_SELECT && options_bitmap & SACK_SELECT) {
+		// Timestamp (10 bytes) and SACK (2 bytes) will pack well with a 4-byte word size
+		last_opt[0] = 0x04; // kind for SACKPermitted
+		last_opt[1] = 0x02; // set the length
+		last_opt += 2; // increment pointer
+		// exact method of getting this timestamp isn't important, only that it is a 4 byte value - RFC 7323
+		uint32_t now = time(NULL);
+		last_opt[0] = 0x08; // kind for timestamp field
+		last_opt[1] = 0x0a; // length for timestamp field
+		*(uint32_t *)(last_opt + 2) = htonl(now); // set current time in correct byte order
+		// final 4 bytes of timestamp field are left zeroed for the timestamp echo value
+		last_opt += 10; // update our pointer 10 bytes ahead
+		tcp_header->th_off += 3;
 
-	// Timestamps = 10 bytes
-	// exact method of getting this timestamp isn't important, only that it is a 4 byte value - RFC 7323
-	uint32_t now = time(NULL);
-	last_opt[0] = 0x08; // kind for timestamp field
-	last_opt[1] = 0x0a; // length for timestamp field
-	*(uint32_t *)(last_opt + 2) = htonl(now); // set current time in correct byte order
-	// final 4 bytes of timestamp field are left zeroed for the timestamp echo value
-	last_opt += 10; // update our pointer 10 bytes ahead
-	// NOP = 1 byte
-	last_opt[0] = 0x01; // kind for NOP
-	last_opt += 1;
-	// WindowScale = 3 bytes
-	last_opt[0] = 0x03; // kind for WindowScale field
-	last_opt[1] = 0x03; // length for WindowScale field
-	last_opt[2] = 0x07; // 7 is used as the linux default WindowScale. It represents 2^7 = x128 window size multiplier
+	} else if (options_bitmap & TIMESTAMP_SELECT) {
+		// Timestamp (10 bytes) will need 2x NOPs to preserve alignment
+		uint32_t now = time(NULL);
+		last_opt[0] = 0x08; // kind for timestamp field
+		last_opt[1] = 0x0a; // length for timestamp field
+		*(uint32_t *)(last_opt + 2) = htonl(now); // set current time in correct byte order
+		// final 4 bytes of timestamp field are left zeroed for the timestamp echo value
+		last_opt += 10; // update our pointer 10 bytes ahead
+		last_opt[0] = 0x01; // kind for NOP
+		last_opt[1] = 0x01; // kind for NOP
+		tcp_header->th_off += 3;
+		last_opt += 2;
+	} else if (options_bitmap & SACK_SELECT) {
+		// SACK (2 bytes) will need 2x NOPs to preserve alignment
+		last_opt[0] = 0x04; // kind for SACKPermitted
+		last_opt[1] = 0x02; // set the length
+		last_opt[2] = 0x01;
+		last_opt[3] = 0x01;
+		last_opt += 4; // increment pointer
+		tcp_header->th_off += 1;
+	}
+
 	// Update tcp header size
-	tcp_header->th_off += 4; // Sum of lengths for SACKPermitted, Timestamp, NOP, and WindowScale
 	return tcp_header->th_off * 4;
 }
 
