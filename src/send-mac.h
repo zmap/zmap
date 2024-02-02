@@ -1,13 +1,13 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy
- * of the License at http://www.apache.org/licenses/LICENSE-2.0
- */
+* ZMap Copyright 2024 Regents of the University of Michigan
+*
+* Licensed under the Apache License, Version 2.0 (the "License"); you may not
+* use this file except in compliance with the License. You may obtain a copy
+* of the License at http://www.apache.org/licenses/LICENSE-2.0
+*/
 
-#ifndef ZMAP_SEND_BSD_H
-#define ZMAP_SEND_BSD_H
+#ifndef ZMAP_SEND_MAC_H
+#define ZMAP_SEND_MAC_H
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -21,17 +21,16 @@
 #include <net/bpf.h>
 
 #ifdef ZMAP_SEND_LINUX_H
-#error "Don't include both send-bsd.h and send-linux.h"
+#error "Don't include both send-mac.h and send-linux.h"
 #endif
-#ifdef ZMAP_SEND_MAC_H
-#error "Don't include both send-bsd.h and send-mac.h"
+#ifdef ZMAP_SEND_BSD_H
+#error "Don't include both send-mac.h and send-bsd.h"
 #endif
-
 
 int send_run_init(UNUSED sock_t sock)
 {
-	// Don't need to do anything on BSD-like variants
-	log_warn("send-bsd", "we on BSDOS");
+	// Don't need to do anything on MacOS
+	log_warn("send-mac", "we on MACOS");
 	return EXIT_SUCCESS;
 }
 
@@ -65,7 +64,7 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 			struct in_addr addr;
 			addr.s_addr = batch->ips[packet_num];
 			char addr_str_buf
-			    [INET_ADDRSTRLEN];
+			[INET_ADDRSTRLEN];
 			const char *addr_str =
 			    inet_ntop(
 				AF_INET, &addr,
@@ -73,7 +72,7 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 				INET_ADDRSTRLEN);
 			if (addr_str != NULL) {
 				log_debug( "send", "send_packet failed for %s. %s", addr_str,
-				    strerror( errno));
+					   strerror( errno));
 			}
 		}
 	}
@@ -85,4 +84,4 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 	return packets_sent;
 }
 
-#endif /* ZMAP_SEND_BSD_H */
+#endif //ZMAP_SEND_MAC_H
