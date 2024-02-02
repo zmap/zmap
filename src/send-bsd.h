@@ -31,7 +31,6 @@
 int send_run_init(UNUSED sock_t sock)
 {
 	// Don't need to do anything on BSD-like variants
-	log_warn("send-bsd", "we on BSDOS");
 	return EXIT_SUCCESS;
 }
 

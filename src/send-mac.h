@@ -30,7 +30,6 @@
 int send_run_init(UNUSED sock_t sock)
 {
 	// Don't need to do anything on MacOS
-	log_warn("send-mac", "we on MACOS");
 	return EXIT_SUCCESS;
 }
 
