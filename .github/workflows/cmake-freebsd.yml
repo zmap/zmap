@@ -13,33 +13,40 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        os: [ freebsd/latest ]
+    name: Test compilation on FreeBSD
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Set up FreeBSD
-        uses: actions/setup-freebsd@v2
+      - uses: actions/checkout@v4
+      - name: Test in FreeBSD
+        id: test
+        uses: vmactions/freebsd-vm@v1
         with:
-          os-version: ${{ matrix.os }}
-      - name: Make build directory
-        run: mkdir -p /zmap/build
-      - name: Install dependencies
-        run: pkg install judy byacc cmake flex gengetopt gmp json-c libunistring influxpkg-config libdnet python3
-
-      - name: Configure CMake
-        working-directory: /zmap/build
-        # Configure CMake in a 'build' subdirectory.
-        run: cmake -DENABLE_DEVELOPMENT=${{env.ENABLE_DEVELOPMENT}} -DENABLE_LOG_TRACE=${{env.ENABLE_LOG_TRACE}} /zmap
-
-      - name: Build
-        working-directory: /zmap/build
-        # Build your program with the given configuration
-        run: make
-
-      - name: Check Manpages
-        working-directory: /zmap
-        run: python3 ./scripts/check_manfile.py
+          usesh: true
+          prepare:  |
+            pkg install judy byacc cmake flex gengetopt gmp json-c libunistring influxpkg-config libdnet python3
+          run: |
+            ls -lah
+#      - name: Make build directory
+#        run: mkdir -p /zmap/build
+#      - name: Install dependencies
+#        run: pkg install judy byacc cmake flex gengetopt gmp json-c libunistring influxpkg-config libdnet python3
+#
+#      - name: Configure CMake
+#        working-directory: /zmap/build
+#        # Configure CMake in a 'build' subdirectory.
+#        run: cmake -DENABLE_DEVELOPMENT=${{env.ENABLE_DEVELOPMENT}} -DENABLE_LOG_TRACE=${{env.ENABLE_LOG_TRACE}} /zmap
+#
+#      - name: Build
+#        working-directory: /zmap/build
+#        # Build your program with the given configuration
+#        run: make
+#
+#      - name: Check Manpages
+#        working-directory: /zmap
+#        run: python3 ./scripts/check_manfile.py
+#
+#
+#      - name: Set up FreeBSD
+#        uses: actions/setup-freebsd@v2
+#        with:
+#          os-version: ${{ matrix.os }}
 
