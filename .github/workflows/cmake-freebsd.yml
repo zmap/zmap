@@ -22,7 +22,9 @@ jobs:
         with:
           usesh: true
           prepare:  |
-            pkg install judy byacc cmake flex gengetopt gmp json-c libunistring influxpkg-config libdnet python3
+            freebsd-update fetch
+            freebsd-update install
+            pkg install -y judy byacc cmake flex gengetopt gmp json-c libunistring influxpkg-config libdnet python3
           run: |
             ls -lah
 #      - name: Make build directory
