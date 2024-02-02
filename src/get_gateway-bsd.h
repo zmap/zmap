@@ -16,6 +16,9 @@
 #include <net/route.h>
 #include <net/if.h>
 #include <net/if_dl.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <ifaddrs.h>
 
 #if defined(_SYSTYPE_BSD)
 
@@ -104,17 +107,23 @@ int get_iface_ip(char *iface, struct in_addr *ip)
 
 int get_iface_hw_addr(char *iface, unsigned char *hw_mac)
 {
-	eth_t *e = eth_open(iface);
-	if (e) {
-		eth_addr_t eth_addr;
-		int res = eth_get(e, &eth_addr);
-		log_debug("gateway", "res: %d", res);
-		if (res == 0) {
-			memcpy(hw_mac, eth_addr.data, ETHER_ADDR_LEN);
-			return EXIT_SUCCESS;
+	struct ifaddrs *ifa;
+	if (getifaddrs(&ifa) == -1) {
+		log_debug("get_iface_hw_addr", "getifaddrs(): %d %s", errno, strerror(errno));
+		return EXIT_FAILURE;
+	}
+	int result = EXIT_FAILURE;
+	for (struct ifaddrs *p = ifa; p; p = p->ifa_next) {
+		if (strcmp(p->ifa_name, iface) == 0 &&
+		    p->ifa_addr != NULL && p->ifa_addr->sa_family == AF_LINK) {
+			struct sockaddr_dl *sdl = (struct sockaddr_dl *)p->ifa_addr;
+			memcpy(hw_mac, LLADDR(sdl), ETHER_ADDR_LEN);
+			result = EXIT_SUCCESS;
+			break;
 		}
 	}
-	return EXIT_FAILURE;
+	freeifaddrs(ifa);
+	return result;
 }
 
 int _get_default_gw(struct in_addr *gw, char **iface)
