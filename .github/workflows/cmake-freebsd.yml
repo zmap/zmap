@@ -1,4 +1,4 @@
-name: CMake
+name: CMake-FreeBSD
 
 on:
   push:
@@ -13,7 +13,6 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: Test compilation on FreeBSD
     steps:
       - uses: actions/checkout@v4
       - name: Test in FreeBSD
