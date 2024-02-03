@@ -36,7 +36,7 @@ int send_run_init(UNUSED sock_t sock)
 
 int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 {
-	return write(sock.sock, buf, len);
+	return wrie(sock.sock, buf, len);
 }
 
 // Since BSD doesn't have the sendmmsg syscall leveraged in send-linux.c, this just wraps the single send_packet call.
