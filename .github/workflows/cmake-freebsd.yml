@@ -22,6 +22,7 @@ jobs:
         with:
           envs: 'ENABLE_DEVELOPMENT ENABLE_LOG_TRACE'
           usesh: true
+          working-directory: /zmap/zmap
           prepare:  |
             ls
             freebsd-update fetch
