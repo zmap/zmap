@@ -97,4 +97,3 @@ option. For example, to install it in `$HOME/opt` run
     make -j4
     make install
     ```
-- On some BSD systems, you man need to manually add `-D_SYSTYPE_BSD` to your CFLAGS.
