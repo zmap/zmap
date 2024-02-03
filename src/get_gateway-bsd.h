@@ -100,6 +100,7 @@ int get_iface_ip(char *iface, struct in_addr *ip)
 			ip->s_addr = sin->sin_addr.s_addr;
 			log_debug("get-iface-ip", "IP address found for %s: %s",
 				  iface, inet_ntoa(*ip));
+			freeifaddrs(ifaddr);
 			return EXIT_SUCCESS;
 		}
 	}
@@ -158,11 +159,13 @@ int _get_default_gw(struct in_addr *gw, char **iface)
 	while (rtm->rtm_type == RTM_GET &&
 	       (len = read(fd, rtm, sizeof(buf))) > 0) {
 		if (len < (int)sizeof(*rtm)) {
+			close(fd);
 			return (-1);
 		}
 		if (rtm->rtm_type == RTM_GET && rtm->rtm_pid == getpid() &&
 		    rtm->rtm_seq == seq) {
 			if (rtm->rtm_errno) {
+				close(fd);
 				errno = rtm->rtm_errno;
 				return (-1);
 			}
