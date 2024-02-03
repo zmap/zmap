@@ -28,7 +28,6 @@ ZMap has the following dependencies:
   - [libunistring](https://www.gnu.org/software/libunistring/) - Unicode string library
   - [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/) - compiler and library helper tool
   - [libjudy](https://judy.sourceforge.net/) - Judy Array for packet de-duplication
-  - [libdnet](https://github.com/dugsong/libdnet) - (macOS Only) Gateway and route detection
 
 Install the required dependencies with the following commands.
 
@@ -44,12 +43,12 @@ Install the required dependencies with the following commands.
 
 * On macOS systems (using [Homebrew](https://brew.sh/)):
   ```sh
-  brew install pkg-config cmake gmp gengetopt json-c byacc libdnet libunistring judy
+  brew install pkg-config cmake gmp gengetopt json-c byacc libunistring judy
   ```
 
 * On macOS systems (using [MacPorts](https://macports.org/)):
   ```
-  sudo port install cmake byacc flex gengetopt pkgconfig gmp libdnet libpcap json-c libunistring judy
+  sudo port install cmake byacc flex gengetopt pkgconfig gmp libpcap json-c libunistring judy
   ```
 
 * To launch a shell inside a Docker container with the build dependencies
