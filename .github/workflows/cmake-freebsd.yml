@@ -28,6 +28,7 @@ jobs:
             freebsd-update fetch
             freebsd-update install
             pkg install -y judy byacc cmake flex gengetopt gmp json-c libunistring influxpkg-config libdnet python3
+            cd work/zmap/zmap
             cmake -DENABLE_DEVELOPMENT=${{env.ENABLE_DEVELOPMENT}} -DENABLE_LOG_TRACE=${{env.ENABLE_LOG_TRACE}} .
             make
             python3 ./scripts/check_manfile.py
