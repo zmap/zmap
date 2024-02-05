@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Download dependencies
-        run: brew install pkg-config cmake gmp gengetopt json-c byacc libdnet libunistring judy
+        run: brew install pkg-config cmake gmp gengetopt json-c byacc libunistring judy
 
         # TODO Phillip remove this, just for testing
       - name: Look around
