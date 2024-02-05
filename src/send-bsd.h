@@ -9,22 +9,24 @@
 #ifndef ZMAP_SEND_BSD_H
 #define ZMAP_SEND_BSD_H
 
+#include <stdbool.h>
+#include <net/bpf.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/ioctl.h>
+
 #include <fcntl.h>
+#include <netinet/in.h>
 
 #include "send.h"
 #include "../lib/includes.h"
 
-#include <netinet/in.h>
-#include <net/bpf.h>
 
 #ifdef ZMAP_SEND_LINUX_H
 #error "Don't include both send-bsd.h and send-linux.h"
 #endif
 
-int send_run_init(UNUSED sock_t sock)
+int send_run_init(UNUSED sock_t sock, UNUSED uint32_t kernel_cpu, UNUSED bool is_liburing_enabled)
 {
 	// Don't need to do anything on BSD-like variants
 	return EXIT_SUCCESS;
@@ -78,6 +80,12 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 		return -1;
 	}
 	return packets_sent;
+}
+
+int send_run_cleanup(void)
+{
+	// Don't need to do anything on BSD-like variants
+	return EXIT_SUCCESS;
 }
 
 #endif /* ZMAP_SEND_BSD_H */

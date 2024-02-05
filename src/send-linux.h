@@ -8,15 +8,17 @@
 #ifndef ZMAP_SEND_LINUX_H
 #define ZMAP_SEND_LINUX_H
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-#include <netinet/ip.h>
 #include <netpacket/packet.h>
 #include <sys/ioctl.h>
-#include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/syscall.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "../lib/includes.h"
 #include "./send.h"
@@ -29,7 +31,14 @@
 // Dummy sockaddr for sendto
 static struct sockaddr_ll sockaddr;
 
-int send_run_init(sock_t s);
+// Used internally to decide to send packets with liburing or send_mmsg
+static bool use_liburing;
+
+int send_run_init(sock_t s, uint32_t kernel_cpu, bool is_liburing_enabled);
 int send_batch(sock_t sock, batch_t* batch, int retries);
+int send_run_cleanup(void);
+struct sockaddr_ll* get_sock(void);
+
+
 
 #endif /* ZMAP_SEND_LINUX_H */

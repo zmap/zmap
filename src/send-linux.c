@@ -33,9 +33,12 @@
 #include "../lib/includes.h"
 #include "../lib/logger.h"
 #include "./send.h"
+#include "./send-liburing.h"
 #include "./send-linux.h"
 
-int send_run_init(sock_t s)
+int send_batch_mmsg_helper(sock_t sock, batch_t* batch, int retries);
+
+int send_run_init(sock_t s, uint32_t kernel_cpu, bool is_liburing_enabled)
 {
 	// Get the actual socket
 	int sock = s.sock;
@@ -62,14 +65,42 @@ int send_run_init(sock_t s)
 		sockaddr.sll_protocol = htons(ETHERTYPE_IP);
 	}
 	memcpy(sockaddr.sll_addr, zconf.gw_mac, ETH_ALEN);
+#if WITH_LIBURING
+	if (is_liburing_enabled) {
+		// set static variable to track this in send_run/send_run_cleanup
+		use_liburing = is_liburing_enabled;
+		// need to initialize liburing related structures
+		return send_run_init_liburing(kernel_cpu);
+	}
+#endif
+	// set static bool so we can check it in other functions
 	return EXIT_SUCCESS;
 }
 
+// send_batch uses either the liburing or sendmmsg helpers depending on CLI arguments
 int send_batch(sock_t sock, batch_t* batch, int retries) {
 	if (batch->len == 0) {
 		// nothing to send
 		return EXIT_SUCCESS;
 	}
+#if WITH_LIBURING
+	if (use_liburing) {
+		return send_batch_liburing_helper(sock, batch);
+	}
+#endif
+	return send_batch_mmsg_helper(sock, batch, retries);
+}
+
+int send_run_cleanup(void) {
+#if WITH_LIBURING
+	if (use_liburing) {
+		return send_run_cleanup_liburing();
+	}
+#endif
+	return EXIT_SUCCESS;
+}
+
+int send_batch_mmsg_helper(sock_t sock, batch_t* batch, int retries) {
 	struct mmsghdr msgvec [batch->capacity]; // Array of multiple msg header structures
 	struct msghdr msgs[batch->capacity];
 	struct iovec iovs[batch->capacity];
@@ -118,4 +149,9 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 		num_of_packets_in_batch = batch->len - total_packets_sent;
 	}
 	return total_packets_sent;
+}
+
+// get_sock let's other files access this global variable. Specifically, send-liburing.c
+struct sockaddr_ll* get_sock(void) {
+	return &sockaddr;
 }
