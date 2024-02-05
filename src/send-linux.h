@@ -25,6 +25,9 @@
 #ifdef ZMAP_SEND_BSD_H
 #error "Don't include both send-bsd.h and send-linux.h"
 #endif
+#ifdef ZMAP_SEND_MAC_H
+#error "Don't include both send-mac.h and send-linux.h"
+#endif
 
 // Dummy sockaddr for sendto
 static struct sockaddr_ll sockaddr;
