@@ -1,0 +1,38 @@
+name: CMake-Ubuntu
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  ENABLE_DEVELOPMENT: ON
+  ENABLE_LOG_TRACE: ON
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Make build directory
+        run: mkdir -p /zmap/build
+
+      - name: Download dependencies
+        run: brew install pkg-config cmake gmp gengetopt json-c byacc libdnet libunistring judy
+
+      - name: Configure CMake
+        working-directory: /zmap/build
+        # Configure CMake in a 'build' subdirectory.
+        run: cmake -DENABLE_DEVELOPMENT=${{env.ENABLE_DEVELOPMENT}} -DENABLE_LOG_TRACE=${{env.ENABLE_LOG_TRACE}} /zmap
+
+      - name: Build
+        working-directory: /zmap/build
+        # Build your program with the given configuration
+        run: make
+
+      - name: Check Manpages
+        working-directory: /zmap
+        run: python3 ./scripts/check_manfile.py
+
