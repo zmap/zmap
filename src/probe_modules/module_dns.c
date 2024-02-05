@@ -593,7 +593,7 @@ static int dns_global_initialize(struct state_conf *conf)
 	}
 	if (conf->probe_args[strlen(conf->probe_args) - 1] == probe_arg_delimitor[0]) {
 		log_debug("dns", "Probe args (%s) contains trailing semicolon. Stripping.", conf->probe_args);
-		conf->probe_args[strlen(conf->probe_args) - 1] = '\n';
+		conf->probe_args[strlen(conf->probe_args) - 1] = '\0';
 	}
 
 	char **domains = NULL;
