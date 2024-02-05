@@ -36,4 +36,3 @@ jobs:
       - name: Check Manpages
         working-directory: /zmap
         run: python3 ./scripts/check_manfile.py
-

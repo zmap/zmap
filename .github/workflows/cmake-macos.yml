@@ -33,4 +33,3 @@ jobs:
 
       - name: Check Manpages
         run: python3 ./scripts/check_manfile.py
-
