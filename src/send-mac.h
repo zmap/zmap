@@ -38,8 +38,8 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 	return write(sock.sock, buf, len);
 }
 
-// Since BSD doesn't have the sendmmsg syscall leveraged in send-linux.c, this just wraps the single send_packet call.
-// However, the behavior in sendmmsg is to send as many packets as possible until one fails, and then return the number of sent packets.
+// MacOS doesn't have the sendmmsg as of Sonoma 14.2. Since we want a uniform interface, we'll emulate the send_batch used in Linux.
+// The behavior in sendmmsg is to send as many packets as possible until one fails, and then return the number of sent packets.
 // Following the same pattern for consistency
 // Returns - number of packets sent
 // Returns -1 and sets errno if no packets could be sent successfully
