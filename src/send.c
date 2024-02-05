@@ -44,7 +44,9 @@ static inline int send_run_init(sock_t sock);
 // Include the right implementations
 #if defined(PFRING)
 #include "send-pfring.h"
-#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) ||     \
+#elif defined(__APPLE__)
+#include "send-mac.h"
+#elif defined(__FreeBSD__) || defined(__NetBSD__) ||     \
     defined(__DragonFly__)
 #include "send-bsd.h"
 #else /* LINUX */
