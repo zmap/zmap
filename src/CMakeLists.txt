@@ -210,11 +210,9 @@ add_executable(ztee ${ZTEESOURCES})
 add_executable(ztests ${ZTESTSOURCES})
 
 if(APPLE OR BSD)
-    set(DNET_LIBRARIES "dnet")
 else()
     set(ZTESTSOURCES ${ZTESTSOURCES} send-linux.c)
     set(SOURCES ${SOURCES} send-linux.c)
-    set(DNET_LIBRARIES "")
 endif()
 
 target_link_libraries(
@@ -222,7 +220,6 @@ target_link_libraries(
     zmaplib
     ${PFRING_LIBRARIES}
     pcap gmp m unistring
-    ${DNET_LIBRARIES}
     ${JSON_LIBRARIES}
 	${JUDY_LIBRARIES}
 )
@@ -251,7 +248,6 @@ target_link_libraries(
     zmaplib
     ${PFRING_LIBRARIES}
     pcap gmp m unistring
-    ${DNET_LIBRARIES}
     ${JSON_LIBRARIES}
 	${JUDY_LIBRARIES}
 )

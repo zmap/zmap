@@ -16,22 +16,15 @@
 #include <net/route.h>
 #include <net/if.h>
 #include <net/if_dl.h>
-
-#if defined(_SYSTYPE_BSD)
-
-#if __GNUC__ < 4
-#error "gcc version >= 4 is required"
-#elif __GNUC_MINOR_ >= 6
-#pragma GCC diagnostic ignored "-Wflexible-array-extensions"
-#endif
-
-#include <dnet/os.h>
-#include <dnet/eth.h>
-#include <dnet/ip.h>
-#include <dnet/ip6.h>
-#include <dnet/addr.h>
-#include <dnet/arp.h>
-#endif
+#include <net/if_arp.h>
+#include <net/if_types.h>
+#include <netinet/if_ether.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/sysctl.h>
+#include <arpa/inet.h>
+#include <ifaddrs.h>
+#include <assert.h>
 
 #define ROUNDUP(a) ((a) > 0 ? (1 + (((a)-1) | (sizeof(int) - 1))) : sizeof(int))
 #define UNUSED __attribute__((unused))
@@ -39,34 +32,49 @@
 int get_hw_addr(struct in_addr *gw_ip, UNUSED char *iface,
 		unsigned char *hw_mac)
 {
-	arp_t *arp;
-	struct arp_entry entry;
-
-	if (!gw_ip || !hw_mac) {
+	int mib[6];
+	mib[0] = CTL_NET;
+	mib[1] = PF_ROUTE;
+	mib[2] = 0;
+	mib[3] = AF_INET;
+	mib[4] = NET_RT_FLAGS;
+	mib[5] = RTF_LLINFO;
+	size_t bufsz = 0;
+	if (sysctl(mib, 6, NULL, &bufsz, NULL, 0) == -1) {
+		log_debug("get_hw_addr", "sysctl getting buffer size: %d %s", errno, strerror(errno));
+		return EXIT_FAILURE;
+	}
+	uint8_t *buf = (uint8_t *)malloc(bufsz);
+	assert(buf);
+	if (sysctl(mib, 6, buf, &bufsz, NULL, 0) == -1) {
+		log_debug("get_hw_addr", "sysctl getting buffer data: %d %s", errno, strerror(errno));
 		return EXIT_FAILURE;
 	}
 
-	if ((arp = arp_open()) == NULL) {
-		log_error("get_hw_addr", "failed to open arp table");
-		return EXIT_FAILURE;
+	int result = EXIT_FAILURE;
+	uint8_t *bufend = buf + bufsz;
+	size_t min_msglen = sizeof(struct rt_msghdr) + sizeof(struct sockaddr_inarp) + sizeof(struct sockaddr_dl);
+	struct rt_msghdr *rtm = (struct rt_msghdr *)buf;
+	for (uint8_t *p = buf; p < bufend; p += rtm->rtm_msglen) {
+		rtm = (struct rt_msghdr *)p;
+		if ((p + sizeof(struct rt_msghdr) >= bufend) ||
+		    (p + rtm->rtm_msglen >= bufend) ||
+		    (rtm->rtm_msglen < min_msglen)) {
+			break;
+		}
+		struct sockaddr_inarp *sin = (struct sockaddr_inarp *)(rtm + 1);
+		struct sockaddr_dl *sdl = (struct sockaddr_dl *)(sin + 1);
+		assert(sin->sin_family == AF_INET);
+		if (sin->sin_addr.s_addr != gw_ip->s_addr) {
+			continue;
+		}
+		assert(sdl->sdl_family == AF_LINK);
+		memcpy(hw_mac, LLADDR(sdl), ETHER_ADDR_LEN);
+		result = EXIT_SUCCESS;
 	}
 
-	// Convert gateway ip to dnet struct format
-	memset(&entry, 0, sizeof(struct arp_entry));
-	entry.arp_pa.addr_type = ADDR_TYPE_IP;
-	entry.arp_pa.addr_bits = IP_ADDR_BITS;
-	entry.arp_pa.addr_ip = gw_ip->s_addr;
-
-	if (arp_get(arp, &entry) < 0) {
-		log_debug("get_hw_addr", "failed to fetch arp entry");
-		return EXIT_FAILURE;
-	} else {
-		log_debug("get_hw_addr", "found ip %s at hw_addr %s",
-			  addr_ntoa(&entry.arp_pa), addr_ntoa(&entry.arp_ha));
-		memcpy(hw_mac, &entry.arp_ha.addr_eth, ETHER_ADDR_LEN);
-	}
-	arp_close(arp);
-	return EXIT_SUCCESS;
+	free(buf);
+	return result;
 }
 
 int get_iface_ip(char *iface, struct in_addr *ip)
@@ -92,6 +100,7 @@ int get_iface_ip(char *iface, struct in_addr *ip)
 			ip->s_addr = sin->sin_addr.s_addr;
 			log_debug("get-iface-ip", "IP address found for %s: %s",
 				  iface, inet_ntoa(*ip));
+			freeifaddrs(ifaddr);
 			return EXIT_SUCCESS;
 		}
 	}
@@ -104,17 +113,23 @@ int get_iface_ip(char *iface, struct in_addr *ip)
 
 int get_iface_hw_addr(char *iface, unsigned char *hw_mac)
 {
-	eth_t *e = eth_open(iface);
-	if (e) {
-		eth_addr_t eth_addr;
-		int res = eth_get(e, &eth_addr);
-		log_debug("gateway", "res: %d", res);
-		if (res == 0) {
-			memcpy(hw_mac, eth_addr.data, ETHER_ADDR_LEN);
-			return EXIT_SUCCESS;
+	struct ifaddrs *ifa;
+	if (getifaddrs(&ifa) == -1) {
+		log_debug("get_iface_hw_addr", "getifaddrs(): %d %s", errno, strerror(errno));
+		return EXIT_FAILURE;
+	}
+	int result = EXIT_FAILURE;
+	for (struct ifaddrs *p = ifa; p; p = p->ifa_next) {
+		if (strcmp(p->ifa_name, iface) == 0 &&
+		    p->ifa_addr != NULL && p->ifa_addr->sa_family == AF_LINK) {
+			struct sockaddr_dl *sdl = (struct sockaddr_dl *)p->ifa_addr;
+			memcpy(hw_mac, LLADDR(sdl), ETHER_ADDR_LEN);
+			result = EXIT_SUCCESS;
+			break;
 		}
 	}
-	return EXIT_FAILURE;
+	freeifaddrs(ifa);
+	return result;
 }
 
 int _get_default_gw(struct in_addr *gw, char **iface)
@@ -144,11 +159,13 @@ int _get_default_gw(struct in_addr *gw, char **iface)
 	while (rtm->rtm_type == RTM_GET &&
 	       (len = read(fd, rtm, sizeof(buf))) > 0) {
 		if (len < (int)sizeof(*rtm)) {
+			close(fd);
 			return (-1);
 		}
 		if (rtm->rtm_type == RTM_GET && rtm->rtm_pid == getpid() &&
 		    rtm->rtm_seq == seq) {
 			if (rtm->rtm_errno) {
+				close(fd);
 				errno = rtm->rtm_errno;
 				return (-1);
 			}
