@@ -24,7 +24,6 @@ jobs:
         run: ls
 
       - name: Configure CMake
-        working-directory: /zmap/build
         # Configure CMake in a 'build' subdirectory.
         run: cmake -DENABLE_DEVELOPMENT=${{env.ENABLE_DEVELOPMENT}} -DENABLE_LOG_TRACE=${{env.ENABLE_LOG_TRACE}} .
 
