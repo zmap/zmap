@@ -39,8 +39,8 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
 	return write(sock.sock, buf, len);
 }
 
-// Since BSD doesn't have the sendmmsg syscall leveraged in send-linux.c, this just wraps the single send_packet call.
-// However, the behavior in sendmmsg is to send as many packets as possible until one fails, and then return the number of sent packets.
+// BSD handles sockets differently than linux, and it seems non-trivial to port the linux code. Leaving this code that wraps the basic send_packet for now.
+// The behavior in sendmmsg is to send as many packets as possible until one fails, and then return the number of sent packets.
 // Following the same pattern for consistency
 // Returns - number of packets sent
 // Returns -1 and sets errno if no packets could be sent successfully
