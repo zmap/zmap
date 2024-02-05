@@ -26,10 +26,9 @@ jobs:
       - name: Configure CMake
         working-directory: /zmap/build
         # Configure CMake in a 'build' subdirectory.
-        run: cmake -DENABLE_DEVELOPMENT=${{env.ENABLE_DEVELOPMENT}} -DENABLE_LOG_TRACE=${{env.ENABLE_LOG_TRACE}} /zmap
+        run: cmake -DENABLE_DEVELOPMENT=${{env.ENABLE_DEVELOPMENT}} -DENABLE_LOG_TRACE=${{env.ENABLE_LOG_TRACE}} .
 
       - name: Build
-        working-directory: /zmap/build
         # Build your program with the given configuration
         run: make
 
