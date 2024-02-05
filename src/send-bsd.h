@@ -9,16 +9,27 @@
 #ifndef ZMAP_SEND_BSD_H
 #define ZMAP_SEND_BSD_H
 
-#include <sys/types.h>
-#include <sys/time.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/types.h>
+//#include <fcntl.h>
+
+#include <netinet/in.h>
+#include <net/bpf.h>
+#include <netpacket/packet.h>
+#include <unistd.h>
 #include <fcntl.h>
 
 #include "send.h"
 #include "../lib/includes.h"
-
-#include <netinet/in.h>
-#include <net/bpf.h>
+#include "../lib/logger.h"
 
 #ifdef ZMAP_SEND_LINUX_H
 #error "Don't include both send-bsd.h and send-linux.h"
@@ -27,61 +38,89 @@
 #error "Don't include both send-bsd.h and send-mac.h"
 #endif
 
-
-int send_run_init(UNUSED sock_t sock)
+int send_run_init(sock_t s)
 {
-	// Don't need to do anything on BSD-like variants
+	// Get the actual socket
+	int sock = s.sock;
+	// get source interface index
+	struct ifreq if_idx;
+	memset(&if_idx, 0, sizeof(struct ifreq));
+	if (strlen(zconf.iface) >= IFNAMSIZ) {
+		log_error("send", "device interface name (%s) too long\n",
+			  zconf.iface);
+		return EXIT_FAILURE;
+	}
+	strncpy(if_idx.ifr_name, zconf.iface, IFNAMSIZ - 1);
+	if (ioctl(sock, SIOCGIFINDEX, &if_idx) < 0) {
+		log_error("send", "%s", "SIOCGIFINDEX");
+		return EXIT_FAILURE;
+	}
+	int ifindex = if_idx.ifr_ifindex;
+
+	// destination address for the socket
+	memset((void *)&sockaddr, 0, sizeof(struct sockaddr_ll));
+	sockaddr.sll_ifindex = ifindex;
+	sockaddr.sll_halen = ETH_ALEN;
+	if (zconf.send_ip_pkts) {
+		sockaddr.sll_protocol = htons(ETHERTYPE_IP);
+	}
+	memcpy(sockaddr.sll_addr, zconf.gw_mac, ETH_ALEN);
 	return EXIT_SUCCESS;
 }
 
-int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
-{
-	return write(sock.sock, buf, len);
-}
-
-// Since BSD doesn't have the sendmmsg syscall leveraged in send-linux.c, this just wraps the single send_packet call.
-// However, the behavior in sendmmsg is to send as many packets as possible until one fails, and then return the number of sent packets.
-// Following the same pattern for consistency
-// Returns - number of packets sent
-// Returns -1 and sets errno if no packets could be sent successfully
 int send_batch(sock_t sock, batch_t* batch, int retries) {
 	if (batch->len == 0) {
 		// nothing to send
 		return EXIT_SUCCESS;
 	}
-	int packets_sent = 0;
-	int rc = 0;
-	for (int packet_num = 0; packet_num < batch->len; packet_num++) {
-		for (int retry_ct = 0; retry_ct < retries; retry_ct++) {
-			rc = send_packet(sock, ((void *)batch->packets) + (packet_num * MAX_PACKET_SIZE), batch->lens[packet_num], 0);
-			if (rc >= 0) {
-				packets_sent++;
-				break;
-			}
-		}
-		if (rc < 0) {
-			// packet couldn't be sent in retries number of attempts
-			struct in_addr addr;
-			addr.s_addr = batch->ips[packet_num];
-			char addr_str_buf
-			    [INET_ADDRSTRLEN];
-			const char *addr_str =
-			    inet_ntop(
-				AF_INET, &addr,
-				addr_str_buf,
-				INET_ADDRSTRLEN);
-			if (addr_str != NULL) {
-				log_debug( "send", "send_packet failed for %s. %s", addr_str,
-				    strerror( errno));
-			}
-		}
+	struct mmsghdr msgvec [batch->capacity]; // Array of multiple msg header structures
+	struct msghdr msgs[batch->capacity];
+	struct iovec iovs[batch->capacity];
+
+	for (int i = 0; i < batch->len; ++i) {
+		struct iovec *iov = &iovs[i];
+		iov->iov_base = ((void *)batch->packets) + (i * MAX_PACKET_SIZE);
+		iov->iov_len = batch->lens[i];
+		struct msghdr *msg = &msgs[i];
+		memset(msg, 0, sizeof(struct msghdr));
+		// based on https://github.com/torvalds/linux/blob/master/net/socket.c#L2180
+		msg->msg_name = (struct sockaddr *)&sockaddr;
+		msg->msg_namelen = sizeof(struct sockaddr_ll);
+		msg->msg_iov = iov;
+		msg->msg_iovlen = 1;
+		msgvec[i].msg_hdr = *msg;
+		msgvec[i].msg_len = batch->lens[i];
 	}
-	if (packets_sent == 0) {
-		// simulating the return behaviour of the Linux send_mmsg sys call on error. Returns -1 and leaves
-		// errno as set by send_packet
-		return -1;
+	// set up per-retry variables, so we can only re-submit what didn't send successfully
+	struct mmsghdr* current_msg_vec = msgvec;
+	int total_packets_sent = 0;
+	int num_of_packets_in_batch = batch->len;
+	for (int i = 0; i < retries; i++) {
+		// according to manpages
+		// On success, sendmmsg() returns the number of messages sent from msgvec; if this is less than vlen, the
+		//       caller can retry with a further sendmmsg() call to send the remaining messages.
+		// On error, -1 is returned, and errno is set to indicate the error.
+		int rv = sendmmsg(sock.sock, current_msg_vec, num_of_packets_in_batch, 0);
+		if (rv < 0) {
+			// retry if sending all packets failed
+			log_error("batch send", "error in sendmmsg: %s", strerror(errno));
+			continue;
+		}
+		// if rv is positive, it gives the number of packets successfully sent
+		total_packets_sent += rv;
+		if (rv == num_of_packets_in_batch){
+			// all packets in batch were sent successfully
+			break;
+		}
+		// batch send was only partially successful, we'll retry if we have retries available
+		log_warn("batch send", "only successfully sent %d packets out of a batch of %d packets", total_packets_sent, batch->len);
+		// per the manpages for sendmmsg, packets are sent sequentially and the call returns upon a
+		// failure, returning the number of packets successfully sent
+		// remove successfully sent packets from batch for retry
+		current_msg_vec = &msgvec[total_packets_sent];
+		num_of_packets_in_batch = batch->len - total_packets_sent;
 	}
-	return packets_sent;
+	return total_packets_sent;
 }
 
 #endif /* ZMAP_SEND_BSD_H */
