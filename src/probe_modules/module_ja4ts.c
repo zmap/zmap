@@ -16,6 +16,7 @@
 #include <assert.h>
 
 #include "../../lib/includes.h"
+#include "../../lib/logger.h"
 #include "../fieldset.h"
 #include "probe_modules.h"
 #include "packet.h"
@@ -28,15 +29,16 @@
 // TCP Option Kind Values
 #define TCP_OPTION_KIND_MSS 2
 #define TCP_OPTION_KIND_WINDOW_SCALE 3
-
+#define TCP_OPTION_KIND_NO_OP 1
+#define TCP_OPTION_END 0
 
 static uint16_t num_source_ports;
 
 // Comparison function for qsort
-static int compare_uint8_t(const void *a, const void *b)
-{
-	return (*(uint8_t *)a - *(uint8_t *)b);
-}
+// static int compare_uint8_t(const void *a, const void *b)
+// {
+// 	return (*(uint8_t *)a - *(uint8_t *)b);
+// }
 
 static int ja4tscan_global_initialize(struct state_conf *state)
 {
@@ -183,6 +185,7 @@ static void ja4tscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 		// Length of TCP options field in 32-bit words (DWORDs)
 		// th_off is the offset in 32-bit words
 		int options_length = (tcp->th_off - 5) * 4;
+		int buffer_size = options_length;
 
 		// PARSE OPTIONS
 		int remaining_length = options_length;
@@ -195,10 +198,23 @@ static void ja4tscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 		int num_option_kinds = 0;
 
 		while (remaining_length > 0) {
-			// Calculate the option length in bytes (including Kind and Length fields)
-			// Length field immediately follows Kind field
-			uint8_t option_length = tcp_options[offset + 1];
+			if (remaining_length < sizeof(uint8_t)) {
+				// Not enough bytes left for any more options
+				break;
+			}
+
 			uint8_t option_kind = tcp_options[offset];
+			uint8_t option_length =
+			    (option_kind == TCP_OPTION_KIND_NO_OP ||
+			     option_kind == TCP_OPTION_END)
+				? 1
+				: tcp_options[offset + 1];
+
+			// Check for malformed packet (option_length too small or beyond remaining_length)
+			if (option_length < 1 ||
+			    option_length > remaining_length) {
+				break;
+			}
 
 			option_kinds[num_option_kinds] = option_kind;
 			num_option_kinds++;
@@ -215,6 +231,16 @@ static void ja4tscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 				scaling_factor = tcp_options[offset + 2];
 				break;
 
+			case TCP_OPTION_KIND_NO_OP:
+				// has no option length, decrement remaining_length by 1
+				remaining_length--;
+				break;
+
+			case TCP_OPTION_END:
+				// end of options, set remaining_length to 0
+				remaining_length = 0;
+				break;
+
 			default:
 				break;
 			}
@@ -222,11 +248,15 @@ static void ja4tscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 			// Update the remaining length and offset for the next option
 			remaining_length -= option_length;
 			offset += option_length;
+			// Check if offset has exceeded buffer bounds (consider buffer_size as the size of tcp_options)
+			if (offset > buffer_size) {
+				break;
+			}
 		}
 
 		// Sort the option_kinds array in ascending order
-		qsort(option_kinds, num_option_kinds, sizeof(uint8_t),
-		      compare_uint8_t);
+		// qsort(option_kinds, num_option_kinds, sizeof(uint8_t),
+		//       compare_uint8_t);
 
 		// Build the sorted option kinds string
 		char option_kinds_str[100]; // Adjust the size as needed
@@ -255,23 +285,26 @@ static void ja4tscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 		uint16_t window_size = ntohs(tcp->th_win);
 
 		// b: TCP Parameters
-        char option_kinds_str_fmt[100];
+		char option_kinds_str_fmt[100];
 		if (strlen(option_kinds_str) == 0) {
-			snprintf(option_kinds_str_fmt, sizeof(option_kinds_str_fmt), "%s", "00");
-        } else {
-            snprintf(option_kinds_str_fmt, sizeof(option_kinds_str_fmt), "%s", option_kinds_str);
+			snprintf(option_kinds_str_fmt,
+				 sizeof(option_kinds_str_fmt), "%s", "00");
+		} else {
+			snprintf(option_kinds_str_fmt,
+				 sizeof(option_kinds_str_fmt), "%s",
+				 option_kinds_str);
 		}
 
 		// Calculate the required size for ja4ts_str
 		int required_size =
 		    snprintf(NULL, 0, "%05u", window_size) +
 		    strlen(option_kinds_str_fmt) + // For b: TCP Parameters
-		    strlen("_") +	       // Separator between b and c
-		    sizeof(mss_value) +	       // For c: MSS mss_value
-		    strlen("_") +	       // Separator between c and d
-		    sizeof(scaling_factor) + // For d: Window Scale
-		    strlen("_") +	       // Separator between d and e
-		    sizeof("00") + 1;	       // For e: Time since last synack
+		    strlen("_") +		   // Separator between b and c
+		    sizeof(mss_value) +		   // For c: MSS mss_value
+		    strlen("_") +		   // Separator between c and d
+		    sizeof(scaling_factor) +	   // For d: Window Scale
+		    strlen("_") +		   // Separator between d and e
+		    sizeof("00") + 1; // For e: Time since last synack
 
 		// Allocate memory for ja4ts_str
 		char *ja4ts_str = (char *)malloc(required_size);
@@ -281,18 +314,17 @@ static void ja4tscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 			 window_size, option_kinds_str_fmt, mss_value,
 			 scaling_factor);
 
-
-		printf("JA4TS: %s\n", ja4ts_str);
-
-		// Don't forget to free the dynamically allocated memory when done
-		free(ja4ts_str);
+		log_debug("ja4ts", "JA4TS: %s", ja4ts_str);
+		log_debug("ja4ts", "IP: %s",
+			  make_ip_str(ip_hdr->ip_src.s_addr));
 
 		fs_add_uint64(fs, "sport", (uint64_t)ntohs(tcp->th_sport));
 		fs_add_uint64(fs, "dport", (uint64_t)ntohs(tcp->th_dport));
 		fs_add_uint64(fs, "seqnum", (uint64_t)ntohl(tcp->th_seq));
 		fs_add_uint64(fs, "acknum", (uint64_t)ntohl(tcp->th_ack));
 		fs_add_uint64(fs, "window", (uint64_t)ntohs(tcp->th_win));
-		fs_add_string(fs, "ja4ts", ja4ts_str, 0);
+		fs_add_string(fs, "ja4ts", (char *)ja4ts_str, 0);
+		fs_add_uint64(fs, "timestamp", (uint64_t)ts.tv_sec);
 		if (tcp->th_flags & TH_RST) { // RST packet
 			fs_add_constchar(fs, "classification", "rst");
 			fs_add_bool(fs, "success", 0);
@@ -302,6 +334,7 @@ static void ja4tscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 		}
 		fs_add_null_icmp(fs);
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
+		log_debug("ja4ts", "ICMP packet");
 		// tcp
 		fs_add_null(fs, "sport");
 		fs_add_null(fs, "dport");
@@ -324,6 +357,7 @@ static fielddef_t fields[] = {
     {.name = "acknum", .type = "int", .desc = "TCP acknowledgement number"},
     {.name = "window", .type = "int", .desc = "TCP window"},
     {.name = "ja4ts", .type = "string", .desc = "TCP JA3 hash"},
+    {.name = "timestamp", .type = "int", .desc = "Unix Epoch timestamp"},
     CLASSIFICATION_SUCCESS_FIELDSET_FIELDS,
     ICMP_FIELDSET_FIELDS,
 };
@@ -331,8 +365,8 @@ static fielddef_t fields[] = {
 probe_module_t module_ja4ts = {
     .name = "ja4ts",
     .max_packet_length = ZMAP_JA4TS_PACKET_LEN,
-    .pcap_filter = "(tcp && tcp[13] & 4 != 0 || tcp[13] == 18) || icmp",
-    .pcap_snaplen = 96,
+    .pcap_filter = "tcp",
+    .pcap_snaplen = 256,
     .port_args = 1,
     .global_initialize = &ja4tscan_global_initialize,
     .thread_initialize = &ja4tscan_init_perthread,

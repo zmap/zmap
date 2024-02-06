@@ -4,5 +4,5 @@ build:
     make install
 
 zmap:
-    sudo zmap -N 5 -B 10M -p 80 -o output.csv --output-fields=saddr,window,ja4ts
+    sudo zmap -N 1000 -B 10M -p443 -o output.csv --output-fields=saddr,window,ja4ts,timestamp,DPORT --probe-module=ja4ts --dedup-method none -v 5
 
