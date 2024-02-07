@@ -17,7 +17,6 @@ endif()
 
 if("${CMAKE_SYSTEM_NAME}" MATCHES "FreeBSD" OR "${CMAKE_SYSTEM_NAME}" MATCHES "NetBSD" OR "${CMAKE_SYSTEM_NAME}" MATCHES "DragonFly")
     set(BSD "YES")
-    add_definitions("-D_SYSTYPE_BSD")
 endif()
 
 if("${CMAKE_SYSTEM_NAME}" MATCHES "NetBSD")
