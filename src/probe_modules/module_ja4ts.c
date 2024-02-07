@@ -34,7 +34,6 @@
 
 static uint16_t num_source_ports;
 
-
 static int ja4tscan_global_initialize(struct state_conf *state)
 {
 	num_source_ports =
@@ -315,6 +314,9 @@ static void ja4tscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 		fs_add_uint64(fs, "window", (uint64_t)ntohs(tcp->th_win));
 		fs_add_string(fs, "ja4ts", (char *)ja4ts_str, 0);
 		fs_add_uint64(fs, "timestamp", (uint64_t)ts.tv_sec);
+		fs_add_uint64(fs, "ip_src_num",
+			      (uint64_t)ntohl(ip_hdr->ip_src.s_addr));
+
 		if (tcp->th_flags & TH_RST) { // RST packet
 			fs_add_constchar(fs, "classification", "rst");
 			fs_add_bool(fs, "success", 0);
@@ -348,6 +350,8 @@ static fielddef_t fields[] = {
     {.name = "window", .type = "int", .desc = "TCP window"},
     {.name = "ja4ts", .type = "string", .desc = "TCP JA3 hash"},
     {.name = "timestamp", .type = "int", .desc = "Unix Epoch timestamp"},
+    {.name = "ip_src_num", .type = "int", .desc = "Source IP address"},
+
     CLASSIFICATION_SUCCESS_FIELDSET_FIELDS,
     ICMP_FIELDSET_FIELDS,
 };
