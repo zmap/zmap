@@ -26,6 +26,22 @@ static FILE *file = NULL;
 char *csv_filename = NULL;
 char **global_field_names = NULL;
 int global_field_count = 0;
+int numRecords = 0;
+
+typedef struct {
+	char *saddr;
+	unsigned long ip_src_num;
+	char *restOfLine;
+} Record;
+
+// Comparator function for qsort.
+int compare_records(const void *a, const void *b)
+{
+	Record *recordA = (Record *)a;
+	Record *recordB = (Record *)b;
+	return (recordA->ip_src_num > recordB->ip_src_num) -
+	       (recordA->ip_src_num < recordB->ip_src_num);
+}
 
 static void csv_post_process(void)
 {
@@ -36,7 +52,8 @@ static void csv_post_process(void)
 
 	printf("global_field_count: %d\n", global_field_count);
 	for (int i = 0; i < global_field_count; i++) {
-		printf("global_field_names[%d]: %s\n", i, global_field_names[i]);
+		printf("global_field_names[%d]: %s\n", i,
+		       global_field_names[i]);
 	}
 
 	char *line = NULL;
@@ -53,8 +70,64 @@ static void csv_post_process(void)
 	}
 	printf("First line: %s\n", line);
 
-	// Find column with saddr
-	
+	// sorting
+	Record *records = malloc(sizeof(Record) * numRecords);
+	if (!records) {
+		perror("Failed to allocate memory for records");
+		fclose(fp);
+		return;
+	}
+
+	char recordLine[1024];
+	int currentRecord = 0;
+	printf("parsing records\n");
+	while (fgets(recordLine, sizeof(recordLine), fp) &&
+	       currentRecord < numRecords) {
+		records[currentRecord].saddr = strdup(strtok(recordLine, ","));
+		records[currentRecord].ip_src_num =
+		    strtoul(strtok(NULL, ","), NULL, 10);
+		// Assuming ip_src_num is the second column and saddr is the first.
+		// If the CSV structure is different, adjust the parsing logic accordingly.
+		// Store the rest of the line if needed
+		char *restOfLine = strtok(NULL, "\n");
+		if (restOfLine) {
+			records[currentRecord].restOfLine = strdup(restOfLine);
+		} else {
+			records[currentRecord].restOfLine = NULL;
+		}
+		currentRecord++;
+	}
+	fclose(fp);
+
+	// Sort the records based on ip_src_num.
+	printf("sorting records\n");
+	qsort(records, numRecords, sizeof(Record), compare_records);
+
+	printf("write back to file\n");
+	static FILE *new_fp = NULL;
+	new_fp = fopen("output_processed.csv", "w");
+	if (new_fp == NULL) {
+		log_fatal("csv", "could not open CSV output file: %s", strerror(errno));
+	}
+	fprintf(new_fp, "%s", line);
+	for (int i = 0; i < numRecords; i++) {
+		fprintf(new_fp, "%s,%lu", records[i].saddr,
+			records[i].ip_src_num);
+		if (records[i].restOfLine) {
+			fprintf(new_fp, ",%s", records[i].restOfLine);
+		}
+		fprintf(new_fp, "\n");
+	}
+
+	// Free the memory
+	for (int i = 0; i < numRecords; i++) {
+		free(records[i].saddr);
+		if (records[i].restOfLine) {
+			free(records[i].restOfLine);
+		}
+	}
+	free(records);
+	fclose(new_fp);
 }
 
 int csv_init(struct state_conf *conf, const char **fields, int fieldlens)
@@ -64,7 +137,6 @@ int csv_init(struct state_conf *conf, const char **fields, int fieldlens)
 	global_field_names = malloc(sizeof(char *) * global_field_count);
 
 	if (conf->output_filename) {
-		// set value on csv_filename
 		csv_filename = conf->output_filename;
 		if (!strcmp(conf->output_filename, "-")) {
 			file = stdout;
@@ -120,6 +192,7 @@ int csv_process(fieldset_t *fs)
 	if (!file) {
 		return EXIT_SUCCESS;
 	}
+	numRecords++;
 	for (int i = 0; i < fs->len; i++) {
 		field_t *f = &(fs->fields[i]);
 		if (i) {
