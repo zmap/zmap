@@ -34,11 +34,6 @@
 
 static uint16_t num_source_ports;
 
-// Comparison function for qsort
-// static int compare_uint8_t(const void *a, const void *b)
-// {
-// 	return (*(uint8_t *)a - *(uint8_t *)b);
-// }
 
 static int ja4tscan_global_initialize(struct state_conf *state)
 {
@@ -254,12 +249,7 @@ static void ja4tscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 			}
 		}
 
-		// Sort the option_kinds array in ascending order
-		// qsort(option_kinds, num_option_kinds, sizeof(uint8_t),
-		//       compare_uint8_t);
-
-		// Build the sorted option kinds string
-		char option_kinds_str[100]; // Adjust the size as needed
+		char option_kinds_str[100];
 		option_kinds_str[0] = '\0';
 
 		for (int i = 0; i < num_option_kinds; i++) {
@@ -297,7 +287,7 @@ static void ja4tscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 
 		// Calculate the required size for ja4ts_str
 		int required_size =
-		    snprintf(NULL, 0, "%05u", window_size) +
+		    snprintf(NULL, 0, "%u", window_size) +
 		    strlen(option_kinds_str_fmt) + // For b: TCP Parameters
 		    strlen("_") +		   // Separator between b and c
 		    sizeof(mss_value) +		   // For c: MSS mss_value
@@ -310,7 +300,7 @@ static void ja4tscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 		char *ja4ts_str = (char *)malloc(required_size);
 
 		// Construct ja4ts_str
-		snprintf(ja4ts_str, required_size, "%05u_%s_%04u_%02u_00",
+		snprintf(ja4ts_str, required_size, "%u_%s_%02u_%02u",
 			 window_size, option_kinds_str_fmt, mss_value,
 			 scaling_factor);
 
