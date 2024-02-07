@@ -13,6 +13,7 @@
 #error "Don't include both get_gateway-bsd.h and get_gateway-linux.h"
 #endif
 
+#include <string.h>
 #include <sys/ioctl.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
@@ -85,86 +86,31 @@ int send_nl_req(uint16_t msg_type, uint32_t seq, void *payload,
 
 int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
 {
-	struct ndmsg req;
-	memset(&req, 0, sizeof(struct ndmsg));
+	// TODOPhillip - what was gw_ip used for? NDA_DST
+	// Looks like getting the IP address of the gateway, talk to Zakir about what that was used for
+	int sockfd;
+	struct ifreq ifr;
 
-	if (!gw_ip || !hw_mac) {
-		return -1;
+	// Open a socket
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sockfd < 0) {
+		perror("socket");
+		return 1;
 	}
-	// Send RTM_GETNEIGH request
-	req.ndm_family = AF_INET;
-	req.ndm_ifindex = if_nametoindex(iface);
-	req.ndm_state = NUD_REACHABLE;
-	req.ndm_type = NDA_LLADDR;
 
-	int sock = send_nl_req(RTM_GETNEIGH, 1, &req, sizeof(req));
-	// Read responses
-	char *buf = xmalloc(GW_BUFFER_SIZE);
-	int nl_len = read_nl_sock(sock, buf, GW_BUFFER_SIZE);
-	if (nl_len <= 0) {
-		free(buf);
-		return -1;
-	}
-	// Parse responses
-	struct nlmsghdr *nlhdr = (struct nlmsghdr *)buf;
-	while (NLMSG_OK(nlhdr, nl_len)) {
-		struct rtattr *rt_attr;
-		struct rtmsg *rt_msg;
-		int rt_len;
-		unsigned char mac[6];
-		struct in_addr dst_ip;
-		int correct_ip = 0;
 
-		rt_msg = (struct rtmsg *)NLMSG_DATA(nlhdr);
-		if ((rt_msg->rtm_family != AF_INET)) {
-			free(buf);
-			return -1;
-		}
-		rt_attr = (struct rtattr *)RTM_RTA(rt_msg);
-		rt_len = RTM_PAYLOAD(nlhdr);
-		while (RTA_OK(rt_attr, rt_len)) {
-			switch (rt_attr->rta_type) {
-			case NDA_LLADDR:
-				if (RTA_PAYLOAD(rt_attr) != IFHWADDRLEN) {
-					// could be using a VPN
-					log_fatal(
-					    "get_gateway",
-					    "Unexpected hardware address length (%d)."
-					    " If you are using a VPN, supply the --iplayer flag (and provide an"
-					    " interface via -i)",
-					    RTA_PAYLOAD(rt_attr));
-				}
-				memcpy(mac, RTA_DATA(rt_attr), IFHWADDRLEN);
-				break;
-			case NDA_DST:
-				if (RTA_PAYLOAD(rt_attr) != sizeof(dst_ip)) {
-					// could be using a VPN
-					log_fatal(
-					    "get_gateway",
-					    "Unexpected IP address length (%d)."
-					    " If you are using a VPN, supply the --iplayer flag"
-					    " (and provide an interface via -i)",
-					    RTA_PAYLOAD(rt_attr));
-				}
-				memcpy(&dst_ip, RTA_DATA(rt_attr),
-				       sizeof(dst_ip));
-				if (memcmp(&dst_ip, gw_ip, sizeof(dst_ip)) ==
-				    0) {
-					correct_ip = 1;
-				}
-				break;
-			}
-			rt_attr = RTA_NEXT(rt_attr, rt_len);
-		}
-		if (correct_ip) {
-			memcpy(hw_mac, mac, IFHWADDRLEN);
-			free(buf);
-			return 0;
-		}
-		nlhdr = NLMSG_NEXT(nlhdr, nl_len);
+	// Get the MAC address of the interface
+	strncpy(ifr.ifr_name, iface, strlen(iface));
+	if (ioctl(sockfd, SIOCGIFHWADDR, &ifr) < 0) {
+		perror("ioctl");
+		close(sockfd);
+		log_error("get-gw", "error with getting hardware MAC address of interface %s: %s", iface, strerror(errno));
+		return 1;
 	}
-	free(buf);
-	return -1;
+
+	memcpy(hw_mac, ifr.ifr_hwaddr.sa_data, sizeof(unsigned char) * 6);
+	close(sockfd);
+	return 0;
 }
 
 // gw and iface[IF_NAMESIZE] MUST be allocated
