@@ -90,15 +90,12 @@ int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
 	// Looks like getting the IP address of the gateway, talk to Zakir about what that was used for
 	int sockfd;
 	struct ifreq ifr;
-
 	// Open a socket
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockfd < 0) {
 		perror("socket");
 		return 1;
 	}
-
-
 	// Get the MAC address of the interface
 	strncpy(ifr.ifr_name, iface, strlen(iface));
 	if (ioctl(sockfd, SIOCGIFHWADDR, &ifr) < 0) {
@@ -107,7 +104,6 @@ int get_hw_addr(struct in_addr *gw_ip, char *iface, unsigned char *hw_mac)
 		log_error("get-gw", "error with getting hardware MAC address of interface %s: %s", iface, strerror(errno));
 		return 1;
 	}
-
 	memcpy(hw_mac, ifr.ifr_hwaddr.sa_data, sizeof(unsigned char) * 6);
 	close(sockfd);
 	return 0;
