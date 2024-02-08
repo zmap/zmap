@@ -1,3 +1,24 @@
+# JA4TScan Usage
+
+This fork simply implements a new probe module for Zmap that generates JA4T fingerprints. This achieved through a single file: `src/probe_modules/module_ja4ts.c`.
+
+This is a modifed version of Zmap's default TCP scanner `src/probe_modules/module_tcp_synscan.c`. The main difference is that a new field `ja4ts` is added to the field set. The field is created by capturing the server's synack response parameters specified by the [JA4Ts specification](https://docs.google.com/document/d/1Q6-kk2BcWe5qa2FSwsR5cvbaf5jhaj4LDeFLwBlM6Bc/).
+
+For building from source, follow Zmap's instructions in the installation section below.
+
+## Usage
+
+This tool can be used the same way as Zmap with a few caveats.
+
+Example:
+`sudo zmap -N 1000 -B 10M -p 443 -o output.csv --output-fields=saddr,ja4ts,timestamp,dport --probe-module=ja4ts --dedup-method none`
+
+The `--probe-module` flag specifies the probe module to use. In this case, `ja4ts` is used. The `--output-fields` flag specifies the fields to include in the output. The `ja4ts` field is included in the output. Its very important to include the `timestamp` field in the output as it is used to calculate the JA4TScan fingerprint via post processing by measuring the time between first synack and following retransmissions.
+
+Additionally, the `--dedup-method` flag is set to `none` to ensure that retransmission packets are captured.
+
+Without the `dedup-method` flag and the `timestamp` field, you won't be able to calculate the JA4TScan fingerprint when post processing.
+
 ZMap: The Internet Scanner
 ==========================
 
