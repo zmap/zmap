@@ -39,7 +39,7 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t retry_ct)
 		struct ip *iph = (struct ip *)buf;
 #ifdef __APPLE__
 		// The len and off fields need to be in host byte order on macOS.
-		if (retry_ct > 0) {
+		if (retry_ct == 0) {
 			iph->ip_len = ntohs(iph->ip_len);
 			iph->ip_off = ntohs(iph->ip_off);
 			iph->ip_sum = 0;
