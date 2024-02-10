@@ -48,6 +48,7 @@ int get_hw_addr(struct in_addr *gw_ip, UNUSED char *iface,
 	assert(buf);
 	if (sysctl(mib, 6, buf, &bufsz, NULL, 0) == -1) {
 		log_debug("get_hw_addr", "sysctl getting buffer data: %d %s", errno, strerror(errno));
+		free(buf);
 		return EXIT_FAILURE;
 	}
 
