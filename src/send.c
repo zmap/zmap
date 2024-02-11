@@ -91,11 +91,6 @@ iterator_t *send_init(void)
 		log_fatal("send", "senders * shards > max targets");
 	}
 	uint64_t num_addrs = blocklist_count_allowed();
-	if (zconf.list_of_ips_filename) {
-		log_debug("send",
-			  "forcing max group size for compatibility with -I");
-		num_addrs = 0xFFFFFFFF;
-	}
 	it = iterator_init(zconf.senders, zconf.shard_num, zconf.total_shards,
 			   num_addrs, zconf.ports->port_count);
 	// determine the source address offset from which we'll send packets
