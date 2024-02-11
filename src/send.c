@@ -44,7 +44,9 @@ static inline int send_run_init(sock_t sock);
 // Include the right implementations
 #if defined(PFRING)
 #include "send-pfring.h"
-#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) ||     \
+#elif defined(__APPLE__)
+#include "send-mac.h"
+#elif defined(__FreeBSD__) || defined(__NetBSD__) ||     \
     defined(__DragonFly__)
 #include "send-bsd.h"
 #else /* LINUX */
@@ -424,6 +426,7 @@ int send_run(sock_t st, shard_t *s)
 					int rc = send_batch(st, batch, attempts);
 					// whether batch succeeds or fails, this was the only attempt. Any re-tries are handled within batch
 					if (rc < 0) {
+						log_error("send_batch", "could not send any batch packets: %s", strerror(errno));
 						// rc is the last error code if all packets couldn't be sent
 						s->state.packets_failed += batch->len;
 					} else {
@@ -464,8 +467,8 @@ int send_run(sock_t st, shard_t *s)
 		}
 	}
 cleanup:
-	if (send_batch(st, batch, attempts) < 0) {
-		perror("error in cleanup, send_batch");
+	if (!zconf.dryrun && send_batch(st, batch, attempts) < 0) {
+		log_error("send_batch cleanup", "could not send remaining batch packets: %s", strerror(errno));
 	}
 	free_packet_batch(batch);
 	s->cb(s->thread_id, s->arg);
