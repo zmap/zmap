@@ -100,12 +100,16 @@ void handle_packet(uint32_t buflen, const u_char *bytes,
 	// Here, we fake an ethernet frame (which is initialized to
 	// have ETH_P_IP proto and 00s for dest/src).
 	if (zconf.send_ip_pkts) {
-		if (buflen > sizeof(fake_eth_hdr)) {
-			buflen = sizeof(fake_eth_hdr);
+		const static uint32_t available_space = sizeof(fake_eth_hdr) - sizeof(struct ether_header);
+		assert(buflen > zconf.data_link_size);
+		buflen -= zconf.data_link_size;
+		if (buflen > available_space) {
+			buflen = available_space;
 		}
 		memcpy(&fake_eth_hdr[sizeof(struct ether_header)],
 		       bytes + zconf.data_link_size, buflen);
 		bytes = fake_eth_hdr;
+		buflen += sizeof(struct ether_header);
 	}
 	zconf.probe_module->process_packet(bytes, buflen, fs, validation, ts);
 	fs_add_system_fields(fs, is_repeat, zsend.complete);
