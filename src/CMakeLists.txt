@@ -126,8 +126,8 @@ elseif (APPLE OR BSD)
     set(SOURCES ${SOURCES} socket-bsd.c)
     set(ZTESTSOURCES ${ZTESTSOURCES} socket-bsd.c)
 else()
-    set(SOURCES ${SOURCES} socket-linux.c)
-    set(ZTESTSOURCES ${ZTESTSOURCES} socket-linux.c)
+    set(SOURCES ${SOURCES} socket-linux.c send-linux.c)
+    set(ZTESTSOURCES ${ZTESTSOURCES} socket-linux.c send-linux.c)
 endif()
 
 # Handle various versions of recv
@@ -211,9 +211,9 @@ add_executable(ztee ${ZTEESOURCES})
 add_executable(ztests ${ZTESTSOURCES})
 
 if(APPLE OR BSD)
-    set(DNET_LIBRARIES "dnet")
 else()
-    set(DNET_LIBRARIES "")
+    set(ZTESTSOURCES ${ZTESTSOURCES} send-linux.c)
+    set(SOURCES ${SOURCES} send-linux.c)
 endif()
 
 target_link_libraries(
@@ -221,7 +221,6 @@ target_link_libraries(
     zmaplib
     ${PFRING_LIBRARIES}
     pcap gmp m unistring
-    ${DNET_LIBRARIES}
     ${JSON_LIBRARIES}
 	${JUDY_LIBRARIES}
 )
@@ -250,7 +249,6 @@ target_link_libraries(
     zmaplib
     ${PFRING_LIBRARIES}
     pcap gmp m unistring
-    ${DNET_LIBRARIES}
     ${JSON_LIBRARIES}
 	${JUDY_LIBRARIES}
 )

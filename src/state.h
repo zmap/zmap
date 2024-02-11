@@ -125,7 +125,7 @@ struct state_conf {
 	int ignore_invalid_hosts;
 	int syslog;
 	int recv_ready;
-	int num_retries;
+	int retries;
 	uint64_t total_allowed;
 	uint64_t total_disallowed;
 	int max_sendto_failures;

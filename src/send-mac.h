@@ -1,13 +1,13 @@
 /*
- * ZMap Copyright 2013 Regents of the University of Michigan
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy
- * of the License at http://www.apache.org/licenses/LICENSE-2.0
- */
+* ZMap Copyright 2024 Regents of the University of Michigan
+*
+* Licensed under the Apache License, Version 2.0 (the "License"); you may not
+* use this file except in compliance with the License. You may obtain a copy
+* of the License at http://www.apache.org/licenses/LICENSE-2.0
+*/
 
-#ifndef ZMAP_SEND_BSD_H
-#define ZMAP_SEND_BSD_H
+#ifndef ZMAP_SEND_MAC_H
+#define ZMAP_SEND_MAC_H
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -21,25 +21,42 @@
 #include <net/bpf.h>
 
 #ifdef ZMAP_SEND_LINUX_H
-#error "Don't include both send-bsd.h and send-linux.h"
+#error "Don't include both send-mac.h and send-linux.h"
 #endif
-#ifdef ZMAP_SEND_MAC_H
-#error "Don't include both send-bsd.h and send-mac.h"
+#ifdef ZMAP_SEND_BSD_H
+#error "Don't include both send-mac.h and send-bsd.h"
 #endif
-
 
 int send_run_init(UNUSED sock_t sock)
 {
-	// Don't need to do anything on BSD-like variants
+	// Don't need to do anything on MacOS
 	return EXIT_SUCCESS;
 }
 
-int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t idx)
+int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t retry_ct)
 {
-	return write(sock.sock, buf, len);
+	if (zconf.send_ip_pkts) {
+		struct ip *iph = (struct ip *)buf;
+#ifdef __APPLE__
+		// The len and off fields need to be in host byte order on macOS.
+		if (retry_ct == 0) {
+			iph->ip_len = ntohs(iph->ip_len);
+			iph->ip_off = ntohs(iph->ip_off);
+			iph->ip_sum = 0;
+		}
+#endif
+
+		struct sockaddr_in sai;
+		bzero(&sai, sizeof(sai));
+		sai.sin_family = AF_INET;
+		sai.sin_addr.s_addr = iph->ip_dst.s_addr;
+		return sendto(sock.sock, buf, len, 0, (struct sockaddr *)&sai, sizeof(sai));
+	} else {
+		return write(sock.sock, buf, len);
+	}
 }
 
-// BSD handles sockets differently than linux, and it seems non-trivial to port the linux code. Leaving this code that wraps the basic send_packet for now.
+// MacOS doesn't have the sendmmsg as of Sonoma 14.2. Since we want a uniform interface, we'll emulate the send_batch used in Linux.
 // The behavior in sendmmsg is to send as many packets as possible until one fails, and then return the number of sent packets.
 // Following the same pattern for consistency
 // Returns - number of packets sent
@@ -53,7 +70,7 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 	int rc = 0;
 	for (int packet_num = 0; packet_num < batch->len; packet_num++) {
 		for (int retry_ct = 0; retry_ct < retries; retry_ct++) {
-			rc = send_packet(sock, ((void *)batch->packets) + (packet_num * MAX_PACKET_SIZE), batch->lens[packet_num], 0);
+			rc = send_packet(sock, ((uint8_t *)batch->packets) + (packet_num * MAX_PACKET_SIZE), batch->lens[packet_num], retry_ct);
 			if (rc >= 0) {
 				packets_sent++;
 				break;
@@ -63,8 +80,7 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 			// packet couldn't be sent in retries number of attempts
 			struct in_addr addr;
 			addr.s_addr = batch->ips[packet_num];
-			char addr_str_buf
-			    [INET_ADDRSTRLEN];
+			char addr_str_buf[INET_ADDRSTRLEN];
 			const char *addr_str =
 			    inet_ntop(
 				AF_INET, &addr,
@@ -72,7 +88,7 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 				INET_ADDRSTRLEN);
 			if (addr_str != NULL) {
 				log_debug( "send", "send_packet failed for %s. %s", addr_str,
-				    strerror( errno));
+					   strerror( errno));
 			}
 		}
 	}
@@ -84,4 +100,4 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 	return packets_sent;
 }
 
-#endif /* ZMAP_SEND_BSD_H */
+#endif //ZMAP_SEND_MAC_H

@@ -44,6 +44,14 @@ int max_int(int a, int b)
 	return b;
 }
 
+int min_int(int a, int b)
+{
+	if (a >= b) {
+		return b;
+	}
+	return a;
+}
+
 void enforce_range(const char *name, int v, int min, int max)
 {
 	if (check_range(v, min, max) == EXIT_FAILURE) {
