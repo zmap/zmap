@@ -1,4 +1,4 @@
-name: CMake-Ubuntu
+name: CMake-Linux-and-BSD
 
 on:
   push:
@@ -11,7 +11,7 @@ env:
   ENABLE_LOG_TRACE: ON
 
 jobs:
-  build:
+  build-ubuntu:
     runs-on: ubuntu-20.04
     container:
       image: ghcr.io/zmap/builder:2023-09-10
@@ -36,3 +36,14 @@ jobs:
       - name: Check Manpages
         working-directory: /zmap
         run: python3 ./scripts/check_manfile.py
+
+  build-debian:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Check Debian Compilation
+        run: |
+          docker build -t debian-container -f debian.Dockerfile .
+          docker run debian-container
+
