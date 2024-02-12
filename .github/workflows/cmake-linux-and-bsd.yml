@@ -43,8 +43,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2
       - name: looking around
-        working-directory: /.github/workflows/
-        run: ls -a
+        run: ls -a .github/workflows/
       - name: Check Debian Compilation
         run: |
           docker build -t debian-container -f .github/workflows/debian.Dockerfile .
