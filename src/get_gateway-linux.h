@@ -21,7 +21,7 @@
 
 #define GW_BUFFER_SIZE 64000
 
-int read_nl_sock(int sock, char *buf, int buf_len)
+int read_nl_sock(it sock, char *buf, int buf_len)
 {
 	int msg_len = 0;
 	char *pbuf = buf;
