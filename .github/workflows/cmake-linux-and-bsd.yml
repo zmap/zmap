@@ -56,3 +56,13 @@ jobs:
         run: |
           docker build -t arch-container -f .github/workflows/arch.Dockerfile .
           docker run arch-container
+
+  build-fedora:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Check Fedora Compilation
+        run: |
+          docker build -t fedora-container -f .github/workflows/fedora.Dockerfile .
+          docker run fedora-container
