@@ -11,5 +11,5 @@ WORKDIR /zmap
 COPY . .
 
 RUN cmake -DENABLE_DEVELOPMENT=$ENABLE_DEVELOPMENT -DENABLE_LOG_TRACE=$ENABLE_LOG_TRACE . \
-    make
+    && make
 RUN python3 ./scripts/check_manfile.py
