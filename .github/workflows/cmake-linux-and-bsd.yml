@@ -47,3 +47,12 @@ jobs:
           docker build -t debian-container -f .github/workflows/debian.Dockerfile .
           docker run debian-container
 
+  build-arch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Check Arch Compilation
+        run: |
+          docker build -t arch-container -f .github/workflows/arch.Dockerfile .
+          docker run arch-container

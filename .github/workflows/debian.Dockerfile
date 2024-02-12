@@ -1,4 +1,4 @@
-FROM debian:bullseye
+FROM debian:latest
 
 RUN apt-get update \
     && apt-get install -y build-essential cmake libgmp3-dev gengetopt libpcap-dev flex \
