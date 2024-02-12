@@ -43,7 +43,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2
       - name: looking around
-        working-directory: /zmap/
         run: ls
       - name: Check Debian Compilation
         working-directory: /zmap/
