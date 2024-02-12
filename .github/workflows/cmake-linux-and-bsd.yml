@@ -44,6 +44,6 @@ jobs:
         uses: actions/checkout@v2
       - name: Check Debian Compilation
         run: |
-          docker build -t debian-container -f debian.Dockerfile .
+          docker build -t debian-container -f /zmap/.github/workflows/debian.Dockerfile .
           docker run debian-container
 
