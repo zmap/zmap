@@ -5,7 +5,6 @@ RUN pacman -Syu --noconfirm
 RUN pacman -S --noconfirm base-devel cmake gmp gengetopt libpcap flex byacc json-c pkg-config libunistring judy python
 RUN pacman -Scc --noconfirm
 
-
 WORKDIR /zmap
 
 COPY . .
