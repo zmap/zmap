@@ -48,6 +48,7 @@ int get_hw_addr(struct in_addr *gw_ip, UNUSED char *iface,
 	assert(buf);
 	if (sysctl(mib, 6, buf, &bufsz, NULL, 0) == -1) {
 		log_debug("get_hw_addr", "sysctl getting buffer data: %d %s", errno, strerror(errno));
+		free(buf);
 		return EXIT_FAILURE;
 	}
 
@@ -57,8 +58,8 @@ int get_hw_addr(struct in_addr *gw_ip, UNUSED char *iface,
 	struct rt_msghdr *rtm = (struct rt_msghdr *)buf;
 	for (uint8_t *p = buf; p < bufend; p += rtm->rtm_msglen) {
 		rtm = (struct rt_msghdr *)p;
-		if ((p + sizeof(struct rt_msghdr) >= bufend) ||
-		    (p + rtm->rtm_msglen >= bufend) ||
+		if ((p + sizeof(struct rt_msghdr) > bufend) ||
+		    (p + rtm->rtm_msglen > bufend) ||
 		    (rtm->rtm_msglen < min_msglen)) {
 			break;
 		}
