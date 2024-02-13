@@ -1,4 +1,4 @@
-name: CMake-Linux-and-BSD
+name: CMake
 
 on:
   push:
@@ -76,3 +76,41 @@ jobs:
         run: |
           docker build -t gentoo-container -f .github/workflows/gentoo.Dockerfile .
           docker run gentoo-container
+
+  build-mac:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download dependencies
+        run: brew install pkg-config cmake gmp gengetopt json-c byacc libunistring judy
+
+      - name: Configure CMake
+        # Configure CMake in a 'build' subdirectory.
+        run: cmake -DENABLE_DEVELOPMENT=${{env.ENABLE_DEVELOPMENT}} -DENABLE_LOG_TRACE=${{env.ENABLE_LOG_TRACE}} .
+
+      - name: Build
+        # Build your program with the given configuration
+        run: make
+
+      - name: Check Manpages
+        run: python3 ./scripts/check_manfile.py
+
+  build-freebsd:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test in FreeBSD
+        id: test
+        uses: vmactions/freebsd-vm@v1
+        with:
+          envs: 'ENABLE_DEVELOPMENT ENABLE_LOG_TRACE'
+          usesh: true
+          prepare: |
+            freebsd-update fetch
+            freebsd-update install
+            pkg install -y judy byacc cmake flex gengetopt gmp json-c libunistring influxpkg-config python3
+          run: cd ~/work/zmap/zmap \
+            && cmake -DENABLE_DEVELOPMENT=${{env.ENABLE_DEVELOPMENT}} -DENABLE_LOG_TRACE=${{env.ENABLE_LOG_TRACE}} . \
+            && make \
+            && python3 ./scripts/check_manfile.py
