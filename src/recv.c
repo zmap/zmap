@@ -101,7 +101,7 @@ void handle_packet(uint32_t buflen, const u_char *bytes,
 	// have ETH_P_IP proto and 00s for dest/src).
 	if (zconf.send_ip_pkts) {
 		const static uint32_t available_space = sizeof(fake_eth_hdr) - sizeof(struct ether_header);
-		assert(buflen > zconf.data_link_size);
+		assert(buflen > (uint32_t)zconf.data_link_size);
 		buflen -= zconf.data_link_size;
 		if (buflen > available_space) {
 			buflen = available_space;
