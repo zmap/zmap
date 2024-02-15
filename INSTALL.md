@@ -38,7 +38,16 @@ Install the required dependencies with the following commands.
 
 * On RHEL- and Fedora-based systems (including CentOS):
    ```sh
-   sudo yum install gcc cmake gmp-devel gengetopt libpcap-devel flex byacc json-c-devel libunistring-devel Judy-devel
+   sudo dnf install gcc cmake gmp-devel gengetopt libpcap-devel flex byacc json-c-devel libunistring-devel Judy-devel
+   ```
+* On Arch systems
+   ```sh
+   pacman -S base-devel cmake gmp gengetopt libpcap flex byacc json-c pkg-config libunistring judy python
+   ```
+
+* On Gentoo systems
+   ```sh
+   emerge sys-devel/binutils dev-libs/gmp dev-util/gengetopt net-libs/libpcap sys-devel/flex dev-util/byacc dev-libs/json-c dev-util/pkgconf dev-libs/libunistring dev-libs/judy
    ```
 
 * On macOS systems (using [Homebrew](https://brew.sh/)):

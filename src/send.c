@@ -89,11 +89,6 @@ iterator_t *send_init(void)
 		log_fatal("send", "senders * shards > max targets");
 	}
 	uint64_t num_addrs = blocklist_count_allowed();
-	if (zconf.list_of_ips_filename) {
-		log_debug("send",
-			  "forcing max group size for compatibility with -I");
-		num_addrs = 0xFFFFFFFF;
-	}
 	it = iterator_init(zconf.senders, zconf.shard_num, zconf.total_shards,
 			   num_addrs, zconf.ports->port_count);
 	// determine the source address offset from which we'll send packets
@@ -420,7 +415,7 @@ int send_run(sock_t st, shard_t *s)
 				// this is an additional memcpy (packet created in buf, buf -> batch)
 				// but when I modified the TCP SYN module to write packet to batch directly, there wasn't any noticeable speedup.
 				// Using this approach for readability/minimal changes
-				memcpy(((void *)batch->packets) + (batch->len * MAX_PACKET_SIZE), contents, length);
+				memcpy(((uint8_t *)batch->packets) + (batch->len * MAX_PACKET_SIZE), contents, length);
 				batch->lens[batch->len] = length;
 				batch->ips[batch->len] = current_ip;
 				batch->len++;
