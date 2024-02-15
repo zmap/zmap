@@ -417,7 +417,7 @@ int send_run(sock_t st, shard_t *s)
 				// this is an additional memcpy (packet created in buf, buf -> batch)
 				// but when I modified the TCP SYN module to write packet to batch directly, there wasn't any noticeable speedup.
 				// Using this approach for readability/minimal changes
-				memcpy(((void *)batch->packets) + (batch->len * MAX_PACKET_SIZE), contents, length);
+				memcpy(((uint8_t *)batch->packets) + (batch->len * MAX_PACKET_SIZE), contents, length);
 				batch->lens[batch->len] = length;
 				batch->ips[batch->len] = current_ip;
 				batch->len++;
