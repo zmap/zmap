@@ -46,6 +46,10 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t retry_ct)
 		// require header fields in host byte order.
 		// See ip(4) for details on byte order requirements of raw IP
 		// sockets.
+		// Swap byte order on the first send attempt for a given packet
+		// (retry_ct == 0), and rely on the caller to pass us the same
+		// buffer again for retries (retry_ct > 0), with the buffer
+		// still containing the header fields in corrected byte order.
 		if (retry_ct == 0) {
 			iph->ip_len = ntohs(iph->ip_len);
 			iph->ip_off = ntohs(iph->ip_off);
