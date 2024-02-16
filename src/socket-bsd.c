@@ -27,9 +27,9 @@ sock_t get_socket(UNUSED uint32_t id)
 	sock_t sock;
 	sock.sock = -1;
 
-#ifndef __APPLE__
+#if !(defined(__APPLE__) || defined(__FreeBSD__))
 	if (zconf.send_ip_pkts && !zconf.dryrun) {
-		log_fatal("socket", "iplayer not supported on BSD other than macOS");
+		log_fatal("socket", "iplayer not supported on this flavour of BSD");
 	}
 #endif
 
