@@ -142,6 +142,11 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 
 target_t shard_get_cur_target(shard_t *shard)
 {
+	if (shard->current == ZMAP_SHARD_DONE) {
+		// shard_roll_to_valid() has rolled to the very end.
+		return (target_t){
+		    .ip = 0, .port = 0, .status = ZMAP_SHARD_DONE};
+	}
 	uint32_t ip = extract_ip(shard->current - 1, shard->bits_for_port);
 	uint16_t port = extract_port(shard->current - 1, shard->bits_for_port);
 	return (target_t){.ip = (uint32_t)blocklist_lookup_index(ip),
