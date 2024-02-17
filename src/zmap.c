@@ -970,6 +970,9 @@ int main(int argc, char *argv[])
 #ifdef NETMAP
 	// Initialize netmap(4) before computing number of threads,
 	// because we want to know the number of tx queues for that.
+	if (zconf.send_ip_pkts) {
+		log_fatal("zmap", "netmap does not support IP layer mode (--iplayer/-X)");
+	}
 	log_warn("zmap", "netmap will disconnect the NIC from the host while zmap is executing");
 	usleep(100000);
 	zconf.nm.nm_fd = open(NETMAP_DEVICE_NAME, O_RDWR);
