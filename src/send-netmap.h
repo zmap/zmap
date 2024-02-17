@@ -46,6 +46,12 @@ send_run_init(sock_t sock)
 // because the netmap API does not have partial failure semantics.
 // All we know is that a poll or ioctl syscall failed, not if or
 // how many of the packets we placed in the ringbuffer were sent.
+//
+// ZMap's current architecture forces us to copy packet data here.
+// An even more optimised implementation might reuse packet data
+// in buffers (unless NS_BUF_CHANGED has been set by the kernel on
+// a slot), and only update the fields that need to change, such
+// as dst IP, checksum etc depending on scan type and params.
 int
 send_batch(sock_t sock, batch_t *batch, int attempts __unused)
 {
