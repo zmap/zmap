@@ -973,30 +973,41 @@ int main(int argc, char *argv[])
 	if (zconf.send_ip_pkts) {
 		log_fatal("zmap", "netmap does not support IP layer mode (--iplayer/-X)");
 	}
+	assert(zconf.iface);
+
 	log_warn("zmap", "netmap will disconnect the NIC from the host while zmap is executing");
 	usleep(100000);
+
 	zconf.nm.nm_fd = open(NETMAP_DEVICE_NAME, O_RDWR);
 	if (zconf.nm.nm_fd == -1) {
 		log_fatal("zmap", "netmap open(\"" NETMAP_DEVICE_NAME "\") failed: %d: %s", errno, strerror(errno));
 	}
-	struct nmreq nmr;
-	bzero(&nmr, sizeof(nmr));
-	strcpy(nmr.nr_name, zconf.iface);
-	nmr.nr_version = NETMAP_API;
-	nmr.nr_flags = NR_REG_ALL_NIC;
-	if (ioctl(zconf.nm.nm_fd, NIOCREGIF, &nmr) == -1) {
-		log_fatal("zmap", "netmap ioctl(NIOCREGIF) failed: %d: %s", errno, strerror(errno));
+
+	struct nmreq_register nmrreg;
+	bzero(&nmrreg, sizeof(nmrreg));
+	nmrreg.nr_mode = NR_REG_ALL_NIC;
+	nmrreg.nr_flags = NR_NO_TX_POLL;
+	struct nmreq_header nmrhdr;
+	bzero(&nmrhdr, sizeof(nmrhdr));
+	nmrhdr.nr_version = NETMAP_API;
+	nmrhdr.nr_reqtype = NETMAP_REQ_REGISTER;
+	strcpy(nmrhdr.nr_name, zconf.iface);
+	nmrhdr.nr_body = (uint64_t)&nmrreg;
+	if (ioctl(zconf.nm.nm_fd, NIOCCTRL, &nmrhdr) == -1) {
+		log_fatal("zmap", "netmap ioctl(NIOCCTRL) failed: %d: %s", errno, strerror(errno));
 	}
 	// From this point on, the host and NIC are separated until
 	// we close the file descriptor or exit.  We _could_ pass
 	// packets unrelated to the scan up to the host and back via
 	// the host rings, but that is not currently done in order
 	// to avoid adding complexity to perf-sensitive code paths.
-	zconf.nm.nm_mem = mmap(NULL, nmr.nr_memsize, PROT_WRITE|PROT_READ, MAP_SHARED, zconf.nm.nm_fd, 0);
+
+	zconf.nm.nm_mem = mmap(NULL, nmrreg.nr_memsize, PROT_WRITE|PROT_READ, MAP_SHARED, zconf.nm.nm_fd, 0);
 	if (zconf.nm.nm_mem == MAP_FAILED) {
 		log_fatal("zmap", "netmap mmap() failed: %d: %s", errno, strerror(errno));
 	}
-	zconf.nm.nm_if = NETMAP_IF(zconf.nm.nm_mem, nmr.nr_offset);
+	zconf.nm.nm_if = NETMAP_IF(zconf.nm.nm_mem, nmrreg.nr_offset);
+
 	log_info("zmap", "netmap bound to %s with %"PRIu32" tx rings, %"PRIu32" rx rings",
 	                 zconf.nm.nm_if->ni_name, zconf.nm.nm_if->ni_tx_rings, zconf.nm.nm_if->ni_rx_rings);
 	for (uint32_t i = 0; i < zconf.nm.nm_if->ni_tx_rings; i++) {

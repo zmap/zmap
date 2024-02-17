@@ -30,19 +30,27 @@
 sock_t get_socket(uint32_t id)
 {
 	sock_t sock;
+
 	sock.nm.tx_ring_idx = id;
 	sock.nm.tx_ring_fd = open(NETMAP_DEVICE_NAME, O_RDWR);
 	if (sock.nm.tx_ring_fd == -1) {
 		log_fatal("socket-netmap", "open(\"" NETMAP_DEVICE_NAME "\") failed: %d: %s", errno, strerror(errno));
 	}
-	struct nmreq nmr;
-	memset(&nmr, 0, sizeof(nmr));
-	strcpy(nmr.nr_name, zconf.iface);
-	nmr.nr_version = NETMAP_API;
-	nmr.nr_flags = NR_REG_ONE_NIC;
-	nmr.nr_ringid = sock.nm.tx_ring_idx;
-	if (ioctl(sock.nm.tx_ring_fd, NIOCREGIF, &nmr) == -1) {
-		log_fatal("socket-netmap", "ioctl(NIOCREGIF) failed: %d: %s", errno, strerror(errno));
+
+	struct nmreq_register nmrreg;
+	bzero(&nmrreg, sizeof(nmrreg));
+	nmrreg.nr_ringid = sock.nm.tx_ring_idx;
+	nmrreg.nr_mode = NR_REG_ONE_NIC;
+	nmrreg.nr_flags = NR_TX_RINGS_ONLY | NR_NO_TX_POLL;
+	struct nmreq_header nmrhdr;
+	bzero(&nmrhdr, sizeof(nmrhdr));
+	nmrhdr.nr_version = NETMAP_API;
+	nmrhdr.nr_reqtype = NETMAP_REQ_REGISTER;
+	strcpy(nmrhdr.nr_name, zconf.iface);
+	nmrhdr.nr_body = (uint64_t)&nmrreg;
+	if (ioctl(sock.nm.tx_ring_fd, NIOCCTRL, &nmrhdr) == -1) {
+		log_fatal("socket-netmap", "ioctl(NIOCCTRL) failed: %d: %s", errno, strerror(errno));
 	}
+
 	return sock;
 }
