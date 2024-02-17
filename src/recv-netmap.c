@@ -114,6 +114,7 @@ fetch_stats(uint32_t *ps_recv, uint32_t *ps_drop, uint32_t *ps_ifdrop)
 
 static struct pollfd fds;
 static struct netmap_if *nm_if;
+static bool *in_multi_seg_packet;
 
 void recv_init(void)
 {
@@ -121,6 +122,12 @@ void recv_init(void)
 	fds.events = POLLIN;
 
 	nm_if = zconf.nm.nm_if;
+
+	in_multi_seg_packet = (bool *)malloc(nm_if->ni_rx_rings * sizeof(bool));
+	assert(in_multi_seg_packet);
+	for (size_t ri = 0; ri < nm_if->ni_rx_rings; ri++) {
+		in_multi_seg_packet[ri] = false;
+	}
 
 	zconf.data_link_size = fetch_data_link_size();
 	log_debug("recv-netmap", "data_link_size %d", zconf.data_link_size);
@@ -132,6 +139,8 @@ void recv_init(void)
 
 void recv_cleanup(void)
 {
+	free(in_multi_seg_packet);
+	in_multi_seg_packet = NULL;
 	nm_if = NULL;
 }
 
@@ -152,6 +161,40 @@ void recv_packets(void)
 		unsigned tail = rxring->tail;
 		for (; head != tail; head = nm_ring_next(rxring, head)) {
 			struct netmap_slot *slot = rxring->slot + head;
+
+			// Some NICs can produce multi-segment packets,
+			// e.g. ixgbe and i40e on Linux.
+			// A multi-segment packet is a single received
+			// frame split into multiple netmap buffers;
+			// "segment" here refers neither to TCP
+			// segmentation, nor IP fragmentation.
+			//
+			// In the absence of ZMap support for handling
+			// vectored packets, to avoid the overhead of
+			// reassembly into contiguous memory, and based
+			// on the premise that ZMap scans won't need to
+			// see full packet data for packets larger than
+			// txring->nr_buf_size, pass the first segment
+			// to the handler and skip the rest.
+			//
+			// We cannot depend on multi-segment packets
+			// all fitting into a ring in one sync, thus
+			// have to keep track of state across calls to
+			// recv_packets().
+			if ((slot->flags & NS_MOREFRAG) != 0) {
+				if (in_multi_seg_packet[ri]) {
+					// Middle segment.
+					continue;
+				} else {
+					// Head segment.
+					in_multi_seg_packet[ri] = true;
+				}
+			} else if (in_multi_seg_packet[ri]) {
+				// Tail segment.
+				in_multi_seg_packet[ri] = false;
+				continue;
+			}
+
 			char *buf = NETMAP_BUF(rxring, slot->buf_idx);
 			struct timespec ts;
 			ts.tv_sec = rxring->ts.tv_sec;
