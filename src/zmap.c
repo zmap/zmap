@@ -60,9 +60,10 @@ static int32_t distrib_func(pfring_zc_pkt_buff *pkt, pfring_zc_queue *in_queue,
 #endif
 
 #ifdef NETMAP
-#ifndef __FreeBSD__
-#error "NETMAP is only currently supported on FreeBSD"
+#if !(defined(__FreeBSD__) || defined(__linux__))
+#error "NETMAP requires FreeBSD or Linux"
 #endif
+#include "if-netmap.h"
 #include <net/netmap_user.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
@@ -985,11 +986,11 @@ int main(int argc, char *argv[])
 	}
 
 	struct nmreq_register nmrreg;
-	bzero(&nmrreg, sizeof(nmrreg));
+	memset(&nmrreg, 0, sizeof(nmrreg));
 	nmrreg.nr_mode = NR_REG_ALL_NIC;
 	nmrreg.nr_flags = NR_NO_TX_POLL;
 	struct nmreq_header nmrhdr;
-	bzero(&nmrhdr, sizeof(nmrhdr));
+	memset(&nmrhdr, 0, sizeof(nmrhdr));
 	nmrhdr.nr_version = NETMAP_API;
 	nmrhdr.nr_reqtype = NETMAP_REQ_REGISTER;
 	strlcpy(nmrhdr.nr_name, zconf.iface, sizeof(nmrhdr.nr_name));
@@ -1026,26 +1027,8 @@ int main(int argc, char *argv[])
 	// on physical NICs can take multiple seconds to complete.
 	// To avoid dropping packets while the reset is ongoing,
 	// wait for the interface to come back up here.
-	log_debug("zmap", "waiting max 10s for PHY reset to complete");
-	struct if_data ifd;
-	bzero(&ifd, sizeof(ifd));
-	struct ifreq ifr;
-	bzero(&ifr, sizeof(ifr));
-	strlcpy(ifr.ifr_name, zconf.iface, sizeof(ifr.ifr_name));
-	ifr.ifr_data = (caddr_t)&ifd;
-	for (size_t i = 0; i < 40; i++) {
-		if (ioctl(zconf.nm.nm_fd, SIOCGIFDATA, &ifr) == -1) {
-			log_fatal("zmap", "unable to retrieve if_data: %d: %s",
-				  errno, strerror(errno));
-		}
-		if (ifd.ifi_link_state == LINK_STATE_UP) {
-			break;
-		}
-		usleep(250000);
-	}
-	if (ifd.ifi_link_state != LINK_STATE_UP) {
-		log_fatal("zmap", "timeout waiting for PHY reset to complete");
-	}
+	log_debug("zmap", "waiting for PHY reset to complete");
+	if_wait_for_phy_reset(zconf.iface, zconf.nm.nm_fd);
 	log_debug("zmap", "PHY reset is complete, link state is up");
 
 	if (args.netmap_wait_ping_arg != NULL) {

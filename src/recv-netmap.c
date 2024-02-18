@@ -6,8 +6,8 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#ifndef __FreeBSD__
-#error "NETMAP is only currently supported on FreeBSD"
+#if !(defined(__FreeBSD__) || defined(__linux__))
+#error "NETMAP requires FreeBSD or Linux"
 #endif
 
 #include "recv.h"
@@ -16,12 +16,13 @@
 #include "send.h"
 #include "send-internal.h"
 #include "probe_modules/packet.h"
+#include "if-netmap.h"
+#include "state.h"
 
 #include "../lib/includes.h"
 #include "../lib/logger.h"
 
 #include <net/netmap_user.h>
-#include <net/if_types.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
@@ -32,94 +33,13 @@
 #include <assert.h>
 #include <inttypes.h>
 
-#include "state.h"
-
-static void
-fetch_if_data(struct if_data *ifd)
-{
-	struct ifreq ifr;
-	bzero(&ifr, sizeof(ifr));
-	strlcpy(ifr.ifr_name, zconf.iface, sizeof(ifr.ifr_name));
-	ifr.ifr_data = (caddr_t)ifd;
-	if (ioctl(zconf.nm.nm_fd, SIOCGIFDATA, &ifr) == -1) {
-		log_fatal("recv-netmap", "unable to retrieve if_data: %d: %s",
-			  errno, strerror(errno));
-	}
-}
-
-static size_t
-data_link_size_from_if_type(unsigned char if_type)
-{
-	switch (if_type) {
-	case IFT_ETHER:
-		log_debug("recv-netmap", "IFT_ETHER");
-		return sizeof(struct ether_header);
-	case IFT_LOOP:
-		log_debug("recv-netmap", "IFT_LOOP");
-		return 4;
-	default:
-		log_fatal("recv-netmap", "Unknown if_type: %u", if_type);
-	}
-}
-
-static size_t
-fetch_data_link_size(void)
-{
-	struct if_data ifd;
-	bzero(&ifd, sizeof(ifd));
-	fetch_if_data(&ifd);
-	return data_link_size_from_if_type(ifd.ifi_type);
-}
-
-static struct {
-	bool initialized;
-	bool hwstats;
-	uint64_t ifi_ipackets;
-	uint64_t ifi_iqdrops;
-	uint64_t ifi_ierrors;
-	uint64_t ifi_oerrors;
-} stats;
-
-static int
-fetch_stats(uint32_t *ps_recv, uint32_t *ps_drop, uint32_t *ps_ifdrop)
-{
-	// Notes on if counters:
-	// On interfaces without hardware counters (HWSTATS), ipackets misses
-	// packets that we do not forward to the host ring pair.
-	// oqdrops counts packets the host OS could not send due to netmap mode.
-	struct if_data ifd;
-	bzero(&ifd, sizeof(ifd));
-	fetch_if_data(&ifd);
-
-	if (!stats.initialized) {
-		assert(!ps_recv && !ps_drop && !ps_ifdrop);
-		stats.initialized = true;
-		stats.hwstats = (ifd.ifi_hwassist & IFCAP_HWSTATS) != 0;
-		if (stats.hwstats) {
-			stats.ifi_ipackets = ifd.ifi_ipackets;
-		} else {
-			stats.ifi_ipackets = 0;
-		}
-		stats.ifi_iqdrops = ifd.ifi_iqdrops;
-		stats.ifi_ierrors = ifd.ifi_ierrors;
-		stats.ifi_oerrors = ifd.ifi_oerrors;
-	} else {
-		if (stats.hwstats) {
-			*ps_recv = (uint32_t)(ifd.ifi_ipackets - stats.ifi_ipackets);
-		} else {
-			*ps_recv = (uint32_t)stats.ifi_ipackets;
-		}
-		*ps_drop = (uint32_t)(ifd.ifi_iqdrops - stats.ifi_iqdrops);
-		*ps_ifdrop = (uint32_t)(ifd.ifi_ierrors - stats.ifi_ierrors +
-		                        ifd.ifi_oerrors - stats.ifi_oerrors);
-	}
-	return 0;
-}
-
 static struct pollfd fds;
 static struct netmap_if *nm_if;
 static bool *in_multi_seg_packet;
 static void (*handle_packet_func)(uint32_t buflen, const uint8_t *bytes, const struct timespec ts);
+static if_stats_ctx_t *stats_ctx;
+static bool need_recv_counter;
+static uint64_t recv_counter;
 
 static void
 handle_packet_wait_ping(uint32_t buflen, const uint8_t *bytes, UNUSED const struct timespec ts)
@@ -260,7 +180,7 @@ void recv_init(void)
 		in_multi_seg_packet[ri] = false;
 	}
 
-	zconf.data_link_size = fetch_data_link_size();
+	zconf.data_link_size = if_get_data_link_size(zconf.iface, zconf.nm.nm_fd);
 	log_debug("recv-netmap", "data_link_size %d", zconf.data_link_size);
 
 	if (zconf.nm.wait_ping_dstip != 0) {
@@ -270,27 +190,43 @@ void recv_init(void)
 		handle_packet_func = handle_packet;
 	}
 
-	if (fetch_stats(NULL, NULL, NULL) == -1) {
-		log_fatal("recv-netmap", "Failed to fetch initial interface counters");
+	stats_ctx = if_stats_init(zconf.iface, zconf.nm.nm_fd);
+	assert(stats_ctx);
+	need_recv_counter = !if_stats_have_recv_ctr(stats_ctx);
+	if (need_recv_counter) {
+		recv_counter = 0;
 	}
 }
 
-void recv_cleanup(void)
+void
+recv_cleanup(void)
 {
+	if_stats_fini(stats_ctx);
+	stats_ctx = NULL;
 	free(in_multi_seg_packet);
 	in_multi_seg_packet = NULL;
 	nm_if = NULL;
 }
 
-void recv_packets(void)
+void
+recv_packets(void)
 {
-	int ret = poll(&fds, 1, 100 /* ms */);
-	if (ret == 0) {
-		return;
-	}
-	else if (ret == -1) {
-		log_error("recv-netmap", "poll(POLLIN) failed: %d: %s", errno, strerror(errno));
-		return;
+	// On Linux, EINTR seems to happen here once at startup.
+	// Haven't seen any EINTR on FreeBSD.  Retry is not wrong
+	// and making the total delay longer should not hurt.
+	// We may want to look into the root cause some time tho.
+	for (ssize_t retry = 5; retry >= 0; retry--) {
+		int ret = poll(&fds, 1, 100 /* ms */);
+		if (ret > 0) {
+			break;
+		} else if (ret == 0) {
+			return;
+		} else if (errno != EINTR || retry == 0) {
+			log_error("recv-netmap", "poll(POLLIN) failed: %d: %s", errno, strerror(errno));
+			return;
+		} else {
+			log_debug("recv-netmap", "poll(POLLIN) failed: %d: %s (retrying)", errno, strerror(errno));
+		}
 	}
 
 	for (unsigned int ri = 0; ri < nm_if->ni_rx_rings; ri++) {
@@ -337,8 +273,8 @@ void recv_packets(void)
 			struct timespec ts;
 			ts.tv_sec = rxring->ts.tv_sec;
 			ts.tv_nsec = rxring->ts.tv_usec * 1000;
-			if (!stats.hwstats) {
-				stats.ifi_ipackets++;
+			if (need_recv_counter) {
+				recv_counter++;
 			}
 			handle_packet_func(slot->len, (uint8_t *)buf, ts);
 		}
@@ -361,12 +297,15 @@ void recv_packets(void)
 
 int recv_update_stats(void)
 {
-	if (!stats.initialized) {
+	if (!stats_ctx) {
 		return EXIT_FAILURE;
 	}
 
-	if (fetch_stats(&zrecv.pcap_recv, &zrecv.pcap_drop, &zrecv.pcap_ifdrop) == -1) {
+	if (if_stats_get(stats_ctx, &zrecv.pcap_recv, &zrecv.pcap_drop, &zrecv.pcap_ifdrop) == -1) {
 		return EXIT_FAILURE;
+	}
+	if (need_recv_counter) {
+		zrecv.pcap_recv = (uint32_t)recv_counter;
 	}
 	return EXIT_SUCCESS;
 }

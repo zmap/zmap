@@ -6,8 +6,8 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#ifndef __FreeBSD__
-#error "NETMAP is only currently supported on FreeBSD"
+#if !(defined(__FreeBSD__) || defined(__linux__))
+#error "NETMAP requires FreeBSD or Linux"
 #endif
 
 #include "send.h"

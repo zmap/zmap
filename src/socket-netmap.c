@@ -6,8 +6,8 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#ifndef __FreeBSD__
-#error "NETMAP is only currently supported on FreeBSD"
+#if !(defined(__FreeBSD__) || defined(__linux__))
+#error "NETMAP requires FreeBSD or Linux"
 #endif
 
 #include "socket.h"
@@ -38,12 +38,12 @@ sock_t get_socket(uint32_t id)
 	}
 
 	struct nmreq_register nmrreg;
-	bzero(&nmrreg, sizeof(nmrreg));
+	memset(&nmrreg, 0, sizeof(nmrreg));
 	nmrreg.nr_ringid = sock.nm.tx_ring_idx;
 	nmrreg.nr_mode = NR_REG_ONE_NIC;
 	nmrreg.nr_flags = NR_TX_RINGS_ONLY | NR_NO_TX_POLL;
 	struct nmreq_header nmrhdr;
-	bzero(&nmrhdr, sizeof(nmrhdr));
+	memset(&nmrhdr, 0, sizeof(nmrhdr));
 	nmrhdr.nr_version = NETMAP_API;
 	nmrhdr.nr_reqtype = NETMAP_REQ_REGISTER;
 	strlcpy(nmrhdr.nr_name, zconf.iface, sizeof(nmrhdr.nr_name));

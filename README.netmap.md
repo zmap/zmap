@@ -8,9 +8,9 @@ information on netmap.
 
 Netmap is available by default on FreeBSD on many architectures, including
 amd64 and arm64, and is easy to add to the kernel config on architectures where
-it is not built by default.  While netmap has been ported to Linux, ZMap's
-netmap mode currently only supports FreeBSD and will require porting to build
-and run on Linux.
+it is not built by default.  On Linux, netmap itself and netmap-aware drivers
+can be installed by following the instructions in
+[netmap/LINUX/README.md](https://github.com/luigirizzo/netmap/blob/master/LINUX/README.md).
 
 
 ### Prerequisites
