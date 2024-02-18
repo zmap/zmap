@@ -53,7 +53,7 @@ send_run_init(sock_t sock)
 // a slot), and only update the fields that need to change, such
 // as dst IP, checksum etc depending on scan type and params.
 int
-send_batch(sock_t sock, batch_t *batch, int attempts __unused)
+send_batch(sock_t sock, batch_t *batch, UNUSED int attempts)
 {
 	if (batch->len == 0) {
 		return 0;

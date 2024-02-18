@@ -991,7 +991,7 @@ int main(int argc, char *argv[])
 	bzero(&nmrhdr, sizeof(nmrhdr));
 	nmrhdr.nr_version = NETMAP_API;
 	nmrhdr.nr_reqtype = NETMAP_REQ_REGISTER;
-	strcpy(nmrhdr.nr_name, zconf.iface);
+	strlcpy(nmrhdr.nr_name, zconf.iface, sizeof(nmrhdr.nr_name));
 	nmrhdr.nr_body = (uint64_t)&nmrreg;
 	if (ioctl(zconf.nm.nm_fd, NIOCCTRL, &nmrhdr) == -1) {
 		log_fatal("zmap", "netmap ioctl(NIOCCTRL) failed: %d: %s", errno, strerror(errno));
