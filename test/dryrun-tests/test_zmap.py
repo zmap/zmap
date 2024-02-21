@@ -1,4 +1,5 @@
 import ipaddress
+import math
 import re
 import subprocess
 import sys
@@ -7,19 +8,31 @@ PACKET_SEP = "-" * 54
 
 
 class Test:
-    def __init__(self, port, subnet="", num_of_ips=-1, threads=-1):
+    def __init__(self, port=80, subnet="", num_of_ips=-1, threads=-1, shards=-1, shard=-1, seed=-1):
         self.port = port
         self.subnet = subnet
         self.num_of_ips = num_of_ips
         self.threads = threads
+        self.shards = shards
+        self.shard = shard
+        self.seed = seed
 
     def run(self):
         args = ["../../src/zmap", "--dryrun"]
         args.extend(["-p", str(self.port)])
+        if self.subnet:
+            args.extend(self.subnet.split())
         if self.num_of_ips != -1:
             args.extend(["-n", str(self.num_of_ips)])
         if self.threads != -1:
             args.extend(["-T", str(self.threads)])
+        if self.shards != -1:
+            args.extend(["--shards=" + str(self.shards)])
+        if self.shard != -1:
+            args.extend(["--shard=" + str(self.shard)])
+        if self.seed != -1:
+            args.extend(["--seed=" + str(self.seed)])
+
         test_output = subprocess.run(args, stdout=subprocess.PIPE).stdout.decode('utf-8')
         packets = parse_output_into_obj_list(test_output)
         return packets
@@ -99,9 +112,58 @@ def test_num_returned_ips_equals_requested_with_threads():
 
 
 ## Shards
-### Full coverage, without duplicates
+def test_full_coverage_of_subnet_with_shards():
+    shards_cts = [1, 4, 5, 8]
+    subnet = "174.189.0.0/20"
+    subnet_size = int(subnet.split("/")[1])
+    seed = 123
+    for shard_ct in shards_cts:
+        ip_list = []
+        for shard in range(shard_ct):
+            packets = Test(subnet=subnet, shard=shard, shards=shard_ct, seed=seed).run()
+            even_split_search_space = math.pow(2, 32 - subnet_size) / shard_ct
+            assert abs(len(packets) - even_split_search_space) <= 100 # check that shards are splitting up the search space *relatively* evenly
+            for packet in packets:
+                ip_list.append(packet["ip"]["daddr"])
+        assert check_uniqueness_ip_list(ip_list), "scanned target IP multiple times"
+        assert not len(ip_list) > math.pow(2, 32 - subnet_size), "scanned IPs other than those in the subnet"
+        assert not len(ip_list) < math.pow(2, 32 - subnet_size), "did not scan enough IPs to cover the subnet"
+        assert check_coverage_of_ip_list(ip_list, subnet), "the entirety of the subnet was not scanned"
+
 
 ## Subnet
+def test_full_coverage_of_subnets():
+    subnets = ["174.189.0.0/20", "65.189.78.0/24", "112.16.17.32/32"]
+    for subnet in subnets:
+        subnet_size = int(subnet.split("/")[1])
+        packets = Test(subnet=subnet, threads=1).run()
+        even_split_search_space = math.pow(2, 32 - subnet_size)
+        ip_list = [packet["ip"]["daddr"] for packet in packets]
+        assert check_uniqueness_ip_list(ip_list), "scanned target IP multiple times"
+        assert not len(ip_list) > math.pow(2, 32 - subnet_size), "scanned IPs other than those in the subnet"
+        assert not len(ip_list) < math.pow(2, 32 - subnet_size), "did not scan enough IPs to cover the subnet"
+        assert check_coverage_of_ip_list(ip_list, subnet), "the entirety of the subnet was not scanned"
+
+def test_multiple_subnets():
+    subnets = ["174.189.0.0/24", "23.45.67.76/30"]
+    expected_num_ips = math.pow(2, 32 - 24) + math.pow(2, 32 - 30)
+    packets = Test(subnet=" ".join(subnets)).run()
+    assert len(packets) == expected_num_ips
+    ip_list = [packet["ip"]["daddr"] for packet in packets]
+    for subnet in subnets:
+        assert check_coverage_of_ip_list(ip_list, subnet), "the entirety of the subnet was not scanned"
+
+def test_multiple_ips():
+    ips = ["174.189.78.3", "1.1.1.1", "8.8.8.8"]
+    expected_num_ips = len(ips)
+    packets = Test(subnet=" ".join(ips), threads=1).run()
+    assert len(packets) == expected_num_ips
+    ip_list = [packet["ip"]["daddr"] for packet in packets]
+    for ip in ips:
+        assert ip in ip_list, "an IP was not scanned"
+
+
+
 
 ## Seed
 
@@ -114,7 +176,18 @@ def test_num_returned_ips_equals_requested_with_threads():
 ## utils
 
 
-def check_coverage(ip_list, subnet):
+
+def check_uniqueness_ip_list(ip_list):
+    """
+    Args:
+        ip_list (List(str)): List of IP addresses
+
+    Returns:
+        bool: True if all IPs are unique, False otherwise
+    """
+    return len(ip_list) == len(set(ip_list))
+
+def check_coverage_of_ip_list(ip_list, subnet):
     """
     Checks if a list of IPs fully covers a subnet
 
@@ -129,16 +202,16 @@ def check_coverage(ip_list, subnet):
     subnet = ipaddress.ip_network(subnet)
 
     # Convert the list of IPs to ipaddress objects
-    ip_objects = [ipaddress.ip_address(ip) for ip in ip_list]
+    ip_objects = {ipaddress.ip_address(ip) for ip in ip_list}
 
     # Check if all IPs in the subnet are covered by the IP list
     for ip in subnet.hosts():
-        # TODO may want to build a lookup table or else this is a N^2 lookup problem
         if ip not in ip_objects:
             return False
 
     return True
 
 
+# TODO remove this debugging code
 if __name__ == "__main__":
-    test_num_returned_ips_equals_requested()
+    test_multiple_subnets()
