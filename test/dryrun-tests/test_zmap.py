@@ -8,7 +8,7 @@ PACKET_SEP = "-" * 54
 
 
 class Test:
-    def __init__(self, port=80, subnet="", num_of_ips=-1, threads=-1, shards=-1, shard=-1, seed=-1):
+    def __init__(self, port="80", subnet="", num_of_ips=-1, threads=-1, shards=-1, shard=-1, seed=-1, iplayer=False):
         self.port = port
         self.subnet = subnet
         self.num_of_ips = num_of_ips
@@ -16,6 +16,7 @@ class Test:
         self.shards = shards
         self.shard = shard
         self.seed = seed
+        self.iplayer = iplayer
 
     def run(self):
         args = ["../../src/zmap", "--dryrun"]
@@ -32,6 +33,8 @@ class Test:
             args.extend(["--shard=" + str(self.shard)])
         if self.seed != -1:
             args.extend(["--seed=" + str(self.seed)])
+        if self.iplayer:
+            args.extend(["--iplayer"])
 
         test_output = subprocess.run(args, stdout=subprocess.PIPE).stdout.decode('utf-8')
         packets = parse_output_into_obj_list(test_output)
@@ -87,6 +90,40 @@ def parse_packet_string(block):
     return packet
 
 
+def parse_ports_string(port_string):
+    ports = []
+    # Regular expression to match individual ports or port ranges
+    pattern = re.compile(r'(\d+)-(\d+)|(\d+)')
+    matches = pattern.findall(port_string)
+
+    for match in matches:
+        if match[0]:  # If it's a port range
+            start = int(match[0])
+            end = int(match[1])
+            ports.extend(range(start, end + 1))
+        else:  # If it's a single port
+            ports.append(int(match[2]))
+
+    return ports
+
+
+def test_parse_ports_string():
+    tests = {
+        "22": [22],
+        "22-25": [22, 23, 24, 25],
+        "22,80": [22, 80],
+        "24-28,443,34,8080-8085": [24, 25, 26, 27, 28, 34, 443, 8080, 8081, 8082, 8083, 8084, 8085],
+    }
+    for t in tests:
+        output = parse_ports_string(t)
+        expected_output = tests[t]
+        assert len(output) == len(expected_output), "lists don't match in length"
+        output.sort()
+        expected_output.sort()
+        for i in range(len(output)):
+            assert output[i] == expected_output[i], "lists do not match"
+
+
 def test_num_returned_ips_equals_requested():
     # we'll try with different num_of_ips
     ip_reqs = [5, 65, 249]
@@ -95,7 +132,7 @@ def test_num_returned_ips_equals_requested():
         packet_list = t.run()
         assert len(packet_list) == num_of_ips
         for packet in packet_list:
-            assert packet["tcp"]["dest_port"] == 80
+            assert packet["tcp"]["dest_port"] == 80, "packets not sent to correct port"
 
 
 def test_num_returned_ips_equals_requested_with_threads():
@@ -108,7 +145,23 @@ def test_num_returned_ips_equals_requested_with_threads():
             packet_list = t.run()
             assert len(packet_list) == num_ips
             for packet in packet_list:
-                assert packet["tcp"]["dest_port"] == 22
+                assert packet["tcp"]["dest_port"] == 22, "packets not sent to correct port"
+
+
+def test_multi_port():
+    port_tests = ["22", "22,80", "22,80,443,8080", "22-32", "22-32,80,443-445,8080,10"]
+    expected_output = [parse_ports_string(port_test) for port_test in port_tests]
+    for i in range(len(port_tests)):
+        # TODO leaving this test failing until I get an answer from the team
+        # packet_list = Test(port=port_tests[i], subnet="1.1.1.1").run()
+        packet_list = Test(port=port_tests[i], num_of_ips=1).run()
+        # check that packet_list and expected_output are the same
+        port_list = [packet["tcp"]["dest_port"] for packet in packet_list]
+        assert len(port_list) == len(expected_output[i])
+        port_list.sort()
+        expected_output[i].sort()
+        for j in range(len(port_list)):
+            assert port_list[j] == expected_output[i][j]
 
 
 ## Shards
@@ -122,7 +175,8 @@ def test_full_coverage_of_subnet_with_shards():
         for shard in range(shard_ct):
             packets = Test(subnet=subnet, shard=shard, shards=shard_ct, seed=seed).run()
             even_split_search_space = math.pow(2, 32 - subnet_size) / shard_ct
-            assert abs(len(packets) - even_split_search_space) <= 100 # check that shards are splitting up the search space *relatively* evenly
+            assert abs(
+                len(packets) - even_split_search_space) <= 100  # check that shards are splitting up the search space *relatively* evenly
             for packet in packets:
                 ip_list.append(packet["ip"]["daddr"])
         assert check_uniqueness_ip_list(ip_list), "scanned target IP multiple times"
@@ -144,6 +198,19 @@ def test_full_coverage_of_subnets():
         assert not len(ip_list) < math.pow(2, 32 - subnet_size), "did not scan enough IPs to cover the subnet"
         assert check_coverage_of_ip_list(ip_list, subnet), "the entirety of the subnet was not scanned"
 
+
+def test_full_coverage_of_large_subnets():
+    subnets = ["1.0.0.0/15"]
+    for subnet in subnets:
+        subnet_size = int(subnet.split("/")[1])
+        packets = Test(subnet=subnet, threads=1).run()
+        ip_list = [packet["ip"]["daddr"] for packet in packets]
+        assert check_uniqueness_ip_list(ip_list), "scanned target IP multiple times"
+        assert not len(ip_list) > math.pow(2, 32 - subnet_size), "scanned IPs other than those in the subnet"
+        assert not len(ip_list) < math.pow(2, 32 - subnet_size), "did not scan enough IPs to cover the subnet"
+        assert check_coverage_of_ip_list(ip_list, subnet), "the entirety of the subnet was not scanned"
+
+
 def test_multiple_subnets():
     subnets = ["174.189.0.0/24", "23.45.67.76/30"]
     expected_num_ips = math.pow(2, 32 - 24) + math.pow(2, 32 - 30)
@@ -152,6 +219,7 @@ def test_multiple_subnets():
     ip_list = [packet["ip"]["daddr"] for packet in packets]
     for subnet in subnets:
         assert check_coverage_of_ip_list(ip_list, subnet), "the entirety of the subnet was not scanned"
+
 
 def test_multiple_ips():
     ips = ["174.189.78.3", "1.1.1.1", "8.8.8.8"]
@@ -163,6 +231,25 @@ def test_multiple_ips():
         assert ip in ip_list, "an IP was not scanned"
 
 
+def test_multiple_ips_and_subnets():
+    ips = ["174.189.78.3", "1.1.1.1", "8.8.8.8"]
+    subnets = ["174.189.0.0/28", "23.45.67.76/30"]
+    ips_and_subnets = ips + subnets
+    # 3 IPs and 2 subnets, 16 and 4 IPs, respectively
+    expected_num_ips = 3 + math.pow(2, 32 - 28) + math.pow(2, 32 - 30)
+    packets = Test(subnet=" ".join(ips_and_subnets), threads=1).run()
+    assert len(packets) == expected_num_ips
+    for packet in packets:
+        # ensure proper fields are present
+        assert packet.get("tcp")
+        assert packet.get("ip")
+        assert packet.get("eth")
+
+    ip_list = [packet["ip"]["daddr"] for packet in packets]
+    for ip in ips:
+        assert ip in ip_list, "an IP was not scanned"
+    for subnet in subnets:
+        assert check_coverage_of_ip_list(ip_list, subnet), "the entirety of the subnet was not scanned"
 
 
 ## Seed
@@ -172,9 +259,23 @@ def test_multiple_ips():
 ## Blacklist
 
 ## --iplayer
+def test_ip_layer_option():
+    ips = ["174.189.78.3", "1.1.1.1", "8.8.8.8"]
+    # 3 IPs and 2 subnets, 16 and 4 IPs, respectively
+    packets = Test(subnet=" ".join(ips), threads=1, iplayer=True).run()
+    assert len(packets) == len(ips)
+    for packet in packets:
+        # ensure proper fields are present
+        assert packet["ip"]
+        assert packet["tcp"]
+        assert not packet.get("eth")
+
+    ip_list = [packet["ip"]["daddr"] for packet in packets]
+    for ip in ips:
+        assert ip in ip_list, "an IP was not scanned"
+
 
 ## utils
-
 
 
 def check_uniqueness_ip_list(ip_list):
@@ -186,6 +287,7 @@ def check_uniqueness_ip_list(ip_list):
         bool: True if all IPs are unique, False otherwise
     """
     return len(ip_list) == len(set(ip_list))
+
 
 def check_coverage_of_ip_list(ip_list, subnet):
     """
