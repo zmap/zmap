@@ -15,6 +15,7 @@
 #include <string.h>
 #include <assert.h>
 #include <math.h>
+#include <pthread.h>
 
 #include "cachehash.h"
 
@@ -38,9 +39,6 @@
 
 static uint16_t num_source_ports;
 static cachehash *ch = NULL;
-static char *iptables_check = "iptables -C OUTPUT -p tcp -d %s --tcp-flags RST RST -j DROP"; 
-static char *iptables_add = "iptables -A OUTPUT -p tcp -d %s --tcp-flags RST RST -j DROP"; 
-static char *iptables_delete = "iptables -D OUTPUT -p tcp -d %s --tcp-flags RST RST -j DROP"; 
 
 typedef struct ja4t_tuple {
         int saddr;
@@ -68,65 +66,10 @@ static int timediff(const struct timespec *time1, const struct timespec *time0) 
             + (time1->tv_nsec - time0->tv_nsec) / 1000000000.0) * 10);
 }
 
-static install_iptable_rules() {
-        char cidr[50];
-	char command[500];
-        bl_cidr_node_t *b = get_allowlisted_cidrs();
-        if (b) {
-                do {
-			memset(command, 0, 500);
-			cidr[0] = '\0';
-
-                        struct in_addr addr;
-                        addr.s_addr = b->ip_address;
-                        sprintf(cidr, "%s/%i", inet_ntoa(addr), b->prefix_len);
-			sprintf(command, iptables_check, cidr);
-
-			int ret = system(command);
-			printf("%s - %d \n", command, ret);
-			if (ret == 256) {
-			        memset(command, 0, 500);
-			    	sprintf(command, iptables_add, cidr);
-			        ret = system(command);
-			}
-                } while (b && (b = b->next));
-        }
-}
-
-static remove_iptable_rules() {
-        char cidr[50];
-	char command[500];
-        bl_cidr_node_t *b = get_allowlisted_cidrs();
-        if (b) {
-                do {
-			memset(command, 0, 500);
-			cidr[0] = '\0';
-
-                        struct in_addr addr;
-                        addr.s_addr = b->ip_address;
-                        sprintf(cidr, "%s/%i", inet_ntoa(addr), b->prefix_len);
-			sprintf(command, iptables_delete, cidr);
-			int ret = system(command);
-                } while (b && (b = b->next));
-        }
-}
-
 static int ja4tscan_global_initialize(struct state_conf *state)
 {
 	num_source_ports =
 	    state->source_port_last - state->source_port_first + 1;
-
-	if (state->dedup_method == DEDUP_METHOD_NONE) 
-	    install_iptable_rules();
-	return EXIT_SUCCESS;
-}
-
-static int ja4tscan_global_cleanup(UNUSED struct state_conf *zconf,
-                              UNUSED struct state_send *zsend,
-                              UNUSED struct state_recv *zrecv)
-{
-	if (zconf->dedup_method == DEDUP_METHOD_NONE) 
-	    remove_iptable_rules();
 	return EXIT_SUCCESS;
 }
 
@@ -418,7 +361,6 @@ static void ja4tscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 	
 		// Allocate extra space to include retransmits
 		if (extra_room > 0) {
-		    printf ("adding @:%d, extra_room:%d, retransmit:%s\n", required_size, extra_room, timedata->retransmits);
 		    snprintf(ja4ts_str + strlen(ja4ts_str), extra_room+1, "_%s", timedata->retransmits);
 		}
 
@@ -487,7 +429,7 @@ probe_module_t module_ja4ts = {
     .print_packet = &synscan_print_packet,
     .process_packet = &ja4tscan_process_packet,
     .validate_packet = &ja4tscan_validate_packet,
-    .close = &ja4tscan_global_cleanup,
+    .close = NULL,
     .helptext = "Probe module that sends a TCP SYN packet to a specific "
 		"port. Possible classifications are: synack and rst. A "
 		"SYN-ACK packet is considered a success and a reset packet "
