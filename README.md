@@ -11,7 +11,7 @@ For building from source, follow Zmap's instructions in the installation section
 This tool can be used the same way as Zmap with a few caveats.
 
 Example:
-`sudo zmap -N 1000 -B 10M -p 443 -o output.csv --output-fields=saddr,ja4ts,timestamp,dport --probe-module=ja4ts --dedup-method none`
+`sudo python3 ja4tscan.py -N 1000 -B 10M -p 443 -o output.csv --output-fields=saddr,ja4ts,timestamp,dport --probe-module=ja4ts --dedup-method none`
 
 The `--probe-module` flag specifies the probe module to use. In this case, `ja4ts` is used. The `--output-fields` flag specifies the fields to include in the output. The `ja4ts` field is included in the output. Its very important to include the `timestamp` field in the output as it is used to calculate the JA4TScan fingerprint via post processing by measuring the time between first synack and following retransmissions.
 
