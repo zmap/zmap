@@ -1034,7 +1034,7 @@ int main(int argc, char *argv[])
 	ifr.ifr_data = (caddr_t)&ifd;
 	for (size_t i = 0; i < 40; i++) {
 		if (ioctl(zconf.nm.nm_fd, SIOCGIFDATA, &ifr) == -1) {
-			log_fatal("zmap", "unable to retrieve if_data: %d %s",
+			log_fatal("zmap", "unable to retrieve if_data: %d: %s",
 				  errno, strerror(errno));
 		}
 		if (ifd.ifi_link_state == LINK_STATE_UP) {

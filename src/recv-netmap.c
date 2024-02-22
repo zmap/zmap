@@ -38,7 +38,7 @@ fetch_if_data(struct if_data *ifd)
 	strlcpy(ifr.ifr_name, zconf.iface, sizeof(ifr.ifr_name));
 	ifr.ifr_data = (caddr_t)ifd;
 	if (ioctl(zconf.nm.nm_fd, SIOCGIFDATA, &ifr) == -1) {
-		log_fatal("recv-netmap", "unable to retrieve if_data: %d %s",
+		log_fatal("recv-netmap", "unable to retrieve if_data: %d: %s",
 			  errno, strerror(errno));
 	}
 }

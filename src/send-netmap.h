@@ -17,11 +17,12 @@
 #error "NETMAP is only currently supported on FreeBSD"
 #endif
 
-#include "../lib/includes.h"
 #include <net/netmap_user.h>
 #include <sys/ioctl.h>
 #include <poll.h>
 #include <inttypes.h>
+
+#include "../lib/includes.h"
 
 int
 send_run_init(sock_t sock)
@@ -32,7 +33,7 @@ send_run_init(sock_t sock)
 	};
 	log_debug("send-netmap", "tx ring %"PRIu32": polling for POLLOUT", sock.nm.tx_ring_idx);
 	if (poll(&fds, 1, -1) == -1) {
-		log_error("send-netmap", "poll(POLLOUT) failed: %d %s", errno, strerror(errno));
+		log_error("send-netmap", "poll(POLLOUT) failed: %d: %s", errno, strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -68,7 +69,7 @@ send_batch(sock_t sock, batch_t *batch, UNUSED int attempts)
 	for (int i = 0; i < batch->len; i++) {
 		if (ring->head == ring->tail && poll(&fds, 1, -1) == -1) {
 			int oerrno = errno;
-			log_debug("send-netmap", "poll(POLLOUT) failed: %d %s", errno, strerror(errno));
+			log_debug("send-netmap", "poll(POLLOUT) failed: %d: %s", errno, strerror(errno));
 			errno = oerrno;
 			return -1;
 		}
@@ -85,7 +86,7 @@ send_batch(sock_t sock, batch_t *batch, UNUSED int attempts)
 
 	if (ioctl(fds.fd, NIOCTXSYNC, NULL) == -1) {
 		int oerrno = errno;
-		log_debug("send-netmap", "ioctl(NIOCTXSYNC) failed: %d %s", errno, strerror(errno));
+		log_debug("send-netmap", "ioctl(NIOCTXSYNC) failed: %d: %s", errno, strerror(errno));
 		errno = oerrno;
 		return -1;
 	}
