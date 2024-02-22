@@ -14,7 +14,7 @@ COPY . .
 RUN cmake -DENABLE_DEVELOPMENT=$ENABLE_DEVELOPMENT -DENABLE_LOG_TRACE=$ENABLE_LOG_TRACE . \
     && make
 
-WORKDIR /zmap/test/dryrun-tests
+WORKDIR /zmap/test/integration-tests
 # need to get the gateway mac
 RUN curl zmap.io \
     && pytest

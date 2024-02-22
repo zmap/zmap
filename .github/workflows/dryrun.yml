@@ -1,4 +1,4 @@
-name: Dry Run Validation
+name: Integration Validation
 
 on:
   push:
@@ -11,7 +11,7 @@ env:
   ENABLE_LOG_TRACE: ON
 
 jobs:
-  dryrun:
+  integration-tests:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
