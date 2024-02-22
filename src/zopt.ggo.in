@@ -40,7 +40,7 @@ option "bandwidth"              B "Set send rate in bits/second (supports suffix
 option "batch"                  - "Set batch size for how many packets to send in a single syscall. Only advantageous on Linux (default=64)"
     typestr="pps"
     optional int
-option "max-targets"            n "Cap number of targets to probe (as a number or a percentage of the address space)"
+option "max-targets"            n "Cap number of targets to probe (as a number or a percentage of the address space). A target is an IP/port pair, if scanning multiple ports, and an IP otherwise."
     typestr="n"
     optional string
 option "max-runtime"            t "Cap length of time for sending packets"
