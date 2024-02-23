@@ -5,7 +5,7 @@ RUN apt-get update \
     byacc libjson-c-dev pkg-config libunistring-dev libjudy-dev cmake  make python3 python3-pip curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-RUN pip3 install pytest
+RUN pip3 install pytest timeout-decorator
 
 
 WORKDIR /zmap

@@ -3,5 +3,5 @@
 tempfile
 outfile
 !.gitignore
-!dryrun-tests/
+!integration-tests/
 shardfile
