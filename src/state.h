@@ -150,6 +150,7 @@ struct state_conf {
 		int nm_fd;
 		void *nm_mem;
 		struct netmap_if *nm_if;
+		uint32_t wait_ping_dstip;
 	} nm;
 #endif
 };

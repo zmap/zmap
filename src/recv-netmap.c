@@ -12,6 +12,10 @@
 
 #include "recv.h"
 #include "recv-internal.h"
+#include "socket.h"
+#include "send.h"
+#include "send-internal.h"
+#include "probe_modules/packet.h"
 
 #include "../lib/includes.h"
 #include "../lib/logger.h"
@@ -115,6 +119,133 @@ fetch_stats(uint32_t *ps_recv, uint32_t *ps_drop, uint32_t *ps_ifdrop)
 static struct pollfd fds;
 static struct netmap_if *nm_if;
 static bool *in_multi_seg_packet;
+static void (*handle_packet_func)(uint32_t buflen, const uint8_t *bytes, const struct timespec ts);
+
+static void
+handle_packet_wait_ping(uint32_t buflen, const uint8_t *bytes, UNUSED const struct timespec ts)
+{
+	if (buflen < sizeof(struct ether_header) + sizeof(struct ip) + ICMP_MINLEN) {
+		return;
+	}
+	struct ether_header *eh = (struct ether_header *)bytes;
+	if (eh->ether_type != htons(ETHERTYPE_IP)) {
+		return;
+	}
+	struct ip *iph = (struct ip *)(eh + 1);
+	if (iph->ip_v != 4 ||
+	    iph->ip_p != IPPROTO_ICMP ||
+	    iph->ip_src.s_addr != zconf.nm.wait_ping_dstip) {
+		return;
+	}
+	struct icmp *icmph = (struct icmp *)(iph + 1);
+	if (icmph->icmp_type != ICMP_ECHOREPLY) {
+		return;
+	}
+
+	log_debug("recv-netmap", "Received ICMP echo reply, ready to commence scan");
+	handle_packet_func = handle_packet;
+}
+
+static size_t
+make_wait_ping_req(uint8_t *buf)
+{
+	struct ether_header *eh = (struct ether_header *)buf;
+	make_eth_header(eh, zconf.hw_mac, zconf.gw_mac);
+
+	struct ip *iph = (struct ip *)(eh + 1);
+	uint16_t iplen = sizeof(struct ip) + ICMP_MINLEN;
+	make_ip_header(iph, IPPROTO_ICMP, htons(iplen));
+	iph->ip_src.s_addr = zconf.source_ip_addresses[0];
+	iph->ip_dst.s_addr = zconf.nm.wait_ping_dstip;
+
+	struct icmp *icmph = (struct icmp *)(iph + 1);
+	memset(icmph, 0, sizeof(struct icmp));
+	icmph->icmp_type = ICMP_ECHO;
+	icmph->icmp_cksum = icmp_checksum((unsigned short *)icmph, ICMP_MINLEN);
+
+	iph->ip_sum = 0;
+	iph->ip_sum = zmap_ip_checksum((unsigned short *)iph);
+	return sizeof(struct ether_header) + iplen;
+}
+
+static void
+send_wait_ping_req(sock_t sock)
+{
+	batch_t *batch = create_packet_batch(1);
+	batch->lens[0] = (int)make_wait_ping_req((uint8_t *)batch->packets);
+	batch->ips[0] = zconf.nm.wait_ping_dstip;
+	batch->len = 1;
+	if (send_batch(sock, batch, 1) != 1) {
+		log_fatal("recv-netmap", "Failed to send ICMP echo request: %d: %s", errno, strerror(errno));
+	}
+	free_packet_batch(batch);
+	log_debug("recv-netmap", "Sent ICMP echo request");
+}
+
+#ifndef NSEC_PER_SEC
+#define NSEC_PER_SEC 1000000000
+#endif
+
+static struct timespec
+timespec_diff(struct timespec const *t1, struct timespec const *t0)
+{
+	struct timespec diff = {
+		.tv_sec = t1->tv_sec - t0->tv_sec,
+		.tv_nsec = t1->tv_nsec - t0->tv_nsec,
+	};
+	if (diff.tv_nsec < 0) {
+		diff.tv_sec--;
+		diff.tv_nsec += NSEC_PER_SEC;
+	}
+	return diff;
+}
+
+static void
+timespec_get_monotonic(struct timespec *t)
+{
+	if (clock_gettime(CLOCK_MONOTONIC, t) == -1) {
+		log_fatal("recv-netmap", "Failed to obtain monotonic time: %d: %s", errno, strerror(errno));
+	}
+}
+
+// Drive RX and TX ringbuffers directly to wait for end-to-end connectivity.
+// Ping an IP address every second and do not return before receiving a reply.
+static void
+wait_for_e2e_connectivity(void)
+{
+	static const time_t timeout_secs = 60;
+
+	// Synthesize a sock_t for the main netmap fd.
+	// This is safe as long as send threads are not spun up yet.
+	// We're syncing all TX rings this way, not just ring 0.
+	sock_t sock;
+	sock.nm.tx_ring_idx = 0;
+	sock.nm.tx_ring_fd = zconf.nm.nm_fd;
+
+	struct timespec t_start;
+	timespec_get_monotonic(&t_start);
+	struct timespec t_last_send;
+	memset(&t_last_send, 0, sizeof(t_last_send));
+
+	// handle_packet_wait_ping called from recv_packets will
+	// set handle_packet_func to handle_packet upon receipt
+	// of the expected ICMP echo response packet.
+	while (handle_packet_func == handle_packet_wait_ping) {
+		struct timespec t_now;
+		timespec_get_monotonic(&t_now);
+
+		if (timespec_diff(&t_now, &t_start).tv_sec >= timeout_secs) {
+			log_fatal("recv-netmap", "No ICMP echo reply received in %zus", (size_t)timeout_secs);
+		}
+
+		if (timespec_diff(&t_now, &t_last_send).tv_sec >= 1) {
+			send_wait_ping_req(sock);
+			timespec_get_monotonic(&t_last_send);
+		}
+
+		recv_packets();
+	}
+}
 
 void recv_init(void)
 {
@@ -131,6 +262,13 @@ void recv_init(void)
 
 	zconf.data_link_size = fetch_data_link_size();
 	log_debug("recv-netmap", "data_link_size %d", zconf.data_link_size);
+
+	if (zconf.nm.wait_ping_dstip != 0) {
+		handle_packet_func = handle_packet_wait_ping;
+		wait_for_e2e_connectivity();
+	} else {
+		handle_packet_func = handle_packet;
+	}
 
 	if (fetch_stats(NULL, NULL, NULL) == -1) {
 		log_fatal("recv-netmap", "Failed to fetch initial interface counters");
@@ -202,7 +340,7 @@ void recv_packets(void)
 			if (!stats.hwstats) {
 				stats.ifi_ipackets++;
 			}
-			handle_packet(slot->len, (uint8_t *)buf, ts);
+			handle_packet_func(slot->len, (uint8_t *)buf, ts);
 		}
 		rxring->cur = rxring->head = head;
 	}

@@ -47,6 +47,18 @@ access, you will lose connectivity until ZMap exits.
 $ sudo ./src/zmap -p 443 -i ix0 -o output.csv
 ```
 
+Going into and leaving Netmap mode causes the link to go down and up as part of
+a PHY reset.  If the interface is connected to a switch with STP enabled, then
+depending on port configuration, the switch might be muting the port for as
+many as 30 seconds while the port goes through the listening and learning STP
+states.  To work around this, use `--netmap-wait-ping` with an address that you
+know will respond to ICMP echo requests.  ZMap will then only start scanning
+after having received an ICMP echo reply from the address.
+
+```
+$ sudo ./src/zmap -p 443 -i ix0 -o output.csv --netmap-wait-ping 8.8.8.8
+```
+
 
 ### Considerations
 
