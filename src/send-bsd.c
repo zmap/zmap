@@ -6,32 +6,35 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#ifndef ZMAP_SEND_BSD_H
-#define ZMAP_SEND_BSD_H
+#include "send.h"
 
+#include <netinet/in.h>
+#include <net/bpf.h>
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
+#include <stdlib.h>
 
-#include "send.h"
+#include "state.h"
+#include "probe_modules/packet.h"
+
 #include "../lib/includes.h"
+#include "../lib/logger.h"
 
-#include <netinet/in.h>
-#include <net/bpf.h>
-
-#ifdef ZMAP_SEND_LINUX_H
-#error "Don't include both send-bsd.h and send-linux.h"
-#endif
-
-int send_run_init(UNUSED sock_t sock)
+int
+send_run_init(UNUSED sock_t sock)
 {
 	// Don't need to do anything on BSD-like variants
 	return EXIT_SUCCESS;
 }
 
-int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t retry_ct)
+int
+send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t retry_ct)
 {
 	if (zconf.send_ip_pkts) {
 		struct ip *iph = (struct ip *)buf;
@@ -73,7 +76,9 @@ int send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t retry_ct)
 // Following the same pattern for consistency
 // Returns - number of packets sent
 // Returns -1 and sets errno if no packets could be sent successfully
-int send_batch(sock_t sock, batch_t* batch, int retries) {
+int
+send_batch(sock_t sock, batch_t* batch, int retries)
+{
 	if (batch->len == 0) {
 		// nothing to send
 		return EXIT_SUCCESS;
@@ -112,4 +117,3 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 	return packets_sent;
 }
 
-#endif /* ZMAP_SEND_BSD_H */

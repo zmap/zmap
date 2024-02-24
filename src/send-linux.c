@@ -34,6 +34,7 @@
 #include "../lib/logger.h"
 #include "./send.h"
 #include "./send-linux.h"
+#include "state.h"
 
 int send_run_init(sock_t s)
 {

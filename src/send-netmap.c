@@ -6,23 +6,26 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#ifndef ZMAP_SEND_NETMAP_H
-#define ZMAP_SEND_NETMAP_H
-
-#if defined(ZMAP_SEND_BSD_H) || defined(ZMAP_SEND_LINUX_H) || defined(ZMAP_SEND_PFRING_H)
-#error "Don't include send-bsd.h or send-linux.h or send-pfring.h with send-netmap.h"
-#endif
-
 #ifndef __FreeBSD__
 #error "NETMAP is only currently supported on FreeBSD"
 #endif
+
+#include "send.h"
 
 #include <net/netmap_user.h>
 #include <sys/ioctl.h>
 #include <poll.h>
 #include <inttypes.h>
+#include <time.h>
+#include <errno.h>
+#include <string.h>
+#include <assert.h>
 
 #include "../lib/includes.h"
+#include "../lib/logger.h"
+
+#include "socket.h"
+#include "state.h"
 
 int
 send_run_init(sock_t sock)
@@ -93,5 +96,3 @@ send_batch(sock_t sock, batch_t *batch, UNUSED int attempts)
 
 	return batch->len;
 }
-
-#endif /* ZMAP_SEND_NETMAP_H */
