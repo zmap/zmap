@@ -40,6 +40,7 @@
 #include "module_dns.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
@@ -66,12 +67,6 @@
 // something really annoying. Will raise a warning.
 // THIS INCLUDES THE NULL BYTE
 #define MAX_NAME_LENGTH 512
-
-#if defined(__NetBSD__) && !defined(__cplusplus) && defined(bool)
-#undef bool
-#endif
-
-typedef uint8_t bool;
 
 // zmap boilerplate
 probe_module_t module_dns;
@@ -396,12 +391,12 @@ static bool process_response_question(char **data, uint16_t *data_len,
 	    get_name(*data, *data_len, payload, payload_len, &bytes_consumed);
 	// Error.
 	if (question_name == NULL) {
-		return 1;
+		return true;
 	}
 	assert(bytes_consumed > 0);
 	if ((bytes_consumed + sizeof(dns_question_tail)) > *data_len) {
 		free(question_name);
-		return 1;
+		return true;
 	}
 	dns_question_tail *tail = (dns_question_tail *)(*data + bytes_consumed);
 	uint16_t qtype = ntohs(tail->qtype);
@@ -425,7 +420,7 @@ static bool process_response_question(char **data, uint16_t *data_len,
 	// Now update the pointers.
 	*data = *data + bytes_consumed + sizeof(dns_question_tail);
 	*data_len = *data_len - bytes_consumed - sizeof(dns_question_tail);
-	return 0;
+	return false;
 }
 
 static bool process_response_answer(char **data, uint16_t *data_len,
@@ -443,12 +438,12 @@ static bool process_response_answer(char **data, uint16_t *data_len,
 	    get_name(*data, *data_len, payload, payload_len, &bytes_consumed);
 	// Error.
 	if (answer_name == NULL) {
-		return 1;
+		return true;
 	}
 	assert(bytes_consumed > 0);
 	if ((bytes_consumed + sizeof(dns_answer_tail)) > *data_len) {
 		free(answer_name);
-		return 1;
+		return true;
 	}
 	dns_answer_tail *tail = (dns_answer_tail *)(*data + bytes_consumed);
 	uint16_t type = ntohs(tail->type);
@@ -459,7 +454,7 @@ static bool process_response_answer(char **data, uint16_t *data_len,
 
 	if ((rdlength + bytes_consumed + sizeof(dns_answer_tail)) > *data_len) {
 		free(answer_name);
-		return 1;
+		return true;
 	}
 	// Build our new question fieldset
 	fieldset_t *afs = fs_new_fieldset(NULL);
@@ -574,7 +569,7 @@ static bool process_response_answer(char **data, uint16_t *data_len,
 	log_trace("dns",
 		  "return success from process_response_answer, data_len: %d",
 		  *data_len);
-	return 0;
+	return false;
 }
 
 /*
@@ -909,7 +904,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		uint16_t udp_len = ntohs(udp_hdr->uh_ulen);
 
 		int match = 0;
-		bool is_valid = 0;
+		bool is_valid = false;
 		for (int i = 0; i < num_questions; i++) {
 			if (udp_len < dns_packet_lens[i]) {
 				continue;
@@ -933,7 +928,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 					// Verify the qtype and qclass.
 					if (tail_p->qtype == htons(qtypes[i]) &&
 					    tail_p->qclass == htons(0x01)) {
-						is_valid = 1;
+						is_valid = true;
 						break;
 					}
 				}
@@ -989,7 +984,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 			char *data = ((char *)dns_hdr) + sizeof(dns_header);
 			uint16_t data_len =
 			    udp_len - sizeof(udp_hdr) - sizeof(dns_header);
-			bool err = 0;
+			bool err = false;
 			// Questions
 			fieldset_t *list = fs_new_repeated_fieldset();
 			for (int i = 0; i < ntohs(dns_hdr->qdcount) && !err;
@@ -1028,7 +1023,7 @@ void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 			fs_add_repeated(fs, "dns_additionals", list);
 			// Do we have unconsumed data?
 			if (data_len != 0) {
-				err = 1;
+				err = true;
 			}
 			// Did we parse OK?
 			fs_add_uint64(fs, "dns_parse_err", err);
