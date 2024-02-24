@@ -31,7 +31,7 @@ static inline uint32_t extract_ip(uint64_t v, uint8_t bits)
 static void shard_roll_to_valid(shard_t *s)
 {
 	uint64_t current_ip_index = (s->current - 1) >> s->bits_for_port;
-    uint16_t candidate_port = extract_port(s->current - 1, s->bits_for_port);
+	uint16_t candidate_port = extract_port(s->current - 1, s->bits_for_port);
 	if (current_ip_index < zsend.max_index && candidate_port < zconf.ports->port_count) {
 		return;
 	}
