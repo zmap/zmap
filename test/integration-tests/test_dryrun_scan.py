@@ -31,14 +31,46 @@ def test_num_returned_ips_equals_requested_with_threads():
                 assert packet["tcp"]["dest"] == "22", "packets not sent to correct port"
 
 
-def test_multi_port():
-    port_tests = ["22", "22,80", "22,80,443,8080", "22-32", "22-32,80,443-445,8080,10"]
+def test_multi_port_single_ip():
+    port_tests = ["22", "22,80,443,8080", "22-32", "22-32,80,443-445,8080,10"]
     expected_output = [utils.parse_ports_string(port_test) for port_test in port_tests]
-    for port_test_index in range(len(port_tests)):
-        packet_list = io_zmap.Test(port=port_tests[port_test_index], subnet="1.1.1.1", threads=1).run()
-        # check that packet_list and expected_output are the same
-        port_list = [packet["tcp"]["dest"] for packet in packet_list]
-        assert sorted(port_list) == sorted(expected_output[port_test_index]), "didn't scan all the expected ports"
+    for test_iter in range(10):  # using iterations to check for bugs in shard code
+        for port_test_index in range(len(port_tests)):
+            packet_list = io_zmap.Test(port=port_tests[port_test_index], subnet="1.1.1.1", threads=1).run()
+            # check that packet_list and expected_output are the same
+            port_list = sorted([packet["tcp"]["dest"] for packet in packet_list])
+            assert sorted(port_list) == sorted(expected_output[port_test_index]), "didn't scan all the expected ports"
+
+
+def test_multi_port_with_subnet():
+    port_tests = ["22", "22,80,443,8080", "22-32", "22-32,80,443-445,8080,10"]
+    subnet = "1.1.1.0/29"
+    expected_ports = [utils.parse_ports_string(port_test) for port_test in port_tests]
+    expected_ips = set(str(ip) for ip in ipaddress.ip_network(subnet))
+    for test_iter in range(10):  # using iterations to check for bugs in shard code
+        for port_test_index in range(len(port_tests)):
+            expected_port_set = set(expected_ports[port_test_index])
+            packet_list = io_zmap.Test(port=port_tests[port_test_index], subnet=subnet, threads=1).run()
+            assert len(packet_list) == len(expected_ips) * len(expected_ports[port_test_index])
+            for packet in packet_list:
+                assert packet["ip"]["daddr"] in expected_ips, "scanned IP not in subnet"
+                assert packet["tcp"]["dest"] in expected_port_set, "scanned port not in expected ports"
+
+
+def test_multi_port_with_subnet_and_threads():
+    port_tests = ["22-32,80,443-445,8080,10"]
+    subnet = "1.1.1.0/29"
+    expected_ports = [utils.parse_ports_string(port_test) for port_test in port_tests]
+    expected_ips = set(str(ip) for ip in ipaddress.ip_network(subnet))
+    for thread_ct in range(1, 8):
+        for test_iter in range(5):  # using iterations to check for bugs in shard code
+            for port_test_index in range(len(port_tests)):
+                expected_port_set = set(expected_ports[port_test_index])
+                packet_list = io_zmap.Test(port=port_tests[port_test_index], subnet=subnet, threads=thread_ct).run()
+                assert len(packet_list) == len(expected_ips) * len(expected_ports[port_test_index])
+                for packet in packet_list:
+                    assert packet["ip"]["daddr"] in expected_ips, "scanned IP not in subnet"
+                    assert packet["tcp"]["dest"] in expected_port_set, "scanned port not in expected ports"
 
 
 ## Shards
@@ -308,6 +340,18 @@ def test_probes_option():
     for subnet_test in subnets:
         for probe_test in probe_tests:
             probes_helper(probe_test, subnet_test)
+
+
+"""
+--list-of-ips
+"""
+
+
+def test_list_of_ips_option():
+    """
+    scan using a list of IPs and ensure the correct IPs are scanned
+    """
+    assert True == False, "test not implemented"
 
 
 """
