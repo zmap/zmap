@@ -33,7 +33,7 @@ send_run_init(UNUSED sock_t sock)
 	return EXIT_SUCCESS;
 }
 
-int
+static int
 send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t retry_ct)
 {
 	if (zconf.send_ip_pkts) {
