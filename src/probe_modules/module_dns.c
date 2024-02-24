@@ -581,6 +581,9 @@ static bool process_response_answer(char **data, uint16_t *data_len,
 static int dns_global_initialize(struct state_conf *conf)
 {
 	setup_qtype_str_map();
+	if (!conf->probe_args) {
+		log_fatal("dns", "Need probe args, e.g. --probe-args=\"A,example.com\"");
+	}
 	// strip off any leading or trailing semicolons
 	if (*conf->probe_args == probe_arg_delimitor[0]) {
 		log_debug("dns", "Probe args (%s) contains leading semicolon. Stripping.", conf->probe_args);
@@ -663,6 +666,8 @@ static int dns_global_initialize(struct state_conf *conf)
 		// Resize the array to accommodate the new pair
 		domains = xrealloc(domains, (num_questions + 1) * sizeof(char *));
 		qtypes = xrealloc(qtypes, (num_questions + 1) * sizeof(uint16_t));
+		rdbits = xrealloc(rdbits, (num_questions + 1) * sizeof(uint8_t));
+		rdbits[num_questions] = default_rdbit;
 
 		// Add the new pair to the array
 		domains[num_questions] = strdup(default_domain);
