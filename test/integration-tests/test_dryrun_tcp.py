@@ -3,7 +3,7 @@ import math
 import os
 import time
 
-import io_zmap
+import test_io
 import utils
 
 
@@ -11,7 +11,7 @@ def test_num_returned_ips_equals_requested():
     # we'll try with different num_of_ips
     ip_reqs = [5, 65, 249]
     for num_of_ips in ip_reqs:
-        t = io_zmap.Test(port=80, num_of_ips=num_of_ips)
+        t = test_io.Test(port=80, num_of_ips=num_of_ips)
         packet_list = t.run()
         assert len(packet_list) == num_of_ips
         for packet in packet_list:
@@ -24,7 +24,7 @@ def test_num_returned_ips_equals_requested_with_threads():
     num_of_ip_tests = [36, 1001]
     for thread in threads:
         for num_ips in num_of_ip_tests:
-            t = io_zmap.Test(port=22, num_of_ips=num_ips, threads=thread)
+            t = test_io.Test(port=22, num_of_ips=num_ips, threads=thread)
             packet_list = t.run()
             assert len(packet_list) == num_ips
             for packet in packet_list:
@@ -36,7 +36,7 @@ def test_multi_port_single_ip():
     expected_output = [utils.parse_ports_string(port_test) for port_test in port_tests]
     for test_iter in range(10):  # using iterations to check for bugs in shard code
         for port_test_index in range(len(port_tests)):
-            packet_list = io_zmap.Test(port=port_tests[port_test_index], subnet="1.1.1.1", threads=1).run()
+            packet_list = test_io.Test(port=port_tests[port_test_index], subnet="1.1.1.1", threads=1).run()
             # check that packet_list and expected_output are the same
             port_list = sorted([packet["tcp"]["dest"] for packet in packet_list])
             assert sorted(port_list) == sorted(expected_output[port_test_index]), "didn't scan all the expected ports"
@@ -50,7 +50,7 @@ def test_multi_port_with_subnet():
     for test_iter in range(10):  # using iterations to check for bugs in shard code
         for port_test_index in range(len(port_tests)):
             expected_port_set = set(expected_ports[port_test_index])
-            packet_list = io_zmap.Test(port=port_tests[port_test_index], subnet=subnet, threads=1).run()
+            packet_list = test_io.Test(port=port_tests[port_test_index], subnet=subnet, threads=1).run()
             assert len(packet_list) == len(expected_ips) * len(expected_ports[port_test_index])
             for packet in packet_list:
                 assert packet["ip"]["daddr"] in expected_ips, "scanned IP not in subnet"
@@ -66,7 +66,7 @@ def test_multi_port_with_subnet_and_threads():
         for test_iter in range(5):  # using iterations to check for bugs in shard code
             for port_test_index in range(len(port_tests)):
                 expected_port_set = set(expected_ports[port_test_index])
-                packet_list = io_zmap.Test(port=port_tests[port_test_index], subnet=subnet, threads=thread_ct).run()
+                packet_list = test_io.Test(port=port_tests[port_test_index], subnet=subnet, threads=thread_ct).run()
                 assert len(packet_list) == len(expected_ips) * len(expected_ports[port_test_index])
                 for packet in packet_list:
                     assert packet["ip"]["daddr"] in expected_ips, "scanned IP not in subnet"
@@ -82,7 +82,7 @@ def test_full_coverage_of_subnet_with_shards():
     for shard_ct in shards_cts:
         ip_list = []
         for shard in range(shard_ct):
-            packets = io_zmap.Test(subnet=subnet, shard=shard, shards=shard_ct, seed=seed).run()
+            packets = test_io.Test(subnet=subnet, shard=shard, shards=shard_ct, seed=seed).run()
             even_split_search_space = math.pow(2, 32 - subnet_size) / shard_ct
             assert abs(
                 len(packets) - even_split_search_space) <= 100  # check that shards are splitting up the search space *relatively* evenly
@@ -99,7 +99,7 @@ def test_full_coverage_of_subnets():
     subnets = ["174.189.0.0/20", "65.189.78.0/24", "112.16.17.32/32"]
     for subnet in subnets:
         subnet_size = int(subnet.split("/")[1])
-        packets = io_zmap.Test(subnet=subnet, threads=1).run()
+        packets = test_io.Test(subnet=subnet, threads=1).run()
         even_split_search_space = math.pow(2, 32 - subnet_size)
         ip_list = [packet["ip"]["daddr"] for packet in packets]
         assert utils.check_uniqueness_ip_list(ip_list), "scanned target IP multiple times"
@@ -112,7 +112,7 @@ def test_full_coverage_of_large_subnets():
     subnets = ["1.0.0.0/15"]
     for subnet in subnets:
         subnet_size = int(subnet.split("/")[1])
-        packets = io_zmap.Test(subnet=subnet, threads=1).run()
+        packets = test_io.Test(subnet=subnet, threads=1).run()
         ip_list = [packet["ip"]["daddr"] for packet in packets]
         assert utils.check_uniqueness_ip_list(ip_list), "scanned target IP multiple times"
         assert not len(ip_list) > math.pow(2, 32 - subnet_size), "scanned IPs other than those in the subnet"
@@ -123,7 +123,7 @@ def test_full_coverage_of_large_subnets():
 def test_multiple_subnets():
     subnets = ["174.189.0.0/24", "23.45.67.76/30"]
     expected_num_ips = math.pow(2, 32 - 24) + math.pow(2, 32 - 30)
-    packets = io_zmap.Test(subnet=" ".join(subnets)).run()
+    packets = test_io.Test(subnet=" ".join(subnets)).run()
     assert len(packets) == expected_num_ips
     ip_list = [packet["ip"]["daddr"] for packet in packets]
     for subnet in subnets:
@@ -133,7 +133,7 @@ def test_multiple_subnets():
 def test_multiple_ips():
     ips = ["174.189.78.3", "1.1.1.1", "8.8.8.8"]
     expected_num_ips = len(ips)
-    packets = io_zmap.Test(subnet=" ".join(ips), threads=1).run()
+    packets = test_io.Test(subnet=" ".join(ips), threads=1).run()
     assert len(packets) == expected_num_ips
     ip_list = [packet["ip"]["daddr"] for packet in packets]
     for ip in ips:
@@ -146,7 +146,7 @@ def test_multiple_ips_and_subnets():
     ips_and_subnets = ips + subnets
     # 3 IPs and 2 subnets, 16 and 4 IPs, respectively
     expected_num_ips = 3 + math.pow(2, 32 - 28) + math.pow(2, 32 - 30)
-    packets = io_zmap.Test(subnet=" ".join(ips_and_subnets), threads=1).run()
+    packets = test_io.Test(subnet=" ".join(ips_and_subnets), threads=1).run()
     assert len(packets) == expected_num_ips
     for packet in packets:
         # ensure proper fields are present
@@ -169,8 +169,8 @@ def test_same_seed():
     subnet = "174.189.0.0/28"
     seed = 123
     # must use a single thread to have deterministic results
-    packets1 = io_zmap.Test(subnet=subnet, seed=seed, threads=1).run()
-    packets2 = io_zmap.Test(subnet=subnet, seed=seed, threads=1).run()
+    packets1 = test_io.Test(subnet=subnet, seed=seed, threads=1).run()
+    packets2 = test_io.Test(subnet=subnet, seed=seed, threads=1).run()
     assert len(packets1) == len(packets2)
     for i in range(len(packets1)):
         assert packets1[i]["ip"]["daddr"] == packets2[i]["ip"]["daddr"], "scanned IPs in different order with same seed"
@@ -184,8 +184,8 @@ def test_different_seeds():
     seed1 = 123
     seed2 = 987
     # must use a single thread to have deterministic results
-    packets1 = io_zmap.Test(subnet=subnet, seed=seed1, threads=1).run()
-    packets2 = io_zmap.Test(subnet=subnet, seed=seed2, threads=1).run()
+    packets1 = test_io.Test(subnet=subnet, seed=seed1, threads=1).run()
+    packets2 = test_io.Test(subnet=subnet, seed=seed2, threads=1).run()
     assert len(packets1) == len(packets2)
     are_packets_in_same_order = True
     for i in range(len(packets1)):
@@ -205,7 +205,7 @@ def test_rate_limit():
     # scan 1k packets with a rate of 1k. The scan should stop after ~1 seconds
     # uses bounded_runtime_test to ensure the test doesn't run indefinitely should anything go wrong
     expected_runtime = 1
-    utils.bounded_runtime_test(io_zmap.Test(threads=1, rate=1000, num_of_ips=1000))
+    utils.bounded_runtime_test(test_io.Test(threads=1, rate=1000, num_of_ips=1000))
     assert time.time() - start_time < expected_runtime + 0.5, "max_runtime was not respected"  # add small amt. buffer
 
 
@@ -214,7 +214,7 @@ def test_max_runtime():
     # scan full IPv4 space with a max runtime of 2 seconds. The scan should stop after 2 seconds
     # uses bounded_runtime_test to ensure the test doesn't run indefinitely should anything go wrong
     max_runtime = 1
-    utils.bounded_runtime_test(io_zmap.Test(threads=1, max_runtime=max_runtime))
+    utils.bounded_runtime_test(test_io.Test(threads=1, max_runtime=max_runtime))
     assert time.time() - start_time < max_runtime + 0.5, "max_runtime was not respected"  # add small amt. buffer
 
 
@@ -223,7 +223,7 @@ def test_max_runtime_and_rate():
     # scan full IPv4 space with a max runtime of 1 seconds and a rate of 1000. The scan should stop after 1 seconds
     # uses bounded_runtime_test to ensure the test doesn't run indefinitely should anything go wrong
     expected_runtime = 1 + 0.5
-    packets = utils.bounded_runtime_test(io_zmap.Test(threads=1, max_runtime=1, rate=1000))
+    packets = utils.bounded_runtime_test(test_io.Test(threads=1, max_runtime=1, rate=1000))
     assert time.time() - start_time < expected_runtime, "scan did not stop after ~1 seconds"
     assert len(packets) > 0, "no packets were sent"
     assert len(packets) < 1100, "rate was not respected"  # add small buffer
@@ -243,7 +243,7 @@ def test_source_port_option():
         "22-24",  # multiple ports
     ]
     for source_port in source_port_tests:
-        packets = io_zmap.Test(threads=1, source_port=source_port, num_of_ips=500).run()
+        packets = test_io.Test(threads=1, source_port=source_port, num_of_ips=500).run()
         expected_ports_to_packets_sent = {}
         if "-" not in source_port:
             # using a single source port
@@ -271,7 +271,7 @@ def test_source_ip_option():
         "189.23.45.32-189.23.45.34",  # range
     ]
     for source_ip in source_ip_tests:
-        packets = io_zmap.Test(threads=1, source_ip=source_ip, num_of_ips=1000).run()
+        packets = test_io.Test(threads=1, source_ip=source_ip, num_of_ips=1000).run()
         expected_ips_to_packets_sent = {}
         if "-" not in source_ip:
             # using a single source IP
@@ -298,7 +298,7 @@ def test_source_mac_option():
     subnet = "45.23.128.0/30"
     source_mac_tests = ["00:00:00:00:00:00", "ff:ff:ff:ff:ff:ff", "01:23:45:67:89:ab"]
     for source_mac in source_mac_tests:
-        packets = io_zmap.Test(threads=1, source_mac=source_mac, subnet=subnet).run()
+        packets = test_io.Test(threads=1, source_mac=source_mac, subnet=subnet).run()
         for packet in packets:
             assert packet.get("eth")
             assert packet["eth"]["shost"] == source_mac, "incorrect source MAC used"
@@ -310,7 +310,7 @@ def test_source_mac_option():
 
 
 def probes_helper(probes: int, subnet: str):
-    packets = io_zmap.Test(subnet=subnet, threads=1, probes=str(probes)).run()
+    packets = test_io.Test(subnet=subnet, threads=1, probes=str(probes)).run()
     if probes == 0:
         assert len(packets) == 0, "packets were sent when no probes were specified"
         return  # no need to check anything else
@@ -375,7 +375,7 @@ def test_allowlist():
             file.write(subnet + "\n")
     expected_ips = set(str(ip) for subnet in allowed_subnets for ip in ipaddress.ip_network(subnet))
 
-    packets = io_zmap.Test(threads=1, allowlist_file="allowlist.txt").run()
+    packets = test_io.Test(threads=1, allowlist_file="allowlist.txt").run()
     actual_packet_ips = set(packet["ip"]["daddr"] for packet in packets)
     assert actual_packet_ips == expected_ips, "scanned IPs not in the allowlist"
 
@@ -398,7 +398,7 @@ def test_allowlist_with_subnet():
     # append the IPs in the scanning subnet to the expected IPs
     expected_ips = expected_ips.union(set(str(ip) for ip in ipaddress.ip_network(scanning_subnet)))
 
-    packets = io_zmap.Test(threads=1, allowlist_file="allowlist.txt", subnet=scanning_subnet).run()
+    packets = test_io.Test(threads=1, allowlist_file="allowlist.txt", subnet=scanning_subnet).run()
     actual_packet_ips = set(packet["ip"]["daddr"] for packet in packets)
 
     assert actual_packet_ips == expected_ips, "scanned IPs not in the allowlist"
@@ -423,7 +423,7 @@ def blocklist_helper(blocklist_subnet_str: str, scanned_subnet_str: str):
     with open("blocklist.txt", "w") as file:
         file.write(blocklist_subnet_str)
 
-    packets = io_zmap.Test(subnet=scanned_subnet_str, threads=1, blocklist_file="blocklist.txt").run()
+    packets = test_io.Test(subnet=scanned_subnet_str, threads=1, blocklist_file="blocklist.txt").run()
     actual_packet_ips = {packet["ip"]["daddr"] for packet in packets}
     for ip in blocklist_ips:
         assert ip not in actual_packet_ips, "blocked IP was scanned"
@@ -468,7 +468,7 @@ def test_blocklist_fully_covers_subnet():
 def test_ip_layer_option():
     ips = ["174.189.78.3", "1.1.1.1", "8.8.8.8"]
     # 3 IPs and 2 subnets, 16 and 4 IPs, respectively
-    packets = io_zmap.Test(subnet=" ".join(ips), threads=1, iplayer=True).run()
+    packets = test_io.Test(subnet=" ".join(ips), threads=1, iplayer=True).run()
     assert len(packets) == len(ips)
     for packet in packets:
         # ensure proper fields are present

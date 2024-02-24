@@ -1,7 +1,6 @@
 import re
 import subprocess
 import sys
-import typing
 
 PACKET_SEP = "-" * 54
 
