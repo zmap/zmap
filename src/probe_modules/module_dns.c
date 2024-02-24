@@ -671,6 +671,8 @@ static int dns_global_initialize(struct state_conf *conf)
 		// Resize the array to accommodate the new pair
 		domains = xrealloc(domains, (num_questions + 1) * sizeof(char *));
 		qtypes = xrealloc(qtypes, (num_questions + 1) * sizeof(uint16_t));
+		rdbits = xrealloc(rdbits, (num_questions + 1) * sizeof(uint8_t));
+		rdbits[num_questions] = default_rdbit;
 
 		// Add the new pair to the array
 		domains[num_questions] = strdup(default_domain);
