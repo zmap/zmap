@@ -27,6 +27,7 @@
 #include "../lib/lockfd.h"
 #include "../lib/pbm.h"
 
+#include "send-internal.h"
 #include "aesrand.h"
 #include "get_gateway.h"
 #include "iterator.h"
@@ -35,23 +36,6 @@
 #include "shard.h"
 #include "state.h"
 #include "validate.h"
-
-// OS specific functions called by send_run
-static inline int send_packet(sock_t sock, void *buf, int len, uint32_t idx);
-static inline int send_batch(sock_t sock, batch_t *batch, int retries);
-static inline int send_run_init(sock_t sock);
-
-// Include the right implementations
-#if defined(PFRING)
-#include "send-pfring.h"
-#elif defined(NETMAP)
-#include "send-netmap.h"
-#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) ||     \
-    defined(__DragonFly__)
-#include "send-bsd.h"
-#else /* LINUX */
-#include "send-linux.h"
-#endif /* __APPLE__ || __FreeBSD__ || __NetBSD__ || __DragonFly__ */
 
 // The iterator over the cyclic group
 
