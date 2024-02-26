@@ -1,6 +1,6 @@
 import os
 
-import test_io
+import zmap_wrapper
 
 output_file_path = "output.txt"
 
@@ -13,7 +13,7 @@ def test_scan_known_good_ips():
     with open(output_file_path, 'w') as file:
         file.write("")
     # using known dns resolvers to make this test deterministic
-    t = test_io.Test(dryrun=False, port=53, subnet=" ".join(known_active_ips), threads=1, output_file=output_file_path, max_cooldown=3)
+    t = zmap_wrapper.Wrapper(dryrun=False, port=53, subnet=" ".join(known_active_ips), threads=1, output_file=output_file_path, max_cooldown=3)
     t.run()
     # read the file into a list of IPs
     ips = []

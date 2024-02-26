@@ -5,7 +5,7 @@ import sys
 PACKET_SEP = "-" * 54
 
 
-class Test:
+class Wrapper:
     def __init__(self, port="80", subnet="", num_of_ips=-1, threads=-1, shards=-1, shard=-1, seed=-1, iplayer=False,
                  dryrun=True, output_file="", max_runtime=-1, max_cooldown=-1, blocklist_file="", allowlist_file="",
                  list_of_ips_file="", probes="", source_ip="", source_port="", source_mac="", rate=-1):

@@ -3,7 +3,7 @@ import re
 from timeout_decorator import timeout
 import typing
 
-import test_io
+import zmap_wrapper
 
 
 def enumerate_IP_range(ip_range: str):
@@ -155,7 +155,7 @@ def test_parse_ports_string():
 
 
 @timeout(5)  # bounding the runtime of the test so we don't get a stalled Github action should a failure occur in ZMap
-def bounded_runtime_test(t: test_io.Test):
+def bounded_runtime_test(t: zmap_wrapper.Wrapper):
     return t.run()
 
 
