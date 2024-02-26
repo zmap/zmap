@@ -8,7 +8,7 @@ PACKET_SEP = "-" * 54
 class Test:
     def __init__(self, port="80", subnet="", num_of_ips=-1, threads=-1, shards=-1, shard=-1, seed=-1, iplayer=False,
                  dryrun=True, output_file="", max_runtime=-1, max_cooldown=-1, blocklist_file="", allowlist_file="",
-                 probes="", source_ip="", source_port="", source_mac="", rate=-1):
+                 list_of_ips_file="", probes="", source_ip="", source_port="", source_mac="", rate=-1):
         self.port = port
         self.subnet = subnet
         self.num_of_ips = num_of_ips
@@ -23,6 +23,7 @@ class Test:
         self.max_cooldown = max_cooldown
         self.blocklist_file = blocklist_file
         self.allowlist_file = allowlist_file
+        self.list_of_ips_file = list_of_ips_file
         self.probes = probes
         self.source_ip = source_ip
         self.source_port = source_port
@@ -59,6 +60,8 @@ class Test:
             args.extend(["--blocklist-file=" + self.blocklist_file])
         if self.allowlist_file:
             args.extend(["--allowlist-file=" + self.allowlist_file])
+        if self.list_of_ips_file:
+            args.extend(["--list-of-ips-file=" + self.list_of_ips_file])
         if self.probes:
             args.extend(["--probes=" + self.probes])
         if self.source_ip:

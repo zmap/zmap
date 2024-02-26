@@ -1,6 +1,8 @@
 import ipaddress
 import math
 import os
+import random
+import re
 import time
 
 import test_io
@@ -8,17 +10,26 @@ import utils
 
 
 def test_num_returned_ips_equals_requested():
-    # we'll try with different num_of_ips
+    """
+    scan a number of IPs and ensure the scanned result includes the correct number of unique IPs
+    """
     ip_reqs = [5, 65, 249]
     for num_of_ips in ip_reqs:
         t = test_io.Test(port=80, num_of_ips=num_of_ips)
         packet_list = t.run()
         assert len(packet_list) == num_of_ips
+
+        dest_ip_set = set()
         for packet in packet_list:
             assert packet["tcp"]["dest"] == "80", "packets not sent to correct port"
+            dest_ip_set.add(packet["ip"]["daddr"])
+        assert len(dest_ip_set) == num_of_ips, "incorrectly scanned IP multiple times"
 
 
 def test_num_returned_ips_equals_requested_with_threads():
+    """
+    scan a number of IPs with varying thread cts and ensure the scanned result includes the correct number of unique IPs
+    """
     # we'll try with different num_of_ips
     threads = [1, 2, 4, 5, 8, 34]
     num_of_ip_tests = [36, 1001]
@@ -32,6 +43,10 @@ def test_num_returned_ips_equals_requested_with_threads():
 
 
 def test_multi_port_single_ip():
+    """
+    scan a single IP with multiple ports and ensure the scanned result includes the correct number of unique IPs and all
+    expected ports are scanned
+    """
     port_tests = ["22", "22,80,443,8080", "22-32", "22-32,80,443-445,8080,10"]
     expected_output = [utils.parse_ports_string(port_test) for port_test in port_tests]
     for test_iter in range(10):  # using iterations to check for bugs in shard code
@@ -43,21 +58,32 @@ def test_multi_port_single_ip():
 
 
 def test_multi_port_with_subnet():
+    """
+    scan a subnet with multiple ports and ensure the scanned result includes the correct number of unique IPs and all
+    expected ports are scanned
+    """
     port_tests = ["22", "22,80,443,8080", "22-32", "22-32,80,443-445,8080,10"]
     subnet = "1.1.1.0/29"
     expected_ports = [utils.parse_ports_string(port_test) for port_test in port_tests]
     expected_ips = set(str(ip) for ip in ipaddress.ip_network(subnet))
     for test_iter in range(10):  # using iterations to check for bugs in shard code
         for port_test_index in range(len(port_tests)):
-            expected_port_set = set(expected_ports[port_test_index])
+            expected_port_set = set(expected_ports[port_test_index])  # the ports expected to be scanned in this iter.
+
             packet_list = test_io.Test(port=port_tests[port_test_index], subnet=subnet, threads=1).run()
-            assert len(packet_list) == len(expected_ips) * len(expected_ports[port_test_index])
+
+            assert len(packet_list) == len(expected_ips) * len(expected_ports[port_test_index]), ("incorrect number of "
+                                                                                                  "packets sent")
             for packet in packet_list:
                 assert packet["ip"]["daddr"] in expected_ips, "scanned IP not in subnet"
                 assert packet["tcp"]["dest"] in expected_port_set, "scanned port not in expected ports"
 
 
 def test_multi_port_with_subnet_and_threads():
+    """
+    scan a subnet with multiple ports running on multiple threads and ensure the scanned result includes the correct
+    number of unique IPs and all expected ports are scanned
+    """
     port_tests = ["22-32,80,443-445,8080,10"]
     subnet = "1.1.1.0/29"
     expected_ports = [utils.parse_ports_string(port_test) for port_test in port_tests]
@@ -67,7 +93,9 @@ def test_multi_port_with_subnet_and_threads():
             for port_test_index in range(len(port_tests)):
                 expected_port_set = set(expected_ports[port_test_index])
                 packet_list = test_io.Test(port=port_tests[port_test_index], subnet=subnet, threads=thread_ct).run()
-                assert len(packet_list) == len(expected_ips) * len(expected_ports[port_test_index])
+                assert len(packet_list) == len(expected_ips) * len(expected_ports[port_test_index]), ("incorrect "
+                                                                                                      "number of "
+                                                                                                      "packets sent")
                 for packet in packet_list:
                     assert packet["ip"]["daddr"] in expected_ips, "scanned IP not in subnet"
                     assert packet["tcp"]["dest"] in expected_port_set, "scanned port not in expected ports"
@@ -75,6 +103,10 @@ def test_multi_port_with_subnet_and_threads():
 
 ## Shards
 def test_full_coverage_of_subnet_with_shards():
+    """
+    scan a subnet with varying shard counts and ensure the union of all scanned results includes the correct number of
+    unique IPs
+    """
     shards_cts = [1, 4, 5, 8]
     subnet = "174.189.0.0/20"
     subnet_size = int(subnet.split("/")[1])
@@ -85,42 +117,54 @@ def test_full_coverage_of_subnet_with_shards():
             packets = test_io.Test(subnet=subnet, shard=shard, shards=shard_ct, seed=seed).run()
             even_split_search_space = math.pow(2, 32 - subnet_size) / shard_ct
             assert abs(
-                len(packets) - even_split_search_space) <= 100  # check that shards are splitting up the search space *relatively* evenly
+                # check that shards are splitting up the search space *relatively* evenly
+                len(packets) - even_split_search_space) <= 100
             for packet in packets:
                 ip_list.append(packet["ip"]["daddr"])
-        assert utils.check_uniqueness_ip_list(ip_list), "scanned target IP multiple times"
-        assert not len(ip_list) > math.pow(2, 32 - subnet_size), "scanned IPs other than those in the subnet"
-        assert not len(ip_list) < math.pow(2, 32 - subnet_size), "did not scan enough IPs to cover the subnet"
-        assert utils.check_coverage_of_ip_list(ip_list, subnet), "the entirety of the subnet was not scanned"
+
+        assert_subnet_scanned_correctly(ip_list, subnet, subnet_size)
+
+
+def assert_subnet_scanned_correctly(ip_list, subnet, subnet_size):
+    """
+    Asserts that the scanned IPs are unique, cover the subnet, and are not outside the subnet
+    """
+    assert utils.check_uniqueness_ip_list(ip_list), "scanned target IP multiple times"
+    assert not len(ip_list) > math.pow(2, 32 - subnet_size), "scanned IPs other than those in the subnet"
+    assert not len(ip_list) < math.pow(2, 32 - subnet_size), "did not scan enough IPs to cover the subnet"
+    assert utils.check_coverage_of_ip_list(ip_list, subnet), "the entirety of the subnet was not scanned"
 
 
 ## Subnet
 def test_full_coverage_of_subnets():
+    """
+    scan a number of subnets and ensure the scanned result fully scans the search space
+    """
     subnets = ["174.189.0.0/20", "65.189.78.0/24", "112.16.17.32/32"]
     for subnet in subnets:
         subnet_size = int(subnet.split("/")[1])
         packets = test_io.Test(subnet=subnet, threads=1).run()
         even_split_search_space = math.pow(2, 32 - subnet_size)
         ip_list = [packet["ip"]["daddr"] for packet in packets]
-        assert utils.check_uniqueness_ip_list(ip_list), "scanned target IP multiple times"
-        assert not len(ip_list) > math.pow(2, 32 - subnet_size), "scanned IPs other than those in the subnet"
-        assert not len(ip_list) < math.pow(2, 32 - subnet_size), "did not scan enough IPs to cover the subnet"
-        assert utils.check_coverage_of_ip_list(ip_list, subnet), "the entirety of the subnet was not scanned"
+        assert_subnet_scanned_correctly(ip_list, subnet, subnet_size)
 
 
 def test_full_coverage_of_large_subnets():
+    """
+    scan a large subnet and ensure the scanned result fully scans the search space
+    """
     subnets = ["1.0.0.0/15"]
     for subnet in subnets:
         subnet_size = int(subnet.split("/")[1])
         packets = test_io.Test(subnet=subnet, threads=1).run()
         ip_list = [packet["ip"]["daddr"] for packet in packets]
-        assert utils.check_uniqueness_ip_list(ip_list), "scanned target IP multiple times"
-        assert not len(ip_list) > math.pow(2, 32 - subnet_size), "scanned IPs other than those in the subnet"
-        assert not len(ip_list) < math.pow(2, 32 - subnet_size), "did not scan enough IPs to cover the subnet"
-        assert utils.check_coverage_of_ip_list(ip_list, subnet), "the entirety of the subnet was not scanned"
+        assert_subnet_scanned_correctly(ip_list, subnet, subnet_size)
 
 
 def test_multiple_subnets():
+    """
+    scan multiple subnets in one scan and ensure the scanned result fully scans the search space
+    """
     subnets = ["174.189.0.0/24", "23.45.67.76/30"]
     expected_num_ips = math.pow(2, 32 - 24) + math.pow(2, 32 - 30)
     packets = test_io.Test(subnet=" ".join(subnets)).run()
@@ -131,6 +175,9 @@ def test_multiple_subnets():
 
 
 def test_multiple_ips():
+    """
+    scan multiple IPs in one scan and ensure the scanned result fully scans the search space
+    """
     ips = ["174.189.78.3", "1.1.1.1", "8.8.8.8"]
     expected_num_ips = len(ips)
     packets = test_io.Test(subnet=" ".join(ips), threads=1).run()
@@ -141,6 +188,9 @@ def test_multiple_ips():
 
 
 def test_multiple_ips_and_subnets():
+    """
+    scan multiple IPs and subnets in one scan and ensure the scanned result fully scans the search space
+    """
     ips = ["174.189.78.3", "1.1.1.1", "8.8.8.8"]
     subnets = ["174.189.0.0/28", "23.45.67.76/30"]
     ips_and_subnets = ips + subnets
@@ -201,6 +251,9 @@ def test_different_seeds():
 
 
 def test_rate_limit():
+    """
+    scan with a rate limit and ensure the rate is respected
+    """
     start_time = time.time()
     # scan 1k packets with a rate of 1k. The scan should stop after ~1 seconds
     # uses bounded_runtime_test to ensure the test doesn't run indefinitely should anything go wrong
@@ -210,6 +263,9 @@ def test_rate_limit():
 
 
 def test_max_runtime():
+    """
+    scan with a max runtime and ensure the scan stops after the correct amount of time
+    """
     start_time = time.time()
     # scan full IPv4 space with a max runtime of 2 seconds. The scan should stop after 2 seconds
     # uses bounded_runtime_test to ensure the test doesn't run indefinitely should anything go wrong
@@ -219,6 +275,10 @@ def test_max_runtime():
 
 
 def test_max_runtime_and_rate():
+    """
+    scan with a max runtime and a rate limit and ensure the scan stops after the correct amount of time AND
+    the rate is respected
+    """
     start_time = time.time()
     # scan full IPv4 space with a max runtime of 1 seconds and a rate of 1000. The scan should stop after 1 seconds
     # uses bounded_runtime_test to ensure the test doesn't run indefinitely should anything go wrong
@@ -264,7 +324,7 @@ def test_source_port_option():
 
 def test_source_ip_option():
     """
-    scan using various source IPs and ensure the correct source IPs are used
+    scan using various source IP(s) and ensure the correct source IP(s) are used
     """
     source_ip_tests = [
         "134.23.98.23",  # single IP
@@ -310,6 +370,10 @@ def test_source_mac_option():
 
 
 def probes_helper(probes: int, subnet: str):
+    """
+    helper that takes in a number of probes and a subnet and ensures the correct number of packets are sent to that
+    subnet
+    """
     packets = test_io.Test(subnet=subnet, threads=1, probes=str(probes)).run()
     if probes == 0:
         assert len(packets) == 0, "packets were sent when no probes were specified"
@@ -351,7 +415,41 @@ def test_list_of_ips_option():
     """
     scan using a list of IPs and ensure the correct IPs are scanned
     """
-    assert True == False, "test not implemented"
+    subnet_pattern = r'\b(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}\b'
+    # read in blocked subnets in file "blocklist.conf" into a list
+    blocked_subnets = []
+    with open("../../conf/blocklist.conf", "r") as file:
+        for line in file:
+            if not line.startswith("#") and "/" in line:
+                # need to use a regex to pull out the subnet
+                subnet = re.findall(subnet_pattern, line.strip())
+                if subnet:
+                    blocked_subnets.append(subnet[0])
+
+    # generate a list of 1M random, non-blocked public IPs
+    ips = []
+    for _ in range(1000):
+        while (True):
+            ip = str(ipaddress.IPv4Address(int(2 ** 32 * random.random())))
+            # ensure the IP is not in the blocklist
+            if any(ipaddress.ip_address(ip) in ipaddress.ip_network(subnet) for subnet in blocked_subnets):
+                # IP is blocked
+                continue
+            if ipaddress.ip_address(ip).is_global and not ipaddress.ip_address(ip).is_reserved:
+                # found a good IP
+                ips.append(ip)
+                break
+    # write the IPs to a file
+    with open("ips.txt", "w") as file:
+        for ip in ips:
+            file.write(ip + "\n")
+    packets = test_io.Test(threads=2, list_of_ips_file="ips.txt").run()
+
+    actual_packet_ips = list(packet["ip"]["daddr"] for packet in packets)
+    assert sorted(actual_packet_ips) == sorted(ips), "scanned IPs not in the list of IPs"
+
+    # cleanup
+    os.remove("ips.txt")
 
 
 """
@@ -385,7 +483,7 @@ def test_allowlist():
 
 def test_allowlist_with_subnet():
     """
-    per the code: "allowlist: both a allowlist file and destination addresses were specified. The union of these two
+    Per the code: "allowlist: both a allowlist file and destination addresses were specified. The union of these two
         sources will be utilized."
     Test will ensure that both the allowlist file and the subnet are used to scan the correct IPs
     """
@@ -413,6 +511,9 @@ def test_allowlist_with_subnet():
 
 
 def blocklist_helper(blocklist_subnet_str: str, scanned_subnet_str: str):
+    """
+    helper that takes in a blocklist subnet and a scanned subnet and ensures only IPs not in the blocklist are scanned
+    """
     blocklist_subnet = ipaddress.ip_network(blocklist_subnet_str)
     scanned_subnet = ipaddress.ip_network(scanned_subnet_str)
 
@@ -449,6 +550,9 @@ def test_blocklist_partially_covers_subnet():
 
 
 def test_blocklist_does_not_cover_subnet():
+    """
+    scan a subnet not covered by a blocklist and ensure all IPs are scanned
+    """
     tests = [
         ("10.0.0.0/24", "10.0.1.0/24"),
         ("192.0.2.0/24", "192.0.3.0/24"),
@@ -461,15 +565,20 @@ def test_blocklist_does_not_cover_subnet():
 
 
 def test_blocklist_fully_covers_subnet():
+    """
+    scan a subnet fully covered by a blocklist and ensure no IPs are scanned
+    """
     blocklist_helper("10.0.0.0/24", "10.0.0.0/24")
 
 
 ## --iplayer
 def test_ip_layer_option():
-    ips = ["174.189.78.3", "1.1.1.1", "8.8.8.8"]
+    ips = ["174.189.78.3", "1.1.1.1", "8.8.8.8", "175.189.78.0/28", "176.145.2.0/30"]
     # 3 IPs and 2 subnets, 16 and 4 IPs, respectively
+    expected_num_ips = 3 + math.pow(2, 32 - 28) + math.pow(2, 32 - 30)
+    expected_scanned_ips = set(ips[:3] + [str(ip) for subnet in ips[3:] for ip in ipaddress.ip_network(subnet)])
     packets = test_io.Test(subnet=" ".join(ips), threads=1, iplayer=True).run()
-    assert len(packets) == len(ips)
+    assert len(packets) == expected_num_ips
     for packet in packets:
         # ensure proper fields are present
         assert packet["ip"]
@@ -477,5 +586,5 @@ def test_ip_layer_option():
         assert not packet.get("eth")
 
     ip_list = [packet["ip"]["daddr"] for packet in packets]
-    for ip in ips:
-        assert ip in ip_list, "an IP was not scanned"
+    for actual_ip in ip_list:
+        assert actual_ip in expected_scanned_ips, "an IP was not scanned"
