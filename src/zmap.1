@@ -1,7 +1,7 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "ZMAP" "1" "December 2023" "ZMap" "zmap"
+.TH "ZMAP" "1" "February 2024" "ZMap" "zmap"
 .
 .SH "NAME"
 \fBzmap\fR \- The Fast Internet Scanner
@@ -52,7 +52,7 @@ Set the send rate in bits/second (supports suffixes G, M, and K (e\.g\. \-B 10M 
 .
 .TP
 \fB\-n\fR, \fB\-\-max\-targets=n\fR
-Cap the number of targets to probe\. This can either be a number (e\.g\. \-n 1000) or a percentage (e\.g\. \-n 0\.1%) of the scannable address space (after excluding blocklist)
+Cap the number of targets to probe\. This can either be a number (e\.g\. \-n 1000) or a percentage (e\.g\. \-n 0\.1%) of the scannable address space (after excluding blocklist)\. A target is an IP/port pair, if scanning multiple ports, and an IP otherwise\.
 .
 .TP
 \fB\-N\fR, \fB\-\-max\-results=n\fR
