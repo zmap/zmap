@@ -7,6 +7,7 @@ option(ENABLE_LOG_TRACE "Enable log trace messages" OFF)
 option(RESPECT_INSTALL_PREFIX_CONFIG "Respect CMAKE_INSTALL_PREFIX for /etc" OFF)
 option(WITH_WERROR "Build with -Werror" OFF)
 option(WITH_PFRING "Build with PF_RING ZC for send (10 GigE)" OFF)
+option(WITH_NETMAP "Build with netmap(4) for send/recv (10+ GigE)" OFF)
 option(FORCE_CONF_INSTALL "Overwrites existing configuration files at install" OFF)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
@@ -79,6 +80,10 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${JSON_CFLAGS}")
 if(WITH_PFRING)
     add_definitions("-DPFRING")
     set(PFRING_LIBRARIES pfring rt numa)
+endif()
+
+if(WITH_NETMAP)
+    add_definitions("-DNETMAP")
 endif()
 
 set(JUDY_LIBRARIES "Judy")
