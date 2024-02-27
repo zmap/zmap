@@ -1,0 +1,23 @@
+name: Integration Validation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  ENABLE_DEVELOPMENT: ON
+  ENABLE_LOG_TRACE: ON
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Run Pytest
+        run: |
+          docker build -t pytest-container -f .github/workflows/pytest.Dockerfile .
+          docker run pytest-container
+          
