@@ -145,6 +145,13 @@ struct state_conf {
 		pfring_zc_buffer_pool *prefetches;
 	} pf;
 #endif
+#ifdef NETMAP
+	struct {
+		int nm_fd;
+		void *nm_mem;
+		struct netmap_if *nm_if;
+	} nm;
+#endif
 };
 extern struct state_conf zconf;
 

@@ -121,9 +121,12 @@ set(ZTEESOURCES
 if(WITH_PFRING)
     set(SOURCES ${SOURCES} socket-pfring.c)
     set(ZTESTSOURCES ${ZTESTSOURCES} socket-pfring.c)
+elseif(WITH_NETMAP)
+    set(SOURCES ${SOURCES} socket-netmap.c send-netmap.c)
+    set(ZTESTSOURCES ${ZTESTSOURCES} socket-netmap.c send-netmap.c)
 elseif (APPLE OR BSD)
-    set(SOURCES ${SOURCES} socket-bsd.c)
-    set(ZTESTSOURCES ${ZTESTSOURCES} socket-bsd.c)
+    set(SOURCES ${SOURCES} socket-bsd.c send-bsd.c)
+    set(ZTESTSOURCES ${ZTESTSOURCES} socket-bsd.c send-bsd.c)
 else()
     set(SOURCES ${SOURCES} socket-linux.c send-linux.c)
     set(ZTESTSOURCES ${ZTESTSOURCES} socket-linux.c send-linux.c)
@@ -133,6 +136,9 @@ endif()
 if(WITH_PFRING)
     set(SOURCES ${SOURCES} recv-pfring.c)
     set(ZTESTSOURCES ${ZTESTSOURCES} recv-pfring.c)
+elseif(WITH_NETMAP)
+    set(SOURCES ${SOURCES} recv-netmap.c)
+    set(ZTESTSOURCES ${ZTESTSOURCES} recv-netmap.c)
 else()
     set(SOURCES ${SOURCES} recv-pcap.c)
     set(ZTESTSOURCES ${ZTESTSOURCES} recv-pcap.c)
@@ -210,11 +216,9 @@ add_executable(ztee ${ZTEESOURCES})
 add_executable(ztests ${ZTESTSOURCES})
 
 if(APPLE OR BSD)
-    set(DNET_LIBRARIES "dnet")
 else()
     set(ZTESTSOURCES ${ZTESTSOURCES} send-linux.c)
     set(SOURCES ${SOURCES} send-linux.c)
-    set(DNET_LIBRARIES "")
 endif()
 
 target_link_libraries(
@@ -222,7 +226,6 @@ target_link_libraries(
     zmaplib
     ${PFRING_LIBRARIES}
     pcap gmp m unistring
-    ${DNET_LIBRARIES}
     ${JSON_LIBRARIES}
 	${JUDY_LIBRARIES}
 )
@@ -251,7 +254,6 @@ target_link_libraries(
     zmaplib
     ${PFRING_LIBRARIES}
     pcap gmp m unistring
-    ${DNET_LIBRARIES}
     ${JSON_LIBRARIES}
 	${JUDY_LIBRARIES}
 )

@@ -27,6 +27,7 @@
 #include "../lib/lockfd.h"
 #include "../lib/pbm.h"
 
+#include "send-internal.h"
 #include "aesrand.h"
 #include "get_gateway.h"
 #include "iterator.h"
@@ -35,21 +36,6 @@
 #include "shard.h"
 #include "state.h"
 #include "validate.h"
-
-// OS specific functions called by send_run
-static inline int send_packet(sock_t sock, void *buf, int len, uint32_t idx);
-static inline int send_batch(sock_t sock, batch_t *batch, int retries);
-static inline int send_run_init(sock_t sock);
-
-// Include the right implementations
-#if defined(PFRING)
-#include "send-pfring.h"
-#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) ||     \
-    defined(__DragonFly__)
-#include "send-bsd.h"
-#else /* LINUX */
-#include "send-linux.h"
-#endif /* __APPLE__ || __FreeBSD__ || __NetBSD__ || __DragonFly__ */
 
 // The iterator over the cyclic group
 
@@ -89,11 +75,6 @@ iterator_t *send_init(void)
 		log_fatal("send", "senders * shards > max targets");
 	}
 	uint64_t num_addrs = blocklist_count_allowed();
-	if (zconf.list_of_ips_filename) {
-		log_debug("send",
-			  "forcing max group size for compatibility with -I");
-		num_addrs = 0xFFFFFFFF;
-	}
 	it = iterator_init(zconf.senders, zconf.shard_num, zconf.total_shards,
 			   num_addrs, zconf.ports->port_count);
 	// determine the source address offset from which we'll send packets
@@ -420,7 +401,7 @@ int send_run(sock_t st, shard_t *s)
 				// this is an additional memcpy (packet created in buf, buf -> batch)
 				// but when I modified the TCP SYN module to write packet to batch directly, there wasn't any noticeable speedup.
 				// Using this approach for readability/minimal changes
-				memcpy(((void *)batch->packets) + (batch->len * MAX_PACKET_SIZE), contents, length);
+				memcpy(((uint8_t *)batch->packets) + (batch->len * MAX_PACKET_SIZE), contents, length);
 				batch->lens[batch->len] = length;
 				batch->ips[batch->len] = current_ip;
 				batch->len++;

@@ -28,7 +28,6 @@ ZMap has the following dependencies:
   - [libunistring](https://www.gnu.org/software/libunistring/) - Unicode string library
   - [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/) - compiler and library helper tool
   - [libjudy](https://judy.sourceforge.net/) - Judy Array for packet de-duplication
-  - [libdnet](https://github.com/dugsong/libdnet) - (macOS Only) Gateway and route detection
 
 Install the required dependencies with the following commands.
 
@@ -39,17 +38,26 @@ Install the required dependencies with the following commands.
 
 * On RHEL- and Fedora-based systems (including CentOS):
    ```sh
-   sudo yum install gcc cmake gmp-devel gengetopt libpcap-devel flex byacc json-c-devel libunistring-devel Judy-devel
+   sudo dnf install gcc cmake gmp-devel gengetopt libpcap-devel flex byacc json-c-devel libunistring-devel Judy-devel
+   ```
+* On Arch systems
+   ```sh
+   pacman -S base-devel cmake gmp gengetopt libpcap flex byacc json-c pkg-config libunistring judy python
+   ```
+
+* On Gentoo systems
+   ```sh
+   emerge sys-devel/binutils dev-libs/gmp dev-util/gengetopt net-libs/libpcap sys-devel/flex dev-util/byacc dev-libs/json-c dev-util/pkgconf dev-libs/libunistring dev-libs/judy
    ```
 
 * On macOS systems (using [Homebrew](https://brew.sh/)):
   ```sh
-  brew install pkg-config cmake gmp gengetopt json-c byacc libdnet libunistring judy
+  brew install pkg-config cmake gmp gengetopt json-c byacc libunistring judy
   ```
 
 * On macOS systems (using [MacPorts](https://macports.org/)):
   ```
-  sudo port install cmake byacc flex gengetopt pkgconfig gmp libdnet libpcap json-c libunistring judy
+  sudo port install cmake byacc flex gengetopt pkgconfig gmp libpcap json-c libunistring judy
   ```
 
 * To launch a shell inside a Docker container with the build dependencies
@@ -97,4 +105,3 @@ option. For example, to install it in `$HOME/opt` run
     make -j4
     make install
     ```
-- On some BSD systems, you man need to manually add `-D_SYSTYPE_BSD` to your CFLAGS.

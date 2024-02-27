@@ -11,7 +11,6 @@
 
 #include "iterator.h"
 #include "socket.h"
-#include "./probe_modules/packet.h"
 
 iterator_t *send_init(void);
 int send_run(sock_t, shard_t *);
