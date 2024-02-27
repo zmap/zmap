@@ -13,7 +13,7 @@ def set_options_bitmap(bitmap_value:int) -> None:
     hex_value = format(bitmap_value, '02x')
     new_line = f"uint8_t options_bitmap = 0x{hex_value};"
     # use sed to replace line in the file
-    sed_command = f"sed -i '' 's/^[[:space:]]*uint8_t options_bitmap = 0x[0-9a-fA-F]*;/{new_line}/' {packet_file_path}"
+    sed_command = f"sed -i 's/^[[:space:]]*uint8_t options_bitmap = 0x[0-9a-fA-F]*;/{new_line}/' {packet_file_path}"
     print(sed_command)
     os.system(sed_command)
 
@@ -65,11 +65,11 @@ if __name__ == "__main__":
         set_options_bitmap(bitmap_value)
         set_len_fields(bitmap_value)
         compile()
-        for test_num in range(3):
+        for test_num in range(1):
             print(f"Running test {test_num} with bitmap {bitmap_value}")
             output_file = get_output_file(bitmap_value, test_num)
             # os.system(f"sudo ./src/zmap -o '{output_file}' -p 80 1.1.1.0/2 -c 5 -B 250M --sender-threads=2 -v 2 --seed=4321 -n 3000000")
-            os.system(f"sudo ./src/zmap -o '{output_file}' -p 80 1.1.1.0/2 -c 5 -B 250M --sender-threads=2 -v 2 --seed=4321 -n 30000000")
+            os.system(f"sudo ./src/zmap -o '{output_file}' -p 80 1.1.1.0/2 -c 5 -B 250M --sender-threads=2 -v 2 --seed=4321 -n 3000000")
             # os.system(f"sudo ./src/zmap -o '{output_file}' -p 80 1.1.1.1 -c 3 -B 250M --sender-threads=1 -v 2 --seed=4321 -n 30000000")
 
     process_output()
