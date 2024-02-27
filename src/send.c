@@ -287,7 +287,6 @@ int send_run(sock_t st, shard_t *s)
 		}
 	}
 	int attempts = zconf.retries + 1;
-	uint32_t idx = 0;
 	while (1) {
 		// Adaptive timing delay
 		if (count && delay > 0) {
@@ -419,8 +418,6 @@ int send_run(sock_t st, shard_t *s)
 					}
 					// reset batch length for next batch
 					batch->len = 0;
-					idx++;
-					idx &= 0xFF;
 				}
 			}
 			s->state.packets_sent++;
