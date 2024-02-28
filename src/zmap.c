@@ -915,10 +915,10 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (args.batch_given && args.batch_arg >= 1 && args.batch_arg <= UINT8_MAX) {
+	if (args.batch_given && args.batch_arg >= 1 && args.batch_arg <= UINT16_MAX) {
 		zconf.batch = args.batch_arg;
 	} else if (args.batch_given) {
-		log_fatal("zmap", "batch size must be > 0 and <= 255");
+		log_fatal("zmap", "batch size must be > 0 and <= 65535");
 	}
 
 	if (args.max_targets_given) {
