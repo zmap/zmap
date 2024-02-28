@@ -177,7 +177,8 @@ static void network_config_init(void)
 			    "could not detect GW MAC address for %s on %s."
 			    " Try setting default gateway mac address (-G), or run"
 			    " \"arp <gateway_ip>\" in terminal."
-			    " If this is a newly launched machine, try completing an outgoing network connection (e.g. curl https://zmap.io), and trying again.",
+			    " If this is a newly launched machine, try completing an outgoing network connection (e.g. curl https://zmap.io), and trying again."
+			    " If you are using a VPN, supply the --iplayer flag (and provide an interface via -i)",
 			    inet_ntoa(gw_ip), zconf.iface);
 		}
 		zconf.gw_mac_set = 1;
