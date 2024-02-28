@@ -4,6 +4,8 @@ packet_file_path = "./src/probe_modules/packet.c"
 tcp_synscan_file_path = "./src/probe_modules/module_tcp_synscan.c"
 
 NUMBER_OF_TESTS = 1
+OS = "MACOS"
+# OS = "LINUX"
 
 def compile() -> None:
     os.system("cmake . && make -j4")
@@ -13,7 +15,10 @@ def set_options_bitmap(bitmap_value:int) -> None:
     hex_value = format(bitmap_value, '02x')
     new_line = f"uint8_t options_bitmap = 0x{hex_value};"
     # use sed to replace line in the file
-    sed_command = f"sed -i 's/^[[:space:]]*uint8_t options_bitmap = 0x[0-9a-fA-F]*;/{new_line}/' {packet_file_path}"
+    if OS == "MACOS":
+        sed_command = f"sed -i '' -e 's|^[[:space:]]*uint8_t options_bitmap = 0x[0-9a-fA-F]*;|{new_line}|' {packet_file_path}"
+    else:
+        sed_command = f"sed -i 's|^[[:space:]]*uint8_t options_bitmap = 0x[0-9a-fA-F]*;|{new_line}|' {packet_file_path}"
     print(sed_command)
     os.system(sed_command)
 
@@ -42,8 +47,12 @@ def set_len_fields(bitmap_value: int) -> None:
     header_line = f"define ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN {header_len}"
     packet_line = f"define ZMAP_TCP_SYNSCAN_PACKET_LEN {packet_len}"
 
-    sed_command_header = f"sed -i 's/define ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN [0-9]*/{header_line}/' {tcp_synscan_file_path}"
-    sed_command_packet = f"sed -i 's/define ZMAP_TCP_SYNSCAN_PACKET_LEN [0-9]*/{packet_line}/' {tcp_synscan_file_path}"
+    if OS == "MACOS":
+        sed_command_header = f"sed -i '' -e 's/define ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN [0-9]*/{header_line}/' {tcp_synscan_file_path}"
+        sed_command_packet = f"sed -i '' -e 's/define ZMAP_TCP_SYNSCAN_PACKET_LEN [0-9]*/{packet_line}/' {tcp_synscan_file_path}"
+    else:
+        sed_command_header = f"sed -i 's/define ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN [0-9]*/{header_line}/' {tcp_synscan_file_path}"
+        sed_command_packet = f"sed -i 's/define ZMAP_TCP_SYNSCAN_PACKET_LEN [0-9]*/{packet_line}/' {tcp_synscan_file_path}"
     os.system(sed_command_header)
     os.system(sed_command_packet)
 
@@ -61,15 +70,19 @@ def get_output_file(bitmap_value:int, test_num:int) -> str:
 
 
 if __name__ == "__main__":
+    # confirm OS with user
+    print(f"Running tests on {OS}")
+    # have user confirm
+    input("Press Enter to continue...")
     for bitmap_value in range(16):
         set_options_bitmap(bitmap_value)
         set_len_fields(bitmap_value)
         compile()
-        for test_num in range(1):
+        for test_num in range(NUMBER_OF_TESTS):
             print(f"Running test {test_num} with bitmap {bitmap_value}")
             output_file = get_output_file(bitmap_value, test_num)
             # os.system(f"sudo ./src/zmap -o '{output_file}' -p 80 1.1.1.0/2 -c 5 -B 250M --sender-threads=2 -v 2 --seed=4321 -n 3000000")
-            os.system(f"sudo ./src/zmap -o '{output_file}' -p 80 1.1.1.0/2 -c 5 -B 250M --sender-threads=2 -v 2 --seed=4321 -n 3000000")
+            os.system(f"sudo ./src/zmap -o '{output_file}' -p 80 1.1.1.1 -c 1 -B 250M --sender-threads=1 -v 2 --seed=4321 -n 3000000")
             # os.system(f"sudo ./src/zmap -o '{output_file}' -p 80 1.1.1.1 -c 3 -B 250M --sender-threads=1 -v 2 --seed=4321 -n 30000000")
 
     process_output()
