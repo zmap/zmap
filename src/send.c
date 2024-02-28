@@ -462,7 +462,7 @@ cleanup:
 	return EXIT_SUCCESS;
 }
 
-batch_t* create_packet_batch(uint8_t capacity) {
+batch_t* create_packet_batch(uint16_t capacity) {
 	// calculate how many bytes are needed for each component of a batch
 	int size_of_packet_array = MAX_PACKET_SIZE * capacity;
 	int size_of_ips_array = sizeof(uint32_t) * capacity;

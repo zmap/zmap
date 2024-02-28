@@ -126,6 +126,14 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
    * `-X`, `--iplayer`:
      Send IP layer packets instead of ethernet packets (for non-Ethernet interface)
 
+   * `--netmap-wait-ping=ip`:
+     (Netmap only)
+     Wait for ip to respond to ICMP Echo request before commencing scan.
+     Useful if connected to a switch with STP enabled, where the PHY reset
+     that is needed for entering and leaving Netmap mode will cause the switch
+     to mute the port until the spanning tree protocol has determined that
+     the link should be set into forward state.
+
 ### PROBE OPTIONS ###
 
 ZMap allows users to specify and write their own probe modules. Probe modules
