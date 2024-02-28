@@ -1046,6 +1046,10 @@ int main(int argc, char *argv[])
 		log_fatal("zmap", "timeout waiting for PHY reset to complete");
 	}
 	log_debug("zmap", "PHY reset is complete, link state is up");
+
+	if (args.netmap_wait_ping_arg != NULL) {
+		zconf.nm.wait_ping_dstip = string_to_ip_address(args.netmap_wait_ping_arg);
+	}
 #endif
 
 #ifndef PFRING
