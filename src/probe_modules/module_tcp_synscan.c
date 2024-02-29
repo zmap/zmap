@@ -21,8 +21,8 @@
 #include "packet.h"
 #include "validate.h"
 
-#define ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN 40
-#define ZMAP_TCP_SYNSCAN_PACKET_LEN 74
+int ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN = 20;
+int ZMAP_TCP_SYNSCAN_PACKET_LEN = 54;
 
 probe_module_t module_tcp_synscan;
 
@@ -32,6 +32,8 @@ static int synscan_global_initialize(struct state_conf *state)
 {
 	num_source_ports =
 	    state->source_port_last - state->source_port_first + 1;
+	// Based on the OS, we'll set the TCP options differently
+
 	return EXIT_SUCCESS;
 }
 
@@ -46,7 +48,7 @@ static int synscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	make_ip_header(ip_header, IPPROTO_TCP, len);
 	struct tcphdr *tcp_header = (struct tcphdr *)(&ip_header[1]);
 	make_tcp_header(tcp_header, TH_SYN);
-	set_linux_tcp_options(tcp_header);
+	set_tcp_options(tcp_header);
 	return EXIT_SUCCESS;
 }
 
@@ -214,7 +216,6 @@ static fielddef_t fields[] = {
 
 probe_module_t module_tcp_synscan = {
     .name = "tcp_synscan",
-    .max_packet_length = ZMAP_TCP_SYNSCAN_PACKET_LEN,
     .pcap_filter = "(tcp && tcp[13] & 4 != 0 || tcp[13] == 18) || icmp",
     .pcap_snaplen = 96,
     .port_args = 1,
@@ -225,10 +226,14 @@ probe_module_t module_tcp_synscan = {
     .process_packet = &synscan_process_packet,
     .validate_packet = &synscan_validate_packet,
     .close = NULL,
-    .helptext = "Probe module that sends a TCP SYN packet to a specific "
-		"port. Possible classifications are: synack and rst. A "
-		"SYN-ACK packet is considered a success and a reset packet "
-		"is considered a failed response.",
+    .helptext =
+	"Probe module that sends a TCP SYN packet to a specific port. Possible "
+	"classifications are: synack and rst. A SYN-ACK packet is considered a "
+	"success and a reset packet is considered a failed response. "
+	"By default, TCP header options are set identically to the values for "
+	"Ubuntu (MSS, SACK permitted, Timestamp,  and WindowScale = 7). Use "
+	"\"--probe-args=n\" to set the options, valid options are \"none\", "
+	"\"bsd\", \"windows\", \"linux\" (default).",
     .output_type = OUTPUT_TYPE_STATIC,
     .fields = fields,
     .numfields = sizeof(fields) / sizeof(fields[0])};
