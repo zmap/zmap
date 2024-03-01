@@ -381,7 +381,8 @@ int send_run(sock_t st, shard_t *s)
 			zconf.probe_module->make_packet(
 			    buf, &length, src_ip, current_ip,
 			    htons(current_port), ttl, validation, i,
-			    aesrand_getword(aes_rand_gen), probe_data);
+			    (uint16_t)aesrand_getword(aes_rand_gen),
+			    probe_data);
 			if (length > MAX_PACKET_SIZE) {
 				log_fatal(
 				    "send",
