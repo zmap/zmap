@@ -16,23 +16,59 @@
 #include <assert.h>
 
 #include "../../lib/includes.h"
+#include "../../lib/logger.h"
 #include "../fieldset.h"
+#include "module_tcp_synscan.h"
 #include "probe_modules.h"
 #include "packet.h"
 #include "validate.h"
 
-int ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN = 20;
-int ZMAP_TCP_SYNSCAN_PACKET_LEN = 54;
+// defaults
+static uint8_t ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN = 20;
+static uint8_t ZMAP_TCP_SYNSCAN_PACKET_LEN = 54;
 
 probe_module_t module_tcp_synscan;
 
 static uint16_t num_source_ports;
+static uint8_t os_for_tcp_options;
 
 static int synscan_global_initialize(struct state_conf *state)
 {
 	num_source_ports =
 	    state->source_port_last - state->source_port_first + 1;
-	// Based on the OS, we'll set the TCP options differently
+	module_tcp_synscan.max_packet_length = ZMAP_TCP_SYNSCAN_PACKET_LEN;
+	    // Based on the OS, we'll set the TCP options differently
+	if (!state->probe_args) {
+		// user didn't provide any probe args, defaulting to linux
+		log_debug("tcp_synscan", "no probe-args, defaulting to linux-like TCP options");
+		state->probe_args = (char *)"linux";
+	}
+	if (strcmp(state->probe_args, "none") == 0) {
+		os_for_tcp_options = NO_OPTIONS;
+		ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN = 20;
+		ZMAP_TCP_SYNSCAN_PACKET_LEN = 54;
+	} else if (strcmp(state->probe_args, "bsd") == 0) {
+		os_for_tcp_options = BSD_OS_OPTIONS;
+		ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN = 44;
+		ZMAP_TCP_SYNSCAN_PACKET_LEN = 78;
+	} else if (strcmp(state->probe_args, "windows") == 0) {
+		os_for_tcp_options = WINDOWS_OS_OPTIONS;
+		ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN = 32;
+		ZMAP_TCP_SYNSCAN_PACKET_LEN = 66;
+	} else if (strcmp(state->probe_args, "linux") == 0) {
+		os_for_tcp_options = LINUX_OS_OPTIONS;
+		ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN = 40;
+		ZMAP_TCP_SYNSCAN_PACKET_LEN = 74;
+	} else {
+		log_fatal("tcp_synscan", "unknown "
+					 "probe-args value: %s, probe-args "
+					 "should have format: \"--probe-args=os\" "
+					 "where os can be \"none\", \"bsd\", "
+					 "\"windows\", and \"linux\"",
+			  state->probe_args);
+	}
+	// double-check arithmetic
+	assert(ZMAP_TCP_SYNSCAN_PACKET_LEN - ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN == 34);
 
 	return EXIT_SUCCESS;
 }
@@ -48,7 +84,7 @@ static int synscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	make_ip_header(ip_header, IPPROTO_TCP, len);
 	struct tcphdr *tcp_header = (struct tcphdr *)(&ip_header[1]);
 	make_tcp_header(tcp_header, TH_SYN);
-	set_tcp_options(tcp_header);
+	set_tcp_options(tcp_header, os_for_tcp_options);
 	return EXIT_SUCCESS;
 }
 
