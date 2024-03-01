@@ -15,7 +15,8 @@
 #include "../../lib/xalloc.h"
 #include "packet.h"
 
-#include "../state.h"
+#include "module_tcp_synscan.h"
+#include "logger.h"
 
 #ifndef NDEBUG
 void print_macaddr(struct ifreq *i)
@@ -119,19 +120,145 @@ void make_tcp_header(struct tcphdr *tcp_header, uint16_t th_flags)
 size_t set_mss_option(struct tcphdr *tcp_header)
 {
 	// This only sets MSS, which is a single-word option.
-	size_t header_size = tcp_header->th_off * 4;
+	// seems like assumption here is that word-size = 32 bits
+	// MSS field
+	// 0 byte = TCP Option Kind = 0x2
+	// 1 byte = Length of entire MSS field = 4
+	// 2-3 byte = Value of MSS
+
+	size_t header_size = tcp_header->th_off * 4; // 4 is word size
 	uint8_t *base = (uint8_t *)tcp_header;
 	uint8_t *last_opt = (uint8_t *)base + header_size;
 
 	// TCP Option "header"
-	last_opt[0] = 2; // MSS
-	last_opt[1] = 4; // MSS is 4 bytes long
+	last_opt[0] = 2; // the value in the TCP options spec denoting this as MSS
+	last_opt[1] = 4; // MSS is 4 bytes long, length goes here
 
 	// Default Linux MSS is 1460, which 0x05b4
 	last_opt[2] = 0x05;
 	last_opt[3] = 0xb4;
 
 	tcp_header->th_off += 1;
+	return tcp_header->th_off * 4;
+}
+
+
+size_t set_nop_plus_windows_scale(struct tcphdr *tcp_header, uint8_t os)
+{
+	size_t header_size = tcp_header->th_off * 4;
+	uint8_t *last_opt = (uint8_t *)tcp_header + header_size;
+	// NOP = 1 byte
+	last_opt[0] = 0x01; // kind for NOP
+	last_opt += 1;
+	// WindowScale = 3 bytes
+	last_opt[0] = 0x03; // kind for WindowScale field
+	last_opt[1] = 0x03; // length for WindowScale field
+
+	if (os == LINUX_OS_OPTIONS) {
+		last_opt[2] = 0x07; // 7 is used as the linux default WindowScale. It represents 2^7 = x128 window size multiplier
+	} else if (os == BSD_OS_OPTIONS) {
+		last_opt[2] = 0x06; // 6 is used as the MacOS/BSD default WindowScale. It represents 2^6 = x64 window size multiplier
+	} else if (os == WINDOWS_OS_OPTIONS) {
+		last_opt[2] = 0x08; // 8 is used as the windows default WindowScale. It represents 2^8 = x256 window size multiplier
+	}
+	tcp_header->th_off += 1;
+	return tcp_header->th_off * 4;
+}
+
+// sets 2x NOPs and a timestamp (10 bytes)  option = 12 bytes
+size_t set_timestamp_option_with_nops(struct tcphdr *tcp_header)
+{
+	size_t header_size = tcp_header->th_off * 4;
+	uint8_t *last_opt = (uint8_t *)tcp_header + header_size;
+	// NOP = 1 byte
+	last_opt[0] = 0x01; // kind for NOP
+	last_opt[1] = 0x01; // kind for NOP
+	last_opt += 2;
+	// exact method of getting this timestamp isn't important, only that it is a 4 byte value - RFC 7323
+	uint32_t now = time(NULL);
+	last_opt[0] = 0x08; // kind for timestamp field
+	last_opt[1] = 0x0a; // length for timestamp field
+	*(uint32_t *)(last_opt + 2) = htonl(now); // set current time in correct byte order
+	// final 4 bytes of timestamp field are left zeroed for the timestamp echo value
+	last_opt += 10; // update our pointer 10 bytes ahead
+	tcp_header->th_off += 3;
+	return tcp_header->th_off * 4;
+}
+
+size_t set_sack_permitted_with_timestamp(struct tcphdr *tcp_header)
+{
+	size_t header_size = tcp_header->th_off * 4;
+	uint8_t *last_opt = (uint8_t *)tcp_header + header_size;
+	// SACKPermitted = 2 bytes
+	last_opt[0] = 0x04; // kind for SACKPermitted
+	last_opt[1] = 0x02; // set the length
+	last_opt += 2; // increment pointer
+	// exact method of getting this timestamp isn't important, only that it is a 4 byte value - RFC 7323
+	uint32_t now = time(NULL);
+	last_opt[0] = 0x08; // kind for timestamp field
+	last_opt[1] = 0x0a; // length for timestamp field
+	*(uint32_t *)(last_opt + 2) = htonl(now); // set current time in correct byte order
+	// final 4 bytes of timestamp field are left zeroed for the timestamp echo value
+	last_opt += 10; // update our pointer 10 bytes ahead
+	tcp_header->th_off += 3;
+	return tcp_header->th_off * 4;
+}
+
+// sets 2x NOPs and a SACKPermitted (2 bytes) option = 4 bytes
+size_t set_nop_plus_sack_permitted(struct tcphdr *tcp_header)
+{
+	size_t header_size = tcp_header->th_off * 4;
+	uint8_t *last_opt = (uint8_t *)tcp_header + header_size;
+	// NOP = 1 byte
+	last_opt[0] = 0x01; // kind for NOP
+	last_opt[1] = 0x01;
+	last_opt += 2;
+	// SACKPermitted = 2 bytes
+	last_opt[0] = 0x04; // kind for SACKPermitted
+	last_opt[1] = 0x02; // set the length
+	last_opt += 2; // increment pointer
+	tcp_header->th_off += 1;
+	return tcp_header->th_off * 4;
+}
+
+size_t set_sack_permitted_plus_eol(struct tcphdr *tcp_header)
+{
+	size_t header_size = tcp_header->th_off * 4;
+	uint8_t *last_opt = (uint8_t *)tcp_header + header_size;
+	// SACKPermitted = 2 bytes
+	last_opt[0] = 0x04; // kind for SACKPermitted
+	last_opt[1] = 0x02; // set the length
+	last_opt += 2; // increment pointer
+	// EOL = 1 byte
+	last_opt[0] = 0x00; // kind for EOL
+	last_opt[1] = 0x00; // kind for EOL
+	last_opt += 2; // increment pointer
+	tcp_header->th_off += 1;
+	return tcp_header->th_off * 4;
+}
+
+// set_tcp_options adds the relevant TCP options so ZMap-sent packets have the same TCP header as linux-sent ones
+size_t set_tcp_options(struct tcphdr *tcp_header, uint8_t os_options_type)
+{
+	if (os_options_type == NO_OPTIONS) {
+		// nothing to set
+	} else if (os_options_type == LINUX_OS_OPTIONS) {
+		set_mss_option(tcp_header);
+		set_sack_permitted_with_timestamp(tcp_header);
+		set_nop_plus_windows_scale(tcp_header, os_options_type);
+	} else if (os_options_type == BSD_OS_OPTIONS) {
+		set_mss_option(tcp_header);
+		set_nop_plus_windows_scale(tcp_header, os_options_type);
+		set_timestamp_option_with_nops(tcp_header);
+		set_sack_permitted_plus_eol(tcp_header);
+	} else if (os_options_type == WINDOWS_OS_OPTIONS) {
+		set_mss_option(tcp_header);
+		set_nop_plus_windows_scale(tcp_header, os_options_type);
+		set_nop_plus_sack_permitted(tcp_header);
+	} else {
+		// should not his this case
+		log_fatal("packet", "unknown OS for TCP options: %d", os_options_type);
+	}
 	return tcp_header->th_off * 4;
 }
 

@@ -16,22 +16,61 @@
 #include <assert.h>
 
 #include "../../lib/includes.h"
+#include "../../lib/logger.h"
 #include "../fieldset.h"
+#include "module_tcp_synscan.h"
 #include "probe_modules.h"
 #include "packet.h"
 #include "validate.h"
 
-#define ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN 24
-#define ZMAP_TCP_SYNSCAN_PACKET_LEN 58
+// defaults
+static uint8_t zmap_tcp_synscan_tcp_header_len = 20;
+static uint8_t zmap_tcp_synscan_packet_len = 54;
 
 probe_module_t module_tcp_synscan;
 
 static uint16_t num_source_ports;
+static uint8_t os_for_tcp_options;
 
 static int synscan_global_initialize(struct state_conf *state)
 {
 	num_source_ports =
 	    state->source_port_last - state->source_port_first + 1;
+	module_tcp_synscan.max_packet_length = zmap_tcp_synscan_packet_len;
+	    // Based on the OS, we'll set the TCP options differently
+	if (!state->probe_args) {
+		// user didn't provide any probe args, defaulting to linux
+		log_debug("tcp_synscan", "no probe-args, "
+					 "defaulting to linux TCP options");
+		state->probe_args = (char *)"linux";
+	}
+	if (strcmp(state->probe_args, "none") == 0) {
+		os_for_tcp_options = NO_OPTIONS;
+		zmap_tcp_synscan_tcp_header_len = 20;
+		zmap_tcp_synscan_packet_len = 54;
+	} else if (strcmp(state->probe_args, "bsd") == 0) {
+		os_for_tcp_options = BSD_OS_OPTIONS;
+		zmap_tcp_synscan_tcp_header_len = 44;
+		zmap_tcp_synscan_packet_len = 78;
+	} else if (strcmp(state->probe_args, "windows") == 0) {
+		os_for_tcp_options = WINDOWS_OS_OPTIONS;
+		zmap_tcp_synscan_tcp_header_len = 32;
+		zmap_tcp_synscan_packet_len = 66;
+	} else if (strcmp(state->probe_args, "linux") == 0) {
+		os_for_tcp_options = LINUX_OS_OPTIONS;
+		zmap_tcp_synscan_tcp_header_len = 40;
+		zmap_tcp_synscan_packet_len = 74;
+	} else {
+		log_fatal("tcp_synscan", "unknown "
+					 "probe-args value: %s, probe-args "
+					 "should have format: \"--probe-args=os\" "
+					 "where os can be \"none\", \"bsd\", "
+					 "\"windows\", and \"linux\"",
+			  state->probe_args);
+	}
+	// double-check arithmetic
+	assert(zmap_tcp_synscan_packet_len - zmap_tcp_synscan_tcp_header_len == 34);
+
 	return EXIT_SUCCESS;
 }
 
@@ -42,11 +81,11 @@ static int synscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	make_eth_header(eth_header, src, gw);
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
 	uint16_t len =
-	    htons(sizeof(struct ip) + ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN);
+	    htons(sizeof(struct ip) + zmap_tcp_synscan_tcp_header_len);
 	make_ip_header(ip_header, IPPROTO_TCP, len);
 	struct tcphdr *tcp_header = (struct tcphdr *)(&ip_header[1]);
 	make_tcp_header(tcp_header, TH_SYN);
-	set_mss_option(tcp_header);
+	set_tcp_options(tcp_header, os_for_tcp_options);
 	return EXIT_SUCCESS;
 }
 
@@ -70,7 +109,7 @@ static int synscan_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	tcp_header->th_seq = tcp_seq;
 	// checksum value must be zero when calculating packet's checksum
 	tcp_header->th_sum = 0;
-	tcp_header->th_sum = tcp_checksum(ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN,
+	tcp_header->th_sum = tcp_checksum(zmap_tcp_synscan_tcp_header_len,
 					  ip_header->ip_src.s_addr,
 					  ip_header->ip_dst.s_addr, tcp_header);
 
@@ -79,7 +118,7 @@ static int synscan_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
 
-	*buf_len = ZMAP_TCP_SYNSCAN_PACKET_LEN;
+	*buf_len = zmap_tcp_synscan_packet_len;
 	return EXIT_SUCCESS;
 }
 
@@ -216,7 +255,6 @@ static fielddef_t fields[] = {
 
 probe_module_t module_tcp_synscan = {
     .name = "tcp_synscan",
-    .max_packet_length = ZMAP_TCP_SYNSCAN_PACKET_LEN,
     .pcap_filter = "(tcp && tcp[13] & 4 != 0 || tcp[13] == 18) || icmp",
     .pcap_snaplen = 96,
     .port_args = 1,
@@ -227,10 +265,14 @@ probe_module_t module_tcp_synscan = {
     .process_packet = &synscan_process_packet,
     .validate_packet = &synscan_validate_packet,
     .close = NULL,
-    .helptext = "Probe module that sends a TCP SYN packet to a specific "
-		"port. Possible classifications are: synack and rst. A "
-		"SYN-ACK packet is considered a success and a reset packet "
-		"is considered a failed response.",
+    .helptext =
+	"Probe module that sends a TCP SYN packet to a specific port. Possible "
+	"classifications are: synack and rst. A SYN-ACK packet is considered a "
+	"success and a reset packet is considered a failed response. "
+	"By default, TCP header options are set identically to the values for "
+	"linux (Ubuntu 23.10) (MSS, SACK permitted, Timestamp,  and WindowScale "
+	"= 7). Use \"--probe-args=n\" to set the options, valid options are "
+	"\"none\", \"bsd\", \"windows\", \"linux\" (default).",
     .output_type = OUTPUT_TYPE_STATIC,
     .fields = fields,
     .numfields = sizeof(fields) / sizeof(fields[0])};
