@@ -163,7 +163,8 @@ static int icmp_echo_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 static int icmp_echo_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 				 ipaddr_n_t dst_ip, UNUSED port_n_t dst_port,
 				 uint8_t ttl, uint32_t *validation,
-				 UNUSED int probe_num, UNUSED void *arg)
+				 UNUSED int probe_num, aesrand_t* aes,
+				 UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
@@ -186,6 +187,9 @@ static int icmp_echo_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	// Update the IP and UDP headers to match the new payload length
 	size_t ip_len = sizeof(struct ip) + ICMP_MINLEN + icmp_payload_len;
 	ip_header->ip_len = htons(ip_len);
+
+	// set the IP id field to be a random value using the fast AES generator
+	ip_header->ip_id = (u_short)aesrand_getword(aes);
 
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);

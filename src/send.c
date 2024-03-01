@@ -228,6 +228,7 @@ int send_run(sock_t st, shard_t *s)
 		zconf.probe_module->thread_initialize(
 		    buf, zconf.hw_mac, zconf.gw_mac, &probe_data);
 	}
+	aesrand_t* aes_rand_gen = aesrand_init_from_seed(random());
 	pthread_mutex_unlock(&send_mutex);
 
 	// adaptive timing to hit target rate
@@ -376,7 +377,7 @@ int send_run(sock_t st, shard_t *s)
 			zconf.probe_module->make_packet(
 			    buf, &length, src_ip, current_ip,
 			    htons(current_port), ttl, validation, i,
-			    probe_data);
+			    aes_rand_gen, probe_data);
 			if (length > MAX_PACKET_SIZE) {
 				log_fatal(
 				    "send",

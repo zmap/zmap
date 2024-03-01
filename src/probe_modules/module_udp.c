@@ -270,7 +270,8 @@ int udp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw, void **arg_ptr)
 
 int udp_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 		    ipaddr_n_t dst_ip, port_n_t dport, uint8_t ttl,
-		    uint32_t *validation, int probe_num, UNUSED void *arg)
+		    uint32_t *validation, int probe_num, aesrand_t* aes,
+		    UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
@@ -285,6 +286,8 @@ int udp_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	    htons(get_src_port(num_ports, probe_num, validation));
 	udp_header->uh_dport = dport;
 
+	// set the IP id field to be a random value using the fast AES generator
+	ip_header->ip_id = (u_short)aesrand_getword(aes);
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
 
