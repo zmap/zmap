@@ -777,7 +777,7 @@ int get_dns_question_index_by_probe_num(int probe_num) {
 int dns_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 		    ipaddr_n_t dst_ip, port_n_t dport, uint8_t ttl,
 		    uint32_t *validation, int probe_num,
-		    aesrand_t* aes, UNUSED void *arg)
+		    u_short ip_id, UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
@@ -809,8 +809,7 @@ int dns_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
 	ip_header->ip_ttl = ttl;
-	// set the IP id field to be a random value using the fast AES generator
-	ip_header->ip_id = (u_short)aesrand_getword(aes);
+	ip_header->ip_id = ip_id;
 	// Above we wanted to look up the dns question index (so we could send 2 probes for the same DNS query)
 	// Here we want the port to be unique regardless of if this is the 2nd probe to the same DNS query so using
 	// probe_num itself to set the unique UDP source port.
