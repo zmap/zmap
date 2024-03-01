@@ -228,7 +228,11 @@ int send_run(sock_t st, shard_t *s)
 		zconf.probe_module->thread_initialize(
 		    buf, zconf.hw_mac, zconf.gw_mac, &probe_data);
 	}
-	aesrand_t* aes_rand_gen = aesrand_init_from_seed(random());
+	// re-seeding the random number generator from /dev/urandom to ensure
+	// it is seeded different from any other RNG in ZMap
+	uint64_t ip_id_seed;
+	random_bytes(&ip_id_seed, sizeof(ip_id_seed));
+	aesrand_t* aes_rand_gen = aesrand_init_from_seed(ip_id_seed);
 	pthread_mutex_unlock(&send_mutex);
 
 	// adaptive timing to hit target rate
