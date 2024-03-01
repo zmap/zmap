@@ -177,7 +177,8 @@ static void network_config_init(void)
 			    "could not detect GW MAC address for %s on %s."
 			    " Try setting default gateway mac address (-G), or run"
 			    " \"arp <gateway_ip>\" in terminal."
-			    " If this is a newly launched machine, try completing an outgoing network connection (e.g. curl https://zmap.io), and trying again.",
+			    " If this is a newly launched machine, try completing an outgoing network connection (e.g. curl https://zmap.io), and trying again."
+			    " If you are using a VPN, supply the --iplayer flag (and provide an interface via -i)",
 			    inet_ntoa(gw_ip), zconf.iface);
 		}
 		zconf.gw_mac_set = 1;
@@ -915,10 +916,10 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (args.batch_given && args.batch_arg >= 1 && args.batch_arg <= UINT8_MAX) {
+	if (args.batch_given && args.batch_arg >= 1 && args.batch_arg <= UINT16_MAX) {
 		zconf.batch = args.batch_arg;
 	} else if (args.batch_given) {
-		log_fatal("zmap", "batch size must be > 0 and <= 255");
+		log_fatal("zmap", "batch size must be > 0 and <= 65535");
 	}
 
 	if (args.max_targets_given) {
@@ -1046,6 +1047,10 @@ int main(int argc, char *argv[])
 		log_fatal("zmap", "timeout waiting for PHY reset to complete");
 	}
 	log_debug("zmap", "PHY reset is complete, link state is up");
+
+	if (args.netmap_wait_ping_arg != NULL) {
+		zconf.nm.wait_ping_dstip = string_to_ip_address(args.netmap_wait_ping_arg);
+	}
 #endif
 
 #ifndef PFRING

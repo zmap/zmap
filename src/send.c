@@ -287,7 +287,6 @@ int send_run(sock_t st, shard_t *s)
 		}
 	}
 	int attempts = zconf.retries + 1;
-	uint32_t idx = 0;
 	while (1) {
 		// Adaptive timing delay
 		if (count && delay > 0) {
@@ -419,8 +418,6 @@ int send_run(sock_t st, shard_t *s)
 					}
 					// reset batch length for next batch
 					batch->len = 0;
-					idx++;
-					idx &= 0xFF;
 				}
 			}
 			s->state.packets_sent++;
@@ -465,7 +462,7 @@ cleanup:
 	return EXIT_SUCCESS;
 }
 
-batch_t* create_packet_batch(uint8_t capacity) {
+batch_t* create_packet_batch(uint16_t capacity) {
 	// calculate how many bytes are needed for each component of a batch
 	int size_of_packet_array = MAX_PACKET_SIZE * capacity;
 	int size_of_ips_array = sizeof(uint32_t) * capacity;
