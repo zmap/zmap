@@ -14,8 +14,8 @@
 #include "../../lib/includes.h"
 #include "../../lib/xalloc.h"
 #include "packet.h"
+#include "random.h"
 
-#include "../state.h"
 
 #ifndef NDEBUG
 void print_macaddr(struct ifreq *i)
@@ -86,7 +86,7 @@ void make_ip_header(struct ip *iph, uint8_t protocol, uint16_t len)
 	iph->ip_v = 4;	 // IPv4
 	iph->ip_tos = 0; // Type of Service
 	iph->ip_len = len;
-	iph->ip_id = htons(54321); // identification number
+	random_bytes((void *)&iph->ip_id, sizeof(u_short));
 	iph->ip_off = 0;	   // fragmentation flag
 	iph->ip_ttl = MAXTTL;	   // time to live (TTL)
 	iph->ip_p = protocol;	   // upper layer protocol => TCP
