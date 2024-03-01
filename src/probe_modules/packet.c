@@ -237,10 +237,6 @@ size_t set_sack_permitted_plus_eol(struct tcphdr *tcp_header)
 	return tcp_header->th_off * 4;
 }
 
-
-
-
-
 // set_tcp_options adds the relevant TCP options so ZMap-sent packets have the same TCP header as linux-sent ones
 size_t set_tcp_options(struct tcphdr *tcp_header, uint8_t os_options_type)
 {
