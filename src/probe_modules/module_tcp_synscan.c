@@ -73,8 +73,10 @@ static int synscan_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	tcp_header->th_sum = tcp_checksum(ZMAP_TCP_SYNSCAN_TCP_HEADER_LEN,
 					  ip_header->ip_src.s_addr,
 					  ip_header->ip_dst.s_addr, tcp_header);
+
 	// set the IP id field to be a random value using the fast AES generator
 	ip_header->ip_id = (u_short)aesrand_getword(aes);
+
 	// checksum value must be zero when calculating packet's checksum
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);

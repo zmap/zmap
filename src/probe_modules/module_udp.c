@@ -288,6 +288,7 @@ int udp_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 
 	// set the IP id field to be a random value using the fast AES generator
 	ip_header->ip_id = (u_short)aesrand_getword(aes);
+
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
 
