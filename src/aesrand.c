@@ -8,6 +8,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <assert.h>
 #include <string.h>
 
@@ -28,6 +29,7 @@ struct aesrand {
 	uint32_t input[AES_BLOCK_WORDS];
 	uint32_t sched[(AES_ROUNDS + 1) * 4];
 	uint8_t output[OUTPUT_BYTES];
+	bool remaining;
 };
 
 static aesrand_t *_aesrand_init(uint8_t *key)
@@ -38,6 +40,7 @@ static aesrand_t *_aesrand_init(uint8_t *key)
 		log_fatal("aesrand", "could not initialize AES key");
 	}
 	memset(aes->output, 0, OUTPUT_BYTES);
+	aes->remaining = false;
 	return aes;
 }
 
@@ -62,10 +65,18 @@ aesrand_t *aesrand_init_from_random(void)
 
 uint64_t aesrand_getword(aesrand_t *aes)
 {
+	uint64_t retval;
+
+	if (aes->remaining) {
+		memcpy(&retval, &aes->output[sizeof(retval)], sizeof(retval));
+		aes->remaining = false;
+		return retval;
+	}
+
 	memcpy(aes->input, aes->output, sizeof(aes->input));
 	rijndaelEncrypt(aes->sched, AES_ROUNDS, (uint8_t *)aes->input,
 			aes->output);
-	uint64_t retval;
 	memcpy(&retval, aes->output, sizeof(retval));
+	aes->remaining = true;
 	return retval;
 }
