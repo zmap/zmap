@@ -297,7 +297,8 @@ int udp_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 
 int udp_make_templated_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 			      ipaddr_n_t dst_ip, port_n_t dport, uint8_t ttl,
-			      uint32_t *validation, int probe_num, void *arg)
+			      uint32_t *validation, int probe_num, u_short ip_id,
+			      void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
@@ -336,6 +337,7 @@ int udp_make_templated_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	udp_header->uh_ulen = ntohs(sizeof(struct udphdr) + payload_len);
 
 	ip_header->ip_sum = 0;
+	ip_header->ip_id = ip_id;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
 
 	// Recalculate the total length of the packet
