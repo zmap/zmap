@@ -8,6 +8,7 @@ option(RESPECT_INSTALL_PREFIX_CONFIG "Respect CMAKE_INSTALL_PREFIX for /etc" OFF
 option(WITH_WERROR "Build with -Werror" OFF)
 option(WITH_PFRING "Build with PF_RING ZC for send (10 GigE)" OFF)
 option(WITH_NETMAP "Build with netmap(4) for send/recv (10+ GigE)" OFF)
+option(WITH_AES_HW "Build with AES hardware acceleration (x86_64 and arm64)" OFF)
 option(FORCE_CONF_INSTALL "Overwrites existing configuration files at install" OFF)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
