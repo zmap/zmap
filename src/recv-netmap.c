@@ -23,6 +23,7 @@
 #include "../lib/logger.h"
 
 #include <net/netmap_user.h>
+#include <net/if_arp.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
@@ -33,13 +34,134 @@
 #include <assert.h>
 #include <inttypes.h>
 
-static struct pollfd fds;
-static struct netmap_if *nm_if;
-static bool *in_multi_seg_packet;
+static void handle_packet_wait_ping(uint32_t buflen, const uint8_t *bytes, UNUSED const struct timespec ts);
 static void (*handle_packet_func)(uint32_t buflen, const uint8_t *bytes, const struct timespec ts);
-static if_stats_ctx_t *stats_ctx;
-static bool need_recv_counter;
-static uint64_t recv_counter;
+typedef size_t (*make_packet_func_t)(uint8_t *buf, void const *arg);
+
+// Send a packet on a netmap ring and fd directly.
+// Used to send packets before send threads are up.
+static void
+send_packet(make_packet_func_t mkpkt, void const *arg)
+{
+	// Synthesize a sock_t for the main netmap fd.
+	// We're syncing all TX rings this way, not just ring 0.
+	sock_t sock;
+	sock.nm.tx_ring_idx = 0;
+	sock.nm.tx_ring_fd = zconf.nm.nm_fd;
+
+	batch_t *batch = create_packet_batch(1);
+	batch->lens[0] = (int)mkpkt((uint8_t *)batch->packets, arg);
+	assert(batch->lens[0] <= MAX_PACKET_SIZE);
+	batch->ips[0] = 0; // unused by netmap
+	batch->len = 1;
+	if (send_batch_internal(sock, batch) != 1) {
+		log_fatal("recv-netmap", "Failed to send packet: %d: %s", errno, strerror(errno));
+	}
+	free_packet_batch(batch);
+}
+
+// Submit a packet for sending by send thread 0.
+// Used to send packets after send threads are up.
+// Submitted packets are sent once per scan batch.
+static void
+submit_packet(make_packet_func_t mkpkt, void const *arg)
+{
+	batch_t *batch = create_packet_batch(1);
+	batch->lens[0] = (int)mkpkt((uint8_t *)batch->packets, arg);
+	assert(batch->lens[0] <= MAX_PACKET_SIZE);
+	batch->ips[0] = 0; // unused by netmap
+	batch->len = 1;
+	submit_batch_internal(batch); // consumes batch
+}
+
+#define ARP_ETHER_INET_PKT_LEN (sizeof(struct ether_header) + sizeof(struct arphdr) + 2 * ETHER_ADDR_LEN + 2 * sizeof(uint32_t))
+#define x_ar_sha(ap) ((uint8_t *)((ap) + 1))
+#define x_ar_spa(ap) (((uint8_t *)((ap) + 1)) + ETHER_ADDR_LEN)
+#define x_ar_tha(ap) (((uint8_t *)((ap) + 1)) + ETHER_ADDR_LEN + sizeof(uint32_t))
+#define x_ar_tpa(ap) (((uint8_t *)((ap) + 1)) + 2 * ETHER_ADDR_LEN + sizeof(uint32_t))
+
+static size_t
+make_arp_resp(uint8_t *buf, void const *arg)
+{
+	struct arphdr const *req_ah = (struct arphdr const *)arg;
+
+	struct ether_header *eh = (struct ether_header *)buf;
+	memcpy(eh->ether_shost, zconf.hw_mac, ETHER_ADDR_LEN);
+	memcpy(eh->ether_dhost, x_ar_sha(req_ah), ETHER_ADDR_LEN);
+	eh->ether_type = htons(ETHERTYPE_ARP);
+
+	struct arphdr *ah = (struct arphdr *)(eh + 1);
+	ah->ar_hrd = htons(ARPHRD_ETHER);
+	ah->ar_pro = htons(ETHERTYPE_IP);
+	ah->ar_hln = ETHER_ADDR_LEN;
+	ah->ar_pln = sizeof(uint32_t);
+	ah->ar_op = htons(ARPOP_REPLY);
+	memcpy(x_ar_sha(ah), zconf.hw_mac, ETHER_ADDR_LEN);
+	*(uint32_t *)x_ar_spa(ah) = *(uint32_t *)x_ar_tpa(req_ah);
+	memcpy(x_ar_tha(ah), x_ar_sha(req_ah), ETHER_ADDR_LEN);
+	*(uint32_t *)x_ar_tpa(ah) = *(uint32_t *)x_ar_spa(req_ah);
+
+	return ARP_ETHER_INET_PKT_LEN;
+}
+
+static void
+handle_packet_arp(uint32_t buflen, const uint8_t *bytes, UNUSED const struct timespec ts)
+{
+	if (buflen < ARP_ETHER_INET_PKT_LEN) {
+		return;
+	}
+	struct ether_header *eh = (struct ether_header *)bytes;
+	if (eh->ether_type != htons(ETHERTYPE_ARP)) {
+		return;
+	}
+	struct arphdr *ah = (struct arphdr *)(eh + 1);
+	if (ah->ar_op != htons(ARPOP_REQUEST) ||
+	    ah->ar_hrd != htons(ARPHRD_ETHER) ||
+	    ah->ar_pro != htons(ETHERTYPE_IP) ||
+	    ah->ar_hln != ETHER_ADDR_LEN ||
+	    ah->ar_pln != sizeof(uint32_t)) {
+		return;
+	}
+	macaddr_t *sender_hardware_address = (macaddr_t *)x_ar_sha(ah);
+	if (memcmp(sender_hardware_address, eh->ether_shost, ETHER_ADDR_LEN) != 0 ||
+	    memcmp(sender_hardware_address, zconf.gw_mac, ETHER_ADDR_LEN) != 0) {
+		return;
+	}
+	in_addr_t target_protocol_address = *(in_addr_t *)x_ar_tpa(ah);
+	for (size_t i = 0; i < zconf.number_source_ips; i++) {
+		if (target_protocol_address == zconf.source_ip_addresses[i]) {
+			log_debug("recv-netmap", "Received ARP request from gateway");
+			if (handle_packet_func == handle_packet_wait_ping) {
+				send_packet(make_arp_resp, (void const *)ah);
+			} else {
+				submit_packet(make_arp_resp, (void const *)ah);
+			}
+			return;
+		}
+	}
+}
+
+static size_t
+make_wait_ping_req(uint8_t *buf, UNUSED void const *arg)
+{
+	struct ether_header *eh = (struct ether_header *)buf;
+	make_eth_header(eh, zconf.hw_mac, zconf.gw_mac);
+
+	struct ip *iph = (struct ip *)(eh + 1);
+	uint16_t iplen = sizeof(struct ip) + ICMP_MINLEN;
+	make_ip_header(iph, IPPROTO_ICMP, htons(iplen));
+	iph->ip_src.s_addr = zconf.source_ip_addresses[0];
+	iph->ip_dst.s_addr = zconf.nm.wait_ping_dstip;
+
+	struct icmp *icmph = (struct icmp *)(iph + 1);
+	memset(icmph, 0, sizeof(struct icmp));
+	icmph->icmp_type = ICMP_ECHO;
+	icmph->icmp_cksum = icmp_checksum((unsigned short *)icmph, ICMP_MINLEN);
+
+	iph->ip_sum = 0;
+	iph->ip_sum = zmap_ip_checksum((unsigned short *)iph);
+	return sizeof(struct ether_header) + iplen;
+}
 
 static void
 handle_packet_wait_ping(uint32_t buflen, const uint8_t *bytes, UNUSED const struct timespec ts)
@@ -64,42 +186,6 @@ handle_packet_wait_ping(uint32_t buflen, const uint8_t *bytes, UNUSED const stru
 
 	log_debug("recv-netmap", "Received ICMP echo reply, ready to commence scan");
 	handle_packet_func = handle_packet;
-}
-
-static size_t
-make_wait_ping_req(uint8_t *buf)
-{
-	struct ether_header *eh = (struct ether_header *)buf;
-	make_eth_header(eh, zconf.hw_mac, zconf.gw_mac);
-
-	struct ip *iph = (struct ip *)(eh + 1);
-	uint16_t iplen = sizeof(struct ip) + ICMP_MINLEN;
-	make_ip_header(iph, IPPROTO_ICMP, htons(iplen));
-	iph->ip_src.s_addr = zconf.source_ip_addresses[0];
-	iph->ip_dst.s_addr = zconf.nm.wait_ping_dstip;
-
-	struct icmp *icmph = (struct icmp *)(iph + 1);
-	memset(icmph, 0, sizeof(struct icmp));
-	icmph->icmp_type = ICMP_ECHO;
-	icmph->icmp_cksum = icmp_checksum((unsigned short *)icmph, ICMP_MINLEN);
-
-	iph->ip_sum = 0;
-	iph->ip_sum = zmap_ip_checksum((unsigned short *)iph);
-	return sizeof(struct ether_header) + iplen;
-}
-
-static void
-send_wait_ping_req(sock_t sock)
-{
-	batch_t *batch = create_packet_batch(1);
-	batch->lens[0] = (int)make_wait_ping_req((uint8_t *)batch->packets);
-	batch->ips[0] = zconf.nm.wait_ping_dstip;
-	batch->len = 1;
-	if (send_batch(sock, batch, 1) != 1) {
-		log_fatal("recv-netmap", "Failed to send ICMP echo request: %d: %s", errno, strerror(errno));
-	}
-	free_packet_batch(batch);
-	log_debug("recv-netmap", "Sent ICMP echo request");
 }
 
 #ifndef NSEC_PER_SEC
@@ -135,13 +221,6 @@ wait_for_e2e_connectivity(void)
 {
 	static const time_t timeout_secs = 60;
 
-	// Synthesize a sock_t for the main netmap fd.
-	// This is safe as long as send threads are not spun up yet.
-	// We're syncing all TX rings this way, not just ring 0.
-	sock_t sock;
-	sock.nm.tx_ring_idx = 0;
-	sock.nm.tx_ring_fd = zconf.nm.nm_fd;
-
 	struct timespec t_start;
 	timespec_get_monotonic(&t_start);
 	struct timespec t_last_send;
@@ -159,13 +238,21 @@ wait_for_e2e_connectivity(void)
 		}
 
 		if (timespec_diff(&t_now, &t_last_send).tv_sec >= 1) {
-			send_wait_ping_req(sock);
+			send_packet(make_wait_ping_req, NULL);
 			timespec_get_monotonic(&t_last_send);
+			log_debug("recv-netmap", "Sent ICMP echo request");
 		}
 
 		recv_packets();
 	}
 }
+
+static struct pollfd fds;
+static struct netmap_if *nm_if;
+static bool *in_multi_seg_packet;
+static if_stats_ctx_t *stats_ctx;
+static bool need_recv_counter;
+static uint64_t recv_counter;
 
 void recv_init(void)
 {
@@ -276,6 +363,7 @@ recv_packets(void)
 			if (need_recv_counter) {
 				recv_counter++;
 			}
+			handle_packet_arp(slot->len, (uint8_t *)buf, ts);
 			handle_packet_func(slot->len, (uint8_t *)buf, ts);
 		}
 		rxring->cur = rxring->head = head;
