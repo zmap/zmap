@@ -27,6 +27,7 @@
 #include "../lib/lockfd.h"
 #include "../lib/pbm.h"
 
+#include "send-internal.h"
 #include "aesrand.h"
 #include "get_gateway.h"
 #include "iterator.h"
@@ -35,23 +36,6 @@
 #include "shard.h"
 #include "state.h"
 #include "validate.h"
-
-// OS specific functions called by send_run
-static inline int send_packet(sock_t sock, void *buf, int len, uint32_t idx);
-static inline int send_batch(sock_t sock, batch_t *batch, int retries);
-static inline int send_run_init(sock_t sock);
-
-// Include the right implementations
-#if defined(PFRING)
-#include "send-pfring.h"
-#elif defined(__APPLE__)
-#include "send-mac.h"
-#elif defined(__FreeBSD__) || defined(__NetBSD__) ||     \
-    defined(__DragonFly__)
-#include "send-bsd.h"
-#else /* LINUX */
-#include "send-linux.h"
-#endif /* __APPLE__ || __FreeBSD__ || __NetBSD__ || __DragonFly__ */
 
 // The iterator over the cyclic group
 
@@ -303,7 +287,6 @@ int send_run(sock_t st, shard_t *s)
 		}
 	}
 	int attempts = zconf.retries + 1;
-	uint32_t idx = 0;
 	while (1) {
 		// Adaptive timing delay
 		if (count && delay > 0) {
@@ -417,7 +400,7 @@ int send_run(sock_t st, shard_t *s)
 				// this is an additional memcpy (packet created in buf, buf -> batch)
 				// but when I modified the TCP SYN module to write packet to batch directly, there wasn't any noticeable speedup.
 				// Using this approach for readability/minimal changes
-				memcpy(((void *)batch->packets) + (batch->len * MAX_PACKET_SIZE), contents, length);
+				memcpy(((uint8_t *)batch->packets) + (batch->len * MAX_PACKET_SIZE), contents, length);
 				batch->lens[batch->len] = length;
 				batch->ips[batch->len] = current_ip;
 				batch->len++;
@@ -435,8 +418,6 @@ int send_run(sock_t st, shard_t *s)
 					}
 					// reset batch length for next batch
 					batch->len = 0;
-					idx++;
-					idx &= 0xFF;
 				}
 			}
 			s->state.packets_sent++;
@@ -481,7 +462,7 @@ cleanup:
 	return EXIT_SUCCESS;
 }
 
-batch_t* create_packet_batch(uint8_t capacity) {
+batch_t* create_packet_batch(uint16_t capacity) {
 	// calculate how many bytes are needed for each component of a batch
 	int size_of_packet_array = MAX_PACKET_SIZE * capacity;
 	int size_of_ips_array = sizeof(uint32_t) * capacity;

@@ -31,7 +31,8 @@ static inline uint32_t extract_ip(uint64_t v, uint8_t bits)
 static void shard_roll_to_valid(shard_t *s)
 {
 	uint64_t current_ip_index = (s->current - 1) >> s->bits_for_port;
-	if (current_ip_index < zsend.max_index) {
+	uint16_t candidate_port = extract_port(s->current - 1, s->bits_for_port);
+	if (current_ip_index < zsend.max_index && candidate_port < zconf.ports->port_count) {
 		return;
 	}
 	shard_get_next_target(s);
@@ -142,6 +143,11 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 
 target_t shard_get_cur_target(shard_t *shard)
 {
+	if (shard->current == ZMAP_SHARD_DONE) {
+		// shard_roll_to_valid() has rolled to the very end.
+		return (target_t){
+		    .ip = 0, .port = 0, .status = ZMAP_SHARD_DONE};
+	}
 	uint32_t ip = extract_ip(shard->current - 1, shard->bits_for_port);
 	uint16_t port = extract_port(shard->current - 1, shard->bits_for_port);
 	return (target_t){.ip = (uint32_t)blocklist_lookup_index(ip),

@@ -17,6 +17,9 @@
 #ifndef UTILITY_H
 #define UTILITY_H
 
+#include <netinet/in.h>
+
 void parse_source_ip_addresses(char given_string[]);
+in_addr_t string_to_ip_address(char *t);
 
 #endif // UTILITY_H

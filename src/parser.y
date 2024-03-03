@@ -10,7 +10,7 @@ void yyerror(const char *str)
 	fprintf(stderr,"Parse error: %s\n",str);
 }
  
-int yywrap()
+int yywrap(void)
 {
 	return 1;
 }

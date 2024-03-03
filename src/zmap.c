@@ -59,6 +59,17 @@ static int32_t distrib_func(pfring_zc_pkt_buff *pkt, pfring_zc_queue *in_queue,
 }
 #endif
 
+#ifdef NETMAP
+#if !(defined(__FreeBSD__) || defined(__linux__))
+#error "NETMAP requires FreeBSD or Linux"
+#endif
+#include "if-netmap.h"
+#include <net/netmap_user.h>
+#include <sys/mman.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#endif
+
 pthread_mutex_t recv_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 int get_num_cores(void) {
@@ -121,7 +132,7 @@ static void *start_mon(void *arg)
 	return NULL;
 }
 
-static void start_zmap(void)
+static void network_config_init(void)
 {
 	if (zconf.iface == NULL) {
 		zconf.iface = get_default_iface();
@@ -167,7 +178,8 @@ static void start_zmap(void)
 			    "could not detect GW MAC address for %s on %s."
 			    " Try setting default gateway mac address (-G), or run"
 			    " \"arp <gateway_ip>\" in terminal."
-			    " If this is a newly launched machine, try completing an outgoing network connection (e.g. curl https://zmap.io), and trying again.",
+			    " If this is a newly launched machine, try completing an outgoing network connection (e.g. curl https://zmap.io), and trying again."
+			    " If you are using a VPN, supply the --iplayer flag (and provide an interface via -i)",
 			    inet_ntoa(gw_ip), zconf.iface);
 		}
 		zconf.gw_mac_set = 1;
@@ -175,6 +187,10 @@ static void start_zmap(void)
 	log_debug("send", "gateway MAC address %02x:%02x:%02x:%02x:%02x:%02x",
 		  zconf.gw_mac[0], zconf.gw_mac[1], zconf.gw_mac[2],
 		  zconf.gw_mac[3], zconf.gw_mac[4], zconf.gw_mac[5]);
+}
+
+static void start_zmap(void)
+{
 	// Initialization
 	assert(zconf.output_module && "no output module set");
 	log_debug("zmap", "output module: %s", zconf.output_module->name);
@@ -901,10 +917,10 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (args.batch_given && args.batch_arg >= 1 && args.batch_arg <= UINT8_MAX) {
+	if (args.batch_given && args.batch_arg >= 1 && args.batch_arg <= UINT16_MAX) {
 		zconf.batch = args.batch_arg;
 	} else if (args.batch_given) {
-		log_fatal("zmap", "batch size must be > 0 and <= 255");
+		log_fatal("zmap", "batch size must be > 0 and <= 65535");
 	}
 
 	if (args.max_targets_given) {
@@ -942,6 +958,84 @@ int main(int argc, char *argv[])
 	if (zconf.max_targets) {
 		zsend.max_targets = zconf.max_targets;
 	}
+
+	// Perform network initialization before initializing
+	// PFRING and NETMAP, as they depend on the interface name
+	// being available.
+	// NETMAP will additionally break network connectivity of
+	// the host through the chosen NIC.  If one wanted to do
+	// active ARP or IPv6 ND as part of network initialization
+	// instead of just querying the kernel, that would also
+	// have to happen before NETMAP binding to the interface.
+	network_config_init();
+
+#ifdef NETMAP
+	// Initialize netmap(4) before computing number of threads,
+	// because we want to know the number of tx queues for that.
+	if (zconf.send_ip_pkts) {
+		log_fatal("zmap", "netmap does not support IP layer mode (--iplayer/-X)");
+	}
+	assert(zconf.iface);
+
+	log_warn("zmap", "netmap will disconnect the NIC from the host while zmap is executing");
+	usleep(100000);
+
+	zconf.nm.nm_fd = open(NETMAP_DEVICE_NAME, O_RDWR);
+	if (zconf.nm.nm_fd == -1) {
+		log_fatal("zmap", "netmap open(\"" NETMAP_DEVICE_NAME "\") failed: %d: %s", errno, strerror(errno));
+	}
+
+	struct nmreq_register nmrreg;
+	memset(&nmrreg, 0, sizeof(nmrreg));
+	nmrreg.nr_mode = NR_REG_ALL_NIC;
+	nmrreg.nr_flags = NR_NO_TX_POLL;
+	struct nmreq_header nmrhdr;
+	memset(&nmrhdr, 0, sizeof(nmrhdr));
+	nmrhdr.nr_version = NETMAP_API;
+	nmrhdr.nr_reqtype = NETMAP_REQ_REGISTER;
+	strlcpy(nmrhdr.nr_name, zconf.iface, sizeof(nmrhdr.nr_name));
+	nmrhdr.nr_body = (uint64_t)&nmrreg;
+	if (ioctl(zconf.nm.nm_fd, NIOCCTRL, &nmrhdr) == -1) {
+		log_fatal("zmap", "netmap ioctl(NIOCCTRL) failed: %d: %s", errno, strerror(errno));
+	}
+	// From this point on, the host and NIC are separated until
+	// we close the file descriptor or exit.  We _could_ pass
+	// packets unrelated to the scan up to the host and back via
+	// the host rings, but that is not currently done in order
+	// to avoid adding complexity to perf-sensitive code paths.
+
+	zconf.nm.nm_mem = mmap(NULL, nmrreg.nr_memsize, PROT_WRITE|PROT_READ, MAP_SHARED, zconf.nm.nm_fd, 0);
+	if (zconf.nm.nm_mem == MAP_FAILED) {
+		log_fatal("zmap", "netmap mmap() failed: %d: %s", errno, strerror(errno));
+	}
+	zconf.nm.nm_if = NETMAP_IF(zconf.nm.nm_mem, nmrreg.nr_offset);
+
+	log_info("zmap", "netmap bound to %s with %"PRIu32" tx rings, %"PRIu32" rx rings",
+	                 zconf.nm.nm_if->ni_name, zconf.nm.nm_if->ni_tx_rings, zconf.nm.nm_if->ni_rx_rings);
+	for (uint32_t i = 0; i < zconf.nm.nm_if->ni_tx_rings; i++) {
+		struct netmap_ring *ring = NETMAP_TXRING(zconf.nm.nm_if, i);
+		log_debug("zmap", "tx ring %d has %"PRIu32" slots of %"PRIu32" bytes each",
+		                  i, ring->num_slots, ring->nr_buf_size);
+	}
+	for (uint32_t i = 0; i < zconf.nm.nm_if->ni_rx_rings; i++) {
+		struct netmap_ring *ring = NETMAP_RXRING(zconf.nm.nm_if, i);
+		log_debug("zmap", "rx ring %d has %"PRIu32" slots of %"PRIu32" bytes each",
+		                  i, ring->num_slots, ring->nr_buf_size);
+	}
+
+	// Enabling netmap mode on an interface resets PHY, which
+	// on physical NICs can take multiple seconds to complete.
+	// To avoid dropping packets while the reset is ongoing,
+	// wait for the interface to come back up here.
+	log_debug("zmap", "waiting for PHY reset to complete");
+	if_wait_for_phy_reset(zconf.iface, zconf.nm.nm_fd);
+	log_debug("zmap", "PHY reset is complete, link state is up");
+
+	if (args.netmap_wait_ping_arg != NULL) {
+		zconf.nm.wait_ping_dstip = string_to_ip_address(args.netmap_wait_ping_arg);
+	}
+#endif
+
 #ifndef PFRING
 	// Set the correct number of threads, default to min(4, number of cores on host - 1, as available)
 	if (args.sender_threads_given) {
@@ -957,6 +1051,12 @@ int main(int argc, char *argv[])
 		zconf.senders = senders;
 		log_debug("zmap", "will use %i sender threads based on core availability", senders);
 	}
+#ifdef NETMAP
+	if (zconf.senders > (int)zconf.nm.nm_if->ni_tx_rings) {
+		zconf.senders = (int)zconf.nm.nm_if->ni_tx_rings;
+		log_debug("zmap", "capping to %i sender threads based on number of TX rings", zconf.senders);
+	}
+#endif
 	if (2 * zconf.senders >= zsend.max_targets) {
 		log_warn(
 		    "zmap",
@@ -966,6 +1066,7 @@ int main(int argc, char *argv[])
 #else
 	zconf.senders = args.sender_threads_arg;
 #endif
+
 	// Figure out what cores to bind to
 	if (args.cores_given) {
 		const char **core_list = NULL;

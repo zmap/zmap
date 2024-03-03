@@ -27,23 +27,23 @@ sock_t get_socket(UNUSED uint32_t id)
 	sock_t sock;
 	sock.sock = -1;
 
-#ifndef __APPLE__
+#if !(defined(__APPLE__) || defined(__FreeBSD__))
 	if (zconf.send_ip_pkts && !zconf.dryrun) {
-		log_fatal("socket", "iplayer not supported on BSD other than macOS");
+		log_fatal("socket", "iplayer not supported on this flavour of BSD");
 	}
 #endif
 
 	if (zconf.send_ip_pkts) {
 		int fd = socket(PF_INET, SOCK_RAW, IPPROTO_RAW);
 		if (fd == -1) {
-			log_debug("socket-bsd", "socket(PF_INET, SOCK_RAW, IPPROTO_IP) failed: %d %s", errno, strerror(errno));
-			return sock;
+			log_fatal("socket-bsd", "obtaining socket(PF_INET, SOCK_RAW, IPPROTO_IP) failed: %d %s. You likely do not have privileges to open a raw packet socket. " \
+						    "Are you running as root?", errno, strerror(errno));
 		}
 
 		int yes = 1;
 		if (setsockopt(fd, IPPROTO_IP, IP_HDRINCL, &yes, sizeof(yes)) == -1) {
-			log_debug("socket-bsd", "setsockopt(IP_HDRINCL) failed: %d %s", errno, strerror(errno));
-			return sock;
+			// could not inform the kernel that ZMap will be filling out the IP header and the kernel does not need to
+			log_fatal("socket-bsd", "setsockopt(IP_HDRINCL) failed: %d %s", errno, strerror(errno));
 		}
 
 		sock.sock = fd;
@@ -61,7 +61,7 @@ sock_t get_socket(UNUSED uint32_t id)
 
 		// Make sure it worked
 		if (bpf < 0) {
-			return sock;
+			log_fatal("socket-bsd", "could not get an open packet filter");
 		}
 
 		// Set up an ifreq to bind to
@@ -72,14 +72,14 @@ sock_t get_socket(UNUSED uint32_t id)
 		// Bind the bpf to the interface
 		if (ioctl(bpf, BIOCSETIF, (char *)&ifr) < 0) {
 			close(bpf);
-			return sock;
+			log_fatal("socket-bsd", "could not bind the packet filter to the interface %s", ifr.ifr_name);
 		}
 
-		// Enable writing the address in
+		// Inform the interface that the source address will be filled out by ZMap and the kernel doens't need to write it
 		int write_addr_enable = 1;
 		if (ioctl(bpf, BIOCSHDRCMPLT, &write_addr_enable) < 0) {
 			close(bpf);
-			return sock;
+			log_fatal("socket-bsd", "could not set the status of the header complete flag to the packet filter on interface %s", ifr.ifr_name);
 		}
 
 		sock.sock = bpf;

@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta http-equiv='content-type' value='text/html;charset=utf8'>
-  <meta name='generator' value='Ronn/v0.7.3 (http://github.com/rtomayko/ronn/tree/0.7.3)'>
+  <meta http-equiv='content-type' content='text/html;charset=utf8'>
+  <meta name='generator' content='Ronn-NG/v0.9.1 (http://github.com/apjanke/ronn-ng/tree/0.9.1)'>
   <title>zblocklist(1) - zmap IP blocklist tool</title>
   <style type='text/css' media='all'>
   /* style: man */
@@ -65,11 +65,12 @@
     <li class='tr'>zblocklist(1)</li>
   </ol>
 
-  <h2 id="NAME">NAME</h2>
+  
+
+<h2 id="NAME">NAME</h2>
 <p class="man-name">
   <code>zblocklist</code> - <span class="man-whatis">zmap IP blocklist tool</span>
 </p>
-
 <h2 id="SYNOPSIS">SYNOPSIS</h2>
 
 <p>zblocklist [ -b &lt;blocklist&gt; ] [ -w &lt;allowlist&gt; ] [ OPTIONS... ]</p>
@@ -84,34 +85,53 @@ IP addresses using a blocklist or allowlist.</p>
 <h3 id="BASIC-OPTIONS">BASIC OPTIONS</h3>
 
 <dl>
-<dt> <code>-b</code>, <code>--blocklist-file=path</code></dt><dd><p> File of subnets to exclude, in CIDR notation, one-per line. It is
- recommended you use this to exclude RFC 1918 addresses, multicast, IANA
- reserved space, and other IANA special-purpose addresses. An example
- blocklist file <strong>blocklist.conf</strong> for this purpose.</p></dd>
-<dt><code>-w</code>, <code>--allowlist-file=name</code></dt><dd><p>File of subnets to include, in CIDR notation, one-per line. All other
-subnets will be excluded.</p></dd>
-<dt><code>-l</code>, <code>--log-file=name</code></dt><dd><p>File to log to.</p></dd>
-<dt><code>--disable-syslog</code></dt><dd><p>Disable logging messages to syslog.</p></dd>
-<dt><code>-v</code>, <code>--verbosity</code></dt><dd><p>Level of log detail (0-5, default=3)</p></dd>
-<dt><code>--no-duplicate-checking</code></dt><dd><p>Don't deduplicate input addresses. Default is false.</p></dd>
-<dt><code>--ignore-blocklist-errors</code></dt><dd><p>Ignore invalid, malformed, or unresolvable entries in the
-blocklist/allowlist. Default is false.</p></dd>
-<dt><code>--ignore-input-errors</code></dt><dd><p>Don't print invalid entries in the input. Default is false.</p></dd>
+<dt>
+<code>-b</code>, <code>--blocklist-file=path</code>
+</dt>
+<dd>File of subnets to exclude, in CIDR notation, one-per line. It is
+recommended you use this to exclude RFC 1918 addresses, multicast, IANA
+reserved space, and other IANA special-purpose addresses. An example
+blocklist file <strong>blocklist.conf</strong> for this purpose.</dd>
+<dt>
+<code>-w</code>, <code>--allowlist-file=name</code>
+</dt>
+<dd>File of subnets to include, in CIDR notation, one-per line. All other
+subnets will be excluded.</dd>
+<dt>
+<code>-l</code>, <code>--log-file=name</code>
+</dt>
+<dd>File to log to.</dd>
+<dt><code>--disable-syslog</code></dt>
+<dd>Disable logging messages to syslog.</dd>
+<dt>
+<code>-v</code>, <code>--verbosity</code>
+</dt>
+<dd>Level of log detail (0-5, default=3)</dd>
+<dt><code>--no-duplicate-checking</code></dt>
+<dd>Don't deduplicate input addresses. Default is false.</dd>
+<dt><code>--ignore-blocklist-errors</code></dt>
+<dd>Ignore invalid, malformed, or unresolvable entries in the
+blocklist/allowlist. Default is false.</dd>
+<dt><code>--ignore-input-errors</code></dt>
+<dd>Don't print invalid entries in the input. Default is false.</dd>
 </dl>
-
 
 <h3 id="ADDITIONAL-OPTIONS">ADDITIONAL OPTIONS</h3>
 
 <dl>
-<dt><code>-h</code>, <code>--help</code></dt><dd><p>Print help and exit</p></dd>
-<dt><code>-V</code>, <code>--version</code></dt><dd><p>Print version and exit</p></dd>
+<dt>
+<code>-h</code>, <code>--help</code>
+</dt>
+<dd>Print help and exit</dd>
+<dt>
+<code>-V</code>, <code>--version</code>
+</dt>
+<dd>Print version and exit</dd>
 </dl>
-
-
 
   <ol class='man-decor man-foot man foot'>
     <li class='tl'>ZMap</li>
-    <li class='tc'>August 2021</li>
+    <li class='tc'>February 2024</li>
     <li class='tr'>zblocklist(1)</li>
   </ol>
 

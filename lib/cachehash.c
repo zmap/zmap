@@ -149,7 +149,7 @@ void *cachehash_has(cachehash *ch, const void *key, size_t keylen)
 	assert(ch);
 	assert(key);
 	assert(keylen);
-	node_t *n = judy_get(ch, key, keylen);
+	node_t *n = judy_get(ch, (void *)key, keylen);
 	if (n) {
 		return n->data;
 	} else {
@@ -163,7 +163,7 @@ void *cachehash_get(cachehash *ch, const void *key, size_t keylen)
 	assert(key);
 	assert(keylen);
 
-	node_t *n = judy_get(ch, key, keylen);
+	node_t *n = judy_get(ch, (void *)key, keylen);
 	if (n) {
 		use(ch, n);
 		return n->data;
@@ -214,7 +214,7 @@ void cachehash_put(cachehash *ch, const void *key, size_t keylen, void *value)
 	ch->currsize++;
 	// add to judy array
 	Word_t *v_;
-	JHSI(v_, ch->judy, key, keylen);
+	JHSI(v_, ch->judy, (void *)key, keylen);
 	// key should not already be in hash table
 	assert(!*v_);
 	*v_ = (Word_t)n;
