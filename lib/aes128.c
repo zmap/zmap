@@ -268,7 +268,7 @@ struct aes128_ctx {
 #ifdef AES_HW
 static bool use_hw = false;
 #endif
-pthread_once_t aes128_inited = PTHREAD_ONCE_INIT;
+static pthread_once_t aes128_inited = PTHREAD_ONCE_INIT;
 
 static void
 aes128_init_once(void)
