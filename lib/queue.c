@@ -34,12 +34,12 @@ zqueue_t *queue_init(void)
 
 int is_empty(zqueue_t *queue) { return queue->size == 0; }
 
-void push_back(char *data, zqueue_t *queue)
+void push_back(void *data, zqueue_t *queue)
 {
 	znode_t *new_node = xmalloc(sizeof(znode_t));
 	new_node->prev = NULL;
 	new_node->next = NULL;
-	new_node->data = strdup(data);
+	new_node->data = data;
 
 	pthread_mutex_lock(&queue->lock);
 	if (is_empty(queue)) {
@@ -86,8 +86,7 @@ znode_t *get_front(zqueue_t *queue)
 		pthread_cond_wait(&queue->empty, &queue->lock);
 	}
 
-	znode_t *temp = xmalloc(sizeof(znode_t));
-	temp = queue->front;
+	znode_t *temp = queue->front;
 	pthread_mutex_unlock(&queue->lock);
 	return temp;
 }
@@ -100,8 +99,7 @@ znode_t *get_back(zqueue_t *queue)
 		pthread_cond_wait(&queue->empty, &queue->lock);
 	}
 
-	znode_t *temp = xmalloc(sizeof(znode_t));
-	temp = queue->back;
+	znode_t *temp = queue->back;
 	pthread_mutex_unlock(&queue->lock);
 	return temp;
 }
