@@ -16,13 +16,6 @@ SET(LIB_SOURCES
 
 add_library(zmaplib STATIC ${LIB_SOURCES})
 
-if(WITH_AES_HW)
-    add_definitions("-DAES_HW")
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=armv8-a+crypto")
-    endif()
-endif()
-
 target_link_libraries(
     zmaplib
     ${JUDY_LIBRARIES}

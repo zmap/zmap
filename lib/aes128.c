@@ -110,7 +110,7 @@ aes128_hw_enc_block(struct aes128_hw_ctx const *ctx, uint8_t const *pt, uint8_t 
 # pragma GCC pop_options
 #endif
 
-#elif defined(__aarch64__) && (defined(__ARM_FEATURE_CRYPTO) || defined(__ARM_FEATURE_AES))
+#elif defined(__aarch64__)
 #define AES_HW_NAME "ARMv8 CE"
 
 #ifdef __ARM_ACLE

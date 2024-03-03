@@ -87,6 +87,10 @@ if(WITH_NETMAP)
     add_definitions("-DNETMAP")
 endif()
 
+if(WITH_AES_HW)
+    add_definitions("-DAES_HW")
+endif()
+
 set(JUDY_LIBRARIES "Judy")
 
 # Standard FLAGS
