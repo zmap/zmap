@@ -159,7 +159,7 @@ static inline int check_dst_port(uint16_t port, int num_ports,
 	if (min <= max) {
 		return (to_validate <= max && to_validate >= min);
 	} else {
-		return (to_validate <= max ^ to_validate >= min);
+		return ((to_validate <= max) != (to_validate >= min));
 	}
 }
 
