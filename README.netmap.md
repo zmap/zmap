@@ -36,19 +36,31 @@ For best results on hardware that supports AES acceleration, additionally use
 
 ### Running
 
-Run zmap as you would normally.  For best results, use the `--cores` option to
-pick which cores to pin to, pinning to different physical cores.  The number of
-send threads is automatically capped to the number of TX rings, and to the
-number of available cores after setting aside one core for the receive thread,
-but you may still want to override the number of threads with `-T`.
+Run zmap as you would normally.
+
+```
+$ sudo ./src/zmap -p 443 -i ix0 -o output.csv
+```
 
 Warning:  Netmap will disconnect the NIC from the host network stack for the
 duration of the scan.  If you use an interface that you depend on for e.g. SSH
 access, you will lose connectivity until ZMap exits.
 
-```
-$ sudo ./src/zmap -p 443 -i ix0 -o output.csv
-```
+
+### Performance tuning
+
+For best results, use the `--cores` option to pick which cores to pin to,
+pinning to different physical cores.  By default, the number of send threads is
+set to the number of available cores after setting aside one core for the
+receive thread, capped to 4 send threads, but you may still want to override
+the number of send threads with `-T`.  The number of send threads cannot exceed
+the number of TX rings of the NIC.
+
+Tuning batch size can also have an effect on send rate.  `--batch 256` is not
+an unreasonable starting point on 10 GbE hardware.
+
+
+### Switch ports and STP
 
 Going into and leaving Netmap mode causes the link to go down and up as part of
 a PHY reset.  If the interface is connected to a switch with STP enabled, then
