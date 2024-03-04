@@ -366,8 +366,8 @@ int send_run(sock_t st, shard_t *s)
 		for (int i = 0; i < zconf.packet_streams; i++) {
 			count++;
 			uint32_t src_ip = get_src_ip(current_ip, i);
-			uint32_t validation[VALIDATE_BYTES /
-					    sizeof(uint32_t)];
+			uint8_t size_of_validation = VALIDATE_BYTES / sizeof(uint32_t);
+			uint32_t validation[size_of_validation];
 			validate_gen(src_ip, current_ip,
 				     htons(current_port),
 				     (uint8_t *)validation);
@@ -376,6 +376,8 @@ int send_run(sock_t st, shard_t *s)
 			zconf.probe_module->make_packet(
 			    buf, &length, src_ip, current_ip,
 			    htons(current_port), ttl, validation, i,
+			    // Grab last 2 bytes of validation for ip_id
+			    (uint16_t)(validation[size_of_validation - 1] & 0xFFFF),
 			    probe_data);
 			if (length > MAX_PACKET_SIZE) {
 				log_fatal(

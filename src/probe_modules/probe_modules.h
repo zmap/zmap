@@ -52,7 +52,7 @@ typedef int (*probe_make_packet_cb)(void *packetbuf, size_t *buf_len,
 				    ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 				    port_n_t dst_port, uint8_t ttl,
 				    uint32_t *validation, int probe_num,
-				    void *arg);
+				    uint16_t ip_id, void *arg);
 
 typedef void (*probe_print_packet_cb)(FILE *, void *packetbuf);
 
