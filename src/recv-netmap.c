@@ -74,6 +74,12 @@ submit_packet(make_packet_func_t mkpkt, void const *arg)
 	submit_batch_internal(batch); // consumes batch
 }
 
+// In netmap mode, the OS network stack never gets to see incoming packets
+// unless we explicitly forward them to the host rings; hence the kernel will
+// not be responding to ARP requests.  To remove the need for static ARP
+// entries on the gateway, respond to ARP requests from the gateway for any of
+// the source IPs of the scan.
+
 #define ARP_ETHER_INET_PKT_LEN (sizeof(struct ether_header) + sizeof(struct arphdr) + 2 * ETHER_ADDR_LEN + 2 * sizeof(uint32_t))
 #define x_ar_sha(ap) ((uint8_t *)((ap) + 1))
 #define x_ar_spa(ap) (((uint8_t *)((ap) + 1)) + ETHER_ADDR_LEN)
