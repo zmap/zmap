@@ -138,7 +138,7 @@ int ipip_global_cleanup(UNUSED struct state_conf *zconf,
 }
 
 int ipip_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-			UNUSED port_h_t dst_port, UNUSED void **arg_ptr)
+			UNUSED void **arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -165,7 +165,8 @@ int ipip_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 
 int ipip_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 		     ipaddr_n_t dst_ip, port_n_t dport, UNUSED uint8_t ttl,
-		     uint32_t *validation, int probe_num, UNUSED void *arg)
+		     uint32_t *validation, int probe_num, uint16_t ip_id,
+		     UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
@@ -174,8 +175,10 @@ int ipip_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
+	ip_header->ip_id = ip_id;
 	ip_header2->ip_src.s_addr = dst_ip;
 	ip_header2->ip_dst.s_addr = src_ip; // TODO put "external_ip"
+	ip_header2->ip_id = ip_id;
 	udp_header->uh_sport =
 	    htons(get_src_port(num_ports, probe_num, validation));
 	udp_header->uh_dport = dport;
