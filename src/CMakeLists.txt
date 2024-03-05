@@ -81,6 +81,7 @@ set(ZTESTSOURCES
     socket.c
     state.c
     summary.c
+    utility.c
     validate.c
     ztopt_compat.c
     ${PROBE_MODULE_SOURCES}

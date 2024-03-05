@@ -10,6 +10,7 @@
 
 #include "../lib/includes.h"
 #include "../lib/logger.h"
+#include "utility.h"
 
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>

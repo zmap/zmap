@@ -15,6 +15,7 @@
 #include "../lib/includes.h"
 #include "../lib/logger.h"
 #include "state.h"
+#include "utility.h"
 
 #include <net/netmap_user.h>
 #include <sys/mman.h>

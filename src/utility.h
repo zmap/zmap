@@ -21,5 +21,6 @@
 
 void parse_source_ip_addresses(char given_string[]);
 in_addr_t string_to_ip_address(char *t);
+size_t strlcpy(char *dst, const char *src, size_t siz);
 
 #endif // UTILITY_H
