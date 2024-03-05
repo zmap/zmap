@@ -154,7 +154,7 @@ int ipip_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 
 	struct udphdr *udp_header = (struct udphdr *)(&ip_header2[1]);
 	len = sizeof(struct udphdr) + udp_send_msg_len;
-	make_udp_header(udp_header, zconf.target_port, len);
+	make_udp_header(udp_header, len);
 
 	char *payload = (char *)(&udp_header[1]);
 
@@ -164,7 +164,7 @@ int ipip_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 }
 
 int ipip_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
-		     ipaddr_n_t dst_ip, UNUSED uint8_t ttl,
+		     ipaddr_n_t dst_ip, port_n_t dport, UNUSED uint8_t ttl,
 		     uint32_t *validation, int probe_num, UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -178,6 +178,7 @@ int ipip_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	ip_header2->ip_dst.s_addr = src_ip; // TODO put "external_ip"
 	udp_header->uh_sport =
 	    htons(get_src_port(num_ports, probe_num, validation));
+	udp_header->uh_dport = dport;
 
 	ip_header2->ip_sum = 0;
 	ip_header2->ip_sum = zmap_ip_checksum((unsigned short *)ip_header2);
@@ -290,7 +291,8 @@ void ipip_process_packet(const u_char *packet, UNUSED uint32_t len,
 }
 
 int ipip_validate_packet(const struct ip *ip_hdr, uint32_t len,
-			 uint32_t *src_ip, uint32_t *validation)
+			 uint32_t *src_ip, uint32_t *validation,
+			 const struct port_conf *ports)
 {
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		if ((4 * ip_hdr->ip_hl + sizeof(struct udphdr)) > len) {
@@ -301,7 +303,7 @@ int ipip_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		struct udphdr *udp =
 		    (struct udphdr *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
 		uint16_t dport = ntohs(udp->uh_dport);
-		if (dport != zconf.target_port) {
+		if (check_src_port(dport, ports) == 0) {
 			return PACKET_INVALID;
 		}
 		if (!blocklist_is_allowed(*src_ip)) {
@@ -314,7 +316,7 @@ int ipip_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		for (unsigned i = 0; i < zconf.number_source_ips; i++) {
 			validate_gen(
 				zconf.source_ip_addresses[i],
-				ip_hdr->ip_src.s_addr, validation);
+				ip_hdr->ip_src.s_addr, udp->uh_dport, (uint8_t *)validation);
 			if (check_dst_port(sport, num_ports, validation)) {
 				return PACKET_VALID;
 			}
@@ -362,7 +364,7 @@ int ipip_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		// original packet and wouldn't have been altered by something
 		// responding on a different port
 		uint16_t dport = ntohs(udp->uh_dport);
-		if (dport != zconf.target_port) {
+		if (check_src_port(dport, ports) == 0) {
 			return PACKET_INVALID;
 		}
 		uint16_t sport = ntohs(udp->uh_sport);
