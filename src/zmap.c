@@ -30,6 +30,7 @@
 #include "../lib/util.h"
 #include "../lib/xalloc.h"
 #include "../lib/pbm.h"
+#include "../lib/aes128.h"
 
 #include "aesrand.h"
 #include "constants.h"
@@ -511,6 +512,8 @@ int main(int argc, char *argv[])
 	if (cmdline_parser_required(&args, CMDLINE_PARSER_PACKAGE) != 0) {
 		exit(EXIT_FAILURE);
 	}
+
+	aes128_selftest();
 
 	// now that we know the probe module, let's find what it supports
 	memset(&zconf.fsconf, 0, sizeof(struct fieldset_conf));
