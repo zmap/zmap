@@ -37,6 +37,16 @@ jobs:
         working-directory: /zmap
         run: python3 ./scripts/check_manfile.py
 
+  build-ubuntu-16-04:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Compilation
+        run: |
+          docker build -t ubuntu-16.04-container -f .github/workflows/ubuntu-16.04.Dockerfile .
+          docker run ubuntu-16.04-container
+
   build-debian:
     runs-on: ubuntu-latest
     steps:
