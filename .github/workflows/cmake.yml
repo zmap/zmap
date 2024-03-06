@@ -46,6 +46,7 @@ jobs:
         run: |
           docker build -t ubuntu-16.04-container -f .github/workflows/ubuntu-16.04.Dockerfile .
           docker run ubuntu-16.04-container
+          
   build-ubuntu-18.04:
     runs-on: ubuntu-latest
     steps:
@@ -55,7 +56,7 @@ jobs:
         run: |
           docker build -t ubuntu-18.04-container -f .github/workflows/ubuntu-18.04.Dockerfile .
           docker run ubuntu-18.04-container
-          
+
   build-ubuntu-20.04:
     runs-on: ubuntu-latest
     steps:
