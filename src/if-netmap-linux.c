@@ -10,6 +10,7 @@
 
 #include "../lib/includes.h"
 #include "../lib/logger.h"
+#include "utility.h"
 
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
@@ -140,7 +141,7 @@ if_wait_for_phy_reset(char const *ifname, int fd)
 
 	for (size_t i = 0; i < 40 /* 10s */; i++) {
 		struct ifreq ifr;
-		strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+		cross_platform_strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name) - 1);
 		struct ethtool_value etv;
 		etv.cmd = ETHTOOL_GLINK;
 		ifr.ifr_data = (void *)&etv;
