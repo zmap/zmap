@@ -120,10 +120,7 @@ set(ZTEESOURCES
 )
 
 # Handle various versions of socket
-if(WITH_PFRING)
-    set(SOURCES ${SOURCES} socket-pfring.c)
-    set(ZTESTSOURCES ${ZTESTSOURCES} socket-pfring.c)
-elseif(WITH_NETMAP)
+if(WITH_NETMAP)
     set(SOURCES ${SOURCES} socket-netmap.c send-netmap.c)
     set(ZTESTSOURCES ${ZTESTSOURCES} socket-netmap.c send-netmap.c)
     if(APPLE OR BSD)
@@ -142,10 +139,7 @@ else()
 endif()
 
 # Handle various versions of recv
-if(WITH_PFRING)
-    set(SOURCES ${SOURCES} recv-pfring.c)
-    set(ZTESTSOURCES ${ZTESTSOURCES} recv-pfring.c)
-elseif(WITH_NETMAP)
+if(WITH_NETMAP)
     set(SOURCES ${SOURCES} recv-netmap.c)
     set(ZTESTSOURCES ${ZTESTSOURCES} recv-netmap.c)
 else()
@@ -233,7 +227,6 @@ endif()
 target_link_libraries(
     zmap
     zmaplib
-    ${PFRING_LIBRARIES}
     pcap gmp m unistring
     ${JSON_LIBRARIES}
 	${JUDY_LIBRARIES}
@@ -261,7 +254,6 @@ target_link_libraries(
 target_link_libraries(
     ztests
     zmaplib
-    ${PFRING_LIBRARIES}
     pcap gmp m unistring
     ${JSON_LIBRARIES}
 	${JUDY_LIBRARIES}

@@ -14,9 +14,7 @@
 int send_run_init(sock_t s);
 int send_batch(sock_t sock, batch_t *batch, int retries);
 
-#if defined(PFRING)
-#include "send-pfring.h"
-#elif defined(NETMAP)
+#if defined(NETMAP)
 void submit_batch_internal(batch_t *batch);
 int send_batch_internal(sock_t sock, batch_t *batch);
 #elif defined(__linux__)
