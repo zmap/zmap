@@ -10,6 +10,7 @@
 
 #include "../lib/includes.h"
 #include "../lib/logger.h"
+#include "utility.h"
 
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
@@ -91,15 +92,15 @@ fetch_stats64(struct rtnl_link_stats64 *rtlstats64, char const *ifname, int nlrt
 			struct {
 				struct nlmsgerr nlerr;
 			} err;
-		};
+		} u;
 	} nlresp;
-	_Static_assert(sizeof(nlresp.ans) >= sizeof(nlresp.err));
-	static const size_t ans_size = offsetof(struct nlresp, ans) + sizeof(nlresp.ans);
-	static const size_t err_size = offsetof(struct nlresp, err) + sizeof(nlresp.err);
+	_Static_assert(sizeof(nlresp.u.ans) >= sizeof(nlresp.u.err));
+	static const size_t ans_size = offsetof(struct nlresp, u.ans) + sizeof(nlresp.u.ans);
+	static const size_t err_size = offsetof(struct nlresp, u.err) + sizeof(nlresp.u.err);
 
 	memset(iov, 0, sizeof(iov));
 	iov[0].iov_base = (void *)&nlresp;
-	iov[0].iov_len = offsetof(struct nlresp, ans.rtlstats64);
+	iov[0].iov_len = offsetof(struct nlresp, u.ans.rtlstats64);
 	iov[1].iov_base = (void *)rtlstats64; // caller-provided
 	iov[1].iov_len = sizeof(struct rtnl_link_stats64);
 	memset(&msg, 0, sizeof(msg));
@@ -116,9 +117,9 @@ fetch_stats64(struct rtnl_link_stats64 *rtlstats64, char const *ifname, int nlrt
 
 	if (nlresp.nlh.nlmsg_type == NLMSG_ERROR) {
 		// copy second iov into ans in first iov to get contiguous struct nlmsgerr
-		nlresp.ans.rtlstats64 = *rtlstats64;
-		assert(nlresp.err.nlerr.error < 0);
-		errno = -nlresp.err.nlerr.error;
+		nlresp.u.ans.rtlstats64 = *rtlstats64;
+		assert(nlresp.u.err.nlerr.error < 0);
+		errno = -nlresp.u.err.nlerr.error;
 		log_fatal("if-netmap-linux", "received NLMSG_ERROR: %d: %s", errno, strerror(errno));
 	}
 	if (nlresp.nlh.nlmsg_type != RTM_NEWSTATS) {
@@ -140,7 +141,7 @@ if_wait_for_phy_reset(char const *ifname, int fd)
 
 	for (size_t i = 0; i < 40 /* 10s */; i++) {
 		struct ifreq ifr;
-		strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+		cross_platform_strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name) - 1);
 		struct ethtool_value etv;
 		etv.cmd = ETHTOOL_GLINK;
 		ifr.ifr_data = (void *)&etv;

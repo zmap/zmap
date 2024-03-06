@@ -15,6 +15,7 @@
 #include "../lib/includes.h"
 #include "../lib/logger.h"
 #include "state.h"
+#include "utility.h"
 
 #include <net/netmap_user.h>
 #include <sys/mman.h>
@@ -46,7 +47,7 @@ sock_t get_socket(uint32_t id)
 	memset(&nmrhdr, 0, sizeof(nmrhdr));
 	nmrhdr.nr_version = NETMAP_API;
 	nmrhdr.nr_reqtype = NETMAP_REQ_REGISTER;
-	strlcpy(nmrhdr.nr_name, zconf.iface, sizeof(nmrhdr.nr_name));
+	cross_platform_strlcpy(nmrhdr.nr_name, zconf.iface, sizeof(nmrhdr.nr_name));
 	nmrhdr.nr_body = (uint64_t)&nmrreg;
 	if (ioctl(sock.nm.tx_ring_fd, NIOCCTRL, &nmrhdr) == -1) {
 		log_fatal("socket-netmap", "ioctl(NIOCCTRL) failed: %d: %s", errno, strerror(errno));

@@ -27,6 +27,7 @@ set(PROBE_MODULE_SOURCES
     probe_modules/module_tcp_synackscan.c
 	#probe_modules/module_tcp_cisco_backdoor.c
     probe_modules/module_udp.c
+    probe_modules/module_ipip.c
     probe_modules/packet.c
     probe_modules/probe_modules.c
     probe_modules/module_ntp.c
@@ -80,6 +81,7 @@ set(ZTESTSOURCES
     socket.c
     state.c
     summary.c
+    utility.c
     validate.c
     ztopt_compat.c
     ${PROBE_MODULE_SOURCES}
