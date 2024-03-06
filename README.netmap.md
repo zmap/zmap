@@ -30,6 +30,9 @@ $ cmake -DWITH_NETMAP=ON -DENABLE_DEVELOPMENT=OFF .
 $ make
 ```
 
+For best results on hardware that supports AES acceleration, additionally use
+`-DWITH_AES_HW=ON` to enable support for AES-NI and ARMv8 CE, where applicable.
+
 
 ### Running
 
