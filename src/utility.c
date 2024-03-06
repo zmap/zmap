@@ -6,14 +6,11 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#include "utility.h"
-
-#include <stddef.h>
-#include <stdio.h>
 #include <string.h>
 #include <arpa/inet.h>
 
 #include "state.h"
+#include "utility.h"
 #include "../lib/logger.h"
 
 in_addr_t string_to_ip_address(char *t)
