@@ -10,6 +10,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 #include <arpa/inet.h>
 
 #include "state.h"
@@ -71,34 +72,15 @@ void parse_source_ip_addresses(char given_string[])
 	}
 }
 
-
-#if defined(__linux__)
-/*
- * Copy src to string dst of size siz.  At most siz-1 characters
- * will be copied.  Always NUL terminates (unless siz == 0).
- * Returns strlen(src); if retval >= siz, truncation occurred.
- */
-size_t
-strlcpy(char *dst, const char *src, size_t siz)
+// Not all platforms have strlcpy, so we provide our own using strncpy
+size_t cross_platform_strlcpy(char *dst, const char *src, size_t siz)
 {
-	char *d = dst;
-	const char *s = src;
-	size_t n = siz;
-	/* Copy as many bytes as will fit */
-	if (n != 0) {
-		while (--n != 0) {
-			if ((*d++ = *s++) == '\0')
-				break;
-		}
-  }
-	/* Not enough room in dst, add NUL and traverse rest of src */
-	if (n == 0) {
-		if (siz != 0)
-			*d = '\0';		/* NUL-terminate dst */
-		while (*s++)
-			;
-	}
-	return(s - src - 1);	/* count does not include NUL */
+	if (siz == 0) // Handle zero size as strlcpy does
+		return strlen(src);
+
+	strncpy(dst, src, siz - 1); // Copy at most size - 1 characters
+	dst[siz - 1] = '\0'; // Ensure null-termination
+
+	return strlen(src); // Return the length of src
 }
-#endif
 
