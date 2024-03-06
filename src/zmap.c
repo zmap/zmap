@@ -1066,6 +1066,14 @@ int main(int argc, char *argv[])
 		    "too few targets relative to senders, dropping to one sender");
 		zconf.senders = 1;
 	}
+	// reserving 1 core for the receiver/monitor thread
+	int sender_cap = get_num_cores() - 1;
+	if (zconf.senders > sender_cap) {
+		log_warn(
+		    "zmap",
+		    "too many senders relative to cores (%d), dropping to %d senders to avoid CPU contention", get_num_cores(), sender_cap);
+		zconf.senders = sender_cap;
+	}
 #else
 	zconf.senders = args.sender_threads_arg;
 #endif
