@@ -239,8 +239,7 @@ targets.
    * `-T`, `--sender-threads=n`:
      Threads used to send packets. ZMap will attempt to detect the optimal
      number of send threads based on the number of processor cores. Defaults to
-     min(4, number of processor cores on host - 1). Cannot exceed number of cores
-     - 1 to avoid contention with the receiver thread.
+     min(4, number of processor cores on host - 1).
 
    * `-C`, `--config=filename`:
      Read a configuration file, which can specify any other options.

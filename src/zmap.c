@@ -1071,8 +1071,7 @@ int main(int argc, char *argv[])
 	if (zconf.senders > sender_cap) {
 		log_warn(
 		    "zmap",
-		    "too many senders relative to cores (%d), dropping to %d senders to avoid CPU contention", get_num_cores(), sender_cap);
-		zconf.senders = sender_cap;
+		    "too many senders relative to cores (%d). Its advised to only use (number of cores - 1 = %d) sender threads to reserve a core for monitoring and receiving packets.", get_num_cores(), sender_cap);
 	}
 #else
 	zconf.senders = args.sender_threads_arg;

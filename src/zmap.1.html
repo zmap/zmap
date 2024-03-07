@@ -241,35 +241,21 @@ targets.</p>
 
 <h3 id="ADDITIONAL-OPTIONS">ADDITIONAL OPTIONS</h3>
 
-<ul>
-<li><p> <code>-T</code>, <code>--sender-threads=n</code>:
- Threads used to send packets. ZMap will attempt to detect the optimal
+<dl>
+<dt> <code>-T</code>, <code>--sender-threads=n</code></dt><dd><p> Threads used to send packets. ZMap will attempt to detect the optimal
  number of send threads based on the number of processor cores. Defaults to
- min(4, number of processor cores on host - 1). Cannot exceed number of cores</p>
-
-<ul>
-<li>1 to avoid contention with the receiver thread.</li>
-</ul>
-</li>
-<li><p> <code>-C</code>, <code>--config=filename</code>:
- Read a configuration file, which can specify any other options.</p></li>
-<li><p> <code>-d</code>, <code>--dryrun</code>:
- Print out each packet to stdout instead of sending it (useful for
- debugging)</p></li>
-<li><p> <code>--max-sendto-failures</code>:
- Maximum NIC sendto failures before scan is aborted</p></li>
-<li><p> <code>--min-hitrate</code>:
- Minimum hitrate that scan can hit before scan is aborted</p></li>
-<li><p> <code>--cores</code>:
- Comma-separated list of cores to pin to</p></li>
-<li><p> <code>--ignore-blocklist-errors</code>:
-  Ignore invalid, malformed, or unresolvable entries in allowlist/blocklist file.
-  Replaces the pre-v3.x <code>--ignore-invalid-hosts</code> option.</p></li>
-<li><p> <code>-h</code>, <code>--help</code>:
- Print help and exit</p></li>
-<li><p> <code>-V</code>, <code>--version</code>:
- Print version and exit</p></li>
-</ul>
+ min(4, number of processor cores on host - 1).</p></dd>
+<dt> <code>-C</code>, <code>--config=filename</code></dt><dd><p> Read a configuration file, which can specify any other options.</p></dd>
+<dt> <code>-d</code>, <code>--dryrun</code></dt><dd><p> Print out each packet to stdout instead of sending it (useful for
+ debugging)</p></dd>
+<dt> <code>--max-sendto-failures</code></dt><dd><p> Maximum NIC sendto failures before scan is aborted</p></dd>
+<dt> <code>--min-hitrate</code></dt><dd><p> Minimum hitrate that scan can hit before scan is aborted</p></dd>
+<dt> <code>--cores</code></dt><dd><p> Comma-separated list of cores to pin to</p></dd>
+<dt> <code>--ignore-blocklist-errors</code></dt><dd><p>  Ignore invalid, malformed, or unresolvable entries in allowlist/blocklist file.
+  Replaces the pre-v3.x <code>--ignore-invalid-hosts</code> option.</p></dd>
+<dt> <code>-h</code>, <code>--help</code></dt><dd><p> Print help and exit</p></dd>
+<dt> <code>-V</code>, <code>--version</code></dt><dd><p> Print version and exit</p></dd>
+</dl>
 
 
 <h3 id="OUTPUT-FILTERS">OUTPUT FILTERS</h3>
