@@ -14,10 +14,6 @@
 
 #include "../lib/includes.h"
 
-#ifdef PFRING
-#include <pfring_zc.h>
-#endif
-
 #include "aesrand.h"
 #include "fieldset.h"
 #include "filter.h"
@@ -135,16 +131,6 @@ struct state_conf {
 	int no_header_row;
 	int dedup_method;
 	int dedup_window_size;
-#ifdef PFRING
-	struct {
-		pfring_zc_cluster *cluster;
-		pfring_zc_queue *send;
-		pfring_zc_queue *recv;
-		pfring_zc_queue **queues;
-		pfring_zc_pkt_buff **buffers;
-		pfring_zc_buffer_pool *prefetches;
-	} pf;
-#endif
 #ifdef NETMAP
 	struct {
 		int nm_fd;

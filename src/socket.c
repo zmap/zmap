@@ -19,7 +19,7 @@ sock_t get_dryrun_socket(void)
 	sock_t s;
 	memset(&s, 0, sizeof(s));
 
-#if !(defined(PFRING) || defined(NETMAP))
+#if !(defined(NETMAP))
 	// we need a socket in order to gather details about the system
 	// such as source MAC address and IP address. However, because
 	// we don't want to require root access in order to run dryrun,
