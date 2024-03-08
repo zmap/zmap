@@ -157,10 +157,8 @@ target_t shard_get_cur_target(shard_t *shard)
 
 static inline uint64_t shard_get_next_elem(shard_t *shard)
 {
-	do {
-		shard->current *= shard->params.factor;
-		shard->current %= shard->params.modulus;
-	} while (shard->current >= (1LL << 48));
+	shard->current *= shard->params.factor;
+	shard->current %= shard->params.modulus;
 	return (uint64_t)shard->current;
 }
 
