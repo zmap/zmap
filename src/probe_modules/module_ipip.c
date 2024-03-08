@@ -53,15 +53,13 @@ int ipip_global_initialize(struct state_conf *conf)
 		return (0);
 
 	args = strdup(conf->probe_args);
-	if (!args)
-		exit(1);
+	assert(args);
 
 	c = strchr(args, ':');
 	if (!c) {
 		free(args);
 		free(udp_send_msg);
-		log_fatal("ipip", ipip_usage_error);
-		exit(1);
+		log_fatal("ipip", "%s", ipip_usage_error);
 	}
 
 	*c++ = 0;
@@ -74,11 +72,10 @@ int ipip_global_initialize(struct state_conf *conf)
 	} else if (strcmp(args, "file") == 0) {
 		inp = fopen(c, "rb");
 		if (!inp) {
-			free(args);
 			free(udp_send_msg);
-			log_fatal("ipip", "could not open UDP data file '%s'\n",
+			// c points to memory in args, let exit free args
+			log_fatal("ipip", "could not open UDP data file '%s'",
 				  c);
-			exit(1);
 		}
 		free(udp_send_msg);
 		udp_send_msg = xmalloc(MAX_UDP_PAYLOAD_LEN);
@@ -93,25 +90,24 @@ int ipip_global_initialize(struct state_conf *conf)
 
 		for (i = 0; i < udp_send_msg_len; i++) {
 			if (sscanf(c + (i * 2), "%2x", &n) != 1) {
+				char nonhexchr = c[i * 2];
 				free(args);
 				free(udp_send_msg);
 				log_fatal("ipip", "non-hex character: '%c'",
-					  c[i * 2]);
-				exit(1);
+					  nonhexchr);
 			}
 			udp_send_msg[i] = (n & 0xff);
 		}
 	} else {
-		log_fatal("ipip", ipip_usage_error);
 		free(udp_send_msg);
 		free(args);
-		exit(1);
+		log_fatal("ipip", "%s", ipip_usage_error);
 	}
 
 	if (udp_send_msg_len > MAX_UDP_PAYLOAD_LEN) {
 		log_warn("ipip",
 			 "warning: reducing UDP payload to %d "
-			 "bytes (from %d) to fit on the wire\n",
+			 "bytes (from %d) to fit on the wire",
 			 MAX_UDP_PAYLOAD_LEN, udp_send_msg_len);
 		udp_send_msg_len = MAX_UDP_PAYLOAD_LEN;
 	}
