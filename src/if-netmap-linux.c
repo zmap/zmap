@@ -94,7 +94,7 @@ fetch_stats64(struct rtnl_link_stats64 *rtlstats64, char const *ifname, int nlrt
 			} err;
 		} u;
 	} nlresp;
-	_Static_assert(sizeof(nlresp.u.ans) >= sizeof(nlresp.u.err));
+	static_assert(sizeof(nlresp.u.ans) >= sizeof(nlresp.u.err), "ans is at least as large as err");
 	static const size_t ans_size = offsetof(struct nlresp, u.ans) + sizeof(nlresp.u.ans);
 	static const size_t err_size = offsetof(struct nlresp, u.err) + sizeof(nlresp.u.err);
 
