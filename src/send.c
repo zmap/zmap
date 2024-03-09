@@ -26,6 +26,7 @@
 #include "../lib/blocklist.h"
 #include "../lib/lockfd.h"
 #include "../lib/pbm.h"
+#include "../lib/xalloc.h"
 
 #include "send-internal.h"
 #include "aesrand.h"
@@ -402,9 +403,9 @@ int send_run(sock_t st, shard_t *s)
 				// this is an additional memcpy (packet created in buf, buf -> batch)
 				// but when I modified the TCP SYN module to write packet to batch directly, there wasn't any noticeable speedup.
 				// Using this approach for readability/minimal changes
-				memcpy(((uint8_t *)batch->packets) + (batch->len * MAX_PACKET_SIZE), contents, length);
-				batch->lens[batch->len] = length;
-				batch->ips[batch->len] = current_ip;
+				batch->packets[batch->len].ip = current_ip;
+				batch->packets[batch->len].len = length;
+				memcpy(batch->packets[batch->len].buf, contents, length);
 				batch->len++;
 				if (batch->len == batch->capacity) {
 					// batch is full, sending
@@ -464,27 +465,16 @@ cleanup:
 	return EXIT_SUCCESS;
 }
 
-batch_t* create_packet_batch(uint16_t capacity) {
-	// calculate how many bytes are needed for each component of a batch
-	int size_of_packet_array = MAX_PACKET_SIZE * capacity;
-	int size_of_ips_array = sizeof(uint32_t) * capacity;
-	int size_of_lens_array = sizeof(int) * capacity;
-
-	// allocating batch and associated data structures in single calloc for cache locality
-	void* batch_and_batch_arrs = calloc(sizeof(batch_t) + size_of_packet_array + size_of_ips_array + size_of_lens_array, sizeof(char));
-	// chunk off parts of batch
-	batch_t* batch = batch_and_batch_arrs;
-	batch->packets = (char *)batch + sizeof(batch_t);
-	batch->ips = (uint32_t *)(batch->packets + size_of_packet_array);
-	batch->lens = (int *) ((char *)batch->ips + size_of_ips_array);
-
+batch_t *create_packet_batch(uint16_t capacity) {
+	// allocating batch and associated data structures in single xmalloc for cache locality
+	batch_t *batch = (batch_t *)xmalloc(sizeof(batch_t) + capacity * sizeof(struct batch_packet));
+	batch->packets = (struct batch_packet *)(batch + 1);
 	batch->capacity = capacity;
 	batch->len = 0;
-
 	return batch;
 }
 
-void free_packet_batch(batch_t* batch) {
-	// batch was created with a single calloc, so this will free all the component arrays too
-	free(batch);
+void free_packet_batch(batch_t *batch) {
+	// batch was created with a single xmalloc, so this will free the component array too
+	xfree(batch);
 }

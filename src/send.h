@@ -15,10 +15,21 @@
 iterator_t *send_init(void);
 int send_run(sock_t, shard_t *);
 
+// Fit two packets with metadata into one 4k page.
+// 2k seems like more than enough with typical MTU of
+// 1500, and we don't want to cause IP fragmentation.
+#define MAX_PACKET_SIZE (2048 - 2 * sizeof(uint32_t))
+
+// Metadata and initial packet bytes are adjacent,
+// for cache locality esp. with short packets.
+struct batch_packet {
+	uint32_t ip;
+	uint32_t len;
+	uint8_t buf[MAX_PACKET_SIZE];
+};
+
 typedef struct {
-	char* packets;
-	uint32_t* ips;
-	int* lens;
+	struct batch_packet *packets;
 	uint16_t len;
 	uint16_t capacity;
 }batch_t;

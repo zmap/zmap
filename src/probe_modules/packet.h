@@ -18,11 +18,10 @@
 #include "../../lib/blocklist.h"
 #include "../../lib/pbm.h"
 #include "../state.h"
+#include "../send.h"
 
 #ifndef PACKET_H
 #define PACKET_H
-
-#define MAX_PACKET_SIZE 4096
 
 #define ICMP_UNREACH_HEADER_SIZE 8
 

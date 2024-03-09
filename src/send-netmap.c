@@ -89,12 +89,9 @@ send_batch_internal(sock_t sock, batch_t *batch)
 			return -1;
 		}
 
-		void *src_buf = (void *)((uint8_t *)batch->packets + i * MAX_PACKET_SIZE);
-		int len = batch->lens[i];
-		assert((uint32_t)len <= ring->nr_buf_size);
-
-		void *dst_buf = NETMAP_BUF(ring, ring->slot[ring->cur].buf_idx);
-		memcpy(dst_buf, src_buf, len);
+		uint32_t len = batch->packets[i].len;
+		assert(len <= ring->nr_buf_size);
+		memcpy(NETMAP_BUF(ring, ring->slot[ring->cur].buf_idx), batch->packets[i].buf, len);
 		ring->slot[ring->cur].len = len;
 		ring->head = ring->cur = nm_ring_next(ring, ring->cur);
 	}

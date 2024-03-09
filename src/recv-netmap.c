@@ -50,9 +50,9 @@ send_packet(make_packet_func_t mkpkt, void const *arg)
 	sock.nm.tx_ring_fd = zconf.nm.nm_fd;
 
 	batch_t *batch = create_packet_batch(1);
-	batch->lens[0] = (int)mkpkt((uint8_t *)batch->packets, arg);
-	assert(batch->lens[0] <= MAX_PACKET_SIZE);
-	batch->ips[0] = 0; // unused by netmap
+	batch->packets[0].ip = 0; // unused by netmap
+	batch->packets[0].len = mkpkt(batch->packets[0].buf, arg);
+	assert(batch->packets[0].len <= MAX_PACKET_SIZE);
 	batch->len = 1;
 	if (send_batch_internal(sock, batch) != 1) {
 		log_fatal("recv-netmap", "Failed to send packet: %d: %s", errno, strerror(errno));
@@ -67,9 +67,9 @@ static void
 submit_packet(make_packet_func_t mkpkt, void const *arg)
 {
 	batch_t *batch = create_packet_batch(1);
-	batch->lens[0] = (int)mkpkt((uint8_t *)batch->packets, arg);
-	assert(batch->lens[0] <= MAX_PACKET_SIZE);
-	batch->ips[0] = 0; // unused by netmap
+	batch->packets[0].ip = 0; // unused by netmap
+	batch->packets[0].len = mkpkt(batch->packets[0].buf, arg);
+	assert(batch->packets[0].len <= MAX_PACKET_SIZE);
 	batch->len = 1;
 	submit_batch_internal(batch); // consumes batch
 }

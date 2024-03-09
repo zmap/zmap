@@ -62,7 +62,7 @@ int upnp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	       MAX_PACKET_SIZE);
 
 	assert(MAX_PACKET_SIZE - ((char *)payload - (char *)buf) >
-	       (int)strlen(upnp_query));
+	       strlen(upnp_query));
 	strcpy(payload, upnp_query);
 
 	return EXIT_SUCCESS;
