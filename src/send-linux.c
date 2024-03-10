@@ -36,6 +36,9 @@
 #include "./send-linux.h"
 #include "state.h"
 
+// Dummy sockaddr for sendto
+static struct sockaddr_ll sockaddr;
+
 int send_run_init(sock_t s)
 {
 	// Get the actual socket
