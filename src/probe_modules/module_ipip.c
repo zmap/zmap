@@ -133,8 +133,8 @@ int ipip_global_cleanup(UNUSED struct state_conf *zconf,
 	return EXIT_SUCCESS;
 }
 
-int ipip_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-			UNUSED void **arg_ptr)
+int ipip_prepare_packet(void *buf, macaddr_t *src, macaddr_t *gw,
+			UNUSED void *arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -403,8 +403,8 @@ probe_module_t module_ipip = {
     .pcap_filter = "udp || icmp",
     .pcap_snaplen = 1500,
     .port_args = 1,
-    .thread_initialize = &ipip_init_perthread,
     .global_initialize = &ipip_global_initialize,
+    .prepare_packet = &ipip_prepare_packet,
     .make_packet = &ipip_make_packet,
     .print_packet = &ipip_print_packet,
     .validate_packet = &ipip_validate_packet,

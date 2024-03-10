@@ -30,14 +30,28 @@ typedef struct probe_response_type {
 
 typedef int (*probe_global_init_cb)(struct state_conf *);
 
-typedef int (*probe_thread_init_cb)(void *packetbuf, macaddr_t *src_mac,
-				    macaddr_t *gw_mac, void **arg_ptr);
+// Called once per send thread to initialize state.
+typedef int (*probe_thread_init_cb)(void **arg_ptr);
+
+// The make_packet callback is passed a buffer pointing at an ethernet header.
+// The buffer is MAX_PACKET_SIZE bytes. There are 1..n packet buffers in use
+// per send thread.  For each buffer, prepare_packet is called once before the
+// first call to make_packet.
+//
+// The probe module is expected to write all the constant packet contents
+// in prepare_packet, and only write the fields that need to be updated for
+// each packet being sent in make_packet.
+//
+typedef int (*probe_prepare_packet_cb)(void *packetbuf, macaddr_t *src_mac,
+				    macaddr_t *gw_mac, void *arg);
 
 // The make_packet callback is passed a buffer pointing at an ethernet header.
 // The buffer is MAX_PACKET_SIZE bytes. The callback must update the value
 // pointed at by buf_len with the actual length of the packet. The contents of
-// the buffer will match the previous packet sent. Every invocation of
-// make_packet contains a unique (src_ip, probe_num) tuple.
+// the buffer will match a previously sent packet by this send thread, so
+// content not overwritten by make_packet can be relied upon to be intact.
+// Beyond that, the probe module should not make any assumptions about buffers.
+// Every invocation of make_packet contains a unique (src_ip, probe_num) tuple.
 //
 // The probe module is responsible for populating the IP header. The src_ip,
 // dst_ip, and ttl are provided by the framework and must be set on the IP
@@ -84,6 +98,7 @@ typedef struct probe_module {
 
 	probe_global_init_cb global_initialize;
 	probe_thread_init_cb thread_initialize;
+	probe_prepare_packet_cb prepare_packet;
 	probe_make_packet_cb make_packet;
 	probe_print_packet_cb print_packet;
 	probe_validate_packet_cb validate_packet;

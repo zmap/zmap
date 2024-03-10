@@ -201,8 +201,6 @@ int send_run(sock_t st, shard_t *s)
 {
 	log_debug("send", "send thread started");
 	pthread_mutex_lock(&send_mutex);
-	// Allocate a buffer to hold the outgoing packet
-	char buf[MAX_PACKET_SIZE];
 	// allocate batch
 	batch_t* batch = create_packet_batch(zconf.batch);
 
@@ -211,6 +209,7 @@ int send_run(sock_t st, shard_t *s)
 		pthread_mutex_unlock(&send_mutex);
 		return EXIT_FAILURE;
 	}
+
 	// MAC address length in characters
 	char mac_buf[(ETHER_ADDR_LEN * 2) + (ETHER_ADDR_LEN - 1) + 1];
 	char *p = mac_buf;
@@ -224,12 +223,26 @@ int send_run(sock_t st, shard_t *s)
 		}
 	}
 	log_debug("send", "source MAC address %s", mac_buf);
-	void *probe_data;
+
+	void *probe_data = NULL;
 	if (zconf.probe_module->thread_initialize) {
-		zconf.probe_module->thread_initialize(
-		    buf, zconf.hw_mac, zconf.gw_mac, &probe_data);
+		int rv = zconf.probe_module->thread_initialize(&probe_data);
+		if (rv != EXIT_SUCCESS) {
+			pthread_mutex_unlock(&send_mutex);
+			log_fatal("send", "Send thread initialization for probe module failed: %u", rv);
+		}
 	}
 	pthread_mutex_unlock(&send_mutex);
+
+	if (zconf.probe_module->prepare_packet) {
+		for (size_t i = 0; i < batch->capacity; i++) {
+			int rv = zconf.probe_module->prepare_packet(
+					batch->packets[i].buf, zconf.hw_mac, zconf.gw_mac, probe_data);
+			if (rv != EXIT_SUCCESS) {
+				log_fatal("send", "Probe module failed to prepare packet: %u", rv);
+			}
+		}
+	}
 
 	// adaptive timing to hit target rate
 	uint64_t count = 0;
@@ -373,10 +386,11 @@ int send_run(sock_t st, shard_t *s)
 				     htons(current_port),
 				     (uint8_t *)validation);
 			uint8_t ttl = zconf.probe_ttl;
+
 			size_t length = 0;
 			zconf.probe_module->make_packet(
-			    buf, &length, src_ip, current_ip,
-			    htons(current_port), ttl, validation, i,
+			    batch->packets[batch->len].buf, &length,
+			    src_ip, current_ip, htons(current_port), ttl, validation, i,
 			    // Grab last 2 bytes of validation for ip_id
 			    (uint16_t)(validation[size_of_validation - 1] & 0xFFFF),
 			    probe_data);
@@ -387,26 +401,16 @@ int send_run(sock_t st, shard_t *s)
 				    s->thread_id, length,
 				    MAX_PACKET_SIZE);
 			}
+			batch->packets[batch->len].ip = current_ip;
+			batch->packets[batch->len].len = (uint32_t)length;
+			batch->len++;
+
 			if (zconf.dryrun) {
 				lock_file(stdout);
 				zconf.probe_module->print_packet(stdout,
-								 buf);
+								 batch->packets[batch->len - 1].buf);
 				unlock_file(stdout);
 			} else {
-				void *contents =
-				    buf +
-				    zconf.send_ip_pkts *
-					sizeof(struct ether_header);
-				length -= (zconf.send_ip_pkts *
-					   sizeof(struct ether_header));
-				// add packet to batch and update metadata
-				// this is an additional memcpy (packet created in buf, buf -> batch)
-				// but when I modified the TCP SYN module to write packet to batch directly, there wasn't any noticeable speedup.
-				// Using this approach for readability/minimal changes
-				batch->packets[batch->len].ip = current_ip;
-				batch->packets[batch->len].len = length;
-				memcpy(batch->packets[batch->len].buf, contents, length);
-				batch->len++;
 				if (batch->len == batch->capacity) {
 					// batch is full, sending
 					int rc = send_batch(st, batch, attempts);
