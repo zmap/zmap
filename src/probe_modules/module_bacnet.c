@@ -37,7 +37,16 @@ static inline uint8_t get_invoke_id(uint32_t *validation)
 	return (uint8_t)((validation[1] >> 24) & 0xFF);
 }
 
-int bacnet_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw, void **arg)
+int bacnet_init_perthread(void **arg)
+{
+	uint32_t seed = aesrand_getword(zconf.aes);
+	aesrand_t *aes = aesrand_init_from_seed(seed);
+	*arg = aes;
+
+	return EXIT_SUCCESS;
+}
+
+int bacnet_prepare_packet(void *buf, macaddr_t *src, macaddr_t *gw, UNUSED void *arg)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -66,10 +75,6 @@ int bacnet_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw, void **arg)
 	bnp->apdu.max_segments_apdu = 0x05;
 	bnp->apdu.server_choice = 0x0c;
 	memcpy(body, bacnet_body, BACNET_BODY_LEN);
-
-	uint32_t seed = aesrand_getword(zconf.aes);
-	aesrand_t *aes = aesrand_init_from_seed(seed);
-	*arg = aes;
 
 	return EXIT_SUCCESS;
 }
@@ -184,8 +189,9 @@ probe_module_t module_bacnet = {.name = "bacnet",
 				.pcap_filter = "udp || icmp",
 				.pcap_snaplen = 1500,
 				.port_args = 1,
-				.thread_initialize = &bacnet_init_perthread,
 				.global_initialize = &bacnet_global_initialize,
+				.thread_initialize = &bacnet_init_perthread,
+				.prepare_packet = &bacnet_prepare_packet,
 				.make_packet = &bacnet_make_packet,
 				.print_packet = &udp_print_packet,
 				.validate_packet = &bacnet_validate_packet,

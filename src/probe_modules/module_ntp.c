@@ -154,7 +154,16 @@ void ntp_process_packet(const u_char *packet, UNUSED uint32_t len,
 	}
 }
 
-int ntp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw, void **arg)
+int ntp_init_perthread(void **arg)
+{
+	uint32_t seed = aesrand_getword(zconf.aes);
+	aesrand_t *aes = aesrand_init_from_seed(seed);
+	*arg = aes;
+
+	return EXIT_SUCCESS;
+}
+
+int ntp_prepare_packet(void *buf, macaddr_t *src, macaddr_t *gw, UNUSED void *arg)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -175,10 +184,6 @@ int ntp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw, void **arg)
 	size_t header_len = sizeof(struct ether_header) + sizeof(struct ip) +
 			    sizeof(struct udphdr) + sizeof(struct ntphdr);
 	module_ntp.max_packet_length = header_len;
-
-	uint32_t seed = aesrand_getword(zconf.aes);
-	aesrand_t *aes = aesrand_init_from_seed(seed);
-	*arg = aes;
 
 	return EXIT_SUCCESS;
 }
@@ -240,8 +245,9 @@ probe_module_t module_ntp = {.name = "ntp",
 			     .pcap_filter = "udp || icmp",
 			     .pcap_snaplen = 1500,
 			     .port_args = 1,
-			     .thread_initialize = &ntp_init_perthread,
 			     .global_initialize = &ntp_global_initialize,
+			     .thread_initialize = &ntp_init_perthread,
+			     .prepare_packet = &ntp_prepare_packet,
 			     .make_packet = &udp_make_packet,
 			     .print_packet = &ntp_print_packet,
 			     .validate_packet = &ntp_validate_packet,

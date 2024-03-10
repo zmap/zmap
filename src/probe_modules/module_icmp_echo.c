@@ -137,8 +137,8 @@ int icmp_global_cleanup(__attribute__((unused)) struct state_conf *zconf,
 	return EXIT_SUCCESS;
 }
 
-static int icmp_echo_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-				    UNUSED void **arg_ptr)
+static int icmp_echo_prepare_packet(void *buf, macaddr_t *src, macaddr_t *gw,
+				    UNUSED void *arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 
@@ -330,7 +330,7 @@ probe_module_t module_icmp_echo = {
     .port_args = 0,
     .global_initialize = &icmp_global_initialize,
     .close = &icmp_global_cleanup,
-    .thread_initialize = &icmp_echo_init_perthread,
+    .prepare_packet = &icmp_echo_prepare_packet,
     .make_packet = &icmp_echo_make_packet,
     .print_packet = &icmp_echo_print_packet,
     .process_packet = &icmp_echo_process_packet,

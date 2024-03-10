@@ -241,7 +241,17 @@ int udp_global_cleanup(UNUSED struct state_conf *zconf,
 	return EXIT_SUCCESS;
 }
 
-int udp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw, void **arg_ptr)
+int udp_init_perthread(void **arg_ptr)
+{
+	// Seed our random number generator with the global generator
+	uint32_t seed = aesrand_getword(zconf.aes);
+	aesrand_t *aes = aesrand_init_from_seed(seed);
+	*arg_ptr = aes;
+
+	return EXIT_SUCCESS;
+}
+
+int udp_prepare_packet(void *buf, macaddr_t *src, macaddr_t *gw, UNUSED void *arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -259,11 +269,6 @@ int udp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw, void **arg_ptr)
 		void *payload = &udp_header[1];
 		memcpy(payload, udp_fixed_payload, udp_fixed_payload_len);
 	}
-
-	// Seed our random number generator with the global generator
-	uint32_t seed = aesrand_getword(zconf.aes);
-	aesrand_t *aes = aesrand_init_from_seed(seed);
-	*arg_ptr = aes;
 
 	return EXIT_SUCCESS;
 }
@@ -857,8 +862,9 @@ probe_module_t module_udp = {
     .pcap_snaplen =
 	MAX_UDP_PAYLOAD_LEN + 20 + 24, // Ether Header, IP Header with Options
     .port_args = 1,
-    .thread_initialize = &udp_init_perthread,
     .global_initialize = &udp_global_initialize,
+    .thread_initialize = &udp_init_perthread,
+    .prepare_packet = &udp_prepare_packet,
     .make_packet =
 	&udp_make_packet, // can be overridden to udp_make_templated_packet by udp_global_initalize
     .print_packet = &udp_print_packet,

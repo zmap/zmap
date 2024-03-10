@@ -34,9 +34,10 @@ send_run_init(UNUSED sock_t sock)
 }
 
 static int
-send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t retry_ct)
+send_packet(sock_t sock, uint8_t *buf, int len, UNUSED uint32_t retry_ct)
 {
 	if (zconf.send_ip_pkts) {
+		buf += sizeof(struct ether_header);
 		struct ip *iph = (struct ip *)buf;
 
 #if defined(__APPLE__) || (defined(__FreeBSD__) && __FreeBSD_version < 1100030)
