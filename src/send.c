@@ -401,7 +401,6 @@ int send_run(sock_t st, shard_t *s)
 				    s->thread_id, length,
 				    MAX_PACKET_SIZE);
 			}
-			batch->packets[batch->len].ip = current_ip;
 			batch->packets[batch->len].len = (uint32_t)length;
 
 			if (zconf.dryrun) {

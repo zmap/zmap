@@ -50,7 +50,6 @@ send_packet(make_packet_func_t mkpkt, void const *arg)
 	sock.nm.tx_ring_fd = zconf.nm.nm_fd;
 
 	batch_t *batch = create_packet_batch(1);
-	batch->packets[0].ip = 0; // unused by netmap
 	batch->packets[0].len = mkpkt(batch->packets[0].buf, arg);
 	assert(batch->packets[0].len <= MAX_PACKET_SIZE);
 	batch->len = 1;
@@ -67,7 +66,6 @@ static void
 submit_packet(make_packet_func_t mkpkt, void const *arg)
 {
 	batch_t *batch = create_packet_batch(1);
-	batch->packets[0].ip = 0; // unused by netmap
 	batch->packets[0].len = mkpkt(batch->packets[0].buf, arg);
 	assert(batch->packets[0].len <= MAX_PACKET_SIZE);
 	batch->len = 1;

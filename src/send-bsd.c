@@ -96,12 +96,11 @@ send_batch(sock_t sock, batch_t* batch, int retries)
 		}
 		if (rc < 0) {
 			// packet couldn't be sent in retries number of attempts
-			struct in_addr addr;
-			addr.s_addr = batch->packets[packet_num].ip;
+			struct ip *iph = (struct ip *)(batch->packets[packet_num].buf + sizeof(struct ether_header));
 			char addr_str_buf[INET_ADDRSTRLEN];
 			const char *addr_str =
 			    inet_ntop(
-				AF_INET, &addr,
+				AF_INET, &iph->ip_dst,
 				addr_str_buf,
 				INET_ADDRSTRLEN);
 			if (addr_str != NULL) {
