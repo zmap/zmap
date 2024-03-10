@@ -87,7 +87,7 @@ send_batch(sock_t sock, batch_t* batch, int retries)
 	int rc = 0;
 	for (int packet_num = 0; packet_num < batch->len; packet_num++) {
 		for (int retry_ct = 0; retry_ct < retries; retry_ct++) {
-			rc = send_packet(sock, ((uint8_t *)batch->packets) + (packet_num * MAX_PACKET_SIZE), batch->lens[packet_num], retry_ct);
+			rc = send_packet(sock, batch->packets[packet_num].buf, batch->packets[packet_num].len, retry_ct);
 			if (rc >= 0) {
 				packets_sent++;
 				break;
@@ -96,7 +96,7 @@ send_batch(sock_t sock, batch_t* batch, int retries)
 		if (rc < 0) {
 			// packet couldn't be sent in retries number of attempts
 			struct in_addr addr;
-			addr.s_addr = batch->ips[packet_num];
+			addr.s_addr = batch->packets[packet_num].ip;
 			char addr_str_buf[INET_ADDRSTRLEN];
 			const char *addr_str =
 			    inet_ntop(

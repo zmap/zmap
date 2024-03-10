@@ -23,7 +23,6 @@
 #include "filter.h"
 #include "types.h"
 
-#define MAX_PACKET_SIZE 4096
 #define MAC_ADDR_LEN_BYTES 6
 
 #define DEDUP_METHOD_DEFAULT 0
