@@ -1068,14 +1068,24 @@ int main(int argc, char *argv[])
 	}
 	// reserving 1 core for the receiver/monitor thread
 	int sender_cap = get_num_cores() - 1;
+	if (sender_cap < 1) {
+		// we need at least 1 core to send
+		sender_cap = 1;
+	}
 	if (zconf.senders > sender_cap) {
+		char recommended_cores[128];
+		snprintf(recommended_cores, sizeof(recommended_cores), "(number of cores - 1 = %d)", sender_cap);
+		if (zconf.senders > sender_cap && get_num_cores() == 1) {
+			strncpy(recommended_cores, "1\0", 3);
+		}
 		log_warn(
 		    "zmap",
 		    "ZMap has been configured to use a larger number of sending threads (%d) than the number of "
-			"dedicated cores that can be assigned to sending packets. We advise using only "
-			"(number of cores - 1 = %d) sender threads such that every sender thread and the "
-			"one receiver thread each have a dedicated core. Using a large number of sender threads "
-			"will likely decrease performance, not increase it.", zconf.senders, sender_cap);
+		    "dedicated cores that can be assigned to sending packets. We advise using only "
+		    "%s sender threads such that every sender thread and the "
+		    "one receiver thread each have a dedicated core. Using a large number of sender threads "
+		    "will likely decrease performance, not increase it.",
+		    zconf.senders, recommended_cores);
 	}
 #else
 	zconf.senders = args.sender_threads_arg;
