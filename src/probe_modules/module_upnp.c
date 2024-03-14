@@ -39,8 +39,8 @@ int upnp_global_initialize(struct state_conf *state)
 	return EXIT_SUCCESS;
 }
 
-int upnp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-			UNUSED void **arg_ptr)
+int upnp_prepare_packet(void *buf, macaddr_t *src, macaddr_t *gw,
+			UNUSED void *arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -255,7 +255,7 @@ probe_module_t module_upnp = {
     .pcap_snaplen = 2048,
     .port_args = 1,
     .global_initialize = &upnp_global_initialize,
-    .thread_initialize = &upnp_init_perthread,
+    .prepare_packet = &upnp_prepare_packet,
     .make_packet = &udp_make_packet,
     .print_packet = &udp_print_packet,
     .process_packet = &upnp_process_packet,

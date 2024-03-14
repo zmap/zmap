@@ -74,8 +74,8 @@ static int synscan_global_initialize(struct state_conf *state)
 	return EXIT_SUCCESS;
 }
 
-static int synscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-				  UNUSED void **arg_ptr)
+static int synscan_prepare_packet(void *buf, macaddr_t *src, macaddr_t *gw,
+				  UNUSED void *arg_ptr)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	make_eth_header(eth_header, src, gw);
@@ -259,7 +259,7 @@ probe_module_t module_tcp_synscan = {
     .pcap_snaplen = 96,
     .port_args = 1,
     .global_initialize = &synscan_global_initialize,
-    .thread_initialize = &synscan_init_perthread,
+    .prepare_packet = &synscan_prepare_packet,
     .make_packet = &synscan_make_packet,
     .print_packet = &synscan_print_packet,
     .process_packet = &synscan_process_packet,

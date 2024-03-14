@@ -75,10 +75,14 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 	struct msghdr msgs[batch->capacity];
 	struct iovec iovs[batch->capacity];
 
+	size_t buf_offset = 0;
+	if (zconf.send_ip_pkts) {
+		buf_offset = sizeof(struct ether_header);
+	}
 	for (int i = 0; i < batch->len; ++i) {
 		struct iovec *iov = &iovs[i];
-		iov->iov_base = batch->packets[i].buf;
-		iov->iov_len = batch->packets[i].len;
+		iov->iov_base = batch->packets[i].buf + buf_offset;
+		iov->iov_len = batch->packets[i].len - buf_offset;
 		struct msghdr *msg = &msgs[i];
 		memset(msg, 0, sizeof(struct msghdr));
 		// based on https://github.com/torvalds/linux/blob/master/net/socket.c#L2180
@@ -87,7 +91,7 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 		msg->msg_iov = iov;
 		msg->msg_iovlen = 1;
 		msgvec[i].msg_hdr = *msg;
-		msgvec[i].msg_len = batch->packets[i].len;
+		msgvec[i].msg_len = batch->packets[i].len - buf_offset;
 	}
 	// set up per-retry variables, so we can only re-submit what didn't send successfully
 	struct mmsghdr* current_msg_vec = msgvec;

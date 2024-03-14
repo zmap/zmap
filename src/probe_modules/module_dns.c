@@ -735,8 +735,8 @@ static int dns_global_cleanup(UNUSED struct state_conf *zconf,
 	return EXIT_SUCCESS;
 }
 
-int dns_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-		       UNUSED void **arg_ptr)
+int dns_prepare_packet(void *buf, macaddr_t *src, macaddr_t *gw,
+		       UNUSED void *arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 
@@ -902,7 +902,7 @@ void dns_add_null_fs(fieldset_t *fs)
 
 void dns_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 			uint32_t *validation,
-			__attribute__((unused)) struct timespec ts)
+			UNUSED struct timespec ts)
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
@@ -1111,8 +1111,8 @@ probe_module_t module_dns = {
     .pcap_filter = "udp || icmp",
     .pcap_snaplen = PCAP_SNAPLEN,
     .port_args = 1,
-    .thread_initialize = &dns_init_perthread,
     .global_initialize = &dns_global_initialize,
+    .prepare_packet = &dns_prepare_packet,
     .make_packet = &dns_make_packet,
     .print_packet = &dns_print_packet,
     .validate_packet = &dns_validate_packet,

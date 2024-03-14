@@ -34,9 +34,10 @@ send_run_init(UNUSED sock_t sock)
 }
 
 static int
-send_packet(sock_t sock, void *buf, int len, UNUSED uint32_t retry_ct)
+send_packet(sock_t sock, uint8_t *buf, int len, UNUSED uint32_t retry_ct)
 {
 	if (zconf.send_ip_pkts) {
+		buf += sizeof(struct ether_header);
 		struct ip *iph = (struct ip *)buf;
 
 #if defined(__APPLE__) || (defined(__FreeBSD__) && __FreeBSD_version < 1100030)
@@ -95,12 +96,11 @@ send_batch(sock_t sock, batch_t* batch, int retries)
 		}
 		if (rc < 0) {
 			// packet couldn't be sent in retries number of attempts
-			struct in_addr addr;
-			addr.s_addr = batch->packets[packet_num].ip;
+			struct ip *iph = (struct ip *)(batch->packets[packet_num].buf + sizeof(struct ether_header));
 			char addr_str_buf[INET_ADDRSTRLEN];
 			const char *addr_str =
 			    inet_ntop(
-				AF_INET, &addr,
+				AF_INET, &iph->ip_dst,
 				addr_str_buf,
 				INET_ADDRSTRLEN);
 			if (addr_str != NULL) {
