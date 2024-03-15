@@ -20,7 +20,7 @@ sock_t get_socket(UNUSED uint32_t id)
 {
 	int sock;
 	if (zconf.send_ip_pkts) {
-		sock = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_ALL));
+		sock = socket(PF_INET, SOCK_RAW, IPPROTO_RAW);
 	} else {
 		sock = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	}
