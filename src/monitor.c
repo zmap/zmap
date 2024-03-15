@@ -158,8 +158,16 @@ double compute_remaining_time(double age, uint64_t packets_sent,
 			remaining[4] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;
 		}
+		// time_remaining cannot be less than zero
+		if (min_d(remaining, sizeof(remaining) / sizeof(double)) < 0) {
+			return 0;
+		}
 		return min_d(remaining, sizeof(remaining) / sizeof(double));
 	} else {
+		// time_remaining cannot be less than zero
+		if (zconf.cooldown_secs - (now() - zsend.finish) < 0) {
+			return 0;
+		}
 		return zconf.cooldown_secs - (now() - zsend.finish);
 	}
 }
@@ -258,11 +266,6 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 	exp->total_sent = total_sent;
 	exp->total_tried_sent = total_iterations;
 	exp->percent_complete = 100. * age / (age + remaining_secs);
-	if (exp->percent_complete > 100.) {
-		// Shouldn't have over 100% completion. Also we can't do something like 100 * (pkts_sent / pkts_left)
-		// because for some CLI options (-N) you don't know how many packets you need to send to hit the target.
-		exp->percent_complete = 100.;
-	}
 	exp->recv_success_unique = recv_success;
 	exp->app_recv_success_unique = app_success;
 	exp->total_recv = total_recv;
