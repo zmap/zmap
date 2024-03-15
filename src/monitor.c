@@ -158,14 +158,14 @@ double compute_remaining_time(double age, uint64_t packets_sent,
 			remaining[4] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;
 		}
-		remaining_time = min_d(remaining, sizeof(remaining) / sizeof(double));
+		double remaining_time = min_d(remaining, sizeof(remaining) / sizeof(double));
 		if (remaining_time < 0) {
 			// time_remaining cannot be less than zero
 			return 0;
 		}
 		return remaining_time;
 	} else {
-		remaining_time = zconf.cooldown_secs - (now() - zsend.finish);
+		double remaining_time = zconf.cooldown_secs - (now() - zsend.finish);
 		if (remaining_time < 0) {
 			// time_remaining cannot be less than zero
 			return 0;
