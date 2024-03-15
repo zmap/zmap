@@ -30,6 +30,7 @@ def test_scan_known_good_ips():
 def test_scan_known_good_ips_with_iplayer():
     """
     This test will scan (not dry run) known active IPs and check that they are all scanned
+    Uses the --iplayer flag to test only sending IP packets (lets the OS compose the Ethernet frame)
     """
     known_active_ips = ["1.1.1.1", "8.8.8.8"]
     # create file called "output.txt" in current directory
