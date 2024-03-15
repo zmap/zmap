@@ -634,7 +634,7 @@ static int dns_global_initialize(struct state_conf *conf)
 			uint domain_len = strlen(domain_token);
 			// add space for the null terminator
 			char* domain_ptr = xmalloc(domain_len + 1);
-			strncpy(domain_ptr, domain_token, domain_len);
+			strncpy(domain_ptr, domain_token, domain_len + 1);
 			// add null terminator
 			domain_ptr[domain_len] = '\0';
 

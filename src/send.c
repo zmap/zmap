@@ -278,6 +278,7 @@ int send_run(sock_t st, shard_t *s)
 			last_time = steady_now();
 		}
 	}
+	int attempts = zconf.retries + 1;
 	// Get the initial IP to scan.
 	target_t current = shard_get_cur_target(s);
 	uint32_t current_ip = current.ip;
@@ -300,7 +301,6 @@ int send_run(sock_t st, shard_t *s)
 			}
 		}
 	}
-	int attempts = zconf.retries + 1;
 	while (1) {
 		// Adaptive timing delay
 		if (count && delay > 0) {

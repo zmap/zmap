@@ -21,7 +21,4 @@
 #include "../lib/includes.h"
 
 
-// Dummy sockaddr for sendto
-static struct sockaddr_ll sockaddr;
-
 #endif /* ZMAP_SEND_LINUX_H */
