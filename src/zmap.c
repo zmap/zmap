@@ -1042,6 +1042,11 @@ int main(int argc, char *argv[])
 #ifndef PFRING
 	// Set the correct number of threads, default to min(4, number of cores on host - 1, as available)
 	if (args.sender_threads_given) {
+		if (args.sender_threads_arg > 255) {
+			log_fatal("zmap", "cannot use > 255 sending threads. We advise using a sending thread per CPU "
+					  "core while reserving one core for packet receiving and monitoring. Using a large number of sender threads "
+					  "will likely decrease performance, not increase it.");
+		}
 		zconf.senders = args.sender_threads_arg;
 	} else {
 		// use one fewer than the number of cores on the machine such that the
