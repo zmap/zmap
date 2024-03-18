@@ -16,6 +16,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -464,12 +465,7 @@ void monitor_init(void)
 	}
 }
 
-void monitor_run(iterator_t *it, pthread_mutex_t *lock)
-{
-	int_status_t *internal_status = xmalloc(sizeof(int_status_t));
-	export_status_t *export_status = xmalloc(sizeof(export_status_t));
-
-	while (!(zsend.complete && zrecv.complete)) {
+void export_then_update(int_status_t *internal_status, iterator_t *it, export_status_t *export_status, pthread_mutex_t *lock) {
 		update_pcap_stats(lock);
 		export_stats(internal_status, export_status, it);
 		log_drop_warnings(export_status);
@@ -487,8 +483,21 @@ void monitor_run(iterator_t *it, pthread_mutex_t *lock)
 		if (status_fd) {
 			update_status_updates_file(export_status, status_fd);
 		}
+}
+
+void monitor_run(iterator_t *it, pthread_mutex_t *lock)
+{
+	int_status_t *internal_status = xmalloc(sizeof(int_status_t));
+	export_status_t *export_status = xmalloc(sizeof(export_status_t));
+
+	// wait for the scanning process to finish
+	while (!(zsend.complete && zrecv.complete)) {
+		export_then_update(internal_status, it, export_status, lock);
 		sleep(UPDATE_INTERVAL);
 	}
+	// final update
+	export_then_update(internal_status, it, export_status, lock);
+
 	if (!zconf.quiet) {
 		lock_file(stderr);
 		fflush(stderr);
