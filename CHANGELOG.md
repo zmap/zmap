@@ -171,6 +171,9 @@ ZMap 4.0.0 introduces the notion of multi-port scanning, which has been a long r
 
 ## FEATURE
 
+* Multi-port scanning support
+* Store link-layer timestamp in icmp_echo_time module (#726)
+* Build support for ARM-based Macs
 * Use the network interface containing the default route for usability
 * Improved the dst port validation
 
