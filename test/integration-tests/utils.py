@@ -182,7 +182,7 @@ def write_ips_to_file(num_of_ips, filename):
                     blocked_subnets.append(subnet[0])
 
     # generate a list of num_of_ips random, non-blocked public IPs
-    ips = []
+    ips = set()
     for _ in range(num_of_ips):
         while True:
             ip = str(ipaddress.IPv4Address(int(2 ** 32 * random())))
@@ -190,9 +190,9 @@ def write_ips_to_file(num_of_ips, filename):
             if any(ipaddress.ip_address(ip) in ipaddress.ip_network(subnet) for subnet in blocked_subnets):
                 # IP is blocked
                 continue
-            if ipaddress.ip_address(ip).is_global and not ipaddress.ip_address(ip).is_reserved:
+            if ipaddress.ip_address(ip).is_global and not ipaddress.ip_address(ip).is_reserved and ip not in ips:
                 # found a good IP
-                ips.append(ip)
+                ips.add(ip)
                 break
     # write the IPs to a file
     with open(filename, "w") as file:
