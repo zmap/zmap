@@ -179,24 +179,24 @@ ZMap 4.0.0 introduces the notion of multi-port scanning, which has been a long r
 
 
 # 4.1.0 2024-03-21
-ZMap 4.1.0 contains a number of bug fixes and performance enhancements, especially around the sending of probe packets. Additionally, the `IP_ID` is not randomized to prevent the fingerprinting of ZMap scan traffic. Below are some of the most important changes:
+ZMap 4.1.0 contains a number of bug fixes and performance enhancements, especially around the sending of probe packets. Additionally, the `IP_ID` is now randomized to prevent the fingerprinting of ZMap scan traffic. Below are some of the most important changes:
 
 ## BUGFIX
 * Fixes a bug where an assertion error would always occur when the `-I` flag was used
 * Fixes `--probe-args` parsing with the DNS module
-* Prevent crash when `--batch` size overflowed the uint8 holding the batch_size
-* Fix size calculation with `--iplayer` option that caused an overflow in `fake_eth_hdr`
-* Fixed shard initialization with multi-port that could cause the scan to scan port 0 
+* Prevents crash when `--batch` size overflowed the uint8 holding the batch_size
+* Fixes size calculation with `--iplayer` option that caused an overflow in `fake_eth_hdr`
+* Fixes shard initialization with multi-port that could cause the scan to scan port 0 
 
 
 ## FEATURE
 
-* Randomize the IP packet ID to prevent fingerprinting of scan traffic
-* Add support for Netmap to increase performance on supported NIC's w/ the requisite drivers
-* Add send packet batching (using `sendmmsg`) to improve performance on Linux/BSD
-* Add hardware acceleration for AES to improve performance when the CPU begins to become the bottleneck
-* Added integration tests and compilation checks for supported OS's as Github Actions
-* Added --probe-args options to the TCP SYN scan module to send TCP header options identical to Ubuntu (default), MacOS, Windows, or No Options.
-* Set default number of sending threads to min(4, number of host cores)
-* Handle IPv6 addresses in `blocklist.conf`
-* Support `--iplayer` on MacOS
+* Randomizes the IP packet ID to prevent fingerprinting of scan traffic
+* Adds support for Netmap to increase performance on supported NIC's w/ the requisite drivers
+* Adds send packet batching (using `sendmmsg`) to improve performance on Linux/BSD
+* Adds hardware acceleration for AES to improve performance when the CPU begins to become the bottleneck
+* Adds integration tests and compilation checks for supported OS's as Github Actions
+* Adds --probe-args options to the TCP SYN scan module to send TCP header options identical to Ubuntu (default), MacOS, Windows, or No Options.
+* Sets default number of sending threads to min(4, number of host cores)
+* Handles IPv6 addresses in `blocklist.conf`
+* Supports `--iplayer` on MacOS
