@@ -162,6 +162,14 @@ def bounded_runtime_test(t: zmap_wrapper.Wrapper):
 
 
 def write_ips_to_file(num_of_ips, filename):
+    """
+    Writes a list of public, non-blocked IPs to a file
+    Args:
+        num_of_ips (int): Number of IPs to write to the file
+        filename (str): File to write the IPs to
+    Returns:
+        List of IPs written to the file, as strings
+    """
     subnet_pattern = r'\b(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}\b'
     # read in blocked subnets in file "blocklist.conf" into a list
     blocked_subnets = []
