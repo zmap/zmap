@@ -123,61 +123,47 @@ static double min_d(double array[], int n)
 double compute_remaining_time(double age, uint64_t packets_sent,
 			      uint64_t iterations)
 {
-	log_warn("compute_remaining_time", "age: %f, packets_sent: %d, iterations: %d", age, packets_sent, iterations);
 	if (!zsend.complete) {
 		double remaining[] = {INFINITY, INFINITY, INFINITY, INFINITY,
 				      INFINITY};
 		if (zsend.list_of_ips_pbm) {
-			log_warn("compute_remaining_time", "zsend.list_of_ips_pbm");
 			// Estimate progress using group iterations
 			double done =
 			    (double)iterations /
 			    ((uint64_t)0xFFFFFFFFU / zconf.total_shards);
 			remaining[0] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;
-			log_warn("compute_remaining_time", "done: %f, remaining: %f", done, remaining[0]);
 		}
 		if (zsend.max_targets) {
-			log_warn("compute_remaining_time", "zsend.max_targets");
-			log_warn("compute_remaining_time", "packets_sent: %d, max_targets: %d, packet_streams: %d, total_shards: %d", packets_sent, zsend.max_targets, zconf.packet_streams, zconf.total_shards);
 			double done =
 			    (double)packets_sent /
 			    ((uint64_t)zsend.max_targets *
 			     zconf.packet_streams / zconf.total_shards);
 			remaining[1] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;
-			log_warn("compute_remaining_time", "done: %f, remaining: %f", done, remaining[1]);
 		}
 		if (zconf.max_runtime) {
-			log_warn("compute_remaining_time", "zconf.max_runtime");
 			remaining[2] =
 			    (zconf.max_runtime - age) + zconf.cooldown_secs;
-			log_warn("compute_remaining_time", "remaining: %f", remaining[2]);
 		}
 		if (zconf.max_results) {
-			log_warn("compute_remaining_time", "zconf.max_results: %d", zconf.max_results);
 			double done =
 			    (double)zrecv.filter_success / zconf.max_results;
 			remaining[3] = (1. - done) * (age / done);
-			log_warn("compute_remaining_time", "remaining: %f", remaining[3]);
 		}
 		if (zsend.max_index) {
-			log_warn("compute_remaining_time", "zsend.max_index");
-			log_warn("compute_remaining_time", "max_index: %d", zsend.max_index);
 			double done =
 			    (double)packets_sent /
 			    ((uint64_t)zsend.max_index * zconf.ports->port_count * zconf.packet_streams /
 			     zconf.total_shards);
 			remaining[4] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;
-			log_warn("compute_remaining_time", "remaining: %f", remaining[4]);
 		}
 		double remaining_time = min_d(remaining, sizeof(remaining) / sizeof(double));
 		if (remaining_time < 0) {
 			// remaining time cannot be less than zero
 			return 0;
 		}
-		log_warn("compute_remaining_time", "FINAL remaining_time: %f", remaining_time);
 		return remaining_time;
 	} else {
 		double remaining_time = zconf.cooldown_secs - (now() - zsend.finish);
