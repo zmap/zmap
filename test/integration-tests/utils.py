@@ -1,5 +1,7 @@
 import ipaddress
 import re
+
+from random import random
 from timeout_decorator import timeout
 import typing
 
@@ -159,3 +161,42 @@ def bounded_runtime_test(t: zmap_wrapper.Wrapper):
     return t.run()
 
 
+def write_ips_to_file(num_of_ips, filename):
+    """
+    Writes a list of public, non-blocked IPs to a file
+    Args:
+        num_of_ips (int): Number of IPs to write to the file
+        filename (str): File to write the IPs to
+    Returns:
+        List of IPs written to the file, as strings
+    """
+    subnet_pattern = r'\b(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}\b'
+    # read in blocked subnets in file "blocklist.conf" into a list
+    blocked_subnets = []
+    with open("../../conf/blocklist.conf", "r") as file:
+        for line in file:
+            if not line.startswith("#") and "/" in line:
+                # need to use a regex to pull out the subnet
+                subnet = re.findall(subnet_pattern, line.strip())
+                if subnet:
+                    blocked_subnets.append(subnet[0])
+
+    # generate a list of num_of_ips random, non-blocked public IPs
+    ips = set()
+    for _ in range(num_of_ips):
+        while True:
+            ip = str(ipaddress.IPv4Address(int(2 ** 32 * random())))
+            # ensure the IP is not in the blocklist
+            if any(ipaddress.ip_address(ip) in ipaddress.ip_network(subnet) for subnet in blocked_subnets):
+                # IP is blocked
+                continue
+            if ipaddress.ip_address(ip).is_global and not ipaddress.ip_address(ip).is_reserved and ip not in ips:
+                # found a good IP
+                ips.add(ip)
+                break
+    # write the IPs to a file
+    with open(filename, "w") as file:
+        for ip in ips:
+            file.write(ip + "\n")
+
+    return ips

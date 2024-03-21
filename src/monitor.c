@@ -154,7 +154,7 @@ double compute_remaining_time(double age, uint64_t packets_sent,
 		if (zsend.max_index) {
 			double done =
 			    (double)packets_sent /
-			    ((uint64_t)zsend.max_index * zconf.packet_streams /
+			    ((uint64_t)zsend.max_index * zconf.ports->port_count * zconf.packet_streams /
 			     zconf.total_shards);
 			remaining[4] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;

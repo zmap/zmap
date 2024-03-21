@@ -57,6 +57,20 @@ def test_multi_port_single_ip():
             assert sorted(port_list) == sorted(expected_output[port_test_index]), "didn't scan all the expected ports"
 
 
+def assert_expected_ips_and_ports_were_scanned(expected_ips, expected_port_set, packet_list):
+    ip_to_port_set = {}
+    for packet in packet_list:
+        dst_ip = packet["ip"]["daddr"]
+        dst_port = packet["tcp"]["dest"]
+        if dst_ip not in ip_to_port_set:
+            ip_to_port_set[dst_ip] = set()
+        assert dst_port not in ip_to_port_set[dst_ip], "scanned port multiple times for the same IP"
+        ip_to_port_set[dst_ip].add(dst_port)
+
+        assert dst_ip in expected_ips, "scanned IP not in subnet"
+        assert dst_port in expected_port_set, "scanned port not in expected ports"
+
+
 def test_multi_port_with_subnet():
     """
     scan a subnet with multiple ports and ensure the scanned result includes the correct number of unique IPs and all
@@ -74,9 +88,7 @@ def test_multi_port_with_subnet():
 
             assert len(packet_list) == len(expected_ips) * len(expected_ports[port_test_index]), ("incorrect number of "
                                                                                                   "packets sent")
-            for packet in packet_list:
-                assert packet["ip"]["daddr"] in expected_ips, "scanned IP not in subnet"
-                assert packet["tcp"]["dest"] in expected_port_set, "scanned port not in expected ports"
+            assert_expected_ips_and_ports_were_scanned(expected_ips, expected_port_set, packet_list)
 
 
 def test_multi_port_with_subnet_and_threads():
@@ -96,9 +108,7 @@ def test_multi_port_with_subnet_and_threads():
                 assert len(packet_list) == len(expected_ips) * len(expected_ports[port_test_index]), ("incorrect "
                                                                                                       "number of "
                                                                                                       "packets sent")
-                for packet in packet_list:
-                    assert packet["ip"]["daddr"] in expected_ips, "scanned IP not in subnet"
-                    assert packet["tcp"]["dest"] in expected_port_set, "scanned port not in expected ports"
+                assert_expected_ips_and_ports_were_scanned(expected_ips, expected_port_set, packet_list)
 
 
 ## Shards
@@ -415,34 +425,8 @@ def test_list_of_ips_option():
     """
     scan using a list of IPs and ensure the correct IPs are scanned
     """
-    subnet_pattern = r'\b(?:\d{1,3}\.){3}\d{1,3}/\d{1,2}\b'
-    # read in blocked subnets in file "blocklist.conf" into a list
-    blocked_subnets = []
-    with open("../../conf/blocklist.conf", "r") as file:
-        for line in file:
-            if not line.startswith("#") and "/" in line:
-                # need to use a regex to pull out the subnet
-                subnet = re.findall(subnet_pattern, line.strip())
-                if subnet:
-                    blocked_subnets.append(subnet[0])
 
-    # generate a list of 1M random, non-blocked public IPs
-    ips = []
-    for _ in range(1000):
-        while (True):
-            ip = str(ipaddress.IPv4Address(int(2 ** 32 * random.random())))
-            # ensure the IP is not in the blocklist
-            if any(ipaddress.ip_address(ip) in ipaddress.ip_network(subnet) for subnet in blocked_subnets):
-                # IP is blocked
-                continue
-            if ipaddress.ip_address(ip).is_global and not ipaddress.ip_address(ip).is_reserved:
-                # found a good IP
-                ips.append(ip)
-                break
-    # write the IPs to a file
-    with open("ips.txt", "w") as file:
-        for ip in ips:
-            file.write(ip + "\n")
+    ips = utils.write_ips_to_file(1000, "ips.txt")
     packets = zmap_wrapper.Wrapper(threads=2, list_of_ips_file="ips.txt").run()
 
     actual_packet_ips = list(packet["ip"]["daddr"] for packet in packets)
