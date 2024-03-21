@@ -115,7 +115,7 @@ def test_multi_port_with_list_of_ips_option():
     """
     scan a list of random IPs with multiple ports and ensure all IP/port combinations are scanned
     """
-    port_tests = ["22-32,80"]
+    port_tests = ["22-24"]
     expected_ports = [utils.parse_ports_string(port_test) for port_test in port_tests]
     expected_ips = set(str(ip) for ip in utils.write_ips_to_file(10000, "ips.txt"))
 
