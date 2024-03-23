@@ -60,8 +60,6 @@ uint64_t min_uint64_t(uint64_t a, uint64_t b)
 	return a;
 }
 
-
-
 void enforce_range(const char *name, int v, int min, int max)
 {
 	if (check_range(v, min, max) == EXIT_FAILURE) {
