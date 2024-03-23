@@ -37,7 +37,7 @@ static int synscan_global_initialize(struct state_conf *state)
 	num_source_ports =
 	    state->source_port_last - state->source_port_first + 1;
 	module_tcp_synscan.max_packet_length = zmap_tcp_synscan_packet_len;
-	    // Based on the OS, we'll set the TCP options differently
+	// Based on the OS, we'll set the TCP options differently
 	if (!state->probe_args) {
 		// user didn't provide any probe args, defaulting to linux
 		log_debug("tcp_synscan", "no probe-args, "

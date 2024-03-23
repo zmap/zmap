@@ -36,8 +36,9 @@ sock_t get_socket(UNUSED uint32_t id)
 	if (zconf.send_ip_pkts) {
 		int fd = socket(PF_INET, SOCK_RAW, IPPROTO_RAW);
 		if (fd == -1) {
-			log_fatal("socket-bsd", "obtaining socket(PF_INET, SOCK_RAW, IPPROTO_IP) failed: %d %s. You likely do not have privileges to open a raw packet socket. " \
-						    "Are you running as root?", errno, strerror(errno));
+			log_fatal("socket-bsd", "obtaining socket(PF_INET, SOCK_RAW, IPPROTO_IP) failed: %d %s. You likely do not have privileges to open a raw packet socket. "
+						"Are you running as root?",
+				  errno, strerror(errno));
 		}
 
 		int yes = 1;

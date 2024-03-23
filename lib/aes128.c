@@ -17,10 +17,8 @@
 #include <string.h>
 #include <pthread.h>
 
-
 #define AES128_ROUNDS 10
 #define BITS_PER_BYTE 8
-
 
 #ifdef AES_HW
 
@@ -40,10 +38,10 @@ aes128_hw_supported(void)
 }
 
 #if defined(__clang__)
-# pragma clang attribute push (__attribute__((target("sse2,aes"))), apply_to=function)
+#pragma clang attribute push(__attribute__((target("sse2,aes"))), apply_to = function)
 #elif defined(__GNUC__)
-# pragma GCC push_options
-# pragma GCC target ("sse2,aes")
+#pragma GCC push_options
+#pragma GCC target("sse2,aes")
 #endif
 
 struct aes128_hw_ctx {
@@ -53,7 +51,7 @@ struct aes128_hw_ctx {
 static __m128i
 aes128_hw_round_key(__m128i rk, __m128i rc)
 {
-	rc = _mm_shuffle_epi32(rc, _MM_SHUFFLE(3,3,3,3));
+	rc = _mm_shuffle_epi32(rc, _MM_SHUFFLE(3, 3, 3, 3));
 	rk = _mm_xor_si128(rk, _mm_slli_si128(rk, 4));
 	rk = _mm_xor_si128(rk, _mm_slli_si128(rk, 4));
 	rk = _mm_xor_si128(rk, _mm_slli_si128(rk, 4));
@@ -97,42 +95,42 @@ aes128_hw_enc_block(struct aes128_hw_ctx const *ctx, uint8_t const *pt, uint8_t 
 }
 
 #if defined(__clang__)
-# pragma clang attribute pop
+#pragma clang attribute pop
 #elif defined(__GNUC__)
-# pragma GCC pop_options
+#pragma GCC pop_options
 #endif
 
 #elif defined(__aarch64__)
 #define AES_HW_NAME "ARMv8 CE"
 
 #ifdef __ARM_ACLE
-# include <arm_acle.h>
+#include <arm_acle.h>
 #endif
 #ifdef __ARM_NEON
-# include <arm_neon.h>
+#include <arm_neon.h>
 #endif
 
 #if defined(__APPLE__)
-# include <sys/types.h>
-# include <sys/sysctl.h>
+#include <sys/types.h>
+#include <sys/sysctl.h>
 #elif defined(__FreeBSD__)
-# include <sys/auxv.h>
-# ifndef HWCAP_NEON
-#  define HWCAP_NEON 0x00001000
-# endif
-# ifndef HWCAP2_AES
-#  define HWCAP2_AES 0x00000001
-# endif
+#include <sys/auxv.h>
+#ifndef HWCAP_NEON
+#define HWCAP_NEON 0x00001000
+#endif
+#ifndef HWCAP2_AES
+#define HWCAP2_AES 0x00000001
+#endif
 #elif defined(__linux__)
-# include <sys/auxv.h>
-# ifndef HWCAP_NEON
-#  define HWCAP_NEON 0x00000010
-# endif
-# ifndef HWCAP_AES
-#  define HWCAP_AES  0x00001000
-# endif
+#include <sys/auxv.h>
+#ifndef HWCAP_NEON
+#define HWCAP_NEON 0x00000010
+#endif
+#ifndef HWCAP_AES
+#define HWCAP_AES 0x00001000
+#endif
 #else
-# warning "Runtime detection of AES hardware acceleration not implemented for platform"
+#warning "Runtime detection of AES hardware acceleration not implemented for platform"
 #endif
 
 static bool
@@ -160,10 +158,10 @@ aes128_hw_supported(void)
 }
 
 #if defined(__clang__)
-# pragma clang attribute push (__attribute__((target("aes"))), apply_to=function)
+#pragma clang attribute push(__attribute__((target("aes"))), apply_to = function)
 #elif defined(__GNUC__)
-# pragma GCC push_options
-# pragma GCC target ("+aes")
+#pragma GCC push_options
+#pragma GCC target("+aes")
 #endif
 
 struct aes128_hw_ctx {
@@ -191,7 +189,7 @@ static uint8_t const sbox[256] = {
 };
 // clang-format on
 
-static uint8_t const rcon[AES128_ROUNDS + 1] = { 0, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36 };
+static uint8_t const rcon[AES128_ROUNDS + 1] = {0, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36};
 
 static void
 aes128_hw_key_sched(uint8_t const *key, struct aes128_hw_ctx *ctx)
@@ -236,9 +234,9 @@ aes128_hw_enc_block(struct aes128_hw_ctx const *ctx, uint8_t const *pt, uint8_t 
 }
 
 #if defined(__clang__)
-# pragma clang attribute pop
+#pragma clang attribute pop
 #elif defined(__GNUC__)
-# pragma GCC pop_options
+#pragma GCC pop_options
 #endif
 
 #else
@@ -246,7 +244,6 @@ aes128_hw_enc_block(struct aes128_hw_ctx const *ctx, uint8_t const *pt, uint8_t 
 #endif
 
 #endif // AES_HW
-
 
 struct aes128_ctx {
 	union {
@@ -300,8 +297,7 @@ aes128_init(uint8_t const *key)
 	return ctx;
 }
 
-void
-aes128_encrypt_block(aes128_ctx_t *ctx, uint8_t const *pt, uint8_t *ct)
+void aes128_encrypt_block(aes128_ctx_t *ctx, uint8_t const *pt, uint8_t *ct)
 {
 #ifdef AES_HW
 	if (use_hw) {
@@ -313,19 +309,17 @@ aes128_encrypt_block(aes128_ctx_t *ctx, uint8_t const *pt, uint8_t *ct)
 	rijndaelEncrypt(ctx->u.sw.rk, AES128_ROUNDS, pt, ct);
 }
 
-void
-aes128_fini(aes128_ctx_t *ctx)
+void aes128_fini(aes128_ctx_t *ctx)
 {
 	free(ctx);
 }
 
-void
-aes128_selftest(void)
+void aes128_selftest(void)
 {
 	// Test vector from appendix C of NIST FIPS-197.
-	uint8_t const pt[AES128_BLOCK_BYTES] = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff };
-	uint8_t const key[AES128_KEY_BYTES] = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
-	uint8_t const expected_ct[AES128_BLOCK_BYTES] = { 0x69, 0xc4, 0xe0, 0xd8, 0x6a, 0x7b, 0x04, 0x30, 0xd8, 0xcd, 0xb7, 0x80, 0x70, 0xb4, 0xc5, 0x5a };
+	uint8_t const pt[AES128_BLOCK_BYTES] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
+	uint8_t const key[AES128_KEY_BYTES] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+	uint8_t const expected_ct[AES128_BLOCK_BYTES] = {0x69, 0xc4, 0xe0, 0xd8, 0x6a, 0x7b, 0x04, 0x30, 0xd8, 0xcd, 0xb7, 0x80, 0x70, 0xb4, 0xc5, 0x5a};
 
 	uint8_t actual_ct[AES128_BLOCK_BYTES];
 	memset(actual_ct, 0, sizeof(actual_ct));

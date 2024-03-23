@@ -55,7 +55,7 @@
 #include "../fieldset.h"
 
 #define DNS_PAYLOAD_LEN_LIMIT 512 // This is arbitrary
-#define PCAP_SNAPLEN 1500 // This is even more arbitrary
+#define PCAP_SNAPLEN 1500	  // This is even more arbitrary
 #define MAX_QTYPE 255
 #define ICMP_UNREACH_HEADER_SIZE 8
 #define BAD_QTYPE_STR "BAD QTYPE"
@@ -84,9 +84,9 @@ static uint16_t *qtypes;
 static int num_questions = 0; // How many DNS questions to query. Note: There's a requirement that probes is a multiple of DNS questions
 // necessary to null-terminate these since strtrk_r can take multiple delimitors as a char*, and since these are contiguous in memory,
 // they were being used jointly when the intention is to use only one at a time.
-static const char* probe_arg_delimitor = ";\0";
-static const char* domain_qtype_delimitor = ",\0";
-static const char* rn_delimitor = ":\0";
+static const char *probe_arg_delimitor = ";\0";
+static const char *domain_qtype_delimitor = ",\0";
+static const char *rn_delimitor = ":\0";
 
 static uint8_t *rdbits;
 const char *qopts_rn = "nr"; // used in query to disable recursion bit in DNS header
@@ -96,13 +96,13 @@ const char *qopts_rn = "nr"; // used in query to disable recursion bit in DNS he
  * with: dns_qtype (.h) qtype_strid_to_qtype (below) qtype_qtype_to_strid
  * (below, and setup_qtype_str_map())
  */
-const char *qtype_strs[] = {"A",  "NS",	 "CNAME", "SOA",   "PTR",
-			    "MX", "TXT", "AAAA",  "RRSIG", "ALL"};
+const char *qtype_strs[] = {"A", "NS", "CNAME", "SOA", "PTR",
+			    "MX", "TXT", "AAAA", "RRSIG", "ALL"};
 const int qtype_strs_len = 10;
 
 const dns_qtype qtype_strid_to_qtype[] = {
-    DNS_QTYPE_A,     DNS_QTYPE_NS, DNS_QTYPE_CNAME, DNS_QTYPE_SOA,
-    DNS_QTYPE_PTR,   DNS_QTYPE_MX, DNS_QTYPE_TXT,   DNS_QTYPE_AAAA,
+    DNS_QTYPE_A, DNS_QTYPE_NS, DNS_QTYPE_CNAME, DNS_QTYPE_SOA,
+    DNS_QTYPE_PTR, DNS_QTYPE_MX, DNS_QTYPE_TXT, DNS_QTYPE_AAAA,
     DNS_QTYPE_RRSIG, DNS_QTYPE_ALL};
 
 int8_t qtype_qtype_to_strid[256] = {BAD_QTYPE_VAL};
@@ -576,8 +576,6 @@ static bool process_response_answer(char **data, uint16_t *data_len,
  * Start of required zmap exports.
  */
 
-
-
 static int dns_global_initialize(struct state_conf *conf)
 {
 	setup_qtype_str_map();
@@ -598,9 +596,9 @@ static int dns_global_initialize(struct state_conf *conf)
 	num_questions = 0;
 
 	if (conf->probe_args) {
-		char* questions_ctx;
-		char* domain_ctx;
-		char* domain_and_qtype = strtok_r(conf->probe_args, probe_arg_delimitor, &questions_ctx);
+		char *questions_ctx;
+		char *domain_ctx;
+		char *domain_and_qtype = strtok_r(conf->probe_args, probe_arg_delimitor, &questions_ctx);
 
 		// Process each pair
 		while (domain_and_qtype != NULL) {
@@ -613,9 +611,9 @@ static int dns_global_initialize(struct state_conf *conf)
 			// Tokenize pair based on comma
 			char *qtype_token = strtok_r(domain_and_qtype, domain_qtype_delimitor, &domain_ctx);
 			char *domain_token = strtok_r(NULL, domain_qtype_delimitor, &domain_ctx);
- 			if (strchr(qtype_token, rn_delimitor[0]) != NULL) {
+			if (strchr(qtype_token, rn_delimitor[0]) != NULL) {
 				// need to check if user supplied the no-recursion bit
-				char* rbit_ctx;
+				char *rbit_ctx;
 				char *recurse_token = strtok_r(qtype_token, rn_delimitor, &rbit_ctx);
 				recurse_token = strtok_r(NULL, rn_delimitor, &rbit_ctx);
 				// check if the no-recursion field matches the expected value ("nr")
@@ -626,18 +624,19 @@ static int dns_global_initialize(struct state_conf *conf)
 				}
 			}
 			if (domain_token == NULL || qtype_token == NULL) {
-				log_fatal( "dns", "Invalid probe args (%s). Format: \"A,google.com\" " "or \"A,google.com;A,example.com\"", conf->probe_args);
+				log_fatal("dns", "Invalid probe args (%s). Format: \"A,google.com\" "
+						 "or \"A,google.com;A,example.com\"",
+					  conf->probe_args);
 			}
 			if (strlen(domain_token) == 0) {
-				log_fatal( "dns", "Invalid domain, domain cannot be empty.");
+				log_fatal("dns", "Invalid domain, domain cannot be empty.");
 			}
 			uint domain_len = strlen(domain_token);
 			// add space for the null terminator
-			char* domain_ptr = xmalloc(domain_len + 1);
+			char *domain_ptr = xmalloc(domain_len + 1);
 			strncpy(domain_ptr, domain_token, domain_len + 1);
 			// add null terminator
 			domain_ptr[domain_len] = '\0';
-
 
 			// print debug info
 			if (rdbits[num_questions] == 0) {
@@ -681,7 +680,8 @@ static int dns_global_initialize(struct state_conf *conf)
 	if (conf->packet_streams % num_questions != 0) {
 		// probe count must be a multiple of the number of DNS questions
 		log_fatal("dns", "number of probes (%d) must be a multiple of the number of DNS questions (%d)."
-				 "Example: '-P 4 --probe-args \"A,google.com;AAAA,cloudflare.com\"'", conf->packet_streams, num_questions);
+				 "Example: '-P 4 --probe-args \"A,google.com;AAAA,cloudflare.com\"'",
+			  conf->packet_streams, num_questions);
 	}
 	// Setup the global structures
 	dns_packets = xmalloc(sizeof(char *) * num_questions);
@@ -769,7 +769,8 @@ int dns_prepare_packet(void *buf, macaddr_t *src, macaddr_t *gw,
 //      1     |       2           =       1
 //      2     |       2           =       0
 //      3     |       2           =       1
-int get_dns_question_index_by_probe_num(int probe_num) {
+int get_dns_question_index_by_probe_num(int probe_num)
+{
 	assert(probe_num >= 0);
 	return probe_num % num_questions;
 }

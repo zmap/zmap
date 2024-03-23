@@ -239,7 +239,7 @@ char *get_default_iface(void)
 	iface = malloc(IF_NAMESIZE);
 	memset(iface, 0, IF_NAMESIZE);
 
-	if(_get_default_gw(&gw, iface)) {
+	if (_get_default_gw(&gw, iface)) {
 		log_fatal(
 		    "send",
 		    "ZMap could not detect your default network interface. "

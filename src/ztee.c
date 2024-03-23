@@ -29,7 +29,9 @@
 
 #include "topt.h"
 
-typedef enum file_format { FORMAT_CSV, FORMAT_JSON, FORMAT_RAW } format_t;
+typedef enum file_format { FORMAT_CSV,
+			   FORMAT_JSON,
+			   FORMAT_RAW } format_t;
 static const char *format_names[] = {"csv", "json", "raw"};
 
 typedef struct ztee_conf {
@@ -131,17 +133,17 @@ void print_thread_error(char *string);
 // executes every second
 void *monitor_ztee(void *my_q);
 
-#define SET_IF_GIVEN(DST, ARG)                                                 \
-	{                                                                      \
-		if (args.ARG##_given) {                                        \
-			(DST) = args.ARG##_arg;                                \
-		};                                                             \
+#define SET_IF_GIVEN(DST, ARG)                  \
+	{                                       \
+		if (args.ARG##_given) {         \
+			(DST) = args.ARG##_arg; \
+		};                              \
 	}
-#define SET_BOOL(DST, ARG)                                                     \
-	{                                                                      \
-		if (args.ARG##_given) {                                        \
-			(DST) = 1;                                             \
-		};                                                             \
+#define SET_BOOL(DST, ARG)              \
+	{                               \
+		if (args.ARG##_given) { \
+			(DST) = 1;      \
+		};                      \
 	}
 
 int main(int argc, char *argv[])

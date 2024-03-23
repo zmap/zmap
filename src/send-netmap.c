@@ -39,18 +39,17 @@ submit_queue_init_once(void)
 	assert(submit_queue);
 }
 
-int
-send_run_init(sock_t sock)
+int send_run_init(sock_t sock)
 {
 	if (sock.nm.tx_ring_idx == 0) {
 		pthread_once(&submit_queue_inited, submit_queue_init_once);
 	}
 
 	struct pollfd fds = {
-		.fd = sock.nm.tx_ring_fd,
-		.events = POLLOUT,
+	    .fd = sock.nm.tx_ring_fd,
+	    .events = POLLOUT,
 	};
-	log_debug("send-netmap", "tx ring %"PRIu32": polling for POLLOUT", sock.nm.tx_ring_idx);
+	log_debug("send-netmap", "tx ring %" PRIu32 ": polling for POLLOUT", sock.nm.tx_ring_idx);
 	if (poll(&fds, 1, -1) == -1) {
 		log_error("send-netmap", "poll(POLLOUT) failed: %d: %s", errno, strerror(errno));
 		return -1;
@@ -65,20 +64,18 @@ send_run_init(sock_t sock)
 // sense for low volume packets.
 // Since we don't know if send_run_init() has been called
 // yet or not, we need to ensure the queue is initialized.
-void
-submit_batch_internal(batch_t *batch)
+void submit_batch_internal(batch_t *batch)
 {
 	pthread_once(&submit_queue_inited, submit_queue_init_once);
 	push_back((void *)batch, submit_queue);
 }
 
-int
-send_batch_internal(sock_t sock, batch_t *batch)
+int send_batch_internal(sock_t sock, batch_t *batch)
 {
 	struct netmap_ring *ring = NETMAP_TXRING(zconf.nm.nm_if, sock.nm.tx_ring_idx);
 	struct pollfd fds = {
-		.fd = sock.nm.tx_ring_fd,
-		.events = POLLOUT,
+	    .fd = sock.nm.tx_ring_fd,
+	    .events = POLLOUT,
 	};
 
 	for (int i = 0; i < batch->len; i++) {
@@ -121,8 +118,7 @@ send_batch_internal(sock_t sock, batch_t *batch)
 // into directly.  And even though netmap would allow us to reuse
 // data still in buffers (unless NS_BUF_CHANGED has been set by
 // the kernel), we cannot take advantage of that currently.
-int
-send_batch(sock_t sock, batch_t *batch, UNUSED int attempts)
+int send_batch(sock_t sock, batch_t *batch, UNUSED int attempts)
 {
 	// On send thread 0, send any batches that have been
 	// submitted onto the submit_queue before sending the

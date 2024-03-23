@@ -43,7 +43,7 @@ typedef int (*probe_thread_init_cb)(void **arg_ptr);
 // each packet being sent in make_packet.
 //
 typedef int (*probe_prepare_packet_cb)(void *packetbuf, macaddr_t *src_mac,
-				    macaddr_t *gw_mac, void *arg);
+				       macaddr_t *gw_mac, void *arg);
 
 // The make_packet callback is passed a buffer pointing at an ethernet header.
 // The buffer is MAX_PACKET_SIZE bytes. The callback must update the value

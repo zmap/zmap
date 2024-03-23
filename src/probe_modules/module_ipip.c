@@ -113,8 +113,8 @@ int ipip_global_initialize(struct state_conf *conf)
 	}
 
 	module_ipip.max_packet_length = sizeof(struct ether_header) +
-				    sizeof(struct ip) * 2 +
-				    sizeof(struct udphdr) + udp_send_msg_len;
+					sizeof(struct ip) * 2 +
+					sizeof(struct udphdr) + udp_send_msg_len;
 	assert(module_ipip.max_packet_length <= MAX_PACKET_SIZE);
 
 	free(args);
@@ -145,7 +145,7 @@ int ipip_prepare_packet(void *buf, macaddr_t *src, macaddr_t *gw,
 	make_ip_header(ip_header, IPPROTO_IPIP, len);
 	struct ip *ip_header2 = &ip_header[1];
 	len =
-	     htons(sizeof(struct ip) + sizeof(struct udphdr) + udp_send_msg_len);
+	    htons(sizeof(struct ip) + sizeof(struct udphdr) + udp_send_msg_len);
 	make_ip_header(ip_header2, IPPROTO_UDP, len);
 
 	struct udphdr *udp_header = (struct udphdr *)(&ip_header2[1]);
@@ -186,7 +186,7 @@ int ipip_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 
 	// Output the total length of the packet
 	const size_t header_len = sizeof(struct ether_header) + sizeof(struct ip) +
-		sizeof(struct ip) + sizeof(struct udphdr);
+				  sizeof(struct ip) + sizeof(struct udphdr);
 	*buf_len = header_len + udp_send_msg_len;
 	return EXIT_SUCCESS;
 }
@@ -314,8 +314,8 @@ int ipip_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		}
 		for (unsigned i = 0; i < zconf.number_source_ips; i++) {
 			validate_gen(
-				zconf.source_ip_addresses[i],
-				ip_hdr->ip_src.s_addr, udp->uh_dport, (uint8_t *)validation);
+			    zconf.source_ip_addresses[i],
+			    ip_hdr->ip_src.s_addr, udp->uh_dport, (uint8_t *)validation);
 			if (check_dst_port(sport, num_ports, validation)) {
 				return PACKET_VALID;
 			}
@@ -336,8 +336,8 @@ int ipip_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		}
 		struct ip *ip_inner1 =
 		    (struct ip *)((char *)icmp + ICMP_UNREACH_HEADER_SIZE);
-        // update min_len according to first internal IP packet
-        min_len = min_len - sizeof(struct ip) + 4 * ip_inner1->ip_hl;
+		// update min_len according to first internal IP packet
+		min_len = min_len - sizeof(struct ip) + 4 * ip_inner1->ip_hl;
 		if (len < min_len) {
 			return PACKET_INVALID;
 		}
@@ -345,18 +345,18 @@ int ipip_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		if (!blocklist_is_allowed(dest)) {
 			return PACKET_INVALID;
 		}
-        struct ip *ip_inner2 = 
-            (struct ip *)((char *)ip_inner1 + 4 * ip_inner1->ip_hl);
-        // update min_len according to second internal IP packet
-        min_len = min_len - sizeof(struct ip) + 4 * ip_inner2->ip_hl;
+		struct ip *ip_inner2 =
+		    (struct ip *)((char *)ip_inner1 + 4 * ip_inner1->ip_hl);
+		// update min_len according to second internal IP packet
+		min_len = min_len - sizeof(struct ip) + 4 * ip_inner2->ip_hl;
 		if (len < min_len) {
 			return PACKET_INVALID;
 		}
-        // ensure the internal dst addr is the outer src addr and vice versa
-        if (ip_inner1->ip_dst.s_addr != ip_inner2->ip_src.s_addr || 
-                ip_inner1->ip_src.s_addr != ip_inner2->ip_dst.s_addr) {
-            return PACKET_INVALID;
-        }
+		// ensure the internal dst addr is the outer src addr and vice versa
+		if (ip_inner1->ip_dst.s_addr != ip_inner2->ip_src.s_addr ||
+		    ip_inner1->ip_src.s_addr != ip_inner2->ip_dst.s_addr) {
+			return PACKET_INVALID;
+		}
 		struct udphdr *udp =
 		    (struct udphdr *)((char *)ip_inner2 + 4 * ip_inner2->ip_hl);
 		// we can always check the destination port because this is the
@@ -399,7 +399,7 @@ static fielddef_t fields[] = {
 probe_module_t module_ipip = {
     .name = "ipip",
     .max_packet_length = sizeof(struct ether_header) + sizeof(struct ip) * 2 +
-		     sizeof(struct udphdr) + DEFUALT_PAYLOAD_LEN,
+			 sizeof(struct udphdr) + DEFUALT_PAYLOAD_LEN,
     .pcap_filter = "udp || icmp",
     .pcap_snaplen = 1500,
     .port_args = 1,

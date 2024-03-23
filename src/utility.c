@@ -76,8 +76,7 @@ size_t cross_platform_strlcpy(char *dst, const char *src, size_t siz)
 		return strlen(src);
 
 	strncpy(dst, src, siz - 1); // Copy at most size - 1 characters
-	dst[siz - 1] = '\0'; // Ensure null-termination
+	dst[siz - 1] = '\0';	    // Ensure null-termination
 
 	return strlen(src); // Return the length of src
 }
-

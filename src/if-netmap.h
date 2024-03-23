@@ -37,7 +37,7 @@ typedef struct if_stats_ctx if_stats_ctx_t;
 //
 // *ifname* is the name of the interface.
 // *fd* is the file descriptor to the netmap socket used for recv.
-if_stats_ctx_t * if_stats_init(char const *ifname, int fd);
+if_stats_ctx_t *if_stats_init(char const *ifname, int fd);
 
 // Returns true if the count of received packets is available
 // through if_stats_get(), false otherwise.  If this returns
