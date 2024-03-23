@@ -42,6 +42,7 @@ Td3[x] = Si[x].[09, 0d, 0b, 0e];
 Td4[x] = Si[x].[01, 01, 01, 01];
 */
 
+// clang-format off
 static const u32 Te0[256] = {
     0xc66363a5U, 0xf87c7c84U, 0xee777799U, 0xf67b7b8dU, 0xfff2f20dU,
     0xd66b6bbdU, 0xde6f6fb1U, 0x91c5c554U, 0x60303050U, 0x02010103U,
@@ -584,6 +585,9 @@ static const u32 Td4[256] = {
     0x14141414U, 0x63636363U, 0x55555555U, 0x21212121U, 0x0c0c0c0cU,
     0x7d7d7d7dU,
 };
+// clang-format on
+
+
 static const u32 rcon[] = {
     0x01000000, 0x02000000, 0x04000000, 0x08000000, 0x10000000, 0x20000000,
     0x40000000, 0x80000000, 0x1B000000, 0x36000000, /* for 128-bit blocks,
