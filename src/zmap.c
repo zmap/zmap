@@ -1055,9 +1055,9 @@ int main(int argc, char *argv[])
 		if (available_cores > 1) {
 			available_cores--;
 		}
-		int senders = min_int(available_cores, 4);
+		int senders = (int) min_uint64_t(min_uint64_t(available_cores, 4), (zconf.total_allowed * zconf.ports->port_count));
 		zconf.senders = senders;
-		log_debug("zmap", "will use %i sender threads based on core availability", senders);
+		log_debug("zmap", "will use %i sender threads based on core availability and number of targets", senders);
 	}
 #ifdef NETMAP
 	if (zconf.senders > (int)zconf.nm.nm_if->ni_tx_rings) {

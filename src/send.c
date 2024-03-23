@@ -67,9 +67,8 @@ iterator_t *send_init(void)
 {
 	// generate a new primitive root and starting position
 	iterator_t *it;
-	uint32_t num_subshards =
-	    (uint32_t)zconf.senders * (uint32_t)zconf.total_shards;
-	if (num_subshards > blocklist_count_allowed()) {
+	uint32_t num_subshards = (uint32_t)zconf.senders * (uint32_t)zconf.total_shards;
+	if (num_subshards > (blocklist_count_allowed() * zconf.ports->port_count)) {
 		log_fatal("send", "senders * shards > allowed probes");
 	}
 	if (zsend.max_targets && (num_subshards > zsend.max_targets)) {

@@ -25,6 +25,7 @@
 
 int max_int(int a, int b);
 int min_int(int a, int b);
+uint64_t min_uint64_t(uint64_t a, uint64_t b);
 
 uint32_t parse_max_hosts(char *max_targets);
 void enforce_range(const char *name, int v, int min, int max);
