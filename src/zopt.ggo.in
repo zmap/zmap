@@ -142,7 +142,7 @@ section "Response Deduplication"
 option "dedup-method"           - "Specifies how response deduplication should be performed. Options: default, none, full, window"
     typestr="method"
     optional string
-option "dedup-window-size"      - "Specifies window size for how many recent responses to keep in memory for deuplication"
+option "dedup-window-size"      - "Specifies window size for how many recent responses to keep in memory for deduplication"
     typestr="targets"
     default="1000000"
     optional int
