@@ -201,7 +201,7 @@ int send_run(sock_t st, shard_t *s)
 	log_debug("send", "send thread started");
 	pthread_mutex_lock(&send_mutex);
 	// allocate batch
-	batch_t* batch = create_packet_batch(zconf.batch);
+	batch_t *batch = create_packet_batch(zconf.batch);
 
 	// OS specific per-thread init
 	if (send_run_init(st)) {
@@ -236,7 +236,7 @@ int send_run(sock_t st, shard_t *s)
 	if (zconf.probe_module->prepare_packet) {
 		for (size_t i = 0; i < batch->capacity; i++) {
 			int rv = zconf.probe_module->prepare_packet(
-					batch->packets[i].buf, zconf.hw_mac, zconf.gw_mac, probe_data);
+			    batch->packets[i].buf, zconf.hw_mac, zconf.gw_mac, probe_data);
 			if (rv != EXIT_SUCCESS) {
 				log_fatal("send", "Probe module failed to prepare packet: %u", rv);
 			}
@@ -467,7 +467,8 @@ cleanup:
 	return EXIT_SUCCESS;
 }
 
-batch_t *create_packet_batch(uint16_t capacity) {
+batch_t *create_packet_batch(uint16_t capacity)
+{
 	// allocating batch and associated data structures in single xmalloc for cache locality
 	batch_t *batch = (batch_t *)xmalloc(sizeof(batch_t) + capacity * sizeof(struct batch_packet));
 	batch->packets = (struct batch_packet *)(batch + 1);
@@ -476,7 +477,8 @@ batch_t *create_packet_batch(uint16_t capacity) {
 	return batch;
 }
 
-void free_packet_batch(batch_t *batch) {
+void free_packet_batch(batch_t *batch)
+{
 	// batch was created with a single xmalloc, so this will free the component array too
 	xfree(batch);
 }

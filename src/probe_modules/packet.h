@@ -30,16 +30,16 @@
 
 #define ICMP_HEADER_SIZE 8
 
-#define PRINT_PACKET_SEP                                                       \
+#define PRINT_PACKET_SEP \
 	"------------------------------------------------------\n"
 
-#define CLASSIFICATION_SUCCESS_FIELDSET_FIELDS                                 \
-	{.name = "classification",                                             \
-	 .type = "string",                                                     \
-	 .desc = "packet classification"},                                     \
-	{                                                                      \
-		.name = "success", .type = "bool",                             \
-		.desc = "is response considered success"                       \
+#define CLASSIFICATION_SUCCESS_FIELDSET_FIELDS           \
+	{.name = "classification",                       \
+	 .type = "string",                               \
+	 .desc = "packet classification"},               \
+	{                                                \
+		.name = "success", .type = "bool",       \
+		.desc = "is response considered success" \
 	}
 
 #define CLASSIFICATION_SUCCESS_FIELDSET_LEN 2

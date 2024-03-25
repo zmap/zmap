@@ -130,8 +130,7 @@ fetch_stats64(struct rtnl_link_stats64 *rtlstats64, char const *ifname, int nlrt
 	}
 }
 
-void
-if_wait_for_phy_reset(char const *ifname, int fd)
+void if_wait_for_phy_reset(char const *ifname, int fd)
 {
 	// clobber deliberately
 	fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
@@ -168,7 +167,7 @@ if_get_data_link_size(UNUSED char const *ifname, UNUSED int fd)
 
 struct if_stats_ctx {
 	char *ifname; // owned
-	int nlrtfd; // owned
+	int nlrtfd;   // owned
 	// uint64_t rx_packets;
 	uint64_t rx_dropped;
 	uint64_t rx_errors;
@@ -195,22 +194,19 @@ if_stats_init(char const *ifname, UNUSED int fd)
 	return ctx;
 }
 
-void
-if_stats_fini(if_stats_ctx_t *ctx)
+void if_stats_fini(if_stats_ctx_t *ctx)
 {
 	free(ctx->ifname);
 	close(ctx->nlrtfd);
 	free(ctx);
 }
 
-bool
-if_stats_have_recv_ctr(UNUSED if_stats_ctx_t *ctx)
+bool if_stats_have_recv_ctr(UNUSED if_stats_ctx_t *ctx)
 {
 	return false;
 }
 
-int
-if_stats_get(if_stats_ctx_t *ctx, UNUSED uint32_t *ps_recv, uint32_t *ps_drop, uint32_t *ps_ifdrop)
+int if_stats_get(if_stats_ctx_t *ctx, UNUSED uint32_t *ps_recv, uint32_t *ps_drop, uint32_t *ps_ifdrop)
 {
 	struct rtnl_link_stats64 rtlstats64;
 	memset(&rtlstats64, 0, sizeof(rtlstats64));
@@ -219,6 +215,6 @@ if_stats_get(if_stats_ctx_t *ctx, UNUSED uint32_t *ps_recv, uint32_t *ps_drop, u
 	//*ps_recv = (uint32_t)(rtlstats64.rx_packets - ctx->rx_packets);
 	*ps_drop = (uint32_t)(rtlstats64.rx_dropped - ctx->rx_dropped);
 	*ps_ifdrop = (uint32_t)(rtlstats64.rx_errors - ctx->rx_errors +
-	                        rtlstats64.tx_errors - ctx->tx_errors);
+				rtlstats64.tx_errors - ctx->tx_errors);
 	return 0;
 }

@@ -16,7 +16,7 @@
 
 typedef struct aes128_ctx aes128_ctx_t;
 
-aes128_ctx_t * aes128_init(uint8_t const *key);
+aes128_ctx_t *aes128_init(uint8_t const *key);
 void aes128_encrypt_block(aes128_ctx_t *ctx, uint8_t const *pt, uint8_t *ct);
 void aes128_fini(aes128_ctx_t *ctx);
 

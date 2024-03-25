@@ -200,8 +200,8 @@ static struct timespec
 timespec_diff(struct timespec const *t1, struct timespec const *t0)
 {
 	struct timespec diff = {
-		.tv_sec = t1->tv_sec - t0->tv_sec,
-		.tv_nsec = t1->tv_nsec - t0->tv_nsec,
+	    .tv_sec = t1->tv_sec - t0->tv_sec,
+	    .tv_nsec = t1->tv_nsec - t0->tv_nsec,
 	};
 	if (diff.tv_nsec < 0) {
 		diff.tv_sec--;
@@ -289,8 +289,7 @@ void recv_init(void)
 	}
 }
 
-void
-recv_cleanup(void)
+void recv_cleanup(void)
 {
 	if_stats_fini(stats_ctx);
 	stats_ctx = NULL;
@@ -299,8 +298,7 @@ recv_cleanup(void)
 	nm_if = NULL;
 }
 
-void
-recv_packets(void)
+void recv_packets(void)
 {
 	// On Linux, EINTR seems to happen here once at startup.
 	// Haven't seen any EINTR on FreeBSD.  Retry is not wrong

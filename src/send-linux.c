@@ -69,12 +69,13 @@ int send_run_init(sock_t s)
 	return EXIT_SUCCESS;
 }
 
-int send_batch(sock_t sock, batch_t* batch, int retries) {
+int send_batch(sock_t sock, batch_t *batch, int retries)
+{
 	if (batch->len == 0) {
 		// nothing to send
 		return EXIT_SUCCESS;
 	}
-	struct mmsghdr msgvec [batch->capacity]; // Array of multiple msg header structures
+	struct mmsghdr msgvec[batch->capacity]; // Array of multiple msg header structures
 	struct msghdr msgs[batch->capacity];
 	struct iovec iovs[batch->capacity];
 
@@ -97,7 +98,7 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 		msgvec[i].msg_len = batch->packets[i].len - buf_offset;
 	}
 	// set up per-retry variables, so we can only re-submit what didn't send successfully
-	struct mmsghdr* current_msg_vec = msgvec;
+	struct mmsghdr *current_msg_vec = msgvec;
 	int total_packets_sent = 0;
 	int num_of_packets_in_batch = batch->len;
 	for (int i = 0; i < retries; i++) {
@@ -113,7 +114,7 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 		}
 		// if rv is positive, it gives the number of packets successfully sent
 		total_packets_sent += rv;
-		if (rv == num_of_packets_in_batch){
+		if (rv == num_of_packets_in_batch) {
 			// all packets in batch were sent successfully
 			break;
 		}

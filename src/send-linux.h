@@ -20,5 +20,4 @@
 
 #include "../lib/includes.h"
 
-
 #endif /* ZMAP_SEND_LINUX_H */

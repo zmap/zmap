@@ -102,7 +102,8 @@ void allowlist_prefix(char *ip, int prefix_len)
 	_add_constraint(addr, prefix_len, ADDR_ALLOWED);
 }
 
-static int is_ip_ipv6(char *ip) {
+static int is_ip_ipv6(char *ip)
+{
 	// don't modify the input string
 	char *new_str = strdup(ip);
 	// check if there's a subnet mask_char

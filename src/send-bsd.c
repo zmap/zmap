@@ -26,8 +26,7 @@
 #include "../lib/includes.h"
 #include "../lib/logger.h"
 
-int
-send_run_init(UNUSED sock_t sock)
+int send_run_init(UNUSED sock_t sock)
 {
 	// Don't need to do anything on BSD-like variants
 	return EXIT_SUCCESS;
@@ -77,8 +76,7 @@ send_packet(sock_t sock, uint8_t *buf, int len, UNUSED uint32_t retry_ct)
 // Following the same pattern for consistency
 // Returns - number of packets sent
 // Returns -1 and sets errno if no packets could be sent successfully
-int
-send_batch(sock_t sock, batch_t* batch, int retries)
+int send_batch(sock_t sock, batch_t *batch, int retries)
 {
 	if (batch->len == 0) {
 		// nothing to send
@@ -104,8 +102,8 @@ send_batch(sock_t sock, batch_t* batch, int retries)
 				addr_str_buf,
 				INET_ADDRSTRLEN);
 			if (addr_str != NULL) {
-				log_debug( "send-bsd", "send_packet failed for %s. %s", addr_str,
-					   strerror( errno));
+				log_debug("send-bsd", "send_packet failed for %s. %s", addr_str,
+					  strerror(errno));
 			}
 		}
 	}
@@ -116,4 +114,3 @@ send_batch(sock_t sock, batch_t* batch, int retries)
 	}
 	return packets_sent;
 }
-
