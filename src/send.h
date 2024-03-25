@@ -42,9 +42,9 @@ typedef struct {
 	struct batch_packet *packets;
 	uint16_t len;
 	uint16_t capacity;
-}batch_t;
+} batch_t;
 
-batch_t* create_packet_batch(uint16_t capacity);
-void free_packet_batch(batch_t* batch);
+batch_t *create_packet_batch(uint16_t capacity);
+void free_packet_batch(batch_t *batch);
 
 #endif // SEND_H

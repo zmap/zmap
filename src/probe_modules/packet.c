@@ -143,7 +143,6 @@ size_t set_mss_option(struct tcphdr *tcp_header)
 	return tcp_header->th_off * 4;
 }
 
-
 size_t set_nop_plus_windows_scale(struct tcphdr *tcp_header, uint8_t os)
 {
 	size_t header_size = tcp_header->th_off * 4;
@@ -177,8 +176,8 @@ size_t set_timestamp_option_with_nops(struct tcphdr *tcp_header)
 	last_opt += 2;
 	// exact method of getting this timestamp isn't important, only that it is a 4 byte value - RFC 7323
 	uint32_t now = time(NULL);
-	last_opt[0] = 0x08; // kind for timestamp field
-	last_opt[1] = 0x0a; // length for timestamp field
+	last_opt[0] = 0x08;			  // kind for timestamp field
+	last_opt[1] = 0x0a;			  // length for timestamp field
 	*(uint32_t *)(last_opt + 2) = htonl(now); // set current time in correct byte order
 	// final 4 bytes of timestamp field are left zeroed for the timestamp echo value
 	last_opt += 10; // update our pointer 10 bytes ahead
@@ -193,11 +192,11 @@ size_t set_sack_permitted_with_timestamp(struct tcphdr *tcp_header)
 	// SACKPermitted = 2 bytes
 	last_opt[0] = 0x04; // kind for SACKPermitted
 	last_opt[1] = 0x02; // set the length
-	last_opt += 2; // increment pointer
+	last_opt += 2;	    // increment pointer
 	// exact method of getting this timestamp isn't important, only that it is a 4 byte value - RFC 7323
 	uint32_t now = time(NULL);
-	last_opt[0] = 0x08; // kind for timestamp field
-	last_opt[1] = 0x0a; // length for timestamp field
+	last_opt[0] = 0x08;			  // kind for timestamp field
+	last_opt[1] = 0x0a;			  // length for timestamp field
 	*(uint32_t *)(last_opt + 2) = htonl(now); // set current time in correct byte order
 	// final 4 bytes of timestamp field are left zeroed for the timestamp echo value
 	last_opt += 10; // update our pointer 10 bytes ahead
@@ -217,7 +216,7 @@ size_t set_nop_plus_sack_permitted(struct tcphdr *tcp_header)
 	// SACKPermitted = 2 bytes
 	last_opt[0] = 0x04; // kind for SACKPermitted
 	last_opt[1] = 0x02; // set the length
-	last_opt += 2; // increment pointer
+	last_opt += 2;	    // increment pointer
 	tcp_header->th_off += 1;
 	return tcp_header->th_off * 4;
 }
@@ -229,11 +228,11 @@ size_t set_sack_permitted_plus_eol(struct tcphdr *tcp_header)
 	// SACKPermitted = 2 bytes
 	last_opt[0] = 0x04; // kind for SACKPermitted
 	last_opt[1] = 0x02; // set the length
-	last_opt += 2; // increment pointer
+	last_opt += 2;	    // increment pointer
 	// EOL = 1 byte
 	last_opt[0] = 0x00; // kind for EOL
 	last_opt[1] = 0x00; // kind for EOL
-	last_opt += 2; // increment pointer
+	last_opt += 2;	    // increment pointer
 	tcp_header->th_off += 1;
 	return tcp_header->th_off * 4;
 }
@@ -370,11 +369,11 @@ char *make_ip_str(uint32_t ip)
 }
 
 const char *icmp_unreach_strings[] = {
-    "network unreachable",	"host unreachable",
-    "protocol unreachable",	"port unreachable",
-    "fragments required",	"source route failed",
-    "network unknown",		"host unknown",
-    "source host isolated",	"network admin. prohibited",
-    "host admin. prohibited",	"network unreachable TOS",
-    "host unreachable TOS",	"communication admin. prohibited",
+    "network unreachable", "host unreachable",
+    "protocol unreachable", "port unreachable",
+    "fragments required", "source route failed",
+    "network unknown", "host unknown",
+    "source host isolated", "network admin. prohibited",
+    "host admin. prohibited", "network unreachable TOS",
+    "host unreachable TOS", "communication admin. prohibited",
     "host presdence violation", "precedence cutoff"};

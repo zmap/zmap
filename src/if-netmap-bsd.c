@@ -36,8 +36,7 @@ fetch_if_data(struct if_data *ifd, char const *ifname, int fd)
 	}
 }
 
-void
-if_wait_for_phy_reset(char const *ifname, int fd)
+void if_wait_for_phy_reset(char const *ifname, int fd)
 {
 	struct if_data ifd;
 	bzero(&ifd, sizeof(ifd));
@@ -74,7 +73,7 @@ if_get_data_link_size(char const *ifname, int fd)
 
 struct if_stats_ctx {
 	char *ifname; // owned
-	int fd; // borrowed
+	int fd;	      // borrowed
 	bool hwstats;
 	uint64_t ifi_ipackets;
 	uint64_t ifi_iqdrops;
@@ -107,21 +106,18 @@ if_stats_init(char const *ifname, int fd)
 	return ctx;
 }
 
-void
-if_stats_fini(if_stats_ctx_t *ctx)
+void if_stats_fini(if_stats_ctx_t *ctx)
 {
 	free(ctx->ifname);
 	free(ctx);
 }
 
-bool
-if_stats_have_recv_ctr(if_stats_ctx_t *ctx)
+bool if_stats_have_recv_ctr(if_stats_ctx_t *ctx)
 {
 	return ctx->hwstats;
 }
 
-int
-if_stats_get(if_stats_ctx_t *ctx, uint32_t *ps_recv, uint32_t *ps_drop, uint32_t *ps_ifdrop)
+int if_stats_get(if_stats_ctx_t *ctx, uint32_t *ps_recv, uint32_t *ps_drop, uint32_t *ps_ifdrop)
 {
 	struct if_data ifd;
 	bzero(&ifd, sizeof(ifd));
@@ -132,10 +128,6 @@ if_stats_get(if_stats_ctx_t *ctx, uint32_t *ps_recv, uint32_t *ps_drop, uint32_t
 	}
 	*ps_drop = (uint32_t)(ifd.ifi_iqdrops - ctx->ifi_iqdrops);
 	*ps_ifdrop = (uint32_t)(ifd.ifi_ierrors - ctx->ifi_ierrors +
-	                        ifd.ifi_oerrors - ctx->ifi_oerrors);
+				ifd.ifi_oerrors - ctx->ifi_oerrors);
 	return 0;
 }
-
-
-
-

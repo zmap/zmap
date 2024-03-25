@@ -465,24 +465,25 @@ void monitor_init(void)
 	}
 }
 
-void export_then_update(int_status_t *internal_status, iterator_t *it, export_status_t *export_status, pthread_mutex_t *lock) {
-		update_pcap_stats(lock);
-		export_stats(internal_status, export_status, it);
-		log_drop_warnings(export_status);
-		check_min_hitrate(export_status);
-		check_max_sendto_failures(export_status);
-		if (!zconf.quiet) {
-			lock_file(stderr);
-			if (zconf.fsconf.app_success_index >= 0) {
-				onscreen_appsuccess(export_status);
-			} else {
-				onscreen_generic(export_status);
-			}
-			unlock_file(stderr);
+void export_then_update(int_status_t *internal_status, iterator_t *it, export_status_t *export_status, pthread_mutex_t *lock)
+{
+	update_pcap_stats(lock);
+	export_stats(internal_status, export_status, it);
+	log_drop_warnings(export_status);
+	check_min_hitrate(export_status);
+	check_max_sendto_failures(export_status);
+	if (!zconf.quiet) {
+		lock_file(stderr);
+		if (zconf.fsconf.app_success_index >= 0) {
+			onscreen_appsuccess(export_status);
+		} else {
+			onscreen_generic(export_status);
 		}
-		if (status_fd) {
-			update_status_updates_file(export_status, status_fd);
-		}
+		unlock_file(stderr);
+	}
+	if (status_fd) {
+		update_status_updates_file(export_status, status_fd);
+	}
 }
 
 void monitor_run(iterator_t *it, pthread_mutex_t *lock)

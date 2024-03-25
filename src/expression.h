@@ -16,9 +16,19 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-enum operation { GT, LT, EQ, NEQ, AND, OR, LT_EQ, GT_EQ };
+enum operation { GT,
+		 LT,
+		 EQ,
+		 NEQ,
+		 AND,
+		 OR,
+		 LT_EQ,
+		 GT_EQ };
 
-enum node_type { OP, FIELD, STRING, INT };
+enum node_type { OP,
+		 FIELD,
+		 STRING,
+		 INT };
 
 struct field_id {
 	int index;

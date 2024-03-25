@@ -21,8 +21,8 @@
 
 #define ICMP_UNREACH_HEADER_SIZE 8
 
-#define ZMAP_BACNET_PACKET_LEN                                                 \
-	(sizeof(struct ether_header) + sizeof(struct ip) +                     \
+#define ZMAP_BACNET_PACKET_LEN                             \
+	(sizeof(struct ether_header) + sizeof(struct ip) + \
 	 sizeof(struct udphdr) + 0x11)
 
 probe_module_t module_bacnet;
