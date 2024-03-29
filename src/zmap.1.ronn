@@ -197,12 +197,12 @@ targets.
      full, window, and none. Full deduplication uses a 32-bit bitmap and
      guarantees that no duplicates will be emitted. However, full-deduplication
      requires around 500MB of memory for a single port. We do not support full
-     deduplication for multiple ports. Window uses a sliding window of a the last
+     deduplication for multiple ports. Window uses a sliding window of the last
      (user-defined) number of responses as set by --dedup-window-size. None will
      prevent any deduplication.
 
    * `--dedup-window-size=targets`:
-     Specifies the size of the sliding window of last n target responses to be
+     Specifies the size of the sliding window as the last n target responses to be
      used for deduplication. Only applicable if using window deduplication.
 
 ### LOGGING AND METADATA OPTIONS ###
