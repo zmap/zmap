@@ -188,6 +188,9 @@ ZMap 4.1.0 contains a number of bug fixes and performance enhancements, especial
 * Prevents crash when `--batch` size overflowed the uint8 holding the batch_size
 * Fixes size calculation with `--iplayer` option that caused an overflow in `fake_eth_hdr`
 * Fixes shard initialization with multi-port that could cause the scan to scan port 0 
+* Fixes inaccurate estimated time remaining and percentage complete calculations during a multi-port scan
+* Fixes building from source on MidnightBSD
+* Fixes hit-rate calculation with multiple `--probes` packets per target
 
 
 ## FEATURE
@@ -201,12 +204,3 @@ ZMap 4.1.0 contains a number of bug fixes and performance enhancements, especial
 * Sets default number of sending threads to min(4, number of host cores)
 * Handles IPv6 addresses in `blocklist.conf`
 * Supports `--iplayer` on MacOS
-* 
-# 4.1.1 2024-03-29
-ZMap 4.1.1 contains a couple bux fixes relating to hitrate calculation with multiple probes and a bug with ETA/percentage remaining calculation with multi-port scans.
-
-## BUGFIX
-
-* Fixes inaccurate estimated time remaining and percentage complete calculations during a multi-port scan
-* Fixes building from source on MidnightBSD
-* Fixes hit-rate calculation with multiple `--probes` packets per target
