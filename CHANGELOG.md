@@ -182,6 +182,7 @@ ZMap 4.0.0 introduces the notion of multi-port scanning, which has been a long r
 ZMap 4.1.0 contains a number of bug fixes and performance enhancements, especially around the sending of probe packets. Additionally, the `IP_ID` is now randomized to prevent the fingerprinting of ZMap scan traffic. Below are some of the most important changes:
 
 ## BUGFIX
+
 * Fixes a bug where an assertion error would always occur when the `-I` flag was used
 * Fixes `--probe-args` parsing with the DNS module
 * Prevents crash when `--batch` size overflowed the uint8 holding the batch_size
@@ -200,3 +201,12 @@ ZMap 4.1.0 contains a number of bug fixes and performance enhancements, especial
 * Sets default number of sending threads to min(4, number of host cores)
 * Handles IPv6 addresses in `blocklist.conf`
 * Supports `--iplayer` on MacOS
+* 
+# 4.1.1 2024-03-29
+ZMap 4.1.1 contains a couple bux fixes relating to hitrate calculation with multiple probes and a bug with ETA/percentage remaining calculation with multi-port scans.
+
+## BUGFIX
+
+* Fixes inaccurate estimated time remaining and percentage complete calculations during a multi-port scan
+* Fixes building from source on MidnightBSD
+* Fixes hit-rate calculation with multiple `--probes` packets per target
