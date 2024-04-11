@@ -112,7 +112,7 @@ void handle_packet(uint32_t buflen, const u_char *bytes,
 		buflen += sizeof(struct ether_header);
 	}
 	zconf.probe_module->process_packet(bytes, buflen, fs, validation, ts);
-	fs_add_system_fields(fs, is_repeat, zsend.complete);
+	fs_add_system_fields(fs, is_repeat, zsend.complete, ts);
 	int success_index = zconf.fsconf.success_index;
 	assert(success_index < fs->len);
 	int is_success = fs_get_uint64_by_index(fs, success_index);

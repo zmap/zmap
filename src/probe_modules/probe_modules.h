@@ -114,7 +114,7 @@ typedef struct probe_module {
 probe_module_t *get_probe_module_by_name(const char *);
 
 void fs_add_ip_fields(fieldset_t *fs, struct ip *ip);
-void fs_add_system_fields(fieldset_t *fs, int is_repeat, int in_cooldown);
+void fs_add_system_fields(fieldset_t *fs, int is_repeat, int in_cooldown, const struct timespec ts);
 void print_probe_modules(void);
 
 extern int ip_fields_len;
