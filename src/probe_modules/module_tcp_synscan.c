@@ -36,7 +36,6 @@ static int synscan_global_initialize(struct state_conf *state)
 {
 	num_source_ports =
 	    state->source_port_last - state->source_port_first + 1;
-	module_tcp_synscan.max_packet_length = zmap_tcp_synscan_packet_len;
 	// Based on the OS, we'll set the TCP options differently
 	if (!state->probe_args) {
 		// user didn't provide any probe args, defaulting to linux
@@ -68,6 +67,8 @@ static int synscan_global_initialize(struct state_conf *state)
 					 "\"windows\", and \"linux\"",
 			  state->probe_args);
 	}
+	// set max packet length accordingly for accurate send rate calculation
+	module_tcp_synscan.max_packet_length = zmap_tcp_synscan_packet_len;
 	// double-check arithmetic
 	assert(zmap_tcp_synscan_packet_len - zmap_tcp_synscan_tcp_header_len == 34);
 
