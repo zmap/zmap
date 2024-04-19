@@ -9,6 +9,7 @@ option(WITH_WERROR "Build with -Werror" OFF)
 option(WITH_PFRING "Build with PF_RING ZC for send (10 GigE)" OFF)
 option(WITH_NETMAP "Build with netmap(4) for send/recv (10+ GigE)" OFF)
 option(WITH_AES_HW "Build with AES hardware acceleration (x86_64 and arm64)" OFF)
+option(WITH_RTT "Build with RTT computation (TCP SYN scan only)" OFF)
 option(FORCE_CONF_INSTALL "Overwrites existing configuration files at install" OFF)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
@@ -136,6 +137,10 @@ endif()
 
 if(WITH_AES_HW)
     add_definitions("-DAES_HW")
+endif()
+
+if(WITH_RTT)
+    add_definitions("-DRTT")
 endif()
 
 set(JUDY_LIBRARIES "Judy")

@@ -36,6 +36,59 @@ probe_module_t module_tcp_synscan;
 static uint16_t num_source_ports;
 static uint8_t os_for_tcp_options;
 
+#ifdef RTT
+#include <errno.h>
+
+#ifndef NSEC_PER_SEC
+#define NSEC_PER_SEC 1000000000
+#endif
+#ifndef NSEC_PER_MSEC
+#define NSEC_PER_MSEC 1000000
+#endif
+#ifndef MSEC_PER_SEC
+#define MSEC_PER_SEC 1000
+#endif
+
+static void
+timespec_get_monotonic(struct timespec *t)
+{
+	if (clock_gettime(CLOCK_MONOTONIC, t) == -1) {
+		log_fatal("recv-netmap", "Failed to obtain monotonic time: %d: %s", errno, strerror(errno));
+	}
+}
+
+static struct timespec
+timespec_diff(struct timespec const *t1, struct timespec const *t0)
+{
+	struct timespec diff = {
+	    .tv_sec = t1->tv_sec - t0->tv_sec,
+	    .tv_nsec = t1->tv_nsec - t0->tv_nsec,
+	};
+	if (diff.tv_nsec < 0) {
+		diff.tv_sec--;
+		diff.tv_nsec += NSEC_PER_SEC;
+	}
+	return diff;
+}
+
+static uint64_t
+timespec_to_ms64(struct timespec const *t)
+{
+	return (uint64_t)t->tv_sec * MSEC_PER_SEC + (uint64_t)t->tv_nsec / NSEC_PER_MSEC;
+}
+
+static uint64_t
+timespec_ticks_since(struct timespec const *t_ref)
+{
+	struct timespec t_now;
+	timespec_get_monotonic(&t_now);
+	struct timespec t_diff = timespec_diff(&t_now, t_ref);
+	return timespec_to_ms64(&t_diff);
+}
+
+static struct timespec t_begin;
+#endif // RTT
+
 static int synscan_global_initialize(struct state_conf *state)
 {
 	num_source_ports =
@@ -80,6 +133,13 @@ static int synscan_global_initialize(struct state_conf *state)
 	// double-check arithmetic
 	assert(zmap_tcp_synscan_packet_len - zmap_tcp_synscan_tcp_header_len == 34);
 
+#ifdef RTT
+	timespec_get_monotonic(&t_begin);
+	if (zconf.batch != 1) {
+		log_warn("tcp_synscan", "Warning: Batch size is not 1, RTT calculation works best with --batch 1");
+	}
+#endif
+
 	return EXIT_SUCCESS;
 }
 
@@ -106,7 +166,13 @@ static int synscan_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
 	struct tcphdr *tcp_header = (struct tcphdr *)(&ip_header[1]);
+
+#ifdef RTT
+	uint64_t ticks = timespec_ticks_since(&t_begin);
+	uint32_t tcp_seq = validation[0] ^ ((uint32_t)ticks & 0x00FFFFFF);
+#else
 	uint32_t tcp_seq = validation[0];
+#endif
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
@@ -182,15 +248,28 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		// We treat RST packets different from non RST packets
 		if (tcp->th_flags & TH_RST) {
 			// For RST packets, recv(ack) == sent(seq) + 0 or + 1
+#ifdef RTT
+			if ((htonl(tcp->th_ack) & 0xFF) != (htonl(validation[0]) & 0xFF) &&
+			    (htonl(tcp->th_ack) & 0xFF) != ((htonl(validation[0]) + 1) & 0xFF)) {
+				return PACKET_INVALID;
+			}
+#else
 			if (htonl(tcp->th_ack) != htonl(validation[0]) &&
 			    htonl(tcp->th_ack) != htonl(validation[0]) + 1) {
 				return PACKET_INVALID;
 			}
+#endif
 		} else {
 			// For non RST packets, recv(ack) == sent(seq) + 1
+#ifdef RTT
+			if ((htonl(tcp->th_ack) & 0xFF) != ((htonl(validation[0]) + 1) & 0xFF)) {
+				return PACKET_INVALID;
+			}
+#else
 			if (htonl(tcp->th_ack) != htonl(validation[0]) + 1) {
 				return PACKET_INVALID;
 			}
+#endif
 		}
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		struct ip *ip_inner;
@@ -334,6 +413,17 @@ static void synscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 			fs_add_bool(fs, "success", 1);
 		}
 		fs_add_null_icmp(fs);
+#ifdef RTT
+		if (tcp->th_flags & TH_RST) { // RST packet
+			fs_add_null(fs, "rtt");
+		} else { // SYNACK packet
+			uint64_t ticks_now = timespec_ticks_since(&t_begin) & 0x00FFFFFF;
+			uint64_t ticks_pkt = htonl(ntohl(tcp->th_ack) - 1) ^ validation[0];
+			assert(ticks_pkt < 0x01000000); // should not have gotten past validation
+			uint64_t rtt = (ticks_now - ticks_pkt) & 0x00FFFFFF;
+			fs_add_uint64(fs, "rtt", rtt);
+		}
+#endif
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		// tcp
 		fs_add_null(fs, "sport");
@@ -351,6 +441,10 @@ static void synscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 		fs_add_bool(fs, "success", 0);
 		// icmp
 		fs_populate_icmp_from_iphdr(ip_hdr, len, fs);
+#ifdef RTT
+		// rtt
+		fs_add_null(fs, "rtt");
+#endif
 	}
 }
 
@@ -367,6 +461,9 @@ static fielddef_t fields[] = {
     {.name = "tcpopt_ts_ecr", .type = "int", .desc = "TCP timestamp option echo reply"},
     CLASSIFICATION_SUCCESS_FIELDSET_FIELDS,
     ICMP_FIELDSET_FIELDS,
+#ifdef RTT
+    {.name = "rtt", .type = "int", .desc = "RTT in ms"},
+#endif
 };
 
 probe_module_t module_tcp_synscan = {
