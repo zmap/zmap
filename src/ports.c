@@ -52,6 +52,12 @@ void parse_ports(char *portdef, struct port_conf *ports)
 					  "invalid target port specified: %i",
 					  last);
 			}
+                        if (first > last) {
+                                log_fatal("ports",
+                                          "invalid target port range: %i-%i",
+                                          first,
+                                          last);
+                        }
 			for (int i = first; i <= last; i++) {
 				add_port(ports, i);
 			}
