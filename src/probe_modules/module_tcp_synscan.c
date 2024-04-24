@@ -45,8 +45,8 @@ static int synscan_global_initialize(struct state_conf *state)
 	}
 	if (strcmp(state->probe_args, "smallest-probes") == 0) {
 		os_for_tcp_options = SMALLEST_ETHERNET_OS_OPTIONS;
-		zmap_tcp_synscan_tcp_header_len = 20;
-		zmap_tcp_synscan_packet_len = 54;
+		zmap_tcp_synscan_tcp_header_len = 24;
+		zmap_tcp_synscan_packet_len = 58;
 	} else if (strcmp(state->probe_args, "bsd") == 0) {
 		os_for_tcp_options = BSD_OS_OPTIONS;
 		zmap_tcp_synscan_tcp_header_len = 44;
@@ -273,8 +273,8 @@ probe_module_t module_tcp_synscan = {
 	"By default, TCP header options are set identically to the values used by "
 	"Windows (MSS, SACK permitted, and WindowScale = 8). Use \"--probe-args=n\" "
 	"to set the options, valid options are "
-	"\"smallest-possible\", \"bsd\", \"linux\", \"windows\" (default). "
-	"The \"smallest-possible\" option only sends MSS to achieve a better hit-rate "
+	"\"smallest-probes\", \"bsd\", \"linux\", \"windows\" (default). "
+	"The \"smallest-probes\" option only sends MSS to achieve a better hit-rate "
 	"than no options while staying within the minimum Ethernet payload size. Windows-style "
 	"TCP options offer the highest hit-rate with a modest increase in probe size.",
     .output_type = OUTPUT_TYPE_STATIC,
