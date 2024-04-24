@@ -40,11 +40,11 @@ static int synscan_global_initialize(struct state_conf *state)
 	if (!state->probe_args) {
 		// user didn't provide any probe args, defaulting to windows
 		log_debug("tcp_synscan", "no probe-args, "
-					 "defaulting to Windows TCP options. Windows-style TCP options offer the highest hit-rate with the least bytes per probe.");
+					 "defaulting to Windows-style TCP options. Windows-style TCP options offer the highest hit-rate with the least bytes per probe.");
 		state->probe_args = (char *)"windows";
 	}
 	if (strcmp(state->probe_args, "smallest-probes") == 0) {
-		os_for_tcp_options = SMALLEST_ETHERNET_OS_OPTIONS;
+		os_for_tcp_options = SMALLEST_PROBES_OS_OPTIONS;
 		zmap_tcp_synscan_tcp_header_len = 24;
 		zmap_tcp_synscan_packet_len = 58;
 	} else if (strcmp(state->probe_args, "bsd") == 0) {

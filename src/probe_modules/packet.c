@@ -240,7 +240,7 @@ size_t set_sack_permitted_plus_eol(struct tcphdr *tcp_header)
 // set_tcp_options adds the relevant TCP options so ZMap-sent packets have the same TCP header as linux-sent ones
 size_t set_tcp_options(struct tcphdr *tcp_header, uint8_t os_options_type)
 {
-	if (os_options_type == SMALLEST_ETHERNET_OS_OPTIONS) {
+	if (os_options_type == SMALLEST_PROBES_OS_OPTIONS) {
 		// the minimum Ethernet payload is 46 bytes. A TCP header + IP header is 40 bytes, giving us 6 bytes to work with.
 		// However, the word size is 4 bytes, so we can only use 44 or 48 bytes. Since we're trying to stay as close to the
 		// minimum payload size, we'll use 4 bytes for the MSS option and the last 2 will be padded by the OS.
