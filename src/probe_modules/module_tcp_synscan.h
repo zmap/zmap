@@ -20,7 +20,7 @@
 #include "probe_modules.h"
 #include "packet.h"
 
-#define NO_OPTIONS 0x00
+#define SMALLEST_ETHERNET_OS_OPTIONS 0x00
 #define LINUX_OS_OPTIONS 0x01
 #define BSD_OS_OPTIONS 0x02
 #define WINDOWS_OS_OPTIONS 0x03
