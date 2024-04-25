@@ -38,15 +38,15 @@ static int synscan_global_initialize(struct state_conf *state)
 	    state->source_port_last - state->source_port_first + 1;
 	// Based on the OS, we'll set the TCP options differently
 	if (!state->probe_args) {
-		// user didn't provide any probe args, defaulting to linux
+		// user didn't provide any probe args, defaulting to windows
 		log_debug("tcp_synscan", "no probe-args, "
-					 "defaulting to linux TCP options");
-		state->probe_args = (char *)"linux";
+					 "defaulting to Windows-style TCP options. Windows-style TCP options offer the highest hit-rate with the least bytes per probe.");
+		state->probe_args = (char *)"windows";
 	}
-	if (strcmp(state->probe_args, "none") == 0) {
-		os_for_tcp_options = NO_OPTIONS;
-		zmap_tcp_synscan_tcp_header_len = 20;
-		zmap_tcp_synscan_packet_len = 54;
+	if (strcmp(state->probe_args, "smallest-probes") == 0) {
+		os_for_tcp_options = SMALLEST_PROBES_OS_OPTIONS;
+		zmap_tcp_synscan_tcp_header_len = 24;
+		zmap_tcp_synscan_packet_len = 58;
 	} else if (strcmp(state->probe_args, "bsd") == 0) {
 		os_for_tcp_options = BSD_OS_OPTIONS;
 		zmap_tcp_synscan_tcp_header_len = 44;
@@ -270,10 +270,13 @@ probe_module_t module_tcp_synscan = {
 	"Probe module that sends a TCP SYN packet to a specific port. Possible "
 	"classifications are: synack and rst. A SYN-ACK packet is considered a "
 	"success and a reset packet is considered a failed response. "
-	"By default, TCP header options are set identically to the values for "
-	"linux (Ubuntu 23.10) (MSS, SACK permitted, Timestamp,  and WindowScale "
-	"= 7). Use \"--probe-args=n\" to set the options, valid options are "
-	"\"none\", \"bsd\", \"windows\", \"linux\" (default).",
+	"By default, TCP header options are set identically to the values used by "
+	"Windows (MSS, SACK permitted, and WindowScale = 8). Use \"--probe-args=n\" "
+	"to set the options, valid options are "
+	"\"smallest-probes\", \"bsd\", \"linux\", \"windows\" (default). "
+	"The \"smallest-probes\" option only sends MSS to achieve a better hit-rate "
+	"than no options while staying within the minimum Ethernet payload size. Windows-style "
+	"TCP options offer the highest hit-rate with a modest increase in probe size.",
     .output_type = OUTPUT_TYPE_STATIC,
     .fields = fields,
     .numfields = sizeof(fields) / sizeof(fields[0])};
