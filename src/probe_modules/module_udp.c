@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
+#include <sys/time.h>
 
 #include <errno.h>
 
@@ -123,7 +124,19 @@ static udp_payload_field_type_def_t udp_payload_template_fields[] = {
     {.name = "RAND_ALPHANUM",
      .ftype = UDP_RAND_ALPHANUM,
      .max_length = 0,
-     .desc = "Random mixed-case letters (a-z) and numbers"}};
+     .desc = "Random mixed-case letters (a-z) and numbers"},
+    {.name = "HEX",
+     .ftype = UDP_HEX,
+     .max_length = 0,
+     .desc = "String of hex-encoded byte values"},
+    {.name = "UNIXTIME_SEC",
+     .ftype = UDP_UNIXTIME_SEC,
+     .max_length = 4,
+     .desc = "Time in seconds since the Unix epoch in network byte order"},
+    {.name = "UNIXTIME_USEC",
+     .ftype = UDP_UNIXTIME_USEC,
+     .max_length = 4,
+     .desc = "Microsecond part of Unix time in network byte order"}};
 
 void udp_set_num_ports(int x) { num_ports = x; }
 
@@ -538,6 +551,8 @@ int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len,
 	unsigned int x, y;
 	uint32_t *u32;
 	uint16_t *u16;
+	int32_t *i32;
+	struct timeval tv = (struct timeval){0};
 
 	max = out + len;
 	p = out;
@@ -555,6 +570,7 @@ int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len,
 			// These fields have a specified output length value
 
 		case UDP_DATA:
+		case UDP_HEX:
 			if (!(c->data && c->length))
 				break;
 			memcpy(p, c->data, c->length);
@@ -670,7 +686,28 @@ int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len,
 			memcpy(p, tmp, y);
 			p += y;
 			break;
+
+		case UDP_UNIXTIME_SEC:
+		case UDP_UNIXTIME_USEC:
+			if (p + 4 >= max) {
+				full = 1;
+				break;
+			}
+
+			if (tv.tv_sec == 0) {
+				gettimeofday(&tv, NULL);
+			}
+
+			i32 = (int32_t *)p;
+			if (c->ftype == UDP_UNIXTIME_SEC) {
+				*i32 = htonl(tv.tv_sec);
+			} else {
+				*i32 = htonl(tv.tv_usec);
+			}
+			p += 4;
+			break;
 		}
+
 
 		// Bail out if our packet buffer would overflow
 		if (full == 1) {
@@ -693,6 +730,23 @@ int udp_template_field_lookup(const char *vname, udp_payload_field_t *c)
 	if (param) {
 		type_name_len = param - vname;
 		param++;
+	}
+
+	// Check for HEX= field which uses the parameter to encode hex values instead of the field length
+	if (strncmp(vname, "HEX", 3) == 0 && strlen("HEX") == type_name_len) {
+		c->ftype = UDP_HEX;
+		c->length = strlen(param) / 2;
+		c->data = xmalloc(c->length);
+
+        unsigned int n;
+        for (size_t i = 0; i < c->length; i++) {
+            if (sscanf(param + (i * 2), "%2x", &n) != 1) {
+                log_fatal("udp", "non-hex character: '%c'", param[i * 2]);
+            }
+			c->data[i] = (n & 0xff);
+        }
+
+		return 1;
 	}
 
 	// Most field types treat their parameter as a generator output length
