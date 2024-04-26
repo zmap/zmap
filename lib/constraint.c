@@ -72,7 +72,7 @@ typedef struct node {
 
 // As an optimization, we precompute lookups for every prefix of this
 // length:
-#define RADIX_LENGTH 20
+#define RADIX_LENGTH 18
 
 struct _constraint {
 	node_t *root;	     // root node of the tree
