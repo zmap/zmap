@@ -30,7 +30,7 @@
 #include "probe_modules/probe_modules.h"
 
 #define PCAP_PROMISC 1
-#define PCAP_TIMEOUT 1000
+#define PCAP_TIMEOUT 100
 
 static pcap_t *pc = NULL;
 
