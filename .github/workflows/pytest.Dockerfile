@@ -1,4 +1,4 @@
-FROM ubuntu:24.04
+FROM ubuntu:latest
 
 RUN apt-get update
 RUN apt-get install -y build-essential cmake libgmp3-dev gengetopt libpcap-dev flex \
