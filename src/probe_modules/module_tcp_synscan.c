@@ -64,7 +64,7 @@ static int synscan_global_initialize(struct state_conf *state)
 		log_fatal("tcp_synscan", "unknown "
 					 "probe-args value: %s, probe-args "
 					 "should have format: \"--probe-args=os\" "
-					 "where os can be \"none\", \"bsd\", "
+					 "where os can be \"smallest-probes\", \"bsd\", "
 					 "\"windows\", and \"linux\"",
 			  state->probe_args);
 	}
