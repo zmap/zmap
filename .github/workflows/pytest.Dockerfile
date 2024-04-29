@@ -1,11 +1,9 @@
 FROM ubuntu:latest
 
-RUN apt-get update \
-    && apt-get install -y build-essential cmake libgmp3-dev gengetopt libpcap-dev flex \
-    byacc libjson-c-dev pkg-config libunistring-dev libjudy-dev cmake  make python3 python3-pip curl \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-RUN pip3 install pytest timeout-decorator
+RUN apt-get update
+RUN apt-get install -y build-essential cmake libgmp3-dev gengetopt libpcap-dev flex \
+    byacc libjson-c-dev pkg-config libunistring-dev libjudy-dev cmake  make python3 python3-pytest python3-timeout-decorator curl
+RUN apt-get clean
 
 
 WORKDIR /zmap
