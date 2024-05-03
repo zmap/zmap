@@ -256,12 +256,11 @@ static void parse_tcp_opts(struct tcphdr *tcp, fieldset_t *fs)
 			default:
 				break;
 		}
-		// we don't want to get stuck in the loop if the TCP options are malformed, length must be at least 1
-		int safe_len = *len;
-		if (safe_len < 1) {
-			safe_len = 1;
+		// we don't want to get stuck in the loop if the TCP options are malformed, break if length is non-positive
+		if (*len < 1) {
+			break;
 		}
-		curr_idx += safe_len;
+		curr_idx += *len;
 	}
 
 	add_tcpopt_to_fs(fs, &mss, "tcpopt_mss");
