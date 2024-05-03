@@ -256,7 +256,10 @@ static void parse_tcp_opts(struct tcphdr *tcp, fieldset_t *fs)
 			default:
 				break;
 		}
-
+		// we don't want to get stuck in the loop if the TCP options are malformed, break if length is non-positive
+		if (*len < 1) {
+			break;
+		}
 		curr_idx += *len;
 	}
 
