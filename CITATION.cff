@@ -24,7 +24,7 @@ preferred-citation:
     - family-names: "Halderman"
       given-names: "J. Alex"
       orcid: "https://orcid.org/0000-0002-9116-5390"
-  journal: "22nd USENIX Security Symposium"
+  conference: "22nd USENIX Security Symposium"
   month: 8
   start: 605 # First page number
   end: 619 # Last page number
