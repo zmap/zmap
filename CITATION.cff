@@ -14,7 +14,7 @@ title: "zmap"
 date-released: 2013-08
 url: "https://github.com/zmap/zmap"
 preferred-citation:
-  type: "proceedings"
+  type: "conference-paper"
   authors:
     - family-names: "Durumeric"
       given-names: "Zakir"
