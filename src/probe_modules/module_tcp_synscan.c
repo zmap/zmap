@@ -242,8 +242,9 @@ static void parse_tcp_opts(struct tcphdr *tcp, fieldset_t *fs)
 		}
 
 		uint8_t len = *(((uint8_t *) tcp) + curr_idx + 1);
-		if ((len == 0) || (curr_idx + len > header_size)) {
-			// option length is zero or extends beyond end of header
+		if ((len <= 1) || (curr_idx + len > header_size)) {
+			// option length is too small to include the length
+			// field itself, or extends beyond end of header
 			break;
 		}
 
