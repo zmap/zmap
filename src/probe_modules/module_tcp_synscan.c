@@ -224,30 +224,56 @@ static void parse_tcp_opts(struct tcphdr *tcp, fieldset_t *fs)
 
 	size_t header_size = tcp->th_off * 4;
 	for (size_t curr_idx = 20; curr_idx < header_size; ) {
-		uint8_t *kind = ((uint8_t *) tcp) + curr_idx;
-		uint8_t *len = ((uint8_t *) tcp) + curr_idx + 1;
-		uint8_t *val = ((uint8_t *) tcp) + curr_idx + 2;
+		uint8_t kind = *(((uint8_t *) tcp) + curr_idx);
 
-		switch(*kind) {
+		// single-octet options without length field
+		switch (kind) {
 			case TCPOPT_EOL: // End of option list
 			case TCPOPT_NOP: // NOP
-				// EOL and NOP are 1 byte in length without any length or value fields
 				curr_idx += 1;
 				continue;
+			default:
+				break;
+		}
 
+		if (curr_idx + 1 >= header_size) {
+			// length field extends beyond end of header
+			break;
+		}
+
+		uint8_t len = *(((uint8_t *) tcp) + curr_idx + 1);
+		if ((len == 0) || (curr_idx + len > header_size)) {
+			// option length is zero or extends beyond end of header
+			break;
+		}
+
+		uint8_t *val = ((uint8_t *) tcp) + curr_idx + 2;
+		switch (kind) {
 			case TCPOPT_MAXSEG: // MSS
+				if (len != TCPOLEN_MAXSEG) {
+					goto break_loop;
+				}
 				mss = ntohs(*(uint16_t *) val);
 				break;
 
 			case TCPOPT_WINDOW: // Window scale
+				if (len != TCPOLEN_WINDOW) {
+					goto break_loop;
+				}
 				wscale = pow(2, *((uint8_t *) val));
 				break;
 
 			case TCPOPT_SACK_PERMITTED: // SACK permitted
+				if (len != TCPOLEN_SACK_PERMITTED) {
+					goto break_loop;
+				}
 				sack_perm = 1;
 				break;
 
 			case TCPOPT_TIMESTAMP: // TCP Timestamp
+				if (len != TCPOLEN_TIMESTAMP) {
+					goto break_loop;
+				}
 				// Retrieve TS value and TS echo reply
 				ts_val = ntohl(*(uint32_t *) val);
 				ts_ecr = ntohl(*((uint32_t *) (val + 4)));
@@ -256,13 +282,10 @@ static void parse_tcp_opts(struct tcphdr *tcp, fieldset_t *fs)
 			default:
 				break;
 		}
-		// we don't want to get stuck in the loop if the TCP options are malformed, break if length is non-positive
-		if (*len < 1) {
-			break;
-		}
-		curr_idx += *len;
+		curr_idx += len;
 	}
 
+break_loop:
 	add_tcpopt_to_fs(fs, &mss, "tcpopt_mss");
 	add_tcpopt_to_fs(fs, &wscale, "tcpopt_wscale");
 	add_tcpopt_to_fs(fs, &sack_perm, "tcpopt_sack_perm");
