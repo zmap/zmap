@@ -17,6 +17,6 @@ sock_t get_socket(uint32_t id)
 {
 	sock_t sock;
 	sock.pf.queue = zconf.pf.queues[id];
-	sock.pf.buffers = zconf.pf.buffers + 256 * id;
+	sock.pf.buffers = zconf.pf.buffers + zconf.batch * id;
 	return sock;
 }

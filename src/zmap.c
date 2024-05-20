@@ -50,7 +50,7 @@
 
 #ifdef PFRING
 #include <pfring_zc.h>
-static int32_t distrib_func(pfring_zc_pkt_buff *pkt, pfring_zc_queue *in_queue,
+static int64_t distrib_func(pfring_zc_pkt_buff *pkt, pfring_zc_queue *in_queue,
 			    void *arg)
 {
 	(void)pkt;
@@ -1118,7 +1118,7 @@ int main(int argc, char *argv[])
 #define QUEUE_LEN 8192
 #define ZMAP_PF_BUFFER_SIZE 1536
 #define ZMAP_PF_ZC_CLUSTER_ID 9627
-	uint32_t user_buffers = zconf.senders * 256;
+	uint32_t user_buffers = zconf.senders * zconf.batch;
 	uint32_t queue_buffers = zconf.senders * QUEUE_LEN;
 	uint32_t card_buffers = 2 * MAX_CARD_SLOTS;
 	uint32_t total_buffers =
@@ -1127,7 +1127,7 @@ int main(int argc, char *argv[])
 	uint32_t numa_node = 0; // TODO
 	zconf.pf.cluster = pfring_zc_create_cluster(
 	    ZMAP_PF_ZC_CLUSTER_ID, ZMAP_PF_BUFFER_SIZE, metadata_len,
-	    total_buffers, numa_node, NULL, NULL);
+	    total_buffers, numa_node, NULL, 0);
 	if (zconf.pf.cluster == NULL) {
 		log_fatal("zmap", "Could not create zc cluster: %s",
 			  strerror(errno));
