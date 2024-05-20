@@ -24,19 +24,15 @@ int send_run_init(sock_t socket)
 	return 0;
 }
 
-int send_packet(sock_t sock, void *buf, int len, uint32_t idx)
+int send_batch(sock_t sock, batch_t *batch, UNUSED int attempts)
 {
-	sock.pf.buffers[idx]->len = len;
-	memcpy(pfring_zc_pkt_buff_data(sock.pf.buffers[idx], sock.pf.queue),
-	       buf, len);
-	int ret;
-	do {
-		ret =
-		    pfring_zc_send_pkt(sock.pf.queue, &sock.pf.buffers[idx], 0);
-	} while (ret < 0);
-	return ret;
-}
+	for (int i = 0; i < batch->len; i++) {
+		uint32_t len = batch->packets[i].len;
+		sock.pf.buffers[i]->len = len;
+		memcpy(pfring_zc_pkt_buff_data(sock.pf.buffers[i], sock.pf.queue), batch->packets[i].buf, len);
+	}
 
-void send_finish(sock_t sock) { pfring_zc_sync_queue(sock.pf.queue, tx_only); }
+	return pfring_zc_send_pkt_burst(sock.pf.queue, sock.pf.buffers, batch->len, 1 /* flush */);
+}
 
 #endif /* ZMAP_SEND_PFRING_H */
