@@ -99,6 +99,8 @@ int send_run_cleanup_liburing(void) {
 // send_batch_liburing_helper uses the liburing library to async send packets
 // This will be much more performant than synchronous alternatives.
 int send_batch_liburing_helper(sock_t sock, batch_t* batch) {
+	// Todo - Phillip - remove
+	log_warn("send", "send_batch_liburing_helper: batch->len: %d", batch->len);
 	for (int i = 0; i < batch->len; i++) {
 		char *buf = ((void *)batch->packets) + (i * MAX_PACKET_SIZE);
 		int len = batch->lens[i];

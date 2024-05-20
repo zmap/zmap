@@ -42,7 +42,9 @@ static struct sockaddr_ll sockaddr;
 
 int send_batch_mmsg_helper(sock_t sock, batch_t* batch, int retries);
 
-int send_run_init(sock_t s, uint32_t kernel_cpu, bool is_liburing_enabled)
+static bool is_liburing_enabled = false;
+
+int send_run_init(sock_t s, uint32_t kernel_cpu)
 {
 	// Get the actual socket
 	int sock = s.sock;
@@ -71,7 +73,7 @@ int send_run_init(sock_t s, uint32_t kernel_cpu, bool is_liburing_enabled)
 	memcpy(sockaddr.sll_addr, zconf.gw_mac, ETH_ALEN);
 #if WITH_LIBURING
 	if (is_liburing_enabled) {
-		// set static variable to track this in send_run/send_run_cleanup
+		// TODO Phillip set static variable to track this in send_run/send_run_cleanup
 		use_liburing = is_liburing_enabled;
 		// need to initialize liburing related structures
 		return send_run_init_liburing(kernel_cpu);

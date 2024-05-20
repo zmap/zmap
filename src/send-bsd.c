@@ -26,7 +26,7 @@
 #include "../lib/includes.h"
 #include "../lib/logger.h"
 
-int send_run_init(UNUSED sock_t sock)
+int send_run_init(UNUSED sock_t sock, UNUSED uint32_t kernel_cpu)
 {
 	// Don't need to do anything on BSD-like variants
 	return EXIT_SUCCESS;
@@ -113,4 +113,8 @@ int send_batch(sock_t sock, batch_t *batch, int retries)
 		return -1;
 	}
 	return packets_sent;
+}
+
+int send_run_cleanup(void) {
+	return EXIT_SUCCESS;
 }

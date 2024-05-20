@@ -11,7 +11,7 @@
 
 #include "socket.h"
 
-int send_run_init(sock_t s);
+int send_run_init(sock_t s, uint32_t kernel_cpu);
 int send_batch(sock_t sock, batch_t *batch, int retries);
 
 #if defined(PFRING)

@@ -17,7 +17,8 @@
 #include <assert.h>
 
 iterator_t *send_init(void);
-int send_run(sock_t, shard_t *, uint32_t kernel_cpu, bool is_liburing_enabled);
+int send_run(sock_t, shard_t *, uint32_t kernel_cpu);
+int send_run_cleanup(void);
 
 // Fit two packets with metadata into one 4k page.
 // 2k seems like more than enough with typical MTU of

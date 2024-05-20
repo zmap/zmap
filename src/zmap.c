@@ -107,7 +107,15 @@ static void *start_send(void *arg)
 	send_arg_t *s = (send_arg_t *)arg;
 	log_debug("zmap", "Pinning a send thread to core %u", s->cpu);
 	set_cpu(s->cpu);
-	int ret = send_run(s->sock, s->shard, s->kernel_cpu, s->liburing_enabled);
+#if with_liburing
+	is_liburing_enabled = s->liburing_enabled;
+	if (s->liburing_enabled) {
+		log_warn("zmap", "liburing is enabled");
+	} else {
+		log_warn("zmap", "liburing is disabled");
+	}
+#endif
+	int ret = send_run(s->sock, s->shard, s->kernel_cpu);
 	free(s);
 	if (ret != EXIT_SUCCESS) {
 		log_fatal("send", "send_run failed, terminating");
