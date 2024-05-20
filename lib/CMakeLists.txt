@@ -11,6 +11,7 @@ SET(LIB_SOURCES
     util.c
     queue.c
     csv.c
+    aes128.c
 )
 
 add_library(zmaplib STATIC ${LIB_SOURCES})

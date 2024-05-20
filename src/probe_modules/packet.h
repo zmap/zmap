@@ -18,11 +18,10 @@
 #include "../../lib/blocklist.h"
 #include "../../lib/pbm.h"
 #include "../state.h"
+#include "../send.h"
 
 #ifndef PACKET_H
 #define PACKET_H
-
-#define MAX_PACKET_SIZE 4096
 
 #define ICMP_UNREACH_HEADER_SIZE 8
 
@@ -31,16 +30,16 @@
 
 #define ICMP_HEADER_SIZE 8
 
-#define PRINT_PACKET_SEP                                                       \
+#define PRINT_PACKET_SEP \
 	"------------------------------------------------------\n"
 
-#define CLASSIFICATION_SUCCESS_FIELDSET_FIELDS                                 \
-	{.name = "classification",                                             \
-	 .type = "string",                                                     \
-	 .desc = "packet classification"},                                     \
-	{                                                                      \
-		.name = "success", .type = "bool",                             \
-		.desc = "is response considered success"                       \
+#define CLASSIFICATION_SUCCESS_FIELDSET_FIELDS           \
+	{.name = "classification",                       \
+	 .type = "string",                               \
+	 .desc = "packet classification"},               \
+	{                                                \
+		.name = "success", .type = "bool",       \
+		.desc = "is response considered success" \
 	}
 
 #define CLASSIFICATION_SUCCESS_FIELDSET_LEN 2
@@ -68,6 +67,7 @@ void make_eth_header(struct ether_header *ethh, macaddr_t *src, macaddr_t *dst);
 void make_ip_header(struct ip *iph, uint8_t, uint16_t);
 void make_tcp_header(struct tcphdr *, uint16_t th_flags);
 size_t set_mss_option(struct tcphdr *tcp_header);
+size_t set_tcp_options(struct tcphdr *tcp_header, uint8_t os);
 void make_icmp_header(struct icmp *);
 void make_udp_header(struct udphdr *udp_header, uint16_t len);
 void fprintf_ip_header(FILE *fp, struct ip *iph);
@@ -158,7 +158,7 @@ static inline int check_dst_port(uint16_t port, int num_ports,
 	if (min <= max) {
 		return (to_validate <= max && to_validate >= min);
 	} else {
-		return (to_validate <= max ^ to_validate >= min);
+		return ((to_validate <= max) != (to_validate >= min));
 	}
 }
 

@@ -13,9 +13,32 @@
 
 #include "../lib/includes.h"
 
-typedef struct {
+#if defined(PFRING) && defined(NETMAP)
+#error "PFRING and NETMAP are mutually exclusive, only define one of them"
+#endif
+
+#ifdef PFRING
+#include <pfring_zc.h>
+#endif
+
+typedef union {
+#ifdef PFRING
+	struct {
+		pfring_zc_queue *queue;
+		pfring_zc_pkt_buff **buffers;
+		int idx;
+	} pf;
+#elif defined(NETMAP)
+	struct {
+		uint32_t tx_ring_idx;
+		int tx_ring_fd;
+	} nm;
+#else
 	int sock;
+#endif
 } sock_t;
+
+#endif /* PFRING */
 
 sock_t get_dryrun_socket(void);
 sock_t get_socket(uint32_t id);

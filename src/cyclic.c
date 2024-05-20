@@ -135,6 +135,10 @@ static uint32_t find_primroot(const cyclic_group_t *group, aesrand_t *aes)
 		candidate %= group->prime;
 		candidate %= max_root;
 
+		if (candidate == 0) {
+			continue;
+		}
+
 		mpz_t prime;
 		mpz_init_set_ui(prime, group->prime);
 		int ok = 1;

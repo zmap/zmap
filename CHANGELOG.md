@@ -161,3 +161,46 @@ ZMap 3.0.0 represents several years of development and contains more than a hund
 
 * Drop Redis and MongoDB support (#661)
 
+
+# 4.0.0 2023-11-06
+ZMap 4.0.0 introduces the notion of multi-port scanning, which has been a long requested feature. This is a breaking change since ZMap now operates on a metric of (ip,port) target instead of simply IP (e.g., for scan rate). It also introduces new dependencies (e.g., libjudy) to support multi-port scanning and changes ZMap's command-line interface. Below are some of the most important changes:
+
+## BUGFIX
+
+* Fix segmentation fault when passing no port to the ICMP module (or any module without a port requirement)
+
+## FEATURE
+
+* Multi-port scanning support
+* Store link-layer timestamp in icmp_echo_time module (#726)
+* Build support for ARM-based Macs
+* Use the network interface containing the default route for usability
+* Improve the dst port validation
+
+
+# 4.1.0 2024-03-21
+ZMap 4.1.0 contains a number of bug fixes and performance enhancements, especially around the sending of probe packets. Additionally, the `IP_ID` is now randomized to prevent the fingerprinting of ZMap scan traffic. Below are some of the most important changes:
+
+## BUGFIX
+
+* Fixes a bug where an assertion error would always occur when the `-I` flag was used
+* Fixes `--probe-args` parsing with the DNS module
+* Prevents crash when `--batch` size overflowed the uint8 holding the batch_size
+* Fixes size calculation with `--iplayer` option that caused an overflow in `fake_eth_hdr`
+* Fixes shard initialization with multi-port that could cause the scan to scan port 0 
+* Fixes inaccurate estimated time remaining and percentage complete calculations during a multi-port scan
+* Fixes building from source on MidnightBSD
+* Fixes hit-rate calculation with multiple `--probes` packets per target
+
+
+## FEATURE
+
+* Randomizes the IP packet ID to prevent fingerprinting of scan traffic
+* Adds support for Netmap to increase performance on supported NIC's w/ the requisite drivers
+* Adds send packet batching (using `sendmmsg`) to improve performance on Linux/BSD
+* Adds hardware acceleration for AES to improve performance when the CPU begins to become the bottleneck
+* Adds integration tests and compilation checks for supported OS's as Github Actions
+* Adds --probe-args options to the TCP SYN scan module to send TCP header options identical to Ubuntu (default), MacOS, Windows, or No Options.
+* Sets default number of sending threads to min(4, number of host cores)
+* Handles IPv6 addresses in `blocklist.conf`
+* Supports `--iplayer` on MacOS

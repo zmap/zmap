@@ -34,8 +34,8 @@ static int synackscan_global_initialize(struct state_conf *state)
 	return EXIT_SUCCESS;
 }
 
-static int synackscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-				     UNUSED void **arg_ptr)
+static int synackscan_prepare_packet(void *buf, macaddr_t *src, macaddr_t *gw,
+				     UNUSED void *arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -54,7 +54,7 @@ static int synackscan_make_packet(void *buf, UNUSED size_t *buf_len,
 				  ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
 				  port_n_t dport, uint8_t ttl,
 				  uint32_t *validation, int probe_num,
-				  UNUSED void *arg)
+				  uint16_t ip_id, UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
@@ -66,6 +66,7 @@ static int synackscan_make_packet(void *buf, UNUSED size_t *buf_len,
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
 	ip_header->ip_ttl = ttl;
+	ip_header->ip_id = ip_id;
 
 	tcp_header->th_sport =
 	    htons(get_src_port(num_ports, probe_num, validation));
@@ -210,7 +211,7 @@ probe_module_t module_tcp_synackscan = {
     .pcap_snaplen = 96,
     .port_args = 1,
     .global_initialize = &synackscan_global_initialize,
-    .thread_initialize = &synackscan_init_perthread,
+    .prepare_packet = &synackscan_prepare_packet,
     .make_packet = &synackscan_make_packet,
     .print_packet = &synscan_print_packet,
     .process_packet = &synackscan_process_packet,

@@ -1,7 +1,7 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "ZMAP" "1" "January 2024" "ZMap" "zmap"
+.TH "ZMAP" "1" "April 2024" "ZMap" "zmap"
 .
 .SH "NAME"
 \fBzmap\fR \- The Fast Internet Scanner
@@ -122,6 +122,10 @@ Network interface to use
 \fB\-X\fR, \fB\-\-iplayer\fR
 Send IP layer packets instead of ethernet packets (for non\-Ethernet interface)
 .
+.TP
+\fB\-\-netmap\-wait\-ping=ip\fR
+(Netmap only) Wait for ip to respond to ICMP Echo request before commencing scan\. Useful if connected to a switch with STP enabled, where the PHY reset that is needed for entering and leaving Netmap mode will cause the switch to mute the port until the spanning tree protocol has determined that the link should be set into forward state\.
+.
 .SS "PROBE OPTIONS"
 ZMap allows users to specify and write their own probe modules\. Probe modules are responsible for generating probe packets to send, and processing responses from hosts\.
 .
@@ -177,11 +181,11 @@ Hosts will oftentimes send multiple responses to a probe (either because the sca
 .
 .TP
 \fB\-\-dedup\-method\fR
-Specifies the method ZMap will use to deduplicate responses\. Options are: full, window, and none\. Full deduplication uses a 32\-bit bitmap and guarantees that no duplicates will be emitted\. However, full\-deduplication requires around 500MB of memory for a single port\. We do not support full deduplication for multiple ports\. Window uses a sliding window of a the last (user\-defined) number of responses as set by \-\-dedup\-window\-size\. None will prevent any deduplication\.
+Specifies the method ZMap will use to deduplicate responses\. Options are: full, window, and none\. Full deduplication uses a 32\-bit bitmap and guarantees that no duplicates will be emitted\. However, full\-deduplication requires around 500MB of memory for a single port\. We do not support full deduplication for multiple ports\. Window uses a sliding window of the last (user\-defined) number of responses as set by \-\-dedup\-window\-size\. None will prevent any deduplication\.
 .
 .TP
 \fB\-\-dedup\-window\-size=targets\fR
-Specifies the size of the sliding window of last n target responses to be used for deduplication\. Only applicable if using window deduplication\.
+Specifies the size of the sliding window as the last n target responses to be used for deduplication\. Only applicable if using window deduplication\.
 .
 .SS "LOGGING AND METADATA OPTIONS"
 .

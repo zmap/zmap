@@ -58,7 +58,7 @@ struct state_conf zconf = {
     .ports = NULL,
     .probe_args = NULL,
     .probe_module = NULL,
-    .probe_ttl = MAXTTL,
+    .probe_ttl = IPDEFTTL,
     .quiet = 0,
     .rate = -1,
     .raw_output_fields = NULL,
@@ -69,7 +69,7 @@ struct state_conf zconf = {
     .senders = 1,
     .send_ip_pkts = 0,
     .source_port_first = 32768, // (these are the default
-    .source_port_last = 61000, //   ephemeral range on Linux),
+    .source_port_last = 61000,	//   ephemeral range on Linux),
     .status_updates_file = NULL,
     .syslog = 1};
 

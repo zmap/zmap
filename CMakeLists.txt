@@ -6,6 +6,9 @@ option(ENABLE_DEVELOPMENT "Enable development specific compiler and linker flags
 option(ENABLE_LOG_TRACE "Enable log trace messages" OFF)
 option(RESPECT_INSTALL_PREFIX_CONFIG "Respect CMAKE_INSTALL_PREFIX for /etc" OFF)
 option(WITH_WERROR "Build with -Werror" OFF)
+option(WITH_PFRING "Build with PF_RING ZC for send (10 GigE)" OFF)
+option(WITH_NETMAP "Build with netmap(4) for send/recv (10+ GigE)" OFF)
+option(WITH_AES_HW "Build with AES hardware acceleration (x86_64 and arm64)" OFF)
 option(FORCE_CONF_INSTALL "Overwrites existing configuration files at install" OFF)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
@@ -14,7 +17,7 @@ else()
     set(USING_GCC "YES")
 endif()
 
-if("${CMAKE_SYSTEM_NAME}" MATCHES "FreeBSD" OR "${CMAKE_SYSTEM_NAME}" MATCHES "NetBSD" OR "${CMAKE_SYSTEM_NAME}" MATCHES "DragonFly")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "FreeBSD" OR "${CMAKE_SYSTEM_NAME}" MATCHES "NetBSD" OR "${CMAKE_SYSTEM_NAME}" MATCHES "DragonFly" OR "${CMAKE_SYSTEM_NAME}" MATCHES "MidnightBSD")
     set(BSD "YES")
 endif()
 
@@ -75,6 +78,19 @@ endif()
 string(REPLACE ";" " " JSON_CFLAGS "${JSON_CFLAGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${JSON_CFLAGS}")
 
+if(WITH_PFRING)
+    add_definitions("-DPFRING")
+    set(PFRING_LIBRARIES pfring rt numa)
+endif()
+
+if(WITH_NETMAP)
+    add_definitions("-DNETMAP")
+endif()
+
+if(WITH_AES_HW)
+    add_definitions("-DAES_HW")
+endif()
+
 set(JUDY_LIBRARIES "Judy")
 
 pkg_check_modules(LIBURING liburing)
@@ -86,7 +102,7 @@ endif()
 add_definitions(-DWITH_LIBURING=${WITH_LIBURING})
 
 # Standard FLAGS
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu11")
 if(NOT APPLE)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
 endif()

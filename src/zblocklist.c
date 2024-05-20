@@ -73,17 +73,17 @@ struct zbl_conf {
 	// struct zbl_stats stats;
 };
 
-#define SET_IF_GIVEN(DST, ARG)                                                 \
-	{                                                                      \
-		if (args.ARG##_given) {                                        \
-			(DST) = args.ARG##_arg;                                \
-		};                                                             \
+#define SET_IF_GIVEN(DST, ARG)                  \
+	{                                       \
+		if (args.ARG##_given) {         \
+			(DST) = args.ARG##_arg; \
+		};                              \
 	}
-#define SET_BOOL(DST, ARG)                                                     \
-	{                                                                      \
-		if (args.ARG##_given) {                                        \
-			(DST) = 1;                                             \
-		};                                                             \
+#define SET_BOOL(DST, ARG)              \
+	{                               \
+		if (args.ARG##_given) { \
+			(DST) = 1;      \
+		};                      \
 	}
 
 int main(int argc, char **argv)

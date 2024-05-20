@@ -11,7 +11,7 @@ env:
   ENABLE_LOG_TRACE: ON
 
 jobs:
-  build:
+  build-ubuntu:
     runs-on: ubuntu-20.04
     container:
       image: ghcr.io/zmap/builder:2023-09-10
@@ -37,3 +37,117 @@ jobs:
         working-directory: /zmap
         run: python3 ./scripts/check_manfile.py
 
+  build-ubuntu-16-04:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Compilation
+        run: |
+          docker build -t ubuntu-16.04-container -f .github/workflows/ubuntu-16.04.Dockerfile .
+          docker run ubuntu-16.04-container
+
+  build-ubuntu-18-04:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Compilation
+        run: |
+          docker build -t ubuntu-18.04-container -f .github/workflows/ubuntu-18.04.Dockerfile .
+          docker run ubuntu-18.04-container
+
+  build-ubuntu-20-04:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Compilation
+        run: |
+          docker build -t ubuntu-20.04-container -f .github/workflows/ubuntu-20.04.Dockerfile .
+          docker run ubuntu-20.04-container
+
+  build-ubuntu-22-04:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Compilation
+        run: |
+          docker build -t ubuntu-22.04-container -f .github/workflows/ubuntu-22.04.Dockerfile .
+          docker run ubuntu-22.04-container
+
+  build-ubuntu-24-04:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Compilation
+        run: |
+          docker build -t ubuntu-24.04-container -f .github/workflows/ubuntu-24.04.Dockerfile .
+          docker run ubuntu-24.04-container
+
+  build-debian:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Check Debian Compilation
+        run: |
+          docker build -t debian-container -f .github/workflows/debian.Dockerfile .
+          docker run debian-container
+
+  build-arch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Check Arch Compilation
+        run: |
+          docker build -t arch-container -f .github/workflows/arch.Dockerfile .
+          docker run arch-container
+
+  build-fedora:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Check Fedora Compilation
+        run: |
+          docker build -t fedora-container -f .github/workflows/fedora.Dockerfile .
+          docker run fedora-container
+
+  build-mac:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download dependencies
+        run: brew install pkg-config cmake gmp gengetopt json-c byacc libunistring judy
+
+      - name: Configure CMake
+        # Configure CMake in a 'build' subdirectory.
+        run: cmake -DENABLE_DEVELOPMENT=${{env.ENABLE_DEVELOPMENT}} -DENABLE_LOG_TRACE=${{env.ENABLE_LOG_TRACE}} .
+
+      - name: Build
+        # Build your program with the given configuration
+        run: make
+
+      - name: Check Manpages
+        run: python3 ./scripts/check_manfile.py
+
+  build-freebsd:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test in FreeBSD
+        id: test
+        uses: vmactions/freebsd-vm@v1
+        with:
+          envs: 'ENABLE_DEVELOPMENT ENABLE_LOG_TRACE'
+          usesh: true
+          prepare: |
+            freebsd-update fetch
+            freebsd-update install
+            pkg install -y judy byacc cmake flex gengetopt gmp json-c libunistring influxpkg-config python3
+          run: cd ~/work/zmap/zmap && cmake -DENABLE_DEVELOPMENT=${{env.ENABLE_DEVELOPMENT}} -DENABLE_LOG_TRACE=${{env.ENABLE_LOG_TRACE}} . && make && python3 ./scripts/check_manfile.py

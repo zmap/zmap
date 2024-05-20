@@ -20,19 +20,9 @@
 #include "probe_modules.h"
 #include "packet.h"
 
-int synscan_global_initialize(struct state_conf *state);
-
-int synscan_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-			   port_h_t dst_port, UNUSED void **arg_ptr);
-
-int synscan_make_packet(void *buf, ipaddr_n_t src_ip, ipaddr_n_t dst_ip,
-			uint8_t ttl, uint32_t *validation, int probe_num,
-			UNUSED void *arg);
+#define SMALLEST_PROBES_OS_OPTIONS 0x00
+#define LINUX_OS_OPTIONS 0x01
+#define BSD_OS_OPTIONS 0x02
+#define WINDOWS_OS_OPTIONS 0x03
 
 void synscan_print_packet(FILE *fp, void *packet);
-
-int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
-			    UNUSED uint32_t *src_ip, uint32_t *validation);
-
-void synscan_process_packet(const u_char *packet, UNUSED uint32_t len,
-			    fieldset_t *fs, UNUSED uint32_t *validation);

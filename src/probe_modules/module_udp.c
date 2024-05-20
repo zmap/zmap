@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <assert.h>
+#include <sys/time.h>
 
 #include <errno.h>
 
@@ -123,7 +124,19 @@ static udp_payload_field_type_def_t udp_payload_template_fields[] = {
     {.name = "RAND_ALPHANUM",
      .ftype = UDP_RAND_ALPHANUM,
      .max_length = 0,
-     .desc = "Random mixed-case letters (a-z) and numbers"}};
+     .desc = "Random mixed-case letters (a-z) and numbers"},
+    {.name = "HEX",
+     .ftype = UDP_HEX,
+     .max_length = 0,
+     .desc = "String of hex-encoded byte values"},
+    {.name = "UNIXTIME_SEC",
+     .ftype = UDP_UNIXTIME_SEC,
+     .max_length = 4,
+     .desc = "Time in seconds since the Unix epoch in network byte order"},
+    {.name = "UNIXTIME_USEC",
+     .ftype = UDP_UNIXTIME_USEC,
+     .max_length = 4,
+     .desc = "Microsecond part of Unix time in network byte order"}};
 
 void udp_set_num_ports(int x) { num_ports = x; }
 
@@ -241,7 +254,17 @@ int udp_global_cleanup(UNUSED struct state_conf *zconf,
 	return EXIT_SUCCESS;
 }
 
-int udp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw, void **arg_ptr)
+int udp_init_perthread(void **arg_ptr)
+{
+	// Seed our random number generator with the global generator
+	uint32_t seed = aesrand_getword(zconf.aes);
+	aesrand_t *aes = aesrand_init_from_seed(seed);
+	*arg_ptr = aes;
+
+	return EXIT_SUCCESS;
+}
+
+int udp_prepare_packet(void *buf, macaddr_t *src, macaddr_t *gw, UNUSED void *arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 	struct ether_header *eth_header = (struct ether_header *)buf;
@@ -260,17 +283,13 @@ int udp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw, void **arg_ptr)
 		memcpy(payload, udp_fixed_payload, udp_fixed_payload_len);
 	}
 
-	// Seed our random number generator with the global generator
-	uint32_t seed = aesrand_getword(zconf.aes);
-	aesrand_t *aes = aesrand_init_from_seed(seed);
-	*arg_ptr = aes;
-
 	return EXIT_SUCCESS;
 }
 
 int udp_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 		    ipaddr_n_t dst_ip, port_n_t dport, uint8_t ttl,
-		    uint32_t *validation, int probe_num, UNUSED void *arg)
+		    uint32_t *validation, int probe_num, uint16_t ip_id,
+		    UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
@@ -285,6 +304,7 @@ int udp_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	    htons(get_src_port(num_ports, probe_num, validation));
 	udp_header->uh_dport = dport;
 
+	ip_header->ip_id = ip_id;
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
 
@@ -295,7 +315,8 @@ int udp_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 
 int udp_make_templated_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 			      ipaddr_n_t dst_ip, port_n_t dport, uint8_t ttl,
-			      uint32_t *validation, int probe_num, void *arg)
+			      uint32_t *validation, int probe_num, uint16_t ip_id,
+			      void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
@@ -334,6 +355,7 @@ int udp_make_templated_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	udp_header->uh_ulen = ntohs(sizeof(struct udphdr) + payload_len);
 
 	ip_header->ip_sum = 0;
+	ip_header->ip_id = ip_id;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
 
 	// Recalculate the total length of the packet
@@ -529,6 +551,8 @@ int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len,
 	unsigned int x, y;
 	uint32_t *u32;
 	uint16_t *u16;
+	int32_t *i32;
+	struct timeval tv = (struct timeval){0};
 
 	max = out + len;
 	p = out;
@@ -546,6 +570,7 @@ int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len,
 			// These fields have a specified output length value
 
 		case UDP_DATA:
+		case UDP_HEX:
 			if (!(c->data && c->length))
 				break;
 			memcpy(p, c->data, c->length);
@@ -661,7 +686,28 @@ int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len,
 			memcpy(p, tmp, y);
 			p += y;
 			break;
+
+		case UDP_UNIXTIME_SEC:
+		case UDP_UNIXTIME_USEC:
+			if (p + 4 >= max) {
+				full = 1;
+				break;
+			}
+
+			if (tv.tv_sec == 0) {
+				gettimeofday(&tv, NULL);
+			}
+
+			i32 = (int32_t *)p;
+			if (c->ftype == UDP_UNIXTIME_SEC) {
+				*i32 = htonl(tv.tv_sec);
+			} else {
+				*i32 = htonl(tv.tv_usec);
+			}
+			p += 4;
+			break;
 		}
+
 
 		// Bail out if our packet buffer would overflow
 		if (full == 1) {
@@ -684,6 +730,23 @@ int udp_template_field_lookup(const char *vname, udp_payload_field_t *c)
 	if (param) {
 		type_name_len = param - vname;
 		param++;
+	}
+
+	// Check for HEX= field which uses the parameter to encode hex values instead of the field length
+	if (strncmp(vname, "HEX", 3) == 0 && strlen("HEX") == type_name_len) {
+		c->ftype = UDP_HEX;
+		c->length = strlen(param) / 2;
+		c->data = xmalloc(c->length);
+
+        unsigned int n;
+        for (size_t i = 0; i < c->length; i++) {
+            if (sscanf(param + (i * 2), "%2x", &n) != 1) {
+                log_fatal("udp", "non-hex character: '%c'", param[i * 2]);
+            }
+			c->data[i] = (n & 0xff);
+        }
+
+		return 1;
 	}
 
 	// Most field types treat their parameter as a generator output length
@@ -853,8 +916,9 @@ probe_module_t module_udp = {
     .pcap_snaplen =
 	MAX_UDP_PAYLOAD_LEN + 20 + 24, // Ether Header, IP Header with Options
     .port_args = 1,
-    .thread_initialize = &udp_init_perthread,
     .global_initialize = &udp_global_initialize,
+    .thread_initialize = &udp_init_perthread,
+    .prepare_packet = &udp_prepare_packet,
     .make_packet =
 	&udp_make_packet, // can be overridden to udp_make_templated_packet by udp_global_initalize
     .print_packet = &udp_print_packet,

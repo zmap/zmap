@@ -13,20 +13,40 @@
 
 #include "iterator.h"
 #include "socket.h"
-#include "./probe_modules/packet.h"
+
+#include <assert.h>
 
 iterator_t *send_init(void);
 int send_run(sock_t, shard_t *, uint32_t kernel_cpu, bool is_liburing_enabled);
 
-typedef struct {
-	char* packets;
-	uint32_t* ips;
-	int* lens;
-	uint8_t len;
-	uint8_t capacity;
-}batch_t;
+// Fit two packets with metadata into one 4k page.
+// 2k seems like more than enough with typical MTU of
+// 1500, and we don't want to cause IP fragmentation.
+#define MAX_PACKET_SIZE (2048 - sizeof(uint32_t) - 2 * sizeof(uint8_t))
 
-batch_t* create_packet_batch(uint8_t capacity);
-void free_packet_batch(batch_t* batch);
+// Metadata and initial packet bytes are adjacent,
+// for cache locality esp. with short packets.
+// buf is aligned such that the end of the Ethernet
+// header and beginning of the IP header will align
+// to a 32 bit boundary, such that reading/writing
+// IP addresses and other 32 bit header fields is
+// properly aligned.
+struct batch_packet {
+	uint32_t len;
+	uint8_t unused[2];
+	uint8_t buf[MAX_PACKET_SIZE];
+};
+
+static_assert((offsetof(struct batch_packet, buf) + sizeof(struct ether_header)) % sizeof(uint32_t) == 0,
+	      "buf is aligned such that IP header is 32-bit aligned");
+
+typedef struct {
+	struct batch_packet *packets;
+	uint16_t len;
+	uint16_t capacity;
+} batch_t;
+
+batch_t *create_packet_batch(uint16_t capacity);
+void free_packet_batch(batch_t *batch);
 
 #endif // SEND_H

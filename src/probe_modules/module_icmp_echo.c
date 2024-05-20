@@ -137,8 +137,8 @@ int icmp_global_cleanup(__attribute__((unused)) struct state_conf *zconf,
 	return EXIT_SUCCESS;
 }
 
-static int icmp_echo_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
-				    UNUSED void **arg_ptr)
+static int icmp_echo_prepare_packet(void *buf, macaddr_t *src, macaddr_t *gw,
+				    UNUSED void *arg_ptr)
 {
 	memset(buf, 0, MAX_PACKET_SIZE);
 
@@ -163,7 +163,8 @@ static int icmp_echo_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 static int icmp_echo_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 				 ipaddr_n_t dst_ip, UNUSED port_n_t dst_port,
 				 uint8_t ttl, uint32_t *validation,
-				 UNUSED int probe_num, UNUSED void *arg)
+				 UNUSED int probe_num, uint16_t ip_id,
+				 UNUSED void *arg)
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
@@ -186,7 +187,7 @@ static int icmp_echo_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	// Update the IP and UDP headers to match the new payload length
 	size_t ip_len = sizeof(struct ip) + ICMP_MINLEN + icmp_payload_len;
 	ip_header->ip_len = htons(ip_len);
-
+	ip_header->ip_id = ip_id;
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
 	*buf_len = ip_len + sizeof(struct ether_header);
@@ -329,7 +330,7 @@ probe_module_t module_icmp_echo = {
     .port_args = 0,
     .global_initialize = &icmp_global_initialize,
     .close = &icmp_global_cleanup,
-    .thread_initialize = &icmp_echo_init_perthread,
+    .prepare_packet = &icmp_echo_prepare_packet,
     .make_packet = &icmp_echo_make_packet,
     .print_packet = &icmp_echo_print_packet,
     .process_packet = &icmp_echo_process_packet,

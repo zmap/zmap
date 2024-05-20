@@ -37,10 +37,10 @@ option "rate"                   r "Set send rate in packets/sec"
 option "bandwidth"              B "Set send rate in bits/second (supports suffixes G, M and K)"
     typestr="bps"
     optional string
-option "batch"                  - "Set batch size for how many packets to send in a single syscall. Only advantageous on Linux (default=64)"
+option "batch"                  - "Set batch size for how many packets to send in a single syscall. Advantageous on Linux or with netmap (default=64)"
     typestr="pps"
     optional int
-option "max-targets"            n "Cap number of targets to probe (as a number or a percentage of the address space)"
+option "max-targets"            n "Cap number of targets to probe (as a number or a percentage of the address space). A target is an IP/port pair, if scanning multiple ports, and an IP otherwise."
     typestr="n"
     optional string
 option "max-runtime"            t "Cap length of time for sending packets"
@@ -99,6 +99,9 @@ option "interface"              i "Specify network interface to use"
     optional string
 option "iplayer"                X "Sends IP packets instead of Ethernet (for VPNs)"
     optional
+option "netmap-wait-ping"       - "Wait for IP to respond to ping before commencing scan (netmap only)"
+    typestr="ip"
+    optional string
 
 section "Probe Modules"
 option "probe-module"           M "Select probe module"
@@ -110,7 +113,7 @@ option "probe-args"             - "Arguments to pass to probe module"
     optional string
 option "probe-ttl"              - "Set TTL value for probe IP packets"
     typestr="n"
-    default="255"
+    default="64"
     optional int
 option "list-probe-modules"     - "List available probe modules"
         optional
@@ -140,7 +143,7 @@ section "Response Deduplication"
 option "dedup-method"           - "Specifies how response deduplication should be performed. Options: default, none, full, window"
     typestr="method"
     optional string
-option "dedup-window-size"      - "Specifies window size for how many recent responses to keep in memory for deuplication"
+option "dedup-window-size"      - "Specifies window size for how many recent responses to keep in memory for deduplication"
     typestr="targets"
     default="1000000"
     optional int

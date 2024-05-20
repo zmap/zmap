@@ -16,6 +16,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,6 +29,7 @@
 #include "../lib/util.h"
 #include "../lib/xalloc.h"
 
+#include "blocklist.h"
 #include "iterator.h"
 #include "recv.h"
 #include "state.h"
@@ -153,14 +155,24 @@ double compute_remaining_time(double age, uint64_t packets_sent,
 		if (zsend.max_index) {
 			double done =
 			    (double)packets_sent /
-			    ((uint64_t)zsend.max_index * zconf.packet_streams /
+			    ((uint64_t)zsend.max_index * zconf.ports->port_count * zconf.packet_streams /
 			     zconf.total_shards);
 			remaining[4] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;
 		}
-		return min_d(remaining, sizeof(remaining) / sizeof(double));
+		double remaining_time = min_d(remaining, sizeof(remaining) / sizeof(double));
+		if (remaining_time < 0) {
+			// remaining time cannot be less than zero
+			return 0;
+		}
+		return remaining_time;
 	} else {
-		return zconf.cooldown_secs - (now() - zsend.finish);
+		double remaining_time = zconf.cooldown_secs - (now() - zsend.finish);
+		if (remaining_time < 0) {
+			// remaining time cannot be less than zero
+			return 0;
+		}
+		return remaining_time;
 	}
 }
 
@@ -179,7 +191,7 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 	uint64_t total_iterations = iterator_get_iterations(it);
 	uint32_t total_fail = iterator_get_fail(it);
 	uint64_t total_recv = zrecv.pcap_recv;
-	uint64_t recv_success = zrecv.filter_success;
+	uint64_t recv_success = zrecv.success_unique;
 	uint32_t app_success = zrecv.app_success_unique;
 	double cur_time = now();
 	double age = cur_time - zsend.start; // time of entire scan
@@ -224,9 +236,14 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 	if (!total_sent) {
 		exp->hitrate = 0;
 		exp->app_hitrate = 0;
+	} else if (zconf.dedup_method == DEDUP_METHOD_NONE) {
+			// receive thread won't de-dupe packets, so don't need to care about number of probes
+			exp->hitrate = recv_success * 100.0 /  total_sent;
+			exp->app_hitrate = app_success * 100.0 / total_sent;
 	} else {
-		exp->hitrate = recv_success * 100.0 / total_sent;
-		exp->app_hitrate = app_success * 100.0 / total_sent;
+		// receive thread will de-dupe packets for a given target, so we'll divide by the number of probes to get accurate hit-rate
+		exp->hitrate = recv_success * 100.0 / (total_sent / zconf.packet_streams);
+		exp->app_hitrate = app_success * 100.0 / (total_sent / zconf.packet_streams);
 	}
 
 	if (age > WARMUP_PERIOD && exp->hitrate < zconf.min_hitrate) {
@@ -454,31 +471,40 @@ void monitor_init(void)
 	}
 }
 
+void export_then_update(int_status_t *internal_status, iterator_t *it, export_status_t *export_status, pthread_mutex_t *lock)
+{
+	update_pcap_stats(lock);
+	export_stats(internal_status, export_status, it);
+	log_drop_warnings(export_status);
+	check_min_hitrate(export_status);
+	check_max_sendto_failures(export_status);
+	if (!zconf.quiet) {
+		lock_file(stderr);
+		if (zconf.fsconf.app_success_index >= 0) {
+			onscreen_appsuccess(export_status);
+		} else {
+			onscreen_generic(export_status);
+		}
+		unlock_file(stderr);
+	}
+	if (status_fd) {
+		update_status_updates_file(export_status, status_fd);
+	}
+}
+
 void monitor_run(iterator_t *it, pthread_mutex_t *lock)
 {
 	int_status_t *internal_status = xmalloc(sizeof(int_status_t));
 	export_status_t *export_status = xmalloc(sizeof(export_status_t));
 
+	// wait for the scanning process to finish
 	while (!(zsend.complete && zrecv.complete)) {
-		update_pcap_stats(lock);
-		export_stats(internal_status, export_status, it);
-		log_drop_warnings(export_status);
-		check_min_hitrate(export_status);
-		check_max_sendto_failures(export_status);
-		if (!zconf.quiet) {
-			lock_file(stderr);
-			if (zconf.fsconf.app_success_index >= 0) {
-				onscreen_appsuccess(export_status);
-			} else {
-				onscreen_generic(export_status);
-			}
-			unlock_file(stderr);
-		}
-		if (status_fd) {
-			update_status_updates_file(export_status, status_fd);
-		}
+		export_then_update(internal_status, it, export_status, lock);
 		sleep(UPDATE_INTERVAL);
 	}
+	// final update
+	export_then_update(internal_status, it, export_status, lock);
+
 	if (!zconf.quiet) {
 		lock_file(stderr);
 		fflush(stderr);

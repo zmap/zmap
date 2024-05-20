@@ -120,7 +120,8 @@ be excluded.</p></dd>
  10M for 10 mbps). This overrides the --rate flag.</p></dd>
 <dt> <code>-n</code>, <code>--max-targets=n</code></dt><dd><p> Cap the number of targets to probe. This can either be a number (e.g. -n
  1000) or a percentage (e.g. -n 0.1%) of the scannable address space
- (after excluding blocklist)</p></dd>
+ (after excluding blocklist). A target is an IP/port pair, if scanning multiple
+ ports, and an IP otherwise.</p></dd>
 <dt> <code>-N</code>, <code>--max-results=n</code></dt><dd><p> Exit after receiving this many results</p></dd>
 <dt> <code>-t</code>, <code>--max-runtime=secs</code></dt><dd><p> Cap the length of time for sending packets</p></dd>
 <dt> <code>-c</code>, <code>--cooldown-time=secs</code></dt><dd><p> How long to continue receiving after sending has completed (default=8)</p></dd>
@@ -163,6 +164,12 @@ be excluded.</p></dd>
 <dt> <code>--source-mac=addr</code></dt><dd><p> Source MAC address to send packets from (in case auto-detection fails)</p></dd>
 <dt> <code>-i</code>, <code>--interface=name</code></dt><dd><p> Network interface to use</p></dd>
 <dt> <code>-X</code>, <code>--iplayer</code></dt><dd><p> Send IP layer packets instead of ethernet packets (for non-Ethernet interface)</p></dd>
+<dt> <code>--netmap-wait-ping=ip</code></dt><dd><p> (Netmap only)
+ Wait for ip to respond to ICMP Echo request before commencing scan.
+ Useful if connected to a switch with STP enabled, where the PHY reset
+ that is needed for entering and leaving Netmap mode will cause the switch
+ to mute the port until the spanning tree protocol has determined that
+ the link should be set into forward state.</p></dd>
 </dl>
 
 
@@ -213,10 +220,10 @@ targets.</p>
  full, window, and none. Full deduplication uses a 32-bit bitmap and
  guarantees that no duplicates will be emitted. However, full-deduplication
  requires around 500MB of memory for a single port. We do not support full
- deduplication for multiple ports. Window uses a sliding window of a the last
+ deduplication for multiple ports. Window uses a sliding window of the last
  (user-defined) number of responses as set by --dedup-window-size. None will
  prevent any deduplication.</p></dd>
-<dt> <code>--dedup-window-size=targets</code></dt><dd><p> Specifies the size of the sliding window of last n target responses to be
+<dt> <code>--dedup-window-size=targets</code></dt><dd><p> Specifies the size of the sliding window as the last n target responses to be
  used for deduplication. Only applicable if using window deduplication.</p></dd>
 </dl>
 
@@ -302,7 +309,7 @@ decreasing by 5%.</p>
 
   <ol class='man-decor man-foot man foot'>
     <li class='tl'>ZMap</li>
-    <li class='tc'>January 2024</li>
+    <li class='tc'>April 2024</li>
     <li class='tr'>zmap(1)</li>
   </ol>
 

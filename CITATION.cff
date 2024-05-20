@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Durumeric"
+  given-names: "Zakir"
+  orcid: "https://orcid.org/0000-0002-9647-4192"
+- family-names: "Wustrow"
+  given-names: "Eric"
+- family-names: "Halderman"
+  given-names: "J. Alex"
+  orcid: "https://orcid.org/0000-0002-9116-5390"
+title: "zmap"
+# TODO add version/doi once we tag and release ZMap 4.1 into package managers
+date-released: 2013-08
+url: "https://github.com/zmap/zmap"
+preferred-citation:
+  type: "conference-paper"
+  authors:
+    - family-names: "Durumeric"
+      given-names: "Zakir"
+      orcid: "https://orcid.org/0000-0002-9647-4192"
+    - family-names: "Wustrow"
+      given-names: "Eric"
+    - family-names: "Halderman"
+      given-names: "J. Alex"
+      orcid: "https://orcid.org/0000-0002-9116-5390"
+  collection-title: "22nd USENIX Security Symposium"
+  title: "ZMap: Fast Internet-Wide Scanning and its Security Applications"
+  year: 2013

@@ -9,3 +9,4 @@ PointerAlignment: Right
 BreakStringLiterals: false
 SortIncludes: false
 ReflowComments: false
+ColumnLimit: 0

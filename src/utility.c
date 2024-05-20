@@ -6,12 +6,11 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-#include "utility.h"
-
-#include <stdio.h>
+#include <string.h>
 #include <arpa/inet.h>
 
 #include "state.h"
+#include "utility.h"
 #include "../lib/logger.h"
 
 in_addr_t string_to_ip_address(char *t)
@@ -68,4 +67,16 @@ void parse_source_ip_addresses(char given_string[])
 	} else {
 		add_to_array(given_string);
 	}
+}
+
+// Not all platforms have strlcpy, so we provide our own using strncpy
+size_t cross_platform_strlcpy(char *dst, const char *src, size_t siz)
+{
+	if (siz == 0) // Handle zero size as strlcpy does
+		return strlen(src);
+
+	strncpy(dst, src, siz - 1); // Copy at most size - 1 characters
+	dst[siz - 1] = '\0';	    // Ensure null-termination
+
+	return strlen(src); // Return the length of src
 }

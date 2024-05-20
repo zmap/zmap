@@ -35,6 +35,10 @@
 #include "./send.h"
 #include "./send-liburing.h"
 #include "./send-linux.h"
+#include "state.h"
+
+// Dummy sockaddr for sendto
+static struct sockaddr_ll sockaddr;
 
 int send_batch_mmsg_helper(sock_t sock, batch_t* batch, int retries);
 
@@ -101,14 +105,18 @@ int send_run_cleanup(void) {
 }
 
 int send_batch_mmsg_helper(sock_t sock, batch_t* batch, int retries) {
-	struct mmsghdr msgvec [batch->capacity]; // Array of multiple msg header structures
+	struct mmsghdr msgvec[batch->capacity]; // Array of multiple msg header structures
 	struct msghdr msgs[batch->capacity];
 	struct iovec iovs[batch->capacity];
 
+	size_t buf_offset = 0;
+	if (zconf.send_ip_pkts) {
+		buf_offset = sizeof(struct ether_header);
+	}
 	for (int i = 0; i < batch->len; ++i) {
 		struct iovec *iov = &iovs[i];
-	    	iov->iov_base = ((void *)batch->packets) + (i * MAX_PACKET_SIZE);
-	       	iov->iov_len = batch->lens[i];
+		iov->iov_base = batch->packets[i].buf + buf_offset;
+		iov->iov_len = batch->packets[i].len - buf_offset;
 		struct msghdr *msg = &msgs[i];
 		memset(msg, 0, sizeof(struct msghdr));
 		// based on https://github.com/torvalds/linux/blob/master/net/socket.c#L2180
@@ -117,10 +125,10 @@ int send_batch_mmsg_helper(sock_t sock, batch_t* batch, int retries) {
 		msg->msg_iov = iov;
 		msg->msg_iovlen = 1;
 		msgvec[i].msg_hdr = *msg;
-		msgvec[i].msg_len = batch->lens[i];
+		msgvec[i].msg_len = batch->packets[i].len - buf_offset;
 	}
 	// set up per-retry variables, so we can only re-submit what didn't send successfully
-	struct mmsghdr* current_msg_vec = msgvec;
+	struct mmsghdr *current_msg_vec = msgvec;
 	int total_packets_sent = 0;
 	int num_of_packets_in_batch = batch->len;
 	for (int i = 0; i < retries; i++) {
@@ -136,7 +144,7 @@ int send_batch_mmsg_helper(sock_t sock, batch_t* batch, int retries) {
 		}
 		// if rv is positive, it gives the number of packets successfully sent
 		total_packets_sent += rv;
-		if (rv == num_of_packets_in_batch){
+		if (rv == num_of_packets_in_batch) {
 			// all packets in batch were sent successfully
 			break;
 		}

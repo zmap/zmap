@@ -29,7 +29,9 @@
 
 #include "topt.h"
 
-typedef enum file_format { FORMAT_CSV, FORMAT_JSON, FORMAT_RAW } format_t;
+typedef enum file_format { FORMAT_CSV,
+			   FORMAT_JSON,
+			   FORMAT_RAW } format_t;
 static const char *format_names[] = {"csv", "json", "raw"};
 
 typedef struct ztee_conf {
@@ -131,17 +133,17 @@ void print_thread_error(char *string);
 // executes every second
 void *monitor_ztee(void *my_q);
 
-#define SET_IF_GIVEN(DST, ARG)                                                 \
-	{                                                                      \
-		if (args.ARG##_given) {                                        \
-			(DST) = args.ARG##_arg;                                \
-		};                                                             \
+#define SET_IF_GIVEN(DST, ARG)                  \
+	{                                       \
+		if (args.ARG##_given) {         \
+			(DST) = args.ARG##_arg; \
+		};                              \
 	}
-#define SET_BOOL(DST, ARG)                                                     \
-	{                                                                      \
-		if (args.ARG##_given) {                                        \
-			(DST) = 1;                                             \
-		};                                                             \
+#define SET_BOOL(DST, ARG)              \
+	{                               \
+		if (args.ARG##_given) { \
+			(DST) = 1;      \
+		};                      \
 	}
 
 int main(int argc, char *argv[])
@@ -334,7 +336,7 @@ void *process_queue(void *arg)
 		pthread_mutex_unlock(&queue->lock);
 
 		// Write raw data to output file
-		fprintf(output_file, "%s", node->data);
+		fprintf(output_file, "%s", (char *)node->data);
 		fflush(output_file);
 		if (ferror(output_file)) {
 			log_fatal("ztee", "Error writing to output file");
@@ -346,11 +348,11 @@ void *process_queue(void *arg)
 			log_fatal("ztee", "JSON input format unimplemented");
 			break;
 		case FORMAT_CSV:
-			print_from_csv(node->data);
+			print_from_csv((char *)node->data);
 			break;
 		default:
 			// Handle raw
-			fprintf(stdout, "%s", node->data);
+			fprintf(stdout, "%s", (char *)node->data);
 			break;
 		}
 
@@ -383,7 +385,7 @@ void *read_in(void *arg)
 
 	// Read in from stdin and add to back of linked list
 	while (getline(&input, &length, stdin) > 0) {
-		push_back(input, queue);
+		push_back((void *)strdup(input), queue);
 
 		total_read_in++;
 		read_in_last_sec++;

@@ -6,7 +6,7 @@ ZMap: The Internet Scanner
 ZMap is a fast single packet network scanner designed for Internet-wide network
 surveys. On a typical desktop computer with a gigabit Ethernet connection, ZMap
 is capable scanning the entire public IPv4 address space on a single port in 
-under 45 minutes. With a 10gigE connection and [PF_RING](http://www.ntop.org/products/packet-capture/pf_ring/),
+under 45 minutes. With a 10gigE connection and [netmap](http://info.iet.unipi.it/~luigi/netmap/) or [PF_RING](http://www.ntop.org/products/packet-capture/pf_ring/),
 ZMap can scan the IPv4 address space in under 5 minutes.
 
 ZMap operates on GNU/Linux, Mac OS, and BSD. ZMap currently has fully implemented
@@ -27,7 +27,7 @@ Installation
 ------------
 
 The latest stable release of ZMap is version [3.0.0](https://github.com/zmap/zmap/releases/tag/v3.0.0) and supports Linux, macOS, and
-BSD. ZMap [4.0.0-RC1](https://github.com/zmap/zmap/releases/tag/v4.0.0-RC1) adds support for scanning multiple ports.
+BSD. ZMap [4.1.0-RC2](https://github.com/zmap/zmap/releases/tag/v4.1.0-RC2) adds support for scanning multiple ports.
 
 **Instructions on building ZMap from source** can be found in [INSTALL](INSTALL.md).
 

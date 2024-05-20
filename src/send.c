@@ -6,6 +6,8 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
+#include "send.h"
+
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -25,13 +27,14 @@
 #include "../lib/blocklist.h"
 #include "../lib/lockfd.h"
 #include "../lib/pbm.h"
+#include "../lib/xalloc.h"
 
+#include "send-internal.h"
 #include "aesrand.h"
 #include "get_gateway.h"
 #include "iterator.h"
 #include "probe_modules/packet.h"
 #include "probe_modules/probe_modules.h"
-#include "send.h"
 #include "shard.h"
 #include "state.h"
 #include "validate.h"
@@ -79,20 +82,14 @@ iterator_t *send_init(void)
 {
 	// generate a new primitive root and starting position
 	iterator_t *it;
-	uint32_t num_subshards =
-	    (uint32_t)zconf.senders * (uint32_t)zconf.total_shards;
-	if (num_subshards > blocklist_count_allowed()) {
+	uint32_t num_subshards = (uint32_t)zconf.senders * (uint32_t)zconf.total_shards;
+	if (num_subshards > (blocklist_count_allowed() * zconf.ports->port_count)) {
 		log_fatal("send", "senders * shards > allowed probes");
 	}
 	if (zsend.max_targets && (num_subshards > zsend.max_targets)) {
 		log_fatal("send", "senders * shards > max targets");
 	}
 	uint64_t num_addrs = blocklist_count_allowed();
-	if (zconf.list_of_ips_filename) {
-		log_debug("send",
-			  "forcing max group size for compatibility with -I");
-		num_addrs = 0xFFFFFFFF;
-	}
 	it = iterator_init(zconf.senders, zconf.shard_num, zconf.total_shards,
 			   num_addrs, zconf.ports->port_count);
 	// determine the source address offset from which we'll send packets
@@ -218,16 +215,15 @@ int send_run(sock_t st, shard_t *s, uint32_t kernel_cpu, bool is_liburing_enable
 {
 	log_debug("send", "send thread started");
 	pthread_mutex_lock(&send_mutex);
-	// Allocate a buffer to hold the outgoing packet
-	char buf[MAX_PACKET_SIZE];
 	// allocate batch
-	batch_t* batch = create_packet_batch(zconf.batch);
+	batch_t *batch = create_packet_batch(zconf.batch);
 
 	// OS specific per-thread init
 	if (send_run_init(st, kernel_cpu, is_liburing_enabled)) {
 		pthread_mutex_unlock(&send_mutex);
 		return EXIT_FAILURE;
 	}
+
 	// MAC address length in characters
 	char mac_buf[(ETHER_ADDR_LEN * 2) + (ETHER_ADDR_LEN - 1) + 1];
 	char *p = mac_buf;
@@ -241,12 +237,26 @@ int send_run(sock_t st, shard_t *s, uint32_t kernel_cpu, bool is_liburing_enable
 		}
 	}
 	log_debug("send", "source MAC address %s", mac_buf);
-	void *probe_data;
+
+	void *probe_data = NULL;
 	if (zconf.probe_module->thread_initialize) {
-		zconf.probe_module->thread_initialize(
-		    buf, zconf.hw_mac, zconf.gw_mac, &probe_data);
+		int rv = zconf.probe_module->thread_initialize(&probe_data);
+		if (rv != EXIT_SUCCESS) {
+			pthread_mutex_unlock(&send_mutex);
+			log_fatal("send", "Send thread initialization for probe module failed: %u", rv);
+		}
 	}
 	pthread_mutex_unlock(&send_mutex);
+
+	if (zconf.probe_module->prepare_packet) {
+		for (size_t i = 0; i < batch->capacity; i++) {
+			int rv = zconf.probe_module->prepare_packet(
+			    batch->packets[i].buf, zconf.hw_mac, zconf.gw_mac, probe_data);
+			if (rv != EXIT_SUCCESS) {
+				log_fatal("send", "Probe module failed to prepare packet: %u", rv);
+			}
+		}
+	}
 
 	// adaptive timing to hit target rate
 	uint64_t count = 0;
@@ -259,7 +269,7 @@ int send_run(sock_t st, shard_t *s, uint32_t kernel_cpu, bool is_liburing_enable
 	double send_rate =
 	    (double)zconf.rate /
 	    ((double)zconf.senders * zconf.packet_streams);
-	const double slow_rate = 50; // packets per seconds per thread
+	const double slow_rate = 1000; // packets per seconds per thread
 	// at which it uses the slow methods
 	long nsec_per_sec = 1000 * 1000 * 1000;
 	long long sleep_time = nsec_per_sec;
@@ -282,6 +292,7 @@ int send_run(sock_t st, shard_t *s, uint32_t kernel_cpu, bool is_liburing_enable
 			last_time = steady_now();
 		}
 	}
+	int attempts = zconf.retries + 1;
 	// Get the initial IP to scan.
 	target_t current = shard_get_cur_target(s);
 	uint32_t current_ip = current.ip;
@@ -304,8 +315,6 @@ int send_run(sock_t st, shard_t *s, uint32_t kernel_cpu, bool is_liburing_enable
 			}
 		}
 	}
-	int attempts = zconf.retries + 1;
-	uint32_t idx = 0;
 	while (1) {
 		// Adaptive timing delay
 		if (count && delay > 0) {
@@ -385,16 +394,19 @@ int send_run(sock_t st, shard_t *s, uint32_t kernel_cpu, bool is_liburing_enable
 		for (int i = 0; i < zconf.packet_streams; i++) {
 			count++;
 			uint32_t src_ip = get_src_ip(current_ip, i);
-			uint32_t validation[VALIDATE_BYTES /
-					    sizeof(uint32_t)];
+			uint8_t size_of_validation = VALIDATE_BYTES / sizeof(uint32_t);
+			uint32_t validation[size_of_validation];
 			validate_gen(src_ip, current_ip,
 				     htons(current_port),
 				     (uint8_t *)validation);
 			uint8_t ttl = zconf.probe_ttl;
+
 			size_t length = 0;
 			zconf.probe_module->make_packet(
-			    buf, &length, src_ip, current_ip,
-			    htons(current_port), ttl, validation, i,
+			    batch->packets[batch->len].buf, &length,
+			    src_ip, current_ip, htons(current_port), ttl, validation, i,
+			    // Grab last 2 bytes of validation for ip_id
+			    (uint16_t)(validation[size_of_validation - 1] & 0xFFFF),
 			    probe_data);
 			if (length > MAX_PACKET_SIZE) {
 				log_fatal(
@@ -403,25 +415,14 @@ int send_run(sock_t st, shard_t *s, uint32_t kernel_cpu, bool is_liburing_enable
 				    s->thread_id, length,
 				    MAX_PACKET_SIZE);
 			}
+			batch->packets[batch->len].len = (uint32_t)length;
+
 			if (zconf.dryrun) {
 				lock_file(stdout);
 				zconf.probe_module->print_packet(stdout,
-								 buf);
+								 batch->packets[batch->len].buf);
 				unlock_file(stdout);
 			} else {
-				void *contents =
-				    buf +
-				    zconf.send_ip_pkts *
-					sizeof(struct ether_header);
-				length -= (zconf.send_ip_pkts *
-					   sizeof(struct ether_header));
-				// add packet to batch and update metadata
-				// this is an additional memcpy (packet created in buf, buf -> batch)
-				// but when I modified the TCP SYN module to write packet to batch directly, there wasn't any noticeable speedup.
-				// Using this approach for readability/minimal changes
-				memcpy(((void *)batch->packets) + (batch->len * MAX_PACKET_SIZE), contents, length);
-				batch->lens[batch->len] = length;
-				batch->ips[batch->len] = current_ip;
 				batch->len++;
 				if (batch->len == batch->capacity) {
 					// batch is full, sending
@@ -437,8 +438,6 @@ int send_run(sock_t st, shard_t *s, uint32_t kernel_cpu, bool is_liburing_enable
 					}
 					// reset batch length for next batch
 					batch->len = 0;
-					idx++;
-					idx &= 0xFF;
 				}
 			}
 			s->state.packets_sent++;
@@ -486,27 +485,18 @@ cleanup:
 	return EXIT_SUCCESS;
 }
 
-batch_t* create_packet_batch(uint8_t capacity) {
-	// calculate how many bytes are needed for each component of a batch
-	int size_of_packet_array = MAX_PACKET_SIZE * capacity;
-	int size_of_ips_array = sizeof(uint32_t) * capacity;
-	int size_of_lens_array = sizeof(int) * capacity;
-
-	// allocating batch and associated data structures in single calloc for cache locality
-	void* batch_and_batch_arrs = calloc(sizeof(batch_t) + size_of_packet_array + size_of_ips_array + size_of_lens_array, sizeof(char));
-	// chunk off parts of batch
-	batch_t* batch = batch_and_batch_arrs;
-	batch->packets = (char *)batch + sizeof(batch_t);
-	batch->ips = (uint32_t *)(batch->packets + size_of_packet_array);
-	batch->lens = (int *) ((char *)batch->ips + size_of_ips_array);
-
+batch_t *create_packet_batch(uint16_t capacity)
+{
+	// allocating batch and associated data structures in single xmalloc for cache locality
+	batch_t *batch = (batch_t *)xmalloc(sizeof(batch_t) + capacity * sizeof(struct batch_packet));
+	batch->packets = (struct batch_packet *)(batch + 1);
 	batch->capacity = capacity;
 	batch->len = 0;
-
 	return batch;
 }
 
-void free_packet_batch(batch_t* batch) {
-	// batch was created with a single calloc, so this will free all the component arrays too
-	free(batch);
+void free_packet_batch(batch_t *batch)
+{
+	// batch was created with a single xmalloc, so this will free the component array too
+	xfree(batch);
 }
