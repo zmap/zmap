@@ -216,3 +216,8 @@ ZMap 4.1.0 contains a number of bug fixes and performance enhancements, especial
 
 * Fixed a bug which caused inaccurate ETA every 44 secs.
 * Fixed a bug where a malformed TCP options returned to the scanner would cause the receive thread to hang.
+
+# 4.1.1+1 2024-05-21
+
+## DOCUMENTATION
+* updated CHANGELOG.md and README.md to contain the changes from v4.1.1 and point to the latest version.
