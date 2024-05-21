@@ -26,8 +26,8 @@ If you have questions, please first check our [FAQ](https://github.com/zmap/zmap
 Installation
 ------------
 
-The latest stable release of ZMap is version [3.0.0](https://github.com/zmap/zmap/releases/tag/v3.0.0) and supports Linux, macOS, and
-BSD. ZMap [4.1.0-RC2](https://github.com/zmap/zmap/releases/tag/v4.1.0-RC2) adds support for scanning multiple ports.
+The latest stable release of ZMap is version [4.1.1+1](https://github.com/zmap/zmap/releases/tag/v4.1.1+1) and supports Linux, macOS, and
+BSD. 
 
 **Instructions on building ZMap from source** can be found in [INSTALL](INSTALL.md).
 
