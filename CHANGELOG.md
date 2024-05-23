@@ -205,6 +205,7 @@ ZMap 4.1.0 contains a number of bug fixes and performance enhancements, especial
 * Handles IPv6 addresses in `blocklist.conf`
 * Supports `--iplayer` on MacOS
 
+
 # 4.1.1 2024-05-21
 
 ## DOCUMENTATION
