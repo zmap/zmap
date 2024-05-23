@@ -119,15 +119,6 @@ set(ZTEESOURCES
     "${CMAKE_CURRENT_BINARY_DIR}/topt.h"
 )
 
-# Handle various versions of socket
-# TODO Phillip handle liburing
-# if (APPLE OR BSD)
-#    set(SOURCES ${SOURCES} socket-bsd.c)
-#    set(ZTESTSOURCES ${ZTESTSOURCES} socket-bsd.c)
-#else()
-#    set(SOURCES ${SOURCES} socket-linux.c send-linux.c send-liburing.c)
-#    set(ZTESTSOURCES ${ZTESTSOURCES} socket-linux.c send-linux.c send-liburing.c)
-#endif()
 if(WITH_PFRING)
     set(SOURCES ${SOURCES} socket-pfring.c)
     set(ZTESTSOURCES ${ZTESTSOURCES} socket-pfring.c)
@@ -145,8 +136,8 @@ elseif (APPLE OR BSD)
     set(SOURCES ${SOURCES} socket-bsd.c send-bsd.c)
     set(ZTESTSOURCES ${ZTESTSOURCES} socket-bsd.c send-bsd.c)
 else()
-    set(SOURCES ${SOURCES} socket-linux.c send-linux.c)
-    set(ZTESTSOURCES ${ZTESTSOURCES} socket-linux.c send-linux.c)
+   set(SOURCES ${SOURCES} socket-linux.c send-linux.c send-liburing.c)
+   set(ZTESTSOURCES ${ZTESTSOURCES} socket-linux.c send-linux.c send-liburing.c)
 endif()
 
 # Handle various versions of recv
