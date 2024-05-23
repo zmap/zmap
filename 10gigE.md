@@ -1,11 +1,6 @@
 10GigE (Zippier) ZMap
 ===========
 
-=============================
-TODO Phillip
-This will need to be reworked after figuring out liburing, but we'll deal with that later.
-=============================
-
 It is possible to build ZMap to run at 95% of 10 GigE linespeed, sending over 14
 million packets per second. This requires a compatible Intel 10 Gbps Ethernet
 NIC and Linux.
