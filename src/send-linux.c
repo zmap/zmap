@@ -42,7 +42,6 @@ static struct sockaddr_ll sockaddr;
 
 int send_batch_mmsg_helper(sock_t sock, batch_t* batch, int retries);
 
-static bool is_liburing_enabled = false;
 
 int send_run_init(sock_t s, uint32_t kernel_cpu)
 {
@@ -72,9 +71,7 @@ int send_run_init(sock_t s, uint32_t kernel_cpu)
 	}
 	memcpy(sockaddr.sll_addr, zconf.gw_mac, ETH_ALEN);
 #if WITH_LIBURING
-	if (is_liburing_enabled) {
-		// TODO Phillip set static variable to track this in send_run/send_run_cleanup
-		use_liburing = is_liburing_enabled;
+	if (zconf.enable_liburing) {
 		// need to initialize liburing related structures
 		return send_run_init_liburing(kernel_cpu);
 	}
@@ -90,11 +87,11 @@ int send_batch(sock_t sock, batch_t* batch, int retries) {
 		return EXIT_SUCCESS;
 	}
 #if WITH_LIBURING
-	if (use_liburing) {
-		return send_batch_liburing_helper(sock, batch);
+	if (zconf.enable_liburing) {
+        return send_batch_liburing_helper(sock, batch);
 	}
 #endif
-	return send_batch_mmsg_helper(sock, batch, retries);
+    return send_batch_mmsg_helper(sock, batch, retries);
 }
 
 int send_run_cleanup(void) {
