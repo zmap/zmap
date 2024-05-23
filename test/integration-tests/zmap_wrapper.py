@@ -8,7 +8,7 @@ PACKET_SEP = "-" * 54
 class Wrapper:
     def __init__(self, port="80", subnet="", num_of_ips=-1, threads=-1, shards=-1, shard=-1, seed=-1, iplayer=False,
                  dryrun=True, output_file="", max_runtime=-1, max_cooldown=-1, blocklist_file="", allowlist_file="",
-                 list_of_ips_file="", probes="", source_ip="", source_port="", source_mac="", rate=-1):
+                 list_of_ips_file="", probes="", source_ip="", source_port="", source_mac="", rate=-1, enable_liburing=False):
         self.port = port
         self.subnet = subnet
         self.num_of_ips = num_of_ips
@@ -29,6 +29,7 @@ class Wrapper:
         self.source_port = source_port
         self.source_mac = source_mac
         self.rate = rate
+        self.enable_liburing = enable_liburing
 
 
     def run(self):
@@ -72,6 +73,8 @@ class Wrapper:
             args.extend(["--source-mac=" + self.source_mac])
         if self.rate != -1:
             args.extend(["--rate=" + str(self.rate)])
+        if self.enable_liburing:
+            args.extend(["--enable-liburing"])
 
         test_output = subprocess.run(args, stdout=subprocess.PIPE).stdout.decode('utf-8')
         packets = parse_output_into_obj_list(test_output)
