@@ -60,7 +60,7 @@ if (NOT FOUND_PCAP)
     message(FATAL_ERROR "Did not find libpcap library, please install libpcap or equivalent. More details in INSTALL.md")
 endif()
 
-find_library(FOUND_FLEX HINTS /usr/include/ NAMES flex sys-devel/flex REQUIRED)
+find_library(FOUND_FLEX HINTS /usr/include/ /usr/bin/ NAMES flex sys-devel/flex REQUIRED)
 find_library(FOUND_BYACC HINTS /usr/include/ NAMES byacc dev-util/byacc REQUIRED)
 find_library(FOUND_JSON HINTS /usr/include/ NAMES json libjson-c-dev json-c-devel json-c dev-libs/json-c REQUIRED)
 find_library(FOUND_GENGETOPT HINTS /usr/include/ NAMES gengetopt dev-util/gengetopt REQUIRED)
