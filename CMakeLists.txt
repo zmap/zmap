@@ -47,33 +47,48 @@ endif()
 # Check for dependencies
 find_library(FOUND_JUDY HINTS /usr/include/ NAMES Judy libjudy-dev judy dev-libs/judy judy-devel)
 if (NOT FOUND_JUDY)
-    message(FATAL_ERROR "Did not find Judy library, please install Judy or equivalent. More details in INSTALL.md")
+    message(FATAL_ERROR "Missing dependency: did not find Judy library, please install Judy or equivalent. More details in INSTALL.md")
 endif()
 
 find_library(FOUND_GMP HINTS /usr/include/ NAMES libgmp3-dev gmp dev-libs/gmp gmp-devel)
 if (NOT FOUND_GMP)
-    message(FATAL_ERROR "Did not find gmp library, please install gmp or equivalent. More details in INSTALL.md")
+    message(FATAL_ERROR "Missing dependency: did not find gmp library, please install gmp or equivalent. More details in INSTALL.md")
 endif()
 
 find_library(FOUND_PCAP HINTS /usr/include/ NAMES pcap libpcap-dev libpcap net-libs/libpcap libpcap-devel)
 if (NOT FOUND_PCAP)
-    message(FATAL_ERROR "Did not find libpcap library, please install libpcap or equivalent. More details in INSTALL.md")
+    message(FATAL_ERROR "Missing dependency: did not find libpcap library, please install libpcap or equivalent. More details in INSTALL.md")
 endif()
 
-find_program(FOUND_FLEX HINTS /usr/include/ /usr/bin/ NAMES flex sys-devel/flex REQUIRED)
-find_program(FOUND_BYACC HINTS /usr/include/ NAMES byacc dev-util/byacc REQUIRED)
-find_library(FOUND_JSON HINTS /usr/include/ NAMES json libjson-c-dev json-c-devel json-c dev-libs/json-c REQUIRED)
-find_program(FOUND_GENGETOPT HINTS /usr/include/ NAMES gengetopt dev-util/gengetopt REQUIRED)
-#find_library(FOUND_LIBUNISTRING HINTS /usr/include/ NAMES unistr libunistring-dev libunistring-devel libunistring dev-libs/libunistring REQUIRED)
-find_path(FOUND_LIBUNISTRING
+find_program(FOUND_FLEX HINTS /usr/include/ /usr/bin/ NAMES flex sys-devel/flex)
+if (NOT FOUND_FLEX)
+    message(FATAL_ERROR "Missing dependency: did not find flex, please install flex or equivalent. More details in INSTALL.md")
+endif()
+find_program(FOUND_BYACC HINTS /usr/include/ NAMES byacc dev-util/byacc)
+if (NOT FOUND_BYACC)
+    message(FATAL_ERROR "Missing dependency: did not find byacc, please install byacc or equivalent. More details in INSTALL.md")
+endif()
+find_library(FOUND_JSON HINTS /usr/include/ NAMES json libjson-c-dev json-c-devel json-c dev-libs/json-c)
+if (NOT FOUND_JSON)
+    message(FATAL_ERROR "Missing dependency: find libjson-c, please install libjson-c or equivalent. More details in INSTALL.md")
+endif()
+find_program(FOUND_GENGETOPT HINTS /usr/include/ NAMES gengetopt dev-util/gengetopt)
+if (NOT FOUND_GENGETOPT)
+    message(FATAL_ERROR "Missing dependency: did not find gengetopt, please install gengetopt or equivalent. More details in INSTALL.md")
+endif()
+
+find_path(FOUND_LIBUNISTRING # UniString is neither a library or a program, but install several header files in the include path
         NAMES unistr.h
         PATH_SUFFIXES include
 )
 if (NOT FOUND_LIBUNISTRING)
-message(FATAL_ERROR "Did not find LibUniString")
+    message(FATAL_ERROR "Missing dependency: did not find libunistring, please install libunistring or equivalent. More details in INSTALL.md")
 endif()
 
-find_program(FOUND_PKGCONFIG HINTS /usr/include/ NAMES pkg-config dev-util/pkgconf REQUIRED)
+find_program(FOUND_PKGCONFIG HINTS /usr/include/ NAMES pkg-config dev-util/pkgconf)
+if (NOT FOUND_PKGCONFIG)
+    message(FATAL_ERROR "Missing dependency: did not find pkg-config, please install pkg-config or equivalent. More details in INSTALL.md")
+endif()
 
 
 if(ENABLE_DEVELOPMENT)
