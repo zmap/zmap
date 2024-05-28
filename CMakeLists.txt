@@ -44,6 +44,24 @@ if(WITH_WERROR)
     set(GCCWARNINGS "${GCCWARNINGS} -Werror")
 endif()
 
+# Check for dependencies
+find_library(FOUND_JUDY HINTS /usr/include/ NAMES Judy libjudy-dev judy dev-libs/judy judy-devel REQUIRED)
+if (NOT FOUND_JUDY)
+    message(FATAL_ERROR "Did not find Judy library, please install Judy or equivalent. More details in Install.md")
+endif()
+
+#find_library(FOUND_GMP NAMES libgmp3-dev gmp dev-libs/gmp gmp-devel)
+#if (NOT FOUND_GMP)
+#    message(FATAL_ERROR "Did not find gmp library, please install gmp or equivalent. More details in Install.md")
+#endif()
+#
+#find_library(FOUND_PCAP NAMES libpcap-dev libpcap net-libs/libpcap libpcap-devel)
+#if (NOT FOUND_PCAP)
+#    message(FATAL_ERROR "Did not find libpcap library, please install libpcap or equivalent. More details in Install.md")
+#endif()
+#
+#find_library(FOUND_FLEX NAMES flex sys-devel/flex)
+
 if(ENABLE_DEVELOPMENT)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ggdb")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -g")
