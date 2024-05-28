@@ -45,22 +45,28 @@ if(WITH_WERROR)
 endif()
 
 # Check for dependencies
-find_library(FOUND_JUDY HINTS /usr/include/ NAMES Judy libjudy-dev judy dev-libs/judy judy-devel REQUIRED)
+find_library(FOUND_JUDY HINTS /usr/include/ NAMES Judy libjudy-dev judy dev-libs/judy judy-devel)
 if (NOT FOUND_JUDY)
-    message(FATAL_ERROR "Did not find Judy library, please install Judy or equivalent. More details in Install.md")
+    message(FATAL_ERROR "Did not find Judy library, please install Judy or equivalent. More details in INSTALL.md")
 endif()
 
-#find_library(FOUND_GMP NAMES libgmp3-dev gmp dev-libs/gmp gmp-devel)
-#if (NOT FOUND_GMP)
-#    message(FATAL_ERROR "Did not find gmp library, please install gmp or equivalent. More details in Install.md")
-#endif()
-#
-#find_library(FOUND_PCAP NAMES libpcap-dev libpcap net-libs/libpcap libpcap-devel)
-#if (NOT FOUND_PCAP)
-#    message(FATAL_ERROR "Did not find libpcap library, please install libpcap or equivalent. More details in Install.md")
-#endif()
-#
-#find_library(FOUND_FLEX NAMES flex sys-devel/flex)
+find_library(FOUND_GMP HINTS /usr/include/ NAMES libgmp3-dev gmp dev-libs/gmp gmp-devel)
+if (NOT FOUND_GMP)
+    message(FATAL_ERROR "Did not find gmp library, please install gmp or equivalent. More details in INSTALL.md")
+endif()
+
+find_library(FOUND_PCAP HINTS /usr/include/ NAMES libpcap-dev libpcap net-libs/libpcap libpcap-devel)
+if (NOT FOUND_PCAP)
+    message(FATAL_ERROR "Did not find libpcap library, please install libpcap or equivalent. More details in INSTALL.md")
+endif()
+
+find_library(FOUND_FLEX HINTS /usr/include/ NAMES flex sys-devel/flex REQUIRED)
+find_library(FOUND_BYACC HINTS /usr/include/ NAMES byacc dev-util/byacc REQUIRED)
+find_library(FOUND_JSON HINTS /usr/include/ NAMES libjson-c-dev json-c-devel json-c dev-libs/json-c REQUIRED)
+find_library(FOUND_GENGETOPT HINTS /usr/include/ NAMES gengetopt dev-util/gengetopt REQUIRED)
+find_library(FOUND_LIBUNISTRING HINTS /usr/include/ NAMES libunistring-dev libunistring-devel libunistring dev-libs/libunistring REQUIRED)
+find_library(FOUND_PKGCONFIG HINTS /usr/include/ NAMES pkg-config dev-util/pkgconf REQUIRED)
+
 
 if(ENABLE_DEVELOPMENT)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ggdb")
