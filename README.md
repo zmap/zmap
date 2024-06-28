@@ -39,6 +39,7 @@ More information about ZMap's architecture and a comparison with other tools can
 
  * [ZMap: Fast Internet-Wide Scanning and its Security Applications](https://zmap.io/paper.pdf)
  * [Zippier ZMap: Internet-Wide Scanning at 10 Gbps](https://jhalderm.com/pub/papers/zmap10gig-woot14.pdf)
+ * [Ten Years of ZMap](https://arxiv.org/pdf/2406.15585)
 
 If you use ZMap for published research, please cite the original research paper:
 
