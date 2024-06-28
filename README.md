@@ -19,7 +19,7 @@ take a look at [ZGrab 2](https://github.com/zmap/zgrab2), ZMap's sister project 
 Using ZMap
 ----------
 
-If you haven't used ZMap before, we have a step-by-step [Getting Started Guide](https://github.com/zmap/zmap/wiki/Getting-Started-Guide) that details how to perform basic scans. Documentation about all of ZMap's options and more advanced functionality can be found in our [GitHub Wiki](https://github.com/zmap/zmap/wiki). 
+If you haven't used ZMap before, we have a step-by-step [Getting Started Guide](https://github.com/zmap/zmap/wiki/Getting-Started-Guide) that details how to perform basic scans. Documentation about all of ZMap's options and more advanced functionality can be found in our [Wiki](https://github.com/zmap/zmap/wiki). 
 
 If you have questions, please first check our [FAQ](https://github.com/zmap/zmap/wiki/FAQ). Still have questions? Ask the community in [Github Discussions](https://github.com/zmap/zmap/discussions/categories/q-a). Please do not create an Issue for usage or support questions.
 
@@ -39,6 +39,7 @@ More information about ZMap's architecture and a comparison with other tools can
 
  * [ZMap: Fast Internet-Wide Scanning and its Security Applications](https://zmap.io/paper.pdf)
  * [Zippier ZMap: Internet-Wide Scanning at 10 Gbps](https://jhalderm.com/pub/papers/zmap10gig-woot14.pdf)
+ * [Ten Years of ZMap](https://arxiv.org/pdf/2406.15585)
 
 If you use ZMap for published research, please cite the original research paper:
 
