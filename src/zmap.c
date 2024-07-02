@@ -929,6 +929,7 @@ int main(int argc, char *argv[])
 
 	if (args.max_targets_given) {
 		zconf.max_targets = parse_max_targets(args.max_targets_arg, zconf.ports->port_count);
+		log_warn("zmap", "max-targets set to %u in zmap.c", zconf.max_targets);
 	}
 
 	// blocklist
@@ -961,6 +962,7 @@ int main(int argc, char *argv[])
 	}
 	if (zconf.max_targets) {
 		zsend.max_targets = zconf.max_targets;
+		log_warn("zmap","max-targets set to %u", zsend.max_targets);
 	}
 
 	// Perform network initialization before initializing
