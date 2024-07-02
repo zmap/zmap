@@ -27,7 +27,7 @@ int max_int(int a, int b);
 int min_int(int a, int b);
 uint64_t min_uint64_t(uint64_t a, uint64_t b);
 
-uint32_t parse_max_hosts(char *max_targets, int num_ports);
+unsigned long long int parse_max_targets(char *max_targets, int num_ports);
 void enforce_range(const char *name, int v, int min, int max);
 
 // Splits comma delimited string into char*[]. Does not handle

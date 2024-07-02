@@ -144,7 +144,9 @@ void fprintw(FILE *f, const char *s, size_t w)
 	free(news);
 }
 
-uint32_t parse_max_hosts(char *max_targets, int port_count)
+// parse a string representing a number/percentage of targets
+// A percentage is interpreted as percent of the search space, so 2^32 * port_count
+unsigned long long int parse_max_targets(char *max_targets, int port_count)
 {
 	assert(port_count > 0);
 	char *end;
@@ -161,8 +163,8 @@ uint32_t parse_max_hosts(char *max_targets, int port_count)
 	}
 	if (v <= 0) {
 		return 0;
-	} else if (v >= ((unsigned long long int)1 << 32)) {
-		return 0xFFFFFFFF;
+	} else if (v >= ((unsigned long long int)1 << 32 * port_count)) {
+		return ((unsigned long long int)1 << 32 * port_count);
 	} else {
 		return v;
 	}

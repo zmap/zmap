@@ -130,7 +130,7 @@ int main(int argc, char **argv)
 	conf.destination_cidrs_len = args.inputs_num;
 	// max targets
 	if (args.max_targets_given) {
-		conf.max_hosts = parse_max_hosts(args.max_targets_arg, zconf.ports->port_count);
+		conf.max_hosts = parse_max_targets(args.max_targets_arg, zconf.ports->port_count);
 	}
 
 	// sanity check blocklist file
