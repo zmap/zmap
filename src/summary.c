@@ -80,7 +80,6 @@ void json_metadata(FILE *file)
 		}
 		json_object_object_add(obj, "target_ports", target_ports);
 	}
-	log_warn("json_metadata", "max_targets: %lu", zconf.max_targets);
 	json_object_object_add(obj, "max_targets",
 			       json_object_new_int(zconf.max_targets));
 	json_object_object_add(obj, "max_runtime",
