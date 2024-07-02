@@ -144,8 +144,9 @@ void fprintw(FILE *f, const char *s, size_t w)
 	free(news);
 }
 
-uint32_t parse_max_hosts(char *max_targets)
+uint32_t parse_max_hosts(char *max_targets, int port_count)
 {
+	assert(port_count > 0);
 	char *end;
 	errno = 0;
 	double v = strtod(max_targets, &end);
@@ -153,8 +154,8 @@ uint32_t parse_max_hosts(char *max_targets)
 		log_fatal("argparse", "can't convert max-targets to a number");
 	}
 	if (end[0] == '%' && end[1] == '\0') {
-		// treat as percentage
-		v = v * ((unsigned long long int)1 << 32) / 100.;
+		// treat as percentage of the search space, so percent of 2^32 * num_ports
+		v = v * (((unsigned long long int)1 << 32) * port_count) / 100.;
 	} else if (end[0] != '\0') {
 		log_fatal("eargparse", "extra characters after max-targets");
 	}

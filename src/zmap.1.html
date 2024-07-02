@@ -121,7 +121,8 @@ be excluded.</p></dd>
 <dt> <code>-n</code>, <code>--max-targets=n</code></dt><dd><p> Cap the number of targets to probe. This can either be a number (e.g. -n
  1000) or a percentage (e.g. -n 0.1%) of the scannable address space
  (after excluding blocklist). A target is an IP/port pair, if scanning multiple
- ports, and an IP otherwise.</p></dd>
+ ports, and an IP otherwise. In the case of percents and multiple ports, the percent
+ is of the total number of IP/port pair combinations.</p></dd>
 <dt> <code>-N</code>, <code>--max-results=n</code></dt><dd><p> Exit after receiving this many results</p></dd>
 <dt> <code>-t</code>, <code>--max-runtime=secs</code></dt><dd><p> Cap the length of time for sending packets</p></dd>
 <dt> <code>-c</code>, <code>--cooldown-time=secs</code></dt><dd><p> How long to continue receiving after sending has completed (default=8)</p></dd>
@@ -305,7 +306,7 @@ decreasing by 5%.</p>
 
   <ol class='man-decor man-foot man foot'>
     <li class='tl'>ZMap</li>
-    <li class='tc'>April 2024</li>
+    <li class='tc'>July 2024</li>
     <li class='tr'>zmap(1)</li>
   </ol>
 

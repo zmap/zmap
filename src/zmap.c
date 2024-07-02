@@ -928,7 +928,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (args.max_targets_given) {
-		zconf.max_targets = parse_max_hosts(args.max_targets_arg);
+		zconf.max_targets = parse_max_hosts(args.max_targets_arg, zconf.ports->port_count);
 	}
 
 	// blocklist
