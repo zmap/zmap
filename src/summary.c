@@ -73,7 +73,7 @@ void json_metadata(FILE *file)
 		    json_object_new_int(zconf.source_port_last));
 
 		json_object *target_ports = json_object_new_array();
-		for (int i = 0; i < zconf.ports->port_count; i++) {
+		for (uint i = 0; i < zconf.ports->port_count; i++) {
 			json_object_array_add(
 			    target_ports,
 			    json_object_new_int(zconf.ports->ports[i]));
