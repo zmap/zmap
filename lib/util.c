@@ -157,7 +157,8 @@ uint64_t parse_max_targets(char *max_targets, int port_count)
 	}
 	if (end[0] == '%' && end[1] == '\0') {
 		// treat as percentage of the search space, so percent of 2^32 * num_ports
-		v = v * (((unsigned long long int)1 << 32) * port_count) / 100.;
+		uint64_t search_space = ((uint64_t)1 << 32) * port_count;
+		v = v * search_space / 100.;
 	} else if (end[0] != '\0') {
 		log_fatal("eargparse", "extra characters after max-targets");
 	}
