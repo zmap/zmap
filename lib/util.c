@@ -165,8 +165,6 @@ uint64_t parse_max_targets(char *max_targets, int port_count)
 	if (v <= 0) {
 		return 0;
 	} else if (v >= (((uint64_t)1 << 32) * port_count)) {
-		log_warn("argparse", "max-targets is greater than the search space, setting to search space: %lu",
-				((uint64_t)1 << 32) * port_count);
 		return (((uint64_t)1 << 32) * port_count);
 	} else {
 		return v;
