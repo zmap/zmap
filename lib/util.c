@@ -164,8 +164,8 @@ uint64_t parse_max_targets(char *max_targets, int port_count)
 	}
 	if (v <= 0) {
 		return 0;
-	} else if (v >= (((unsigned long long int)1 << 32) * port_count)) {
-		return (((unsigned long long int)1 << 32) * port_count);
+	} else if (v >= (((uint64_t)1 << 32) * port_count)) {
+		return (((uint64_t)1 << 32) * port_count);
 	} else {
 		return v;
 	}
