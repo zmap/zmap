@@ -166,7 +166,7 @@ struct state_send {
 	int warmup;
 	int complete;
 	uint32_t first_scanned;
-	uint32_t max_targets;
+	uint64_t max_targets;
 	uint32_t sendto_failures;
 	uint32_t max_index;
 	uint16_t max_port_index;
@@ -215,7 +215,7 @@ struct state_recv {
 extern struct state_recv zrecv;
 
 struct port_conf {
-	int port_count;
+	uint port_count;
 	uint16_t ports[0xFFFF + 1];
 	uint8_t *port_bitmap;
 };

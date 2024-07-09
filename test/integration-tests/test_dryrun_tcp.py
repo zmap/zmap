@@ -104,7 +104,8 @@ def test_multi_port_with_subnet_and_threads():
         for test_iter in range(5):  # using iterations to check for bugs in shard code
             for port_test_index in range(len(port_tests)):
                 expected_port_set = set(expected_ports[port_test_index])
-                packet_list = zmap_wrapper.Wrapper(port=port_tests[port_test_index], subnet=subnet, threads=thread_ct).run()
+                packet_list = zmap_wrapper.Wrapper(port=port_tests[port_test_index], subnet=subnet,
+                                                   threads=thread_ct).run()
                 assert len(packet_list) == len(expected_ips) * len(expected_ports[port_test_index]), ("incorrect "
                                                                                                       "number of "
                                                                                                       "packets sent")
@@ -572,3 +573,22 @@ def test_ip_layer_option():
     ip_list = [packet["ip"]["daddr"] for packet in packets]
     for actual_ip in ip_list:
         assert actual_ip in expected_scanned_ips, "an IP was not scanned"
+
+
+## --max-targets
+def test_max_targets_option():
+    """
+    scan using various numbers of max targets and ensure the correct number of packets are sent
+    """
+    tests = [
+        # Format: (max_targets, ports, expected_num_ips)
+        ("5", "80", 5),
+        ("109", "80", 109),
+        ("10", "80-81", 10),  # target is IP + port, so specifying multiple ports should not affect the number of IPs
+        ("0.0001%", "80", 4294),  # 0.0001% of the IPv4 space, rounded down
+        ("0.0001%", "80-81", 8589)  # 0.0001% of the IPv4 space over 2 ports, rounded down
+    ]
+    for max_targets, ports, expected_num_ips in tests:
+        packets = zmap_wrapper.Wrapper(threads=1, max_targets=max_targets, port=ports).run()
+        assert len(
+            packets) == expected_num_ips, "incorrect number of packets sent for test with max_targets = " + max_targets + " and ports = " + ports
