@@ -14,7 +14,7 @@
 #     docker run -it --rm --net=host ghcr.io/zmap/zmap <zmap args>
 ####
 
-FROM arm64v8/ubuntu:24.04 as builder
+FROM ubuntu:24.04 as builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Etc/UTC
@@ -44,7 +44,7 @@ RUN cd /usr/local/src \
     && cmake --build . --parallel "$(nproc)" \
     && cmake --install . --prefix "/opt/zmap"
 
-FROM arm64v8/ubuntu:24.04
+FROM ubuntu:24.04
 
 LABEL org.opencontainers.image.source="https://github.com/zmap/zmap"
 
