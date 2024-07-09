@@ -227,3 +227,7 @@ ZMap 4.1.0 contains a number of bug fixes and performance enhancements, especial
 ## BUGFIX
 
 * Fixed a bug where ZMap's behavior with a --max-targets of a percentage with multiple ports was inconsistent with our documentation/expectations. (#886)
+
+## ENHANCEMENT
+
+* Bump the base Docker image from Ubuntu 20.04 to 24.04 (#888)
