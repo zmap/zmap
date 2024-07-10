@@ -220,3 +220,14 @@ ZMap 4.1.0 contains a number of bug fixes and performance enhancements, especial
 
 * Fixed a bug which caused inaccurate ETA every 44 secs.
 * Fixed a bug where a malformed TCP options returned to the scanner would cause the receive thread to hang.
+
+
+# 4.2.0 2024-07-09
+
+## BUGFIX
+
+* Fixed a bug where ZMap's behavior with a --max-targets of a percentage with multiple ports was inconsistent with our documentation/expectations. (#886)
+
+## ENHANCEMENT
+
+* Bump the base Docker image from Ubuntu 20.04 to 24.04 (#888)
