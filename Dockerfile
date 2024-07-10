@@ -53,7 +53,6 @@ RUN apt-get update \
     libpcap0.8 \
     libjson-c5 \
     libjudydebian1 \
-    libhiredis1.1.0 \
     libgmp10 \
     dumb-init \
     && rm -rf /var/lib/apt/lists/*
