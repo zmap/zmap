@@ -42,6 +42,7 @@ upnp_1900.pkt           This probe triggers a response from UPnP SSDP services o
 wdbrpc_17185.pkt        This probe triggers a response from VxWorks WDBRPC services on UDP port 17185
 wsd_3702.pkt            This probe triggers a response from WSD/DPWS services on UDP port 3702
 coap_5683.pkt           This probe triggers a response from COAP services on UDP port 5683
+dtls1.2_443_client_hello.pkt       This probe sends a DTLS 1.2 (RFC 6347) client hello and solicits a server response (standard UDP port is 443)
 
 NOTES:
 -----
