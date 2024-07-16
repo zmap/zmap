@@ -678,7 +678,7 @@ int main(int argc, char *argv[])
 					  zconf.packet_streams,
 					  zconf.source_port_first, zconf.source_port_last,
 					  (zconf.source_port_last - zconf.source_port_first) + 1);
-			} else if (((float)zconf.packet_streams / (float)num_source_ports) < 0.1) {
+			} else if (((float)zconf.packet_streams / (float)num_source_ports) > 0.1) {
 				log_warn("zmap", "ZMap is configured to use a relatively small number"
 						 " of source ports (fewer than 10x the number of probe packets per target ip/port),"
 						 " which limits the entropy that ZMap has available for "
