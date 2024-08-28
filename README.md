@@ -41,7 +41,7 @@ More information about ZMap's architecture and a comparison with other tools can
  * [Zippier ZMap: Internet-Wide Scanning at 10 Gbps](https://jhalderm.com/pub/papers/zmap10gig-woot14.pdf)
  * [Ten Years of ZMap](https://arxiv.org/pdf/2406.15585)
 
-If you use ZMap for published research, please cite the original research paper:
+If you use ZMap for published research, please cite:
 
 ```
 @inproceedings{durumeric2013zmap,
@@ -50,9 +50,16 @@ If you use ZMap for published research, please cite the original research paper:
   booktitle={22nd USENIX Security Symposium},
   year={2013}
 }
+
+@inproceedings{durumeric2024ten,
+  title={Ten Years of {ZMap}},
+  author={Durumeric, Zakir and Adrian, David and Stephens, Phillip and Wustrow, Eric and Halderman, J Alex},
+  booktitle={ACM Internet Measurement Conference},
+  year={2024}
+}
 ```
 
-Citing the ZMap paper helps us to track ZMap usage within the research community and to pursue funding for continued development.
+Citing the ZMap publications help us to track ZMap usage within the research community and to pursue funding for continued development.
 
 
 License and Copyright
