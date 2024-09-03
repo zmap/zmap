@@ -188,6 +188,14 @@ endif()
 
 FILE(GLOB CONF_FILES "${PROJECT_SOURCE_DIR}/conf/*")
 
+# Upgrade path for old conf files - this is necessary for users upgrading from a version where we called the blocklist file blacklist.conf
+# Must occur before the install command
+if(EXISTS "${CONFIG_DESTINATION}/blacklist.conf")
+    message(STATUS "Old configuration file detected at ${CONFIG_DESTINATION}/blacklist.conf, moving to ${CONFIG_DESTINATION}/blocklist.conf to match the new flag conventions")
+    file(RENAME "${CONFIG_DESTINATION}/blacklist.conf" "${CONFIG_DESTINATION}/blocklist.conf")
+    message(STATUS "blocklist.conf has been successfully moved.")
+endif()
+
 message(STATUS "Default ZMap configuration file location is /etc/zmap")
 foreach(EACH_CONF ${CONF_FILES})
     get_filename_component(CONF_BASENAME ${EACH_CONF} NAME)
@@ -201,12 +209,6 @@ foreach(EACH_CONF ${CONF_FILES})
         message(WARNING "Existing configuration file detected at /etc/zmap/${CONF_BASENAME}, ${CONF_BASENAME} from sources will NOT be installed. Please check and install manually!")
     endif()
 endforeach()
-
-# Upgrade path for old conf files - this is necessary for users upgrading from a version where we called the blocklist file blacklist.conf
-if(EXISTS "${CONFIG_DESTINATION}/blacklist.conf")
-    message(STATUS "Old configuration file detected at ${CONFIG_DESTINATION}/blacklist.conf, moving to ${CONFIG_DESTINATION}/blocklist.conf to match the new flag conventions")
-    file(RENAME "${CONFIG_DESTINATION}/blacklist.conf" "${CONFIG_DESTINATION}/blocklist.conf")
-    message(STATUS "blocklist.conf has been successfully moved.")
 
 # Allow Debian Packaging
 include(InstallRequiredSystemLibraries)
