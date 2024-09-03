@@ -191,9 +191,11 @@ FILE(GLOB CONF_FILES "${PROJECT_SOURCE_DIR}/conf/*")
 # Upgrade path for old conf files - this is necessary for users upgrading from a version where we called the blocklist file blacklist.conf
 # Must occur before the install command
 if(EXISTS "${CONFIG_DESTINATION}/blacklist.conf")
-    message(STATUS "Old configuration file detected at ${CONFIG_DESTINATION}/blacklist.conf, moving to ${CONFIG_DESTINATION}/blocklist.conf to match the new flag conventions")
-    file(RENAME "${CONFIG_DESTINATION}/blacklist.conf" "${CONFIG_DESTINATION}/blocklist.conf")
-    message(STATUS "blocklist.conf has been successfully moved.")
+    message(STATUS "Old configuration file detected at ${CONFIG_DESTINATION}/blacklist.conf, creating a symlink to ${CONFIG_DESTINATION}/blocklist.conf to match the new flag conventions")
+    execute_process(
+            COMMAND ${CMAKE_COMMAND} -E create_symlink "${CONFIG_DESTINATION}/blacklist.conf" "${CONFIG_DESTINATION}/blocklist.conf"
+    )
+    message(STATUS "blocklist.conf has been successfully symlinked to blacklist.conf.")
 endif()
 
 # If the zmap.conf file exists and contains the old blacklist-file option, replace it with the new blocklist-file option
