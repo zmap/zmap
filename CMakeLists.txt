@@ -196,6 +196,30 @@ if(EXISTS "${CONFIG_DESTINATION}/blacklist.conf")
     message(STATUS "blocklist.conf has been successfully moved.")
 endif()
 
+# Check if the file exists
+if(EXISTS "${CONFIG_DESTINATION}/zmap.conf")
+    # Read the file content into a variable
+    file(READ "${CONFIG_DESTINATION}/zmap.conf" FILE_CONTENTS)
+
+    # Check if the specific line exists
+    if(FILE_CONTENTS MATCHES "blacklist-file \"${CONFIG_DESTINATION}/blacklist.conf\"")
+        # Replace the line
+        string(REPLACE "blacklist-file \"${CONFIG_DESTINATION}/blacklist.conf\""
+                "blocklist-file \"${CONFIG_DESTINATION}/blocklist.conf\""
+                FILE_CONTENTS
+                "${FILE_CONTENTS}")
+
+        # Write the modified content back to the file
+        file(WRITE "${CONFIG_DESTINATION}/zmap.conf" "${FILE_CONTENTS}")
+
+        message(STATUS "Blacklist to blocklist file path successfully updated in ${CONFIG_DESTINATION}/zmap.conf.")
+    else()
+        message(STATUS "blacklist-file option does not exist in ${CONFIG_DESTINATION}/zmap.conf. No changes necessary to upgrade ZMap configuration file.")
+    endif()
+else()
+    message(STATUS "No ZMap configuration file detected at ${CONFIG_DESTINATION}/zmap.conf. No changes necessary to upgrade ZMap configuration file.")
+endif()
+
 message(STATUS "Default ZMap configuration file location is /etc/zmap")
 foreach(EACH_CONF ${CONF_FILES})
     get_filename_component(CONF_BASENAME ${EACH_CONF} NAME)
