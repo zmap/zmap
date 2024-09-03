@@ -202,6 +202,12 @@ foreach(EACH_CONF ${CONF_FILES})
     endif()
 endforeach()
 
+# Upgrade path for old conf files
+if(EXISTS "${CONFIG_DESTINATION}/blacklist.conf")
+    message(STATUS "Old configuration file detected at ${CONFIG_DESTINATION}/blacklist.conf, moving to ${CONFIG_DESTINATION}/blocklist.conf to match the new flag conventions")
+    file(RENAME "${CONFIG_DESTINATION}/blacklist.conf" "${CONFIG_DESTINATION}/blocklist.conf")
+    message(STATUS "blocklist.conf has been successfully moved.")
+
 # Allow Debian Packaging
 include(InstallRequiredSystemLibraries)
 
