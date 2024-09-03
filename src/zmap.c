@@ -793,7 +793,7 @@ int main(int argc, char *argv[])
 	if (zconf.default_mode) {
 		log_debug(
 		    "filter",
-		    "No output filter specified. Will use default: exclude duplicates and unssuccessful");
+		    "No output filter specified. Will use default: exclude duplicates and unsuccessful");
 	} else if (args.output_filter_given &&
 		   strcmp(args.output_filter_arg, "")) {
 		// Run it through yyparse to build the expression tree
