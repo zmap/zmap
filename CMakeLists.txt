@@ -202,7 +202,7 @@ foreach(EACH_CONF ${CONF_FILES})
     endif()
 endforeach()
 
-# Upgrade path for old conf files
+# Upgrade path for old conf files - this is necessary for users upgrading from a version where we called the blocklist file blacklist.conf
 if(EXISTS "${CONFIG_DESTINATION}/blacklist.conf")
     message(STATUS "Old configuration file detected at ${CONFIG_DESTINATION}/blacklist.conf, moving to ${CONFIG_DESTINATION}/blocklist.conf to match the new flag conventions")
     file(RENAME "${CONFIG_DESTINATION}/blacklist.conf" "${CONFIG_DESTINATION}/blocklist.conf")
