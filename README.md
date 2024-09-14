@@ -3,7 +3,7 @@ ZMap: The Internet Scanner
 
 ![Build Status](https://github.com/zmap/zmap/actions/workflows/cmake.yml/badge.svg)
 
-ZMap is a fast single packet network scanner designed for Internet-wide network
+ZMap is a fast stateless single packet network scanner designed for Internet-wide network
 surveys. On a typical desktop computer with a gigabit Ethernet connection, ZMap
 is capable of scanning the entire public IPv4 address space on a single port in 
 under 45 minutes. For example, sending a TCP SYN packet to every IPv4 address
