@@ -120,7 +120,7 @@
 * Switch CHANGELOG and INSTALL to Markdown
 * Generate `*.ggo` files from `*.ggo.in` files that define ZMap version as a macro
 
-# 3.0.0 2923-06-23
+# 3.0.0 2023-06-23
 We're happy to provide ZMap 3.0.0, only slightly under six years late. We recommend using this release over any previous 2.x release.
 
 ZMap 3.0.0 represents several years of development and contains more than a hundred small bug fixes from ZMap 2.1.1., including many fixes for UDP modules, sharding, and progress calculation. Below, are some of the most important changes:
