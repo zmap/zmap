@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:22.04
 # Set non-interactive mode so that apt-get does not prompt for input
 ARG DEBIAN_FRONTEND=noninteractive
 
