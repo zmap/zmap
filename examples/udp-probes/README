@@ -14,35 +14,61 @@ $ zmap -M udp -p 137 --probe-args=file:examples/udp-probes/netbios_137.pkt
 PROBES:
 -----
 
+ard_3282.pkt
+bacnet_47808.pkt
+bacnet_rpm_47808.pkt
+blank_space.pkt
+chargen_19.pkt
 citrix_1604.pkt         This probe triggers a response from Citrix application discovery services on UDP port 1604
+coap_5683.pkt           This probe triggers a response from COAP services on UDP port 5683
+db2_523.pkt
 db2disco_523.pkt        This probe triggers a response from IBM DB2 discovery services on UDP port 523
 digi1_2362.pkt          This probe triggers a response from Digi ADDP discovery services on UDP port 2362 (default magic)
 digi2_2362.pkt          This probe triggers a response from Digi ADDP discovery services on UDP port 2362 (devkit magic)
 digi3_2362.pkt          This probe triggers a response from Digi ADDP discovery services on UDP port 2362 (oem magic)
-dns_53.pkt              This probe queries for the DNS vendor and version using the BIND version TXT record over UDP port 53
 dns_53_queryAwww.google.it.pkt     This probe queries for the domain www.google.it A record over UDP port 53
 dns_53_queryAwww.google.com.pkt    This probe queries for the domain www.google.com A record over UDP port 53
+dns_53.pkt              This probe queries for the DNS vendor and version using the BIND version TXT record over UDP port 53
+dtls1.2_443_client_hello.pkt       This probe sends a DTLS 1.2 (RFC 6347) client hello and solicits a server response (standard UDP port is 443)
 ipmi_623.pkt            This probe triggers a Get Channel Authentication reply from IPMI endpoints on UDP port 623
+ldap_389.pkt
 mdns_5353.pkt           This probe triggers a response from mDNS/Avahi/Bonjour discovery services on UDP port 5353
 memcache_11211.pkt      This probe triggers a response from memcached on UDP port 11211 (stats items).
 mssql_1434.pkt          This probe triggers a response from Microsoft SQL Server discovery services on UDP port 1434
+nat_port_mapping_5351.pkt
 natpmp_5351.pkt         This probe triggers a response from NATPMP-enabled devices on UDP port 5351
 netbios_137.pkt         This probe triggers a status reply from NetBIOS services on UDP port 137
-ntp_123.pkt             This probe triggers a response from NTP services on UDP port 123
+netis_53413.pkt
+newline.pkt             This probe consists of a newline character.
 ntp_123_monlist.pkt     This probe triggers a response for command "monlist" from NTP services on UDP port 123
+ntp_123.pkt             This probe triggers a response from NTP services on UDP port 123
+null_byte.pkt           This probe consists of a null byte.
 pca_nq_5632.pkt         This probe triggers a response from PC Anywhere services on UDP port 5632 (network query)
 pca_st_5632.pkt         This probe triggers a response from PC Anywhere services on UDP port 5632 (status)
+pcanywhere_5632.pkt
 portmap_111.pkt         This probe triggers a response from SunRPC portmapper services on UDP port 111
+qotd_17.pkt
+rdp_3389.pkt
 ripv1_520.pkt       	This probe triggers a response from the RIPv1 enabled routers/devices on UDP port 520
 sentinel_5093.pkt       This probe triggers a response from the Sentinel license manager service on UDP port 5093
+sip_5060.pkt
+sip_options.tpl
 snmp1_161.pkt           This probe queries for the system description field of SNMP v1 services using community string public over UDP port 161
 snmp2_161.pkt           This probe queries for the system description field of SNMP v2 services using community string public over UDP port 161
 snmp3_161.pkt           This probe triggers a response from SNMP v3 services on UDP port 161
+ssdp_1900.pkt
+start_of_heading.pkt    This probe consists of a start of heading byte.
+tftp_69.pkt
+ubiquiti_10001.pkt
+ubiquiti_discovery_v1_10001.pkt
+ubiquiti_discovery_v2_10001.pkt
 upnp_1900.pkt           This probe triggers a response from UPnP SSDP services on UDP port 1900
+valve_27015.pkt
 wdbrpc_17185.pkt        This probe triggers a response from VxWorks WDBRPC services on UDP port 17185
 wsd_3702.pkt            This probe triggers a response from WSD/DPWS services on UDP port 3702
-coap_5683.pkt           This probe triggers a response from COAP services on UDP port 5683
-dtls1.2_443_client_hello.pkt       This probe sends a DTLS 1.2 (RFC 6347) client hello and solicits a server response (standard UDP port is 443)
+wsd_malformed_3702.pkt
+xdcmp_177.pkt
+
 
 NOTES:
 -----
