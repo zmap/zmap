@@ -62,8 +62,14 @@ void recv_init(void)
 	char bpftmp[BPFLEN];
 	char errbuf[PCAP_ERRBUF_SIZE];
 
-	pc = pcap_open_live(zconf.iface, zconf.probe_module->pcap_snaplen,
+    char *iface = NULL;
+	if (!zconf.listen_all_interfaces) {
+		iface = zconf.iface;
+	}
+
+	pc = pcap_open_live(iface, zconf.probe_module->pcap_snaplen,
 			    PCAP_PROMISC, PCAP_TIMEOUT, errbuf);
+
 	if (pc == NULL) {
 		log_fatal("recv", "could not open device %s: %s", zconf.iface,
 			  errbuf);
@@ -94,7 +100,7 @@ void recv_init(void)
 
 	struct bpf_program bpf;
 
-	if (!zconf.send_ip_pkts) {
+	if (!zconf.send_ip_pkts && !zconf.listen_all_interfaces) {
 		snprintf(bpftmp, sizeof(bpftmp) - 1,
 			 "not ether src %02x:%02x:%02x:%02x:%02x:%02x",
 			 zconf.hw_mac[0], zconf.hw_mac[1], zconf.hw_mac[2],
@@ -105,7 +111,7 @@ void recv_init(void)
 		bpftmp[0] = 0;
 	}
 	if (zconf.probe_module->pcap_filter) {
-		if (!zconf.send_ip_pkts) {
+		if (!zconf.send_ip_pkts && !zconf.listen_all_interfaces) {
 			strcat(bpftmp, " and (");
 		} else {
 			strcat(bpftmp, "(");

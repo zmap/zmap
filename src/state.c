@@ -45,6 +45,7 @@ struct state_conf zconf = {
     .no_header_row = 0,
     .notes = NULL,
     .number_source_ips = 0,
+    .listen_all_interfaces = 0,
     .output_args = NULL,
     .output_fields = NULL,
     .output_fields_len = 0,

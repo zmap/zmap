@@ -60,6 +60,7 @@ struct state_conf {
 	// name of network interface that
 	// will be utilized for sending/receiving
 	char *iface;
+    int listen_all_interfaces;
 	// rate in packets per second
 	// that the sender will maintain
 	int rate;

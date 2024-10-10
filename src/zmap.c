@@ -930,6 +930,9 @@ int main(int argc, char *argv[])
 	if (args.max_targets_given) {
 		zconf.max_targets = parse_max_targets(args.max_targets_arg, zconf.ports->port_count);
 	}
+    if (args.listen_all_interfaces_given) {
+		zconf.listen_all_interfaces = 1;
+	}
 
 	// blocklist
 	if (blocklist_init(zconf.allowlist_filename, zconf.blocklist_filename,
