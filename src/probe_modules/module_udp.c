@@ -436,7 +436,7 @@ int udp_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation, const struct port_conf *ports)
 {
 	return udp_do_validate_packet(ip_hdr, len, src_ip, validation,
-				      num_ports, NO_SRC_PORT_VALIDATION, ports);
+				      num_ports, SRC_PORT_VALIDATION, ports);
 }
 
 // Do very basic validation that this is an ICMP response to a packet we sent
