@@ -138,12 +138,16 @@ static udp_payload_field_type_def_t udp_payload_template_fields[] = {
      .max_length = 4,
      .desc = "Microsecond part of Unix time in network byte order"}};
 
+static bool validate_source_port_override = false;
 void udp_set_num_ports(int x) { num_ports = x; }
 
 int udp_global_initialize(struct state_conf *conf)
 {
 	uint32_t udp_template_max_len = 0;
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
+    if (conf->validate_source_port_override) {
+        validate_source_port_override = true;
+    }
 
 	if (!conf->probe_args) {
 		log_error(
@@ -435,8 +439,13 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len,
 int udp_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation, const struct port_conf *ports)
 {
+    if (validate_source_port_override) {
+        // user requested we perform source port validation
+        return udp_do_validate_packet(ip_hdr, len, src_ip, validation,
+                      num_ports, SRC_PORT_VALIDATION, ports);
+    }
 	return udp_do_validate_packet(ip_hdr, len, src_ip, validation,
-				      num_ports, SRC_PORT_VALIDATION, ports);
+				      num_ports, NO_SRC_PORT_VALIDATION, ports);
 }
 
 // Do very basic validation that this is an ICMP response to a packet we sent

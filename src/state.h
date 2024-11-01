@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "../lib/includes.h"
 
@@ -50,6 +51,8 @@ struct state_conf {
 	struct port_conf *ports;
 	port_h_t source_port_first;
 	port_h_t source_port_last;
+    // overrides a probe module's default behavior and forces it to perform source port validation, if supported
+    bool validate_source_port_override;
 	// maximum number of packets that the scanner will send before
 	// terminating
 	uint64_t max_targets;

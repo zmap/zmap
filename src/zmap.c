@@ -640,7 +640,9 @@ int main(int argc, char *argv[])
 		    " If you have modified the default blocklist, you can ignore this message.");
 	}
 	SET_IF_GIVEN(zconf.allowlist_filename, allowlist_file);
-
+    if (args.validate_source_port_given) {
+        zconf.validate_source_port_override = 1;
+    }
 	if (zconf.probe_module->port_args) {
 		if (args.source_port_given) {
 			char *dash = strchr(args.source_port_arg, '-');
