@@ -1,7 +1,7 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "ZMAP" "1" "October 2024" "ZMap" "zmap"
+.TH "ZMAP" "1" "November 2024" "ZMap" "zmap"
 .
 .SH "NAME"
 \fBzmap\fR \- The Fast Internet Scanner
@@ -100,7 +100,7 @@ Source port(s) to send packets from
 .
 .TP
 \fB\-\-validate\-source\-port\fR
-Used as an override to enable source port validation\. Source port validation will check that a received probe response\'s dst port matches the source port of the probe sent to that IP/port pair\. This reduces false positives and ensures we only count hits from this ZMap scan instance\.
+Used as an override to enable source port validation\. Source port validation will check that a received probe response\'s src port matches the dst port of the probe sent to that IP/port pair\. This ensures that multiple ZMap scans to the same hosts but to different ports will not interfere with each other\.
 .
 .TP
 \fB\-S\fR, \fB\-\-source\-ip=ip|range\fR
