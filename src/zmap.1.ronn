@@ -111,11 +111,12 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
    * `-s`, `--source-port=port|range`:
      Source port(s) to send packets from
 
-   * `--validate-source-port`:
-     Used as an override to enable source port validation. Source port validation will
+   * `--validate-source-port=enable|disable`:
+     Used as an override to enable/disable source port validation. Source port validation will
      check that a received probe response's src port matches the dst port of the probe
      sent to that IP/port pair. This ensures that multiple ZMap scans to the same hosts
-     but to different ports will not interfere with each other.
+     but to different ports will not interfere with each other Each module has a default behavior
+     on whether to validate source ports or not and this overrides it.
 
    * `-S`, `--source-ip=ip|range`:
      Source address(es) to send packets from. Either single IP or range (e.g.

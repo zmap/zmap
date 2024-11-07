@@ -155,10 +155,11 @@ be excluded.</p></dd>
 
 <dl>
 <dt> <code>-s</code>, <code>--source-port=port|range</code></dt><dd><p> Source port(s) to send packets from</p></dd>
-<dt> <code>--validate-source-port</code></dt><dd><p> Used as an override to enable source port validation. Source port validation will
+<dt> <code>--validate-source-port=enable|disable</code></dt><dd><p> Used as an override to enable/disable source port validation. Source port validation will
  check that a received probe response's src port matches the dst port of the probe
  sent to that IP/port pair. This ensures that multiple ZMap scans to the same hosts
- but to different ports will not interfere with each other.</p></dd>
+ but to different ports will not interfere with each other Each module has a default behavior
+ on whether to validate source ports or not and this overrides it.</p></dd>
 <dt> <code>-S</code>, <code>--source-ip=ip|range</code></dt><dd><p> Source address(es) to send packets from. Either single IP or range (e.g.
  10.0.0.1-10.0.0.9)</p></dd>
 <dt> <code>-G</code>, <code>--gateway-mac=addr</code></dt><dd><p> Gateway MAC address to send packets to (in case auto-detection fails)</p></dd>
