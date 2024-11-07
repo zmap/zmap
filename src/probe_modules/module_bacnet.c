@@ -21,6 +21,8 @@
 
 #define ICMP_UNREACH_HEADER_SIZE 8
 
+static bool validate_source_port_disable_override = false;
+
 #define ZMAP_BACNET_PACKET_LEN                             \
 	(sizeof(struct ether_header) + sizeof(struct ip) + \
 	 sizeof(struct udphdr) + 0x11)
@@ -113,11 +115,18 @@ int bacnet_validate_packet(const struct ip *ip_hdr, uint32_t len,
 {
 	// this will reject packets that aren't UDP or ICMP and fully process ICMP
 	// packets
-	if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports,
-				   SRC_PORT_VALIDATION,
-				   ports) == PACKET_INVALID) {
-		return PACKET_INVALID;
-	}
+    if (validate_source_port_disable_override == true) {
+        // user didn't want source port validation
+        if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports,
+                                   NO_SRC_PORT_VALIDATION,
+                                   ports) == PACKET_INVALID) {
+            return PACKET_INVALID;
+        }
+    } else if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports,
+                                   SRC_PORT_VALIDATION,
+                                   ports) == PACKET_INVALID) {
+            return PACKET_INVALID;
+    }
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		struct udphdr *udp = get_udp_header(ip_hdr, len);
 		if (!udp) {
@@ -173,6 +182,9 @@ void bacnet_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 int bacnet_global_initialize(struct state_conf *conf)
 {
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
+    if (conf->validate_source_port_override == false) {
+        validate_source_port_disable_override = true;
+    }
 	return EXIT_SUCCESS;
 }
 

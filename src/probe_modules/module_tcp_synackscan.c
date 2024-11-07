@@ -24,6 +24,10 @@
 
 #define ZMAP_TCP_SYNACKSCAN_TCP_HEADER_LEN 24
 #define ZMAP_TCP_SYNACKSCAN_PACKET_LEN 58
+// Source Port Validation Override by User
+// -1 = unset, 0 = disable override, 1 = enable override
+static uint8_t validate_source_port_override = -1;
+
 
 probe_module_t module_tcp_synackscan;
 static uint32_t num_ports;
@@ -31,6 +35,7 @@ static uint32_t num_ports;
 static int synackscan_global_initialize(struct state_conf *state)
 {
 	num_ports = state->source_port_last - state->source_port_first + 1;
+    validate_source_port_override = zconf.validate_source_port_override;
 	return EXIT_SUCCESS;
 }
 
@@ -99,7 +104,7 @@ static int synackscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		uint16_t sport = ntohs(tcp->th_sport);
 		uint16_t dport = ntohs(tcp->th_dport);
 		// validate source port
-		if (!check_src_port(sport, ports)) {
+		if (validate_source_port_override != 0 && !check_src_port(sport, ports)) {
 			return PACKET_INVALID;
 		}
 		// validate destination port

@@ -22,6 +22,10 @@
 #define MAX_UDP_PAYLOAD_LEN 200
 #define ICMP_UNREACH_HEADER_SIZE 8
 #define UNUSED __attribute__((unused))
+// Source Port Validation Override by User
+// -1 = unset, 0 = disable override, 1 = enable override
+static uint8_t validate_source_port_override = -1;
+
 
 static char *udp_send_msg = NULL;
 static int udp_send_msg_len = 0;
@@ -45,6 +49,7 @@ int ipip_global_initialize(struct state_conf *conf)
 	FILE *inp;
 
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
+    validate_source_port_override = zconf.validate_source_port_override;
 
 	udp_send_msg = strdup(udp_send_msg_default);
 	udp_send_msg_len = strlen(udp_send_msg);
@@ -302,7 +307,7 @@ int ipip_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		struct udphdr *udp =
 		    (struct udphdr *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
 		uint16_t dport = ntohs(udp->uh_dport);
-		if (check_src_port(dport, ports) == 0) {
+		if (validate_source_port_override != 0 && check_src_port(dport, ports) == 0) {
 			return PACKET_INVALID;
 		}
 		if (!blocklist_is_allowed(*src_ip)) {
@@ -363,7 +368,7 @@ int ipip_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		// original packet and wouldn't have been altered by something
 		// responding on a different port
 		uint16_t dport = ntohs(udp->uh_dport);
-		if (check_src_port(dport, ports) == 0) {
+		if (validate_source_port_override != 0 && check_src_port(dport, ports) == 0) {
 			return PACKET_INVALID;
 		}
 		uint16_t sport = ntohs(udp->uh_sport);

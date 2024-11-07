@@ -22,6 +22,9 @@
 #include "module_udp.h"
 
 #define ICMP_UNREACH_HEADER_SIZE 8
+// Source Port Validation Override by User
+// -1 = unset, 0 = disable override, 1 = enable override
+static uint8_t validate_source_port_override = -1;
 
 static const char *upnp_query = "M-SEARCH * HTTP/1.1\r\n"
 				"Host:239.255.255.250:1900\r\n"
@@ -35,6 +38,7 @@ static int num_ports;
 int upnp_global_initialize(struct state_conf *state)
 {
 	num_ports = state->source_port_last - state->source_port_first + 1;
+    validate_source_port_override = zconf.validate_source_port_override;
 	udp_set_num_ports(num_ports);
 	return EXIT_SUCCESS;
 }
@@ -72,6 +76,11 @@ int upnp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 			 uint32_t *src_ip, uint32_t *validation,
 			 const struct port_conf *ports)
 {
+    if (validate_source_port_override == 0) {
+        // user didn't want src port validation
+        return udp_do_validate_packet(ip_hdr, len, src_ip, validation,
+                                      num_ports, NO_SRC_PORT_VALIDATION, ports);
+    }
 	return udp_do_validate_packet(ip_hdr, len, src_ip, validation,
 				      num_ports, SRC_PORT_VALIDATION, ports);
 }
