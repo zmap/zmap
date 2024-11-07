@@ -52,7 +52,8 @@ struct state_conf {
 	port_h_t source_port_first;
 	port_h_t source_port_last;
     // overrides a probe module's default behavior and forces it to perform source port validation, if supported
-    bool validate_source_port_override;
+    // -1 = unset, 0 = validation disabled, 1 = validation enabled
+    int8_t validate_source_port_override;
 	// maximum number of packets that the scanner will send before
 	// terminating
 	uint64_t max_targets;

@@ -640,8 +640,19 @@ int main(int argc, char *argv[])
 		    " If you have modified the default blocklist, you can ignore this message.");
 	}
 	SET_IF_GIVEN(zconf.allowlist_filename, allowlist_file);
+    zconf.validate_source_port_override = -1;
     if (args.validate_source_port_given) {
-        zconf.validate_source_port_override = 1;
+        if (strcmp(args.validate_source_port_arg, "enable") == 0) {
+            // user wants to force source port validation
+            zconf.validate_source_port_override = 1;
+        } else if (strcmp(args.validate_source_port_arg, "disable") == 0) {
+            // user wants to force disable source port validation
+            zconf.validate_source_port_override = 0;
+        } else {
+            // unknown value
+            log_fatal("zmap",
+                      "unknown value for --validate-source-port, use either \"enable\" or \"disable\"");
+        }
     }
 	if (zconf.probe_module->port_args) {
 		if (args.source_port_given) {
