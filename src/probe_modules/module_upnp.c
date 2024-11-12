@@ -36,7 +36,7 @@ static int num_ports;
 int upnp_global_initialize(struct state_conf *state)
 {
 	num_ports = state->source_port_last - state->source_port_first + 1;
-    validate_source_port_override = zconf.validate_source_port_override;
+	validate_source_port_override = zconf.validate_source_port_override;
 	udp_set_num_ports(num_ports);
 	return EXIT_SUCCESS;
 }

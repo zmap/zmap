@@ -857,7 +857,7 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 	} else if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports, SRC_PORT_VALIDATION, ports) == PACKET_INVALID) {
 		return PACKET_INVALID;
 	}
-    if (ip_hdr->ip_p == IPPROTO_UDP) {
+	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		struct udphdr *udp = get_udp_header(ip_hdr, len);
 		if (!udp) {
 			return PACKET_INVALID;

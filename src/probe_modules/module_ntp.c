@@ -32,7 +32,7 @@ static int8_t validate_source_port_override; // user-specified override for defa
 int ntp_global_initialize(struct state_conf *conf)
 {
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
-    validate_source_port_override = zconf.validate_source_port_override;
+	validate_source_port_override = zconf.validate_source_port_override;
 	return udp_global_initialize(conf);
 }
 
