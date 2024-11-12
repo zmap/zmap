@@ -25,9 +25,8 @@
 
 #define ZMAP_TCP_SYNACKSCAN_TCP_HEADER_LEN 24
 #define ZMAP_TCP_SYNACKSCAN_PACKET_LEN 58
-static int8_t validate_source_port_override; // user-specified override for default source port validation behavior
 #define SOURCE_PORT_VALIDATION_MODULE_DEFAULT true; // default to validating source port
-
+static bool should_validate_src_port = SOURCE_PORT_VALIDATION_MODULE_DEFAULT
 
 probe_module_t module_tcp_synackscan;
 static uint32_t num_ports;
@@ -35,9 +34,9 @@ static uint32_t num_ports;
 static int synackscan_global_initialize(struct state_conf *state)
 {
 	num_ports = state->source_port_last - state->source_port_first + 1;
-	validate_source_port_override = zconf.validate_source_port_override;
-	if (validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
+	if (state->validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
 		log_debug("tcp_synack", "disabling source port validation");
+		should_validate_src_port = false;
 	}
 	return EXIT_SUCCESS;
 }
@@ -99,10 +98,6 @@ static int synackscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 				      const struct port_conf *ports)
 {
 
-	bool should_validate_source_port = SOURCE_PORT_VALIDATION_MODULE_DEFAULT;
-	if (validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
-		should_validate_source_port = false;
-	}
 	if (ip_hdr->ip_p == IPPROTO_TCP) {
 		struct tcphdr *tcp = get_tcp_header(ip_hdr, len);
 		if (!tcp) {
@@ -111,7 +106,7 @@ static int synackscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		uint16_t sport = ntohs(tcp->th_sport);
 		uint16_t dport = ntohs(tcp->th_dport);
 		// validate source port
-		if (should_validate_source_port && !check_src_port(sport, ports)) {
+		if (should_validate_src_port && !check_src_port(sport, ports)) {
 			return PACKET_INVALID;
 		}
 		// validate destination port

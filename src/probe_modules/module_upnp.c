@@ -22,8 +22,8 @@
 #include "module_udp.h"
 
 #define ICMP_UNREACH_HEADER_SIZE 8
-static int8_t validate_source_port_override; // user-specified override for default source port validation behavior
 #define SOURCE_PORT_VALIDATION_MODULE_DEFAULT true; // default to validating source port
+static bool should_validate_src_port = SOURCE_PORT_VALIDATION_MODULE_DEFAULT
 
 static const char *upnp_query = "M-SEARCH * HTTP/1.1\r\n"
 				"Host:239.255.255.250:1900\r\n"
@@ -37,9 +37,9 @@ static int num_ports;
 int upnp_global_initialize(struct state_conf *state)
 {
 	num_ports = state->source_port_last - state->source_port_first + 1;
-	validate_source_port_override = zconf.validate_source_port_override;
-	if (validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
+	if (state->validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
 		log_debug("upnp", "disabling source port validation");
+		should_validate_src_port = false;
 	}
 	udp_set_num_ports(num_ports);
 	return EXIT_SUCCESS;
@@ -78,12 +78,8 @@ int upnp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 			 uint32_t *src_ip, uint32_t *validation,
 			 const struct port_conf *ports)
 {
-	bool should_validate_source_port = SOURCE_PORT_VALIDATION_MODULE_DEFAULT;
-	if (validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
-		should_validate_source_port = false;
-	}
 	return udp_do_validate_packet(ip_hdr, len, src_ip, validation,
-				      num_ports, should_validate_source_port, ports);
+				      num_ports, should_validate_src_port, ports);
 }
 
 void upnp_process_packet(const u_char *packet, UNUSED uint32_t len,

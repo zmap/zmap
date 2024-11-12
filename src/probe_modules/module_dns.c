@@ -62,9 +62,8 @@
 #define BAD_QTYPE_VAL -1
 #define MAX_LABEL_RECURSION 10
 #define DNS_QR_ANSWER 1
-static int8_t validate_source_port_override; // user-specified override for default source port validation behavior
 #define SOURCE_PORT_VALIDATION_MODULE_DEFAULT true; // default to validating source port
-
+static bool should_validate_src_port = SOURCE_PORT_VALIDATION_MODULE_DEFAULT
 
 // Note: each label has a max length of 63 bytes. So someone has to be doing
 // something really annoying. Will raise a warning.
@@ -582,9 +581,9 @@ static bool process_response_answer(char **data, uint16_t *data_len,
 static int dns_global_initialize(struct state_conf *conf)
 {
 	setup_qtype_str_map();
-	validate_source_port_override = zconf.validate_source_port_override;
-	if (validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
+	if (conf->validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
 		log_debug("dns", "disabling source port validation");
+		should_validate_src_port = false;
 	}
 	if (!conf->probe_args) {
 		log_fatal("dns", "Need probe args, e.g. --probe-args=\"A,example.com\"");
@@ -853,11 +852,7 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation, const struct port_conf *ports)
 {
 	// this does the heavy lifting including ICMP validation
-	bool should_validate_source_port = SOURCE_PORT_VALIDATION_MODULE_DEFAULT;
-	if (validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
-		should_validate_source_port = false;
-	}
-	if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports, should_validate_source_port, ports) == PACKET_INVALID) {
+	if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports, should_validate_src_port, ports) == PACKET_INVALID) {
 		return PACKET_INVALID;
 	}
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
