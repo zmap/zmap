@@ -27,9 +27,7 @@
 // defaults
 static uint8_t zmap_tcp_synscan_tcp_header_len = 20;
 static uint8_t zmap_tcp_synscan_packet_len = 54;
-// Source Port Validation Override by User
-// -1 = unset, 0 = disable override, 1 = enable override
-static uint8_t validate_source_port_override = -1;
+static int8_t validate_source_port_override; // user-specified override for default source port validation behavior
 
 
 probe_module_t module_tcp_synscan;
@@ -156,7 +154,7 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		port_h_t sport = ntohs(tcp->th_sport);
 		port_h_t dport = ntohs(tcp->th_dport);
 		// validate source port
-		if (validate_source_port_override != 0 && !check_src_port(sport, ports)) {
+		if (validate_source_port_override != VALIDATE_SRC_PORT_DISABLE_OVERRIDE && !check_src_port(sport, ports)) {
 			return PACKET_INVALID;
 		}
 		// validate destination port

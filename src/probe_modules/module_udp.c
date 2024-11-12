@@ -71,9 +71,7 @@ const unsigned char charset_all[257] = {
     0xfd, 0xfe, 0xff, 0x00};
 
 static int num_ports;
-// Source Port Validation Override by User
-// -1 = unset, 0 = disable override, 1 = enable override
-static uint8_t validate_source_port_override = -1;
+static int8_t validate_source_port_override; // user-specified override for default source port validation behavior
 
 probe_module_t module_udp;
 
@@ -439,7 +437,7 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len,
 int udp_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation, const struct port_conf *ports)
 {
-    if (validate_source_port_override == 1) {
+    if (validate_source_port_override == VALIDATE_SRC_PORT_ENABLE_OVERRIDE) {
         // user requested we perform source port validation
         return udp_do_validate_packet(ip_hdr, len, src_ip, validation,
                       num_ports, SRC_PORT_VALIDATION, ports);

@@ -62,9 +62,7 @@
 #define BAD_QTYPE_VAL -1
 #define MAX_LABEL_RECURSION 10
 #define DNS_QR_ANSWER 1
-// Source Port Validation Override by User
-// -1 = unset, 0 = disable override, 1 = enable override
-static uint8_t validate_source_port_override = -1;
+static int8_t validate_source_port_override; // user-specified override for default source port validation behavior
 
 
 // Note: each label has a max length of 63 bytes. So someone has to be doing
@@ -851,7 +849,7 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation, const struct port_conf *ports)
 {
 	// this does the heavy lifting including ICMP validation
-    if (validate_source_port_override == 0) {
+    if (validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
         // user didn't want source port validation
         if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports,
                                    NO_SRC_PORT_VALIDATION,
