@@ -178,7 +178,7 @@ void bacnet_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 int bacnet_global_initialize(struct state_conf *conf)
 {
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
-    validate_source_port_override = zconf.validate_source_port_override;
+	validate_source_port_override = zconf.validate_source_port_override;
 	return EXIT_SUCCESS;
 }
 
