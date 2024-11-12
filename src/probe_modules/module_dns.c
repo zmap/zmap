@@ -849,19 +849,14 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation, const struct port_conf *ports)
 {
 	// this does the heavy lifting including ICMP validation
-    if (validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
-        // user didn't want source port validation
-        if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports,
-                                   NO_SRC_PORT_VALIDATION,
-                                   ports) == PACKET_INVALID) {
-            return PACKET_INVALID;
-        }
-    } else if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports,
-        // either user didn't set override or they set src port validation on. Proceeding
-                                   SRC_PORT_VALIDATION,
-                                   ports) == PACKET_INVALID) {
-        return PACKET_INVALID;
-    }
+	if (validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
+		// user didn't want source port validation
+		if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports, NO_SRC_PORT_VALIDATION, ports) == PACKET_INVALID) {
+			return PACKET_INVALID;
+		}
+	} else if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports, SRC_PORT_VALIDATION, ports) == PACKET_INVALID) {
+		return PACKET_INVALID;
+	}
     if (ip_hdr->ip_p == IPPROTO_UDP) {
 		struct udphdr *udp = get_udp_header(ip_hdr, len);
 		if (!udp) {

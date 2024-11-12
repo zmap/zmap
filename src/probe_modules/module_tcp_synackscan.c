@@ -33,7 +33,7 @@ static uint32_t num_ports;
 static int synackscan_global_initialize(struct state_conf *state)
 {
 	num_ports = state->source_port_last - state->source_port_first + 1;
-    validate_source_port_override = zconf.validate_source_port_override;
+	validate_source_port_override = zconf.validate_source_port_override;
 	return EXIT_SUCCESS;
 }
 

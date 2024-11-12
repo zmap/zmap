@@ -145,7 +145,7 @@ int udp_global_initialize(struct state_conf *conf)
 {
 	uint32_t udp_template_max_len = 0;
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
-    validate_source_port_override = zconf.validate_source_port_override;
+	validate_source_port_override = zconf.validate_source_port_override;
 
 	if (!conf->probe_args) {
 		log_error(
@@ -437,11 +437,10 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len,
 int udp_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation, const struct port_conf *ports)
 {
-    if (validate_source_port_override == VALIDATE_SRC_PORT_ENABLE_OVERRIDE) {
-        // user requested we perform source port validation
-        return udp_do_validate_packet(ip_hdr, len, src_ip, validation,
-                      num_ports, SRC_PORT_VALIDATION, ports);
-    }
+	if (validate_source_port_override == VALIDATE_SRC_PORT_ENABLE_OVERRIDE) {
+		// user requested we perform source port validation
+		return udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports, SRC_PORT_VALIDATION, ports);
+	}
 	return udp_do_validate_packet(ip_hdr, len, src_ip, validation,
 				      num_ports, NO_SRC_PORT_VALIDATION, ports);
 }

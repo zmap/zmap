@@ -39,7 +39,7 @@ static int synscan_global_initialize(struct state_conf *state)
 {
 	num_source_ports =
 	    state->source_port_last - state->source_port_first + 1;
-    validate_source_port_override = zconf.validate_source_port_override;
+	validate_source_port_override = zconf.validate_source_port_override;
 	// Based on the OS, we'll set the TCP options differently
 	if (!state->probe_args) {
 		// user didn't provide any probe args, defaulting to windows
