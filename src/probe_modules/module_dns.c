@@ -63,6 +63,7 @@
 #define MAX_LABEL_RECURSION 10
 #define DNS_QR_ANSWER 1
 static int8_t validate_source_port_override; // user-specified override for default source port validation behavior
+#define SOURCE_PORT_VALIDATION_MODULE_DEFAULT true; // default to validating source port
 
 
 // Note: each label has a max length of 63 bytes. So someone has to be doing
@@ -582,6 +583,9 @@ static int dns_global_initialize(struct state_conf *conf)
 {
 	setup_qtype_str_map();
 	validate_source_port_override = zconf.validate_source_port_override;
+	if (validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
+		log_debug("dns", "disabling source port validation");
+	}
 	if (!conf->probe_args) {
 		log_fatal("dns", "Need probe args, e.g. --probe-args=\"A,example.com\"");
 	}
@@ -849,7 +853,7 @@ int dns_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation, const struct port_conf *ports)
 {
 	// this does the heavy lifting including ICMP validation
-	bool should_validate_source_port = true; // default to validating source port
+	bool should_validate_source_port = SOURCE_PORT_VALIDATION_MODULE_DEFAULT;
 	if (validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
 		should_validate_source_port = false;
 	}

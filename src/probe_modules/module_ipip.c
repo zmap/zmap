@@ -26,6 +26,7 @@
 
 
 static int8_t validate_source_port_override; // user-specified override for default source port validation behavior
+#define SOURCE_PORT_VALIDATION_MODULE_DEFAULT true; // default to validating source port
 static char *udp_send_msg = NULL;
 static int udp_send_msg_len = 0;
 
@@ -49,6 +50,9 @@ int ipip_global_initialize(struct state_conf *conf)
 
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
 	validate_source_port_override = zconf.validate_source_port_override;
+	if (validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
+		log_debug("ipip", "disabling source port validation");
+	}
 
 	udp_send_msg = strdup(udp_send_msg_default);
 	udp_send_msg_len = strlen(udp_send_msg);
@@ -297,6 +301,10 @@ int ipip_validate_packet(const struct ip *ip_hdr, uint32_t len,
 			 uint32_t *src_ip, uint32_t *validation,
 			 const struct port_conf *ports)
 {
+	bool should_validate_source_port = SOURCE_PORT_VALIDATION_MODULE_DEFAULT;
+	if (validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
+		should_validate_source_port = false;
+	}
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
 		if ((4 * ip_hdr->ip_hl + sizeof(struct udphdr)) > len) {
 			// buffer not large enough to contain expected udp
@@ -306,7 +314,7 @@ int ipip_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		struct udphdr *udp =
 		    (struct udphdr *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
 		uint16_t dport = ntohs(udp->uh_dport);
-		if (validate_source_port_override != VALIDATE_SRC_PORT_DISABLE_OVERRIDE && !check_src_port(dport, ports)) {
+		if (should_validate_source_port && !check_src_port(dport, ports)) {
 			return PACKET_INVALID;
 		}
 		if (!blocklist_is_allowed(*src_ip)) {
@@ -367,7 +375,7 @@ int ipip_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		// original packet and wouldn't have been altered by something
 		// responding on a different port
 		uint16_t dport = ntohs(udp->uh_dport);
-		if (validate_source_port_override != VALIDATE_SRC_PORT_DISABLE_OVERRIDE && !check_src_port(dport, ports)) {
+		if (should_validate_source_port && !check_src_port(dport, ports)) {
 			return PACKET_INVALID;
 		}
 		uint16_t sport = ntohs(udp->uh_sport);

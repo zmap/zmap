@@ -72,6 +72,7 @@ const unsigned char charset_all[257] = {
 
 static int num_ports;
 static int8_t validate_source_port_override; // user-specified override for default source port validation behavior
+#define SOURCE_PORT_VALIDATION_MODULE_DEFAULT false; // default to NOT validating source port
 
 probe_module_t module_udp;
 
@@ -146,6 +147,9 @@ int udp_global_initialize(struct state_conf *conf)
 	uint32_t udp_template_max_len = 0;
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
 	validate_source_port_override = zconf.validate_source_port_override;
+	if (validate_source_port_override == VALIDATE_SRC_PORT_ENABLE_OVERRIDE) {
+		log_debug("udp", "enabling source port validation");
+	}
 
 	if (!conf->probe_args) {
 		log_error(
@@ -437,7 +441,7 @@ void udp_process_packet(const u_char *packet, UNUSED uint32_t len,
 int udp_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation, const struct port_conf *ports)
 {
-	bool should_validate_source_port = false; // default to NOT validating source port
+	bool should_validate_source_port = SOURCE_PORT_VALIDATION_MODULE_DEFAULT;
 	if (validate_source_port_override == VALIDATE_SRC_PORT_ENABLE_OVERRIDE) {
 		should_validate_source_port = true;
 	}

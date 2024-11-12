@@ -27,19 +27,23 @@ probe_module_t module_ntp;
 
 static int num_ports;
 static int8_t validate_source_port_override; // user-specified override for default source port validation behavior
+#define SOURCE_PORT_VALIDATION_MODULE_DEFAULT true; // default to validating source port
 
 
 int ntp_global_initialize(struct state_conf *conf)
 {
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
 	validate_source_port_override = zconf.validate_source_port_override;
+	if (validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
+		log_debug("ntp", "disabling source port validation");
+	}
 	return udp_global_initialize(conf);
 }
 
 int ntp_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation, const struct port_conf *ports)
 {
-	bool should_validate_source_port = true; // default to validating source port
+	bool should_validate_source_port = SOURCE_PORT_VALIDATION_MODULE_DEFAULT;
 	if (validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
 		should_validate_source_port = false;
 	}
