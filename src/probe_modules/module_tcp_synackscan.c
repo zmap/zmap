@@ -8,6 +8,7 @@
 
 // probe module for performing TCP SYN scans
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>

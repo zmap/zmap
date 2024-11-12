@@ -6,8 +6,8 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
+#include <stdbool.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>

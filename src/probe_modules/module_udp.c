@@ -8,10 +8,10 @@
 
 /* send module for performing arbitrary UDP scans */
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <unistd.h>
 #include <string.h>
 #include <assert.h>
 #include <sys/time.h>

@@ -8,6 +8,7 @@
 
 // probe module for performing TCP SYN scans
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -149,7 +150,6 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 				   uint32_t *src_ip, uint32_t *validation,
 				   const struct port_conf *ports)
 {
-
 	if (ip_hdr->ip_p == IPPROTO_TCP) {
 		struct tcphdr *tcp = get_tcp_header(ip_hdr, len);
 		if (!tcp) {
