@@ -113,14 +113,12 @@ int bacnet_validate_packet(const struct ip *ip_hdr, uint32_t len,
 			   uint32_t *src_ip, uint32_t *validation,
 			   const struct port_conf *ports)
 {
-	// this will reject packets that aren't UDP or ICMP and fully process ICMP
-	// packets
+	// this will reject packets that aren't UDP or ICMP and fully process ICMP packets
+	bool should_validate_source_port = true; // default to validating source port
 	if (validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
-		// user didn't want source port validation
-		if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports, NO_SRC_PORT_VALIDATION, ports) == PACKET_INVALID) {
-			return PACKET_INVALID;
-		}
-	} else if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports, SRC_PORT_VALIDATION, ports) == PACKET_INVALID) {
+		should_validate_source_port = false;
+	}
+	if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports, should_validate_source_port, ports) == PACKET_INVALID) {
 		return PACKET_INVALID;
 	}
 	if (ip_hdr->ip_p == IPPROTO_UDP) {

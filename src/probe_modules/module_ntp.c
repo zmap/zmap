@@ -39,12 +39,12 @@ int ntp_global_initialize(struct state_conf *conf)
 int ntp_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation, const struct port_conf *ports)
 {
+	bool should_validate_source_port = true; // default to validating source port
 	if (validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
-		// user wanted us not to check the source port
-		return udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports, NO_SRC_PORT_VALIDATION, ports);
+		should_validate_source_port = false;
 	}
 	return udp_do_validate_packet(ip_hdr, len, src_ip, validation,
-				      num_ports, SRC_PORT_VALIDATION, ports);
+				      num_ports, should_validate_source_port, ports);
 }
 
 void ntp_process_packet(const u_char *packet, UNUSED uint32_t len,
