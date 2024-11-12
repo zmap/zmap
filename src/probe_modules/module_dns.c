@@ -580,8 +580,8 @@ static bool process_response_answer(char **data, uint16_t *data_len,
 
 static int dns_global_initialize(struct state_conf *conf)
 {
-    validate_source_port_override = zconf.validate_source_port_override;
     setup_qtype_str_map();
+    validate_source_port_override = zconf.validate_source_port_override;
 	if (!conf->probe_args) {
 		log_fatal("dns", "Need probe args, e.g. --probe-args=\"A,example.com\"");
 	}
