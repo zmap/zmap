@@ -403,10 +403,11 @@ int send_run(sock_t st, shard_t *s)
 			batch->packets[batch->len].len = (uint32_t)length;
 
 			if (zconf.dryrun) {
-				lock_file(stdout);
-				zconf.probe_module->print_packet(stdout,
-								 batch->packets[batch->len].buf);
-				unlock_file(stdout);
+				// TODO Remove
+//				lock_file(stdout);
+//				zconf.probe_module->print_packet(stdout,
+//								 batch->packets[batch->len].buf);
+//				unlock_file(stdout);
 			} else {
 				batch->len++;
 				if (batch->len == batch->capacity) {
