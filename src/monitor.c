@@ -44,11 +44,11 @@ typedef struct internal_scan_status {
 	double last_now;
 	uint64_t last_sent;
 	uint64_t last_tried_sent;
-	uint32_t last_send_failures;
-	uint32_t last_recv_net_success;
-	uint32_t last_recv_app_success;
-	uint32_t last_recv_total;
-	uint32_t last_pcap_drop;
+	uint64_t last_send_failures;
+	uint64_t last_recv_net_success;
+	uint64_t last_recv_app_success;
+	uint64_t last_recv_total;
+	uint64_t last_pcap_drop;
 	double min_hitrate_start;
 } int_status_t;
 
@@ -56,10 +56,10 @@ typedef struct internal_scan_status {
 typedef struct export_scan_status {
 	uint64_t total_sent;
 	uint64_t total_tried_sent;
-	uint32_t recv_success_unique;
-	uint32_t app_recv_success_unique;
+	uint64_t recv_success_unique;
+	uint64_t app_recv_success_unique;
 	uint64_t total_recv;
-	uint32_t complete;
+	uint64_t complete;
 	uint32_t send_threads;
 	double percent_complete;
 
@@ -85,9 +85,9 @@ typedef struct export_scan_status {
 	double app_success_avg;
 	char app_success_avg_str[NUMBER_STR_LEN];
 
-	uint32_t pcap_drop;
-	uint32_t pcap_ifdrop;
-	uint32_t pcap_drop_total;
+	uint64_t pcap_drop;
+	uint64_t pcap_ifdrop;
+	uint64_t pcap_drop_total;
 	char pcap_drop_total_str[NUMBER_STR_LEN];
 	double pcap_drop_last;
 	char pcap_drop_last_str[NUMBER_STR_LEN];
@@ -99,7 +99,7 @@ typedef struct export_scan_status {
 	uint32_t time_past;
 	char time_past_str[NUMBER_STR_LEN];
 
-	uint32_t fail_total;
+	uint64_t fail_total;
 	double fail_avg;
 	double fail_last;
 	float seconds_under_min_hitrate;
@@ -334,8 +334,8 @@ static void onscreen_appsuccess(export_status_t *exp)
 	if (!exp->complete) {
 		fprintf(stderr,
 			"%5s %0.0f%%%s; sent: %" PRIu64 " %sp/s (%sp/s avg); "
-			"recv: %u %sp/s (%sp/s avg); "
-			"app success: %u %sp/s (%sp/s avg); "
+			"recv: %" PRIu64 " %sp/s (%sp/s avg); "
+			"app success: %" PRIu64 " %sp/s (%sp/s avg); "
 			"drops: %sp/s (%sp/s avg); "
 			"hitrate: %0.2f%% "
 			"app hitrate: %0.2f%%\n",
@@ -350,8 +350,8 @@ static void onscreen_appsuccess(export_status_t *exp)
 	} else {
 		fprintf(stderr,
 			"%5s %0.0f%%%s; sent: %" PRIu64 " done (%sp/s avg); "
-			"recv: %u %sp/s (%sp/s avg); "
-			"app success: %u %sp/s (%sp/s avg); "
+			"recv: %" PRIu64 " %sp/s (%sp/s avg); "
+			"app success: %" PRIu64 " %sp/s (%sp/s avg); "
 			"drops: %sp/s (%sp/s avg); "
 			"hitrate: %0.2f%% "
 			"app hitrate: %0.2f%%\n",
@@ -370,7 +370,7 @@ static void onscreen_generic(export_status_t *exp)
 	if (!exp->complete) {
 		fprintf(stderr,
 			"%5s %0.0f%%%s; send: %" PRIu64 " %sp/s (%sp/s avg); "
-			"recv: %u %sp/s (%sp/s avg); "
+			"recv: %" PRIu64 " %sp/s (%sp/s avg); "
 			"drops: %sp/s (%sp/s avg); "
 			"hitrate: %0.2f%%\n",
 			exp->time_past_str, exp->percent_complete,
@@ -382,7 +382,7 @@ static void onscreen_generic(export_status_t *exp)
 	} else {
 		fprintf(stderr,
 			"%5s %0.0f%%%s; send: %" PRIu64 " done (%sp/s avg); "
-			"recv: %u %sp/s (%sp/s avg); "
+			"recv: %" PRIu64 " %sp/s (%sp/s avg); "
 			"drops: %sp/s (%sp/s avg); "
 			"hitrate: %0.2f%%\n",
 			exp->time_past_str, exp->percent_complete,
@@ -430,10 +430,10 @@ static void update_status_updates_file(export_status_t *exp, FILE *f)
 		"%s,%u,%u,"
 		"%f,%f,%u,"
 		"%" PRIu64 ",%.0f,%.0f,"
-		"%u,%.0f,%.0f,"
 		"%" PRIu64 ",%.0f,%.0f,"
-		"%u,%.0f,%.0f,"
-		"%u,%.0f,%.0f\n",
+		"%" PRIu64 ",%.0f,%.0f,"
+		"%" PRIu64 ",%.0f,%.0f,"
+		"%" PRIu64 ",,%.0f,%.0f\n",
 		timestamp, exp->time_past, exp->time_remaining,
 		exp->percent_complete, exp->hitrate, exp->send_threads,
 		exp->total_sent, exp->send_rate, exp->send_rate_avg,

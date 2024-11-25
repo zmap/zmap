@@ -21,11 +21,11 @@ typedef void (*shard_complete_cb)(uint8_t id, void *arg);
 typedef struct shard {
 	struct shard_state {
 		uint64_t packets_sent;
-		uint32_t targets_scanned;
-		uint32_t max_targets;
-		uint32_t max_packets;
+		uint64_t targets_scanned;
+		uint64_t max_targets;
+		uint64_t max_packets;
 		uint32_t packets_failed;
-		uint32_t first_scanned;
+		uint64_t first_scanned;
 	} state;
 	struct shard_params {
 		uint64_t first;
@@ -43,7 +43,7 @@ typedef struct shard {
 
 void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 		uint8_t thread_idx, uint8_t num_threads,
-		uint32_t max_total_targets, uint8_t bits_for_port,
+		uint64_t max_total_targets, uint8_t bits_for_port,
 		const cycle_t *cycle, shard_complete_cb cb, void *arg);
 
 typedef struct target {
