@@ -177,40 +177,40 @@ extern struct state_send zsend;
 // global receiver stats
 struct state_recv {
 	// valid responses classified as "success"
-	uint32_t success_total;
+	uint64_t success_total;
 	// unique IPs that sent valid responses classified as "success"
-	uint32_t success_unique;
+	uint64_t success_unique;
 	// valid responses classified as "success"
-	uint32_t app_success_total;
+	uint64_t app_success_total;
 	// unique IPs that sent valid responses classified as "success"
-	uint32_t app_success_unique;
+	uint64_t app_success_unique;
 	// valid responses classified as "success" received during cooldown
-	uint32_t cooldown_total;
+	uint64_t cooldown_total;
 	// unique IPs that first sent valid "success"es during cooldown
-	uint32_t cooldown_unique;
+	uint64_t cooldown_unique;
 	// valid responses NOT classified as "success"
-	uint32_t failure_total;
+	uint64_t failure_total;
 	// valid responses that passed the filter
 	uint64_t filter_success;
 	// how many packets did we receive that were marked as being the first
 	// fragment in a stream
 	uint32_t ip_fragments;
 	// metrics about _only_ validate_packet
-	uint32_t validation_passed;
-	uint32_t validation_failed;
+	uint64_t validation_passed;
+	uint64_t validation_failed;
 
 	int complete;  // has the scanner finished sending?
 	double start;  // timestamp of when recv started
 	double finish; // timestamp of when recv terminated
 
 	// number of packets captured by pcap filter
-	uint32_t pcap_recv;
+	uint64_t pcap_recv;
 	// number of packets dropped because there was no room in
 	// the operating system's buffer when they arrived, because
 	// packets weren't being read fast enough
-	uint32_t pcap_drop;
+	uint64_t pcap_drop;
 	// number of packets dropped by the network interface or its driver.
-	uint32_t pcap_ifdrop;
+	uint64_t pcap_ifdrop;
 };
 extern struct state_recv zrecv;
 
