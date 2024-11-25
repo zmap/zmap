@@ -1,4 +1,5 @@
 /* heavily copied from module_udp.c */
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -23,6 +24,8 @@
 #define ICMP_UNREACH_HEADER_SIZE 8
 #define UNUSED __attribute__((unused))
 
+#define SOURCE_PORT_VALIDATION_MODULE_DEFAULT true; // default to validating source port
+static bool should_validate_src_port = SOURCE_PORT_VALIDATION_MODULE_DEFAULT
 static char *udp_send_msg = NULL;
 static int udp_send_msg_len = 0;
 
@@ -45,6 +48,10 @@ int ipip_global_initialize(struct state_conf *conf)
 	FILE *inp;
 
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
+	if (conf->validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
+		log_debug("ipip", "disabling source port validation");
+		should_validate_src_port = false;
+	}
 
 	udp_send_msg = strdup(udp_send_msg_default);
 	udp_send_msg_len = strlen(udp_send_msg);
@@ -302,7 +309,7 @@ int ipip_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		struct udphdr *udp =
 		    (struct udphdr *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
 		uint16_t dport = ntohs(udp->uh_dport);
-		if (check_src_port(dport, ports) == 0) {
+		if (should_validate_src_port && !check_src_port(dport, ports)) {
 			return PACKET_INVALID;
 		}
 		if (!blocklist_is_allowed(*src_ip)) {
@@ -363,7 +370,7 @@ int ipip_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		// original packet and wouldn't have been altered by something
 		// responding on a different port
 		uint16_t dport = ntohs(udp->uh_dport);
-		if (check_src_port(dport, ports) == 0) {
+		if (should_validate_src_port && !check_src_port(dport, ports)) {
 			return PACKET_INVALID;
 		}
 		uint16_t sport = ntohs(udp->uh_sport);

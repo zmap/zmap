@@ -8,6 +8,7 @@
 
 // probe module for performing TCP SYN scans
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -17,8 +18,8 @@
 #include <math.h>
 
 #include "../../lib/includes.h"
-#include "../../lib/logger.h"
 #include "../fieldset.h"
+#include "logger.h"
 #include "module_tcp_synscan.h"
 #include "probe_modules.h"
 #include "packet.h"
@@ -27,6 +28,8 @@
 // defaults
 static uint8_t zmap_tcp_synscan_tcp_header_len = 20;
 static uint8_t zmap_tcp_synscan_packet_len = 54;
+#define SOURCE_PORT_VALIDATION_MODULE_DEFAULT true; // default to validating source port
+static bool should_validate_src_port = SOURCE_PORT_VALIDATION_MODULE_DEFAULT
 
 probe_module_t module_tcp_synscan;
 
@@ -37,6 +40,10 @@ static int synscan_global_initialize(struct state_conf *state)
 {
 	num_source_ports =
 	    state->source_port_last - state->source_port_first + 1;
+	if (state->validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
+		log_debug("tcp_synscan", "disabling source port validation");
+		should_validate_src_port = false;
+	}
 	// Based on the OS, we'll set the TCP options differently
 	if (!state->probe_args) {
 		// user didn't provide any probe args, defaulting to windows
@@ -151,7 +158,7 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		port_h_t sport = ntohs(tcp->th_sport);
 		port_h_t dport = ntohs(tcp->th_dport);
 		// validate source port
-		if (!check_src_port(sport, ports)) {
+		if (should_validate_src_port && !check_src_port(sport, ports)) {
 			return PACKET_INVALID;
 		}
 		// validate destination port
