@@ -122,8 +122,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Download dependencies
-        run: brew install pkg-config cmake gmp gengetopt json-c byacc libunistring judy
+      - name: Download dependencies judy
+        run: brew install judy
+
+      - name: Download other deps
+        run: brew install pkg-config cmake gmp gengetopt json-c byacc libunistring
 
       - name: Configure CMake
         # Configure CMake in a 'build' subdirectory.
