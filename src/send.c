@@ -277,11 +277,14 @@ int send_run(sock_t st, shard_t *s)
 			last_time = steady_now();
 		}
 	}
+	// Print out debuggin info for init adaptive target rate
+	log_debug("send", "init rate: user-provided rate: %d, senders: %d, delay: %lu, interval: %d", zconf.rate, zconf.senders, delay, interval);
 	int attempts = zconf.retries + 1;
 	// Get the initial IP to scan.
 	target_t current = shard_get_cur_target(s);
 	uint32_t current_ip = current.ip;
 	uint16_t current_port = current.port;
+	double steady_start = steady_now();
 
 	// If provided a list of IPs to scan, then the first generated address
 	// might not be on that list. Iterate until the current IP is one the
@@ -336,9 +339,19 @@ int send_run(sock_t st, shard_t *s)
 							delay *= 0.5;
 						}
 					}
+					log_debug("send", "delaying with delay: %lu, interval: %d, count: %llu, multiplier: %lf, time: %lf, last_time: %lf", delay, interval, count, multiplier, t, last_time);
 					last_count = count;
 					last_time = t;
 				}
+			}
+		}
+		// If our current rate is way too high, print out debugging info
+		// Wait 15 seconds before checking to let the rate stabilize
+		if (count > (uint64_t) zconf.rate * 15) {
+			double t = steady_now();
+			double current_rate = (double)count / (steady_now() - steady_start);
+			if (current_rate > 1.25 * zconf.rate) {
+				log_debug("send", "current rate (%lf) is far higher than user's desired rate (%d) - delay: %lu, interval: %d, count: %llu, last_count: %llu, time: %lf, last_time: %lf", current_rate, zconf.rate, delay, interval, count, last_count, t, last_time);
 			}
 		}
 
