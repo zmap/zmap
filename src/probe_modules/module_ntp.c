@@ -6,12 +6,12 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
-#include <assert.h>
 
 #include "../../lib/includes.h"
 #include "probe_modules.h"
@@ -26,10 +26,16 @@
 probe_module_t module_ntp;
 
 static int num_ports;
+#define SOURCE_PORT_VALIDATION_MODULE_DEFAULT true; // default to validating source port
+static bool should_validate_src_port = SOURCE_PORT_VALIDATION_MODULE_DEFAULT
 
 int ntp_global_initialize(struct state_conf *conf)
 {
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
+	if (conf->validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
+		log_debug("ntp", "disabling source port validation");
+		should_validate_src_port = false;
+	}
 	return udp_global_initialize(conf);
 }
 
@@ -37,7 +43,7 @@ int ntp_validate_packet(const struct ip *ip_hdr, uint32_t len, uint32_t *src_ip,
 			uint32_t *validation, const struct port_conf *ports)
 {
 	return udp_do_validate_packet(ip_hdr, len, src_ip, validation,
-				      num_ports, SRC_PORT_VALIDATION, ports);
+				      num_ports, should_validate_src_port, ports);
 }
 
 void ntp_process_packet(const u_char *packet, UNUSED uint32_t len,

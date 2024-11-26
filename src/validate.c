@@ -15,6 +15,13 @@
 
 static aes128_ctx_t *aes128 = NULL;
 
+/*
+ * validate.c encrypts the src IP, dst IP and source port of a probe into a 16-bit value put in the IPID.
+ * We use a random key to encrypt the values, static across this ZMap run, so we can
+ * identify packets that came form this ZMap scan.
+ * This is used to validate a probe response and ensure it is a response to a probe we sent in this ZMap run.
+ */
+
 void validate_init(void)
 {
 	uint8_t key[AES128_KEY_BYTES];

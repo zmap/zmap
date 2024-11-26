@@ -23,6 +23,11 @@
 #define OUTPUT_TYPE_STATIC 1
 #define OUTPUT_TYPE_DYNAMIC 2
 
+// Source Port Validation Override by User, overrides module default behavior
+#define VALIDATE_SRC_PORT_UNSET_OVERRIDE -1
+#define VALIDATE_SRC_PORT_DISABLE_OVERRIDE 0
+#define VALIDATE_SRC_PORT_ENABLE_OVERRIDE 1
+
 typedef struct probe_response_type {
 	const uint8_t is_success;
 	const char *name;
