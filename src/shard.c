@@ -40,7 +40,7 @@ static void shard_roll_to_valid(shard_t *s)
 
 void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 		uint8_t thread_idx, uint8_t num_threads,
-		uint32_t max_total_targets, uint8_t bits_for_port,
+		uint64_t max_total_targets, uint8_t bits_for_port,
 		const cycle_t *cycle, shard_complete_cb cb, void *arg)
 {
 	// Start out by figuring out how many shards we have. A single shard of
