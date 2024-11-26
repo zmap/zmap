@@ -84,6 +84,9 @@ section "Network Options"
 option "source-port"            s "Source port(s) for scan packets"
     typestr="port|range"
     optional string
+option "validate-source-port" - "Override to validate if probe responses have a valid src port corresponding to sent probe's dst port. \"enable\" or \"disable\""
+    typestr="enable|disable"
+    optional string
 option "source-ip"              S "Source address(es) for scan packets"
     typestr="ip|range"
     optional string

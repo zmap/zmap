@@ -7,8 +7,8 @@
  */
 
 #include <assert.h>
+#include <stdbool.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
@@ -18,8 +18,12 @@
 #include "probe_modules.h"
 #include "module_bacnet.h"
 #include "module_udp.h"
+#include "logger.h"
 
 #define ICMP_UNREACH_HEADER_SIZE 8
+
+#define SOURCE_PORT_VALIDATION_MODULE_DEFAULT true; // default to validating source port
+static bool should_validate_src_port = SOURCE_PORT_VALIDATION_MODULE_DEFAULT
 
 #define ZMAP_BACNET_PACKET_LEN                             \
 	(sizeof(struct ether_header) + sizeof(struct ip) + \
@@ -111,11 +115,8 @@ int bacnet_validate_packet(const struct ip *ip_hdr, uint32_t len,
 			   uint32_t *src_ip, uint32_t *validation,
 			   const struct port_conf *ports)
 {
-	// this will reject packets that aren't UDP or ICMP and fully process ICMP
-	// packets
-	if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports,
-				   SRC_PORT_VALIDATION,
-				   ports) == PACKET_INVALID) {
+	// this will reject packets that aren't UDP or ICMP and fully process ICMP packets
+	if (udp_do_validate_packet(ip_hdr, len, src_ip, validation, num_ports, should_validate_src_port, ports) == PACKET_INVALID) {
 		return PACKET_INVALID;
 	}
 	if (ip_hdr->ip_p == IPPROTO_UDP) {
@@ -173,6 +174,10 @@ void bacnet_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 int bacnet_global_initialize(struct state_conf *conf)
 {
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
+	if (conf->validate_source_port_override == VALIDATE_SRC_PORT_DISABLE_OVERRIDE) {
+		log_debug("bacnet", "disabling source port validation");
+		should_validate_src_port = false;
+	}
 	return EXIT_SUCCESS;
 }
 
