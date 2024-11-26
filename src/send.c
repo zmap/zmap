@@ -339,7 +339,10 @@ int send_run(sock_t st, shard_t *s)
 							delay *= 0.5;
 						}
 					}
-					log_debug("send", "delaying with delay: %lu, interval: %d, count: %llu, multiplier: %lf, time: %lf, last_time: %lf", delay, interval, count, multiplier, t, last_time);
+					double current_rate = (double)count / (t - steady_start);
+					double current_rate_snapshot = (double)(count - last_count) /
+												   (t - last_time);
+					log_debug("send", "delaying with delay: %lu, current avg rate: %lf, current rate snapshot: %lf, interval: %d, count: %llu, multiplier: %lf, time: %lf, last_time: %lf", delay, current_rate, current_rate_snapshot, interval, count, multiplier, t, last_time);
 					last_count = count;
 					last_time = t;
 				}
@@ -350,8 +353,8 @@ int send_run(sock_t st, shard_t *s)
 		if (count > (uint64_t) zconf.rate * 15) {
 			double t = steady_now();
 			double current_rate = (double)count / (steady_now() - steady_start);
-			if (current_rate > 1.25 * zconf.rate) {
-				log_debug("send", "current rate (%lf) is far higher than user's desired rate (%d) - delay: %lu, interval: %d, count: %llu, last_count: %llu, time: %lf, last_time: %lf", current_rate, zconf.rate, delay, interval, count, last_count, t, last_time);
+			if (current_rate > 10 * zconf.rate) {
+				log_fatal("send", "current rate (%lf) is far higher than user's desired rate (%d) - delay: %lu, interval: %d, count: %llu, last_count: %llu, time: %lf, last_time: %lf", current_rate, zconf.rate, delay, interval, count, last_count, t, last_time);
 			}
 		}
 
