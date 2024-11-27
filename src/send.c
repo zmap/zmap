@@ -248,8 +248,8 @@ int send_run(sock_t st, shard_t *s)
 	uint64_t last_count = count;
 	double last_time = steady_now();
 	uint32_t delay = 0;
-	int interval = 0;
-	volatile int vi;
+	uint interval = 0;
+	volatile uint vi;
 	struct timespec ts, rem;
 	double send_rate =
 	    (double)zconf.rate /
@@ -275,6 +275,8 @@ int send_run(sock_t st, shard_t *s)
 				    (double)zconf.senders) /
 				   20;
 			last_time = steady_now();
+			assert(interval > 0);
+			assert(delay > 0);
 		}
 	}
 	int attempts = zconf.retries + 1;
@@ -335,6 +337,14 @@ int send_run(sock_t st, shard_t *s)
 						} else if (multiplier < 1.0) {
 							delay *= 0.5;
 						}
+					}
+					if (delay == 0) {
+						// delay could become zero if the actual send rate stays below the target rate for long enough
+						// this could be due to things like VM cpu contention, or the NIC being saturated.
+						// However, we never want delay to become 0, as this would remove any rate limiting for the rest
+						// of the ZMap invocation (since 0 * multiplier = 0 for any multiplier). To prevent the removal
+						// of rate-limiting we'll set delay to one here.
+						delay = 1;
 					}
 					last_count = count;
 					last_time = t;
