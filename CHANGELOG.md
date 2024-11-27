@@ -233,7 +233,7 @@ ZMap 4.1.0 contains a number of bug fixes and performance enhancements, especial
 * Bump the base Docker image from Ubuntu 20.04 to 24.04 (#888)
 
 
-# 4.2.1 2024-11--27
+# 4.3.0 2024-11-27
 
 ## FEATURE
 * New UDP probe for DTLS servers by @dlenskiSB in https://github.com/zmap/zmap/pull/890
