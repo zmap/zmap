@@ -81,20 +81,20 @@ void json_metadata(FILE *file)
 		json_object_object_add(obj, "target_ports", target_ports);
 	}
 	json_object_object_add(obj, "max_targets",
-			       json_object_new_int(zconf.max_targets));
+			       json_object_new_int64(zconf.max_targets));
 	json_object_object_add(obj, "max_runtime",
-			       json_object_new_int(zconf.max_runtime));
+			       json_object_new_int64(zconf.max_runtime));
 	json_object_object_add(obj, "max_results",
-			       json_object_new_int(zconf.max_results));
+			       json_object_new_int64(zconf.max_results));
 	json_object_object_add(obj, "output_results",
-			       json_object_new_int(zrecv.filter_success));
+			       json_object_new_int64(zrecv.filter_success));
 	if (zconf.iface) {
 		json_object_object_add(obj, "iface",
 				       json_object_new_string(zconf.iface));
 	}
 	json_object_object_add(obj, "rate", json_object_new_int(zconf.rate));
 	json_object_object_add(obj, "bandwidth",
-			       json_object_new_int(zconf.bandwidth));
+			       json_object_new_int64(zconf.bandwidth));
 	json_object_object_add(obj, "cooldown_secs",
 			       json_object_new_int(zconf.cooldown_secs));
 	json_object_object_add(obj, "senders",
@@ -120,22 +120,22 @@ void json_metadata(FILE *file)
 	json_object_object_add(obj, "default_mode",
 			       json_object_new_int(zconf.default_mode));
 	json_object_object_add(obj, "pcap_recv",
-			       json_object_new_int(zrecv.pcap_recv));
+			       json_object_new_int64(zrecv.pcap_recv));
 	json_object_object_add(obj, "pcap_drop",
-			       json_object_new_int(zrecv.pcap_drop));
+			       json_object_new_int64(zrecv.pcap_drop));
 	json_object_object_add(obj, "pcap_ifdrop",
-			       json_object_new_int(zrecv.pcap_ifdrop));
+			       json_object_new_int64(zrecv.pcap_ifdrop));
 
 	json_object_object_add(obj, "ip_fragments",
-			       json_object_new_int(zrecv.ip_fragments));
+			       json_object_new_int64(zrecv.ip_fragments));
 	json_object_object_add(obj, "blocklist_total_allowed",
 			       json_object_new_int64(zconf.total_allowed));
 	json_object_object_add(obj, "blocklist_total_not_allowed",
 			       json_object_new_int64(zconf.total_disallowed));
 	json_object_object_add(obj, "validation_passed",
-			       json_object_new_int(zrecv.validation_passed));
+			       json_object_new_int64(zrecv.validation_passed));
 	json_object_object_add(obj, "validation_failed",
-			       json_object_new_int(zrecv.validation_failed));
+			       json_object_new_int64(zrecv.validation_failed));
 
 	//	json_object_object_add(obj, "blocklisted",
 	//            json_object_new_int64(zsend.blocklisted));
@@ -293,7 +293,7 @@ void json_metadata(FILE *file)
 		    json_object_new_string(zconf.list_of_ips_filename));
 		json_object_object_add(
 		    obj, "list_of_ips_count",
-		    json_object_new_int(zconf.list_of_ips_count));
+		    json_object_new_int64(zconf.list_of_ips_count));
 	}
 	json_object_object_add(obj, "dryrun",
 			       json_object_new_int(zconf.dryrun));
