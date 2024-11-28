@@ -116,7 +116,7 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 
 	// Set max_targets if applicable
 	if (max_total_targets > 0) {
-		uint32_t max_targets_this_shard =
+		uint64_t max_targets_this_shard =
 		    max_total_targets / num_subshards;
 		if (sub_idx < (max_total_targets % num_subshards)) {
 			++max_targets_this_shard;
