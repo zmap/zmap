@@ -1,5 +1,7 @@
 import re
 import subprocess
+import struct
+import socket
 import sys
 from bitarray import bitarray
 from ipaddress import IPv4Address, IPv4Network
@@ -11,6 +13,11 @@ TOP_LEVEL_DIR = "/Users/phillip/zmap-dev/zmap/"
 # TOP_LEVEL_DIR = "/home/pstephens/zmap-dev/zmap/"
 BLOCKLIST_FILE = "conf/blocklist.conf"
 ZMAP_ABS_PATH = "src/zmap"
+
+BLOCKLISTED = -1
+DUPLICATE = -2
+SUCCESS = 1
+
 
 def load_blocklist(file_path):
     """Load blocklist CIDR ranges from a file."""
@@ -26,24 +33,32 @@ def load_blocklist(file_path):
         print(f"Error loading blocklist: {e}")
     return blocklist
 
-def is_blocklisted(ip, blocklist):
+def is_blocklisted(ip:int, blocklist_bitmap):
     """Check if an IP address is in the blocklist."""
-    ip_addr = IPv4Address(ip)
-    return any(ip_addr in net for net in blocklist)
+    return blocklist_bitmap[ip]
 
 def create_bitmap(ports):
     """Create a bitmap for all IPs and each port."""
     return {port: bitarray(IPV4_SPACE) for port in ports}
 
-def track_pair(bitmap, ip, port, blocklist):
+def create_blocklist_bitmap(blocklist):
+    """Create a bitmap for all blocklisted IPs."""
+    bitmap = bitarray(IPV4_SPACE)
+    for net in blocklist:
+        number_ips = net.num_addresses
+        start_ip = int(net.network_address)
+        bitmap[start_ip:start_ip + number_ips] = True # efficient bulk set
+        print(f"DEBUG: blocklist net: {net} with size {net.num_addresses}")
+    return bitmap
+
+def track_pair(bitmap, ip:int, port, blocklist_bitmap):
     """Mark an IP/port as scanned, unless it's blocklisted."""
-    if is_blocklisted(ip, blocklist):
-        return "blocklisted"
-    ip_index = int(IPv4Address(ip))
-    if bitmap[port][ip_index]:
-        return "duplicate"
-    bitmap[port][ip_index] = True
-    return "success"
+    if is_blocklisted(ip, blocklist_bitmap):
+        return BLOCKLISTED
+    if bitmap[port][ip]:
+        return DUPLICATE
+    bitmap[port][ip] = True
+    return SUCCESS
 
 def validate_bitmap(bitmap, ports, blocklist):
     """Validate that all non-blocklisted IPs are scanned."""
@@ -60,56 +75,52 @@ def validate_bitmap(bitmap, ports, blocklist):
 
 def run_test(scanner_command, ports):
     blocklist = load_blocklist(TOP_LEVEL_DIR + BLOCKLIST_FILE)
+    blocklist_bitmap = create_blocklist_bitmap(blocklist)
+    print("DEBUG: blocklist loaded and bitmap created")
     bitmap = create_bitmap(ports)
     errors = 0
-
-    # Regex to parse output
-    ip_regex = re.compile(r"^ip.*\bdaddr:\s([\d\.]+)")
-    tcp_regex = re.compile(r"^tcp.*\bdest:\s(\d+)")
-
     try:
         process = subprocess.Popen(
             scanner_command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True,
-            bufsize=-1
         )
         # Process stderr in real time and print it to sys.stdout
         def stream_stderr(proc_stderr):
             for line in proc_stderr:
-                sys.stdout.write(line)  # Directly forward stderr to stdout in real time
+                sys.stdout.write(str(line) + "\n")  # Directly forward stderr to stdout in real time
 
         import threading
         stderr_thread = threading.Thread(target=stream_stderr, args=(process.stderr,))
         stderr_thread.start()
 
-        current_dst_port = None
-        current_dst_ip = None
-        for line in process.stdout:
-            tcp_match = tcp_regex.match(line)
-            if tcp_match:
-                current_dst_port = int(tcp_match.group(1))
-                continue
-            ip_match = ip_regex.match(line)
-            if ip_match:
-                current_dst_ip = ip_match.group(1)
+        while True:
+            # Read 6 bytes at a time
+            chunk = process.stdout.read(6)
+            if not chunk:
+                break  # End of output
 
-            if current_dst_port and current_dst_ip:
-                if current_dst_port in ports:
-                    result = track_pair(bitmap, current_dst_ip, current_dst_port, blocklist)
-                    if result == "blocklisted":
-                        print(f"Error: Scanned blocklisted IP {current_dst_ip},{current_dst_port}")
-                        errors += 1
-                    elif result == "duplicate":
-                        print(f"Error: {current_dst_ip},{current_dst_port} scanned more than once")
-                        errors += 1
-                else:
-                    print(f"Unexpected port ({current_dst_port}) with IP ({current_dst_ip})")
-                    errors += 1
-                # Reset
-                current_dst_ip = None
-                current_dst_port = None
+            if len(chunk) < 6:
+                continue  # Skip incomplete data chunks
+
+            # Unpack the 6-byte chunk (4 bytes for IP, 2 bytes for port)
+            ip, port = struct.unpack('!4sH', chunk)
+
+            ip_as_int = int.from_bytes(ip)
+            if port not in ports:
+                ip_str = socket.inet_ntoa(ip)
+                print(f"Unexpected port ({port}) with IP ({ip_str})")
+                errors += 1
+                continue
+            result = track_pair(bitmap, ip_as_int, port, blocklist_bitmap)
+            if result == BLOCKLISTED:
+                ip_str = socket.inet_ntoa(ip)
+                print(f"Error: Scanned blocklisted IP {ip_str},{port}")
+                errors += 1
+            elif result == DUPLICATE:
+                ip_str = socket.inet_ntoa(ip)
+                print(f"Error: {ip_str},{port} scanned more than once")
+                errors += 1
 
             if errors >= MAX_ERRORS:
                 break
@@ -141,7 +152,7 @@ def run_test(scanner_command, ports):
 if __name__ == "__main__":
     scanner_cmd = [
         TOP_LEVEL_DIR + ZMAP_ABS_PATH, "-p", "80-81", "-T", "1", "--cores=0,1,2",
-        "-B", "200G", "--dryrun", "-c", "1", "--blocklist-file", TOP_LEVEL_DIR + BLOCKLIST_FILE
+        "-B", "200G", "--fast-dryrun", "-c", "1", "--seed", "10", "--blocklist-file", TOP_LEVEL_DIR + BLOCKLIST_FILE
     ]
     ports_to_scan = [80, 81]
 
