@@ -217,8 +217,8 @@ static void start_zmap(void)
 	uint32_t cpu = 0;
 	pthread_t *tsend, trecv, tmon;
 	int r;
-	// TODO remove
-//	if (!zconf.dryrun) {
+	// Don't need to pin the receive thread if we're not sending packets
+	if (!zconf.dryrun) {
 		recv_arg_t *recv_arg = xmalloc(sizeof(recv_arg_t));
 		recv_arg->cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
 		cpu += 1;
@@ -234,7 +234,7 @@ static void start_zmap(void)
 			}
 			pthread_mutex_unlock(&recv_ready_mutex);
 		}
-//	}
+	}
 #ifdef PFRING
 	pfring_zc_worker *zw = pfring_zc_run_balancer(
 	    zconf.pf.queues, &zconf.pf.send, zconf.senders, 1,
@@ -264,19 +264,16 @@ static void start_zmap(void)
 	}
 	log_debug("zmap", "%d sender threads spawned", zconf.senders);
 
-	// TODO - remove this, this is just so we print stats during dryruns
-//	if (!zconf.dryrun) {
-		monitor_init();
-		mon_start_arg_t *mon_arg = xmalloc(sizeof(mon_start_arg_t));
-		mon_arg->it = it;
-		mon_arg->recv_ready_mutex = &recv_ready_mutex;
-		mon_arg->cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
-		int m = pthread_create(&tmon, NULL, start_mon, mon_arg);
-		if (m != 0) {
-			log_fatal("zmap", "unable to create monitor thread");
-			exit(EXIT_FAILURE);
-		}
-//	}
+	monitor_init();
+	mon_start_arg_t *mon_arg = xmalloc(sizeof(mon_start_arg_t));
+	mon_arg->it = it;
+	mon_arg->recv_ready_mutex = &recv_ready_mutex;
+	mon_arg->cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
+	int m = pthread_create(&tmon, NULL, start_mon, mon_arg);
+	if (m != 0) {
+		log_fatal("zmap", "unable to create monitor thread");
+		exit(EXIT_FAILURE);
+	}
 
 #ifndef PFRING
 	drop_privs();
@@ -296,23 +293,22 @@ static void start_zmap(void)
 	pfring_zc_sync_queue(zconf.pf.send, tx_only);
 	log_debug("zmap", "send queue flushed");
 #endif
-	// no receiving or monitoring thread is started in dry run mode
-	// TODO remove
-//	if (!zconf.dryrun) {
+	// no receiving thread is started in dry run mode
+	if (!zconf.dryrun) {
 		r = pthread_join(trecv, NULL);
 		if (r != 0) {
 			log_fatal("zmap", "unable to join recv thread");
 			exit(EXIT_FAILURE);
 		}
-		if (!zconf.quiet || zconf.status_updates_file) {
-			pthread_join(tmon, NULL);
-			if (r != 0) {
-				log_fatal("zmap",
-					  "unable to join monitor thread");
-				exit(EXIT_FAILURE);
-			}
+	}
+	if (!zconf.quiet || zconf.status_updates_file) {
+		r = pthread_join(tmon, NULL);
+		if (r != 0) {
+			log_fatal("zmap",
+				  "unable to join monitor thread");
+			exit(EXIT_FAILURE);
 		}
-//	}
+	}
 
 	// finished
 	if (zconf.metadata_filename) {
