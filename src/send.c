@@ -276,7 +276,11 @@ int send_run(sock_t st, shard_t *s)
 				   20;
 			last_time = steady_now();
 			assert(interval > 0);
-			assert(delay > 0);
+			if (delay == 0) {
+				// at extremely high bandwidths, the delay could be set to zero.
+				// this breaks the multiplier logic below, so we'll hard-set it to 1 in this case.
+				delay = 1;
+			}
 		}
 	}
 	int attempts = zconf.retries + 1;
@@ -413,11 +417,10 @@ int send_run(sock_t st, shard_t *s)
 			batch->packets[batch->len].len = (uint32_t)length;
 
 			if (zconf.dryrun) {
-				// TODO Remove
-//				lock_file(stdout);
-//				zconf.probe_module->print_packet(stdout,
-//								 batch->packets[batch->len].buf);
-//				unlock_file(stdout);
+				lock_file(stdout);
+				zconf.probe_module->print_packet(stdout,
+								 batch->packets[batch->len].buf);
+				unlock_file(stdout);
 			} else {
 				batch->len++;
 				if (batch->len == batch->capacity) {
