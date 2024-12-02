@@ -137,6 +137,16 @@ void synscan_print_packet(FILE *fp, void *packet)
 	struct ether_header *ethh = (struct ether_header *)packet;
 	struct ip *iph = (struct ip *)&ethh[1];
 	struct tcphdr *tcph = (struct tcphdr *)&iph[1];
+	if (zconf.fast_dryrun) {
+		// We'll just print a binary represenation of the dst IP and the dst Port
+		struct in_addr *dest_IP = (struct in_addr *)&(iph->ip_dst);
+		// Writing binary IP addresses
+		const uint8_t IP_ADDR_LEN = 4;
+		const uint8_t TCP_PORT_LEN = 2;
+		fwrite(&(dest_IP->s_addr),  IP_ADDR_LEN,1, fp);  // Write destination IP (binary)
+		fwrite(&(tcph->th_dport),  TCP_PORT_LEN,1, fp);  // Write destination port (binary)
+		return;
+	}
 	fprintf(fp,
 		"tcp { source: %u | dest: %u | seq: %u | checksum: %#04X }\n",
 		ntohs(tcph->th_sport), ntohs(tcph->th_dport),
