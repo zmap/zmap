@@ -213,6 +213,11 @@ static void start_zmap(void)
 		zconf.output_module->start(&zconf, &zsend, &zrecv);
 	}
 
+	if (zconf.fast_dryrun) {
+		// fast dryrun mode is a special case of dryrun mode
+		zconf.dryrun = 1;
+	}
+
 	// start threads
 	uint32_t cpu = 0;
 	pthread_t *tsend, trecv, tmon;
@@ -551,6 +556,7 @@ int main(int argc, char *argv[])
 	}
 	zconf.ignore_invalid_hosts = args.ignore_blocklist_errors_given;
 	SET_BOOL(zconf.dryrun, dryrun);
+	SET_BOOL(zconf.fast_dryrun, fast_dryrun);
 	SET_BOOL(zconf.quiet, quiet);
 	SET_BOOL(zconf.no_header_row, no_header_row);
 	zconf.cooldown_secs = args.cooldown_time_arg;
