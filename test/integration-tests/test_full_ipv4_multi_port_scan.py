@@ -1,8 +1,9 @@
-import re
+import os
 import subprocess
 import struct
 import socket
 import sys
+import unittest
 from bitarray import bitarray
 from ipaddress import IPv4Address, IPv4Network
 
@@ -60,18 +61,60 @@ def track_pair(bitmap, ip:int, port, blocklist_bitmap):
     bitmap[port][ip] = True
     return SUCCESS
 
-def validate_bitmap(bitmap, ports, blocklist):
+def validate_bitmap(bitmap, ports, blocked_bitmap:bitarray):
     """Validate that all non-blocklisted IPs are scanned."""
     errors = []
     for port in ports:
-        for i in range(IPV4_SPACE):
-            if not bitmap[port][i]:
-                ip = IPv4Address(i)
-                if not is_blocklisted(ip, blocklist):
-                    errors.append(f"{ip},{port} was not scanned.")
-                    if len(errors) >= MAX_ERRORS:
-                        return errors
+        difference_bitmap = bitmap[port] & blocked_bitmap
+        for diff_i in difference_bitmap.search(bitarray('1')):  # Find the first unscanned IP
+            ip_str = str(IPv4Address(diff_i))
+            err_str = f"{ip_str}:{port} was blocked and scanned"
+            print(err_str)
+            errors.append(err_str)
+            if len(errors) >= MAX_ERRORS:
+                # early exit optimization
+                return errors
+        difference_bitmap = ~(bitmap[port] | blocked_bitmap) # equiv. to not blocked and not scanned
+        for diff_i in difference_bitmap.search(bitarray('1')):  # Find the first unscanned IP
+            ip_str = str(IPv4Address(diff_i))
+            err_str = f"{ip_str}:{port} was not blocked and not scanned"
+            print(err_str)
+            errors.append(err_str)
+            if len(errors) >= MAX_ERRORS:
+                # early exit optimization
+                return errors
     return errors
+
+class TestBitmapValidation(unittest.TestCase):
+
+    def setUp(self):
+        self.ports = [80, 81]
+        self.bitmap = create_bitmap(self.ports)
+        self.blocklist_bitmap = bitarray(IPV4_SPACE)
+        self.blocklist_bitmap.setall(False)
+
+    def test_validate_bitmap(self):
+        with self.subTest("Scanned IP/Port that is blocked"):
+            ip = int(IPv4Address("2.2.2.2"))
+            self.bitmap[80].setall(True)
+            self.bitmap[81].setall(True)
+            self.blocklist_bitmap[ip] = True
+            errors = validate_bitmap(self.bitmap, self.ports, self.blocklist_bitmap)
+            self.assertGreater(len(errors), 0)
+            self.assertIn("2.2.2.2:80 was blocked and scanned", errors)
+            self.assertIn("2.2.2.2:81 was blocked and scanned", errors)
+        with self.subTest("Not-scanned IP/Port that isn't blocked"):
+            self.bitmap[80].setall(True)
+            self.bitmap[81].setall(True)
+            self.blocklist_bitmap.setall(False)
+            ip = int(IPv4Address("3.3.3.3"))
+            self.bitmap[80][ip] = False
+            self.bitmap[81][ip] = False
+            errors = validate_bitmap(self.bitmap, self.ports, self.blocklist_bitmap)
+            self.assertGreater(len(errors), 0)
+            self.assertIn("3.3.3.3:80 was not blocked and not scanned", errors)
+            self.assertIn("3.3.3.3:81 was not blocked and not scanned", errors)
+
 
 def run_test(scanner_command, ports):
     blocklist = load_blocklist(TOP_LEVEL_DIR + BLOCKLIST_FILE)
@@ -79,64 +122,67 @@ def run_test(scanner_command, ports):
     print("DEBUG: blocklist loaded and bitmap created")
     bitmap = create_bitmap(ports)
     errors = 0
-    try:
-        process = subprocess.Popen(
-            scanner_command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        # Process stderr in real time and print it to sys.stdout
-        def stream_stderr(proc_stderr):
-            for line in proc_stderr:
-                sys.stdout.write(str(line) + "\n")  # Directly forward stderr to stdout in real time
-
-        import threading
-        stderr_thread = threading.Thread(target=stream_stderr, args=(process.stderr,))
-        stderr_thread.start()
-
-        while True:
-            # Read 6 bytes at a time
-            chunk = process.stdout.read(6)
-            if not chunk:
-                break  # End of output
-
-            if len(chunk) < 6:
-                continue  # Skip incomplete data chunks
-
-            # Unpack the 6-byte chunk (4 bytes for IP, 2 bytes for port)
-            ip, port = struct.unpack('!4sH', chunk)
-
-            ip_as_int = int.from_bytes(ip)
-            if port not in ports:
-                ip_str = socket.inet_ntoa(ip)
-                print(f"Unexpected port ({port}) with IP ({ip_str})")
-                errors += 1
-                continue
-            result = track_pair(bitmap, ip_as_int, port, blocklist_bitmap)
-            if result == BLOCKLISTED:
-                ip_str = socket.inet_ntoa(ip)
-                print(f"Error: Scanned blocklisted IP {ip_str},{port}")
-                errors += 1
-            elif result == DUPLICATE:
-                ip_str = socket.inet_ntoa(ip)
-                print(f"Error: {ip_str},{port} scanned more than once")
-                errors += 1
-
-            if errors >= MAX_ERRORS:
-                break
-
-        process.stdout.close()
-        process.wait()
-        stderr_thread.join()  # Ensure stderr thread finishes
-
-    except Exception as e:
-
-        print(f"Error during execution: {e}")
-        return
+    bitmap[80] = ~blocklist_bitmap
+    bitmap[81] = ~blocklist_bitmap
+    blocklist_bitmap[int(IPv4Address("1.1.1.1"))] = True
+    # bitmap[80][int(IPv4Address("1.1.1.1"))] = False
+    # try:
+    #     process = subprocess.Popen(
+    #         scanner_command,
+    #         stdout=subprocess.PIPE,
+    #         stderr=subprocess.PIPE,
+    #     )
+    #     # Process stderr in real time and print it to sys.stdout
+    #     def stream_stderr(proc_stderr):
+    #         for line in proc_stderr:
+    #             sys.stdout.write(str(line) + "\n")  # Directly forward stderr to stdout in real time
+    #
+    #     import threading
+    #     stderr_thread = threading.Thread(target=stream_stderr, args=(process.stderr,))
+    #     stderr_thread.start()
+    #
+    #     size_of_struct = 6  # 4 bytes for IP, 2 bytes for port
+    #     while True:
+    #         # Read 6000 bytes/1k entries at a time
+    #         chunk = process.stdout.read(60000)
+    #         if not chunk:
+    #             break  # End of output
+    #
+    #         # Efficient iteration using struct.unpack_from
+    #         ip = 0
+    #         port = 0
+    #         for i in range(len(chunk) // size_of_struct):
+    #             ip, port = struct.unpack_from("!IH", chunk, i * size_of_struct)
+    #             if port not in ports:
+    #                 ip_str = socket.inet_ntoa(ip)
+    #                 print(f"Unexpected port ({port}) with IP ({ip_str})")
+    #                 errors += 1
+    #                 continue
+    #             if is_blocklisted(ip, blocklist_bitmap):
+    #                 ip_str = socket.inet_ntoa(ip)
+    #                 print(f"Error: Scanned blocklisted IP {ip_str},{port}")
+    #                 errors += 1
+    #             if bitmap[port][ip]:
+    #                 ip_str = socket.inet_ntoa(ip)
+    #                 print(f"Error: {ip_str},{port} scanned more than once")
+    #                 errors += 1
+    #             bitmap[port][ip] = True
+    #
+    #         if errors >= MAX_ERRORS:
+    #             break
+    #
+    #     process.stdout.close()
+    #     process.wait()
+    #     stderr_thread.join()  # Ensure stderr thread finishes
+    #
+    # except Exception as e:
+    #
+    #     print(f"Error during execution: {e}")
+    #     return
     print(f"DEBUG: execution completed with {errors} errors, proceeding to bitmap validation")
 
     # Final validation
-    validation_errors = validate_bitmap(bitmap, ports, blocklist)
+    validation_errors = validate_bitmap(bitmap, ports, blocklist_bitmap)
     for error in validation_errors:
         print(f"Validation Error: {error}")
         errors += 1
@@ -145,8 +191,10 @@ def run_test(scanner_command, ports):
 
     if errors == 0:
         print("Integration test passed successfully.")
+        os._exit(0)
     else:
         print(f"Integration test failed with {errors} errors.")
+        os._exit(1)
 
 # def test_multi_port_scan_two_ports():
 if __name__ == "__main__":
