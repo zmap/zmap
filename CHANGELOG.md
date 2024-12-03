@@ -231,3 +231,23 @@ ZMap 4.1.0 contains a number of bug fixes and performance enhancements, especial
 ## ENHANCEMENT
 
 * Bump the base Docker image from Ubuntu 20.04 to 24.04 (#888)
+
+
+# 4.3.0 2024-11-27
+
+## FEATURE
+* New UDP probe for DTLS servers by @dlenskiSB in https://github.com/zmap/zmap/pull/890
+* New UDP probes by @annalittle in https://github.com/zmap/zmap/pull/899
+* Add source port validation CLI option and associated code to UDP module by @phillip-stephens in https://github.com/zmap/zmap/pull/901
+
+## BUGFIX
+
+* Fix 904 - multi-port scans lead to int overflow by @phillip-stephens in https://github.com/zmap/zmap/pull/905
+* Fix ZMap not obeying `--rate` edge case by @phillip-stephens in https://github.com/zmap/zmap/pull/907
+* Match JSON function to variable type by @phillip-stephens in https://github.com/zmap/zmap/pull/908
+* Fix source port range size warning by @Murgeye in https://github.com/zmap/zmap/pull/891
+
+## ENHANCEMENT
+* Handle upgrade path for blacklist to blocklist by @phillip-stephens in https://github.com/zmap/zmap/pull/895
+* Fixes ubuntu docker base image versions in github tests by @phillip-stephens in https://github.com/zmap/zmap/pull/898
+* Fix Mac build CI step by @phillip-stephens in https://github.com/zmap/zmap/pull/906
