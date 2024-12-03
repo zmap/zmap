@@ -122,63 +122,68 @@ def run_test(scanner_command, ports):
     print("DEBUG: blocklist loaded and bitmap created")
     bitmap = create_bitmap(ports)
     errors = 0
-    bitmap[80] = ~blocklist_bitmap
-    bitmap[81] = ~blocklist_bitmap
-    blocklist_bitmap[int(IPv4Address("1.1.1.1"))] = True
+    # bitmap[80] = ~blocklist_bitmap
+    # bitmap[81] = ~blocklist_bitmap
+    # blocklist_bitmap[int(IPv4Address("1.1.1.1"))] = True
     # bitmap[80][int(IPv4Address("1.1.1.1"))] = False
-    # try:
-    #     process = subprocess.Popen(
-    #         scanner_command,
-    #         stdout=subprocess.PIPE,
-    #         stderr=subprocess.PIPE,
-    #     )
-    #     # Process stderr in real time and print it to sys.stdout
-    #     def stream_stderr(proc_stderr):
-    #         for line in proc_stderr:
-    #             sys.stdout.write(str(line) + "\n")  # Directly forward stderr to stdout in real time
-    #
-    #     import threading
-    #     stderr_thread = threading.Thread(target=stream_stderr, args=(process.stderr,))
-    #     stderr_thread.start()
-    #
-    #     size_of_struct = 6  # 4 bytes for IP, 2 bytes for port
-    #     while True:
-    #         # Read 6000 bytes/1k entries at a time
-    #         chunk = process.stdout.read(60000)
-    #         if not chunk:
-    #             break  # End of output
-    #
-    #         # Efficient iteration using struct.unpack_from
-    #         ip = 0
-    #         port = 0
-    #         for i in range(len(chunk) // size_of_struct):
-    #             ip, port = struct.unpack_from("!IH", chunk, i * size_of_struct)
-    #             if port not in ports:
-    #                 ip_str = socket.inet_ntoa(ip)
-    #                 print(f"Unexpected port ({port}) with IP ({ip_str})")
-    #                 errors += 1
-    #                 continue
-    #             if is_blocklisted(ip, blocklist_bitmap):
-    #                 ip_str = socket.inet_ntoa(ip)
-    #                 print(f"Error: Scanned blocklisted IP {ip_str},{port}")
-    #                 errors += 1
-    #             if bitmap[port][ip]:
-    #                 ip_str = socket.inet_ntoa(ip)
-    #                 print(f"Error: {ip_str},{port} scanned more than once")
-    #                 errors += 1
-    #             bitmap[port][ip] = True
-    #
-    #         if errors >= MAX_ERRORS:
-    #             break
-    #
-    #     process.stdout.close()
-    #     process.wait()
-    #     stderr_thread.join()  # Ensure stderr thread finishes
-    #
-    # except Exception as e:
-    #
-    #     print(f"Error during execution: {e}")
-    #     return
+
+
+    size_of_struct = 6  # 4 bytes for IP, 2 bytes for port
+    chunk_size = 1024 * 4 * size_of_struct  # 4k entries
+
+    try:
+        process = subprocess.Popen(
+            scanner_command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            bufsize=chunk_size * 4,
+        )
+        # Process stderr in real time and print it to sys.stdout
+        def stream_stderr(proc_stderr):
+            for line in proc_stderr:
+                sys.stdout.write(str(line) + "\n")  # Directly forward stderr to stdout in real time
+
+        import threading
+        stderr_thread = threading.Thread(target=stream_stderr, args=(process.stderr,))
+        stderr_thread.start()
+
+        while True:
+            # Read 6000 bytes/1k entries at a time
+            chunk = process.stdout.read(chunk_size)
+            if not chunk:
+                break  # End of output
+
+            # Efficient iteration using struct.unpack_from
+            ip = 0
+            port = 0
+            for i in range(len(chunk) // size_of_struct):
+                ip, port = struct.unpack_from("!IH", chunk, i * size_of_struct)
+                if port not in ports:
+                    ip_str = socket.inet_ntoa(ip)
+                    print(f"Unexpected port ({port}) with IP ({ip_str})")
+                    errors += 1
+                    continue
+                if is_blocklisted(ip, blocklist_bitmap):
+                    ip_str = socket.inet_ntoa(ip)
+                    print(f"Error: Scanned blocklisted IP {ip_str},{port}")
+                    errors += 1
+                if bitmap[port][ip]:
+                    ip_str = socket.inet_ntoa(ip)
+                    print(f"Error: {ip_str},{port} scanned more than once")
+                    errors += 1
+                bitmap[port][ip] = True
+
+            if errors >= MAX_ERRORS:
+                break
+
+        process.stdout.close()
+        process.wait()
+        stderr_thread.join()  # Ensure stderr thread finishes
+
+    except Exception as e:
+
+        print(f"Error during execution: {e}")
+        return
     print(f"DEBUG: execution completed with {errors} errors, proceeding to bitmap validation")
 
     # Final validation
@@ -199,8 +204,8 @@ def run_test(scanner_command, ports):
 # def test_multi_port_scan_two_ports():
 if __name__ == "__main__":
     scanner_cmd = [
-        TOP_LEVEL_DIR + ZMAP_ABS_PATH, "-p", "80-81", "-T", "1", "--cores=0,1,2",
-        "-B", "200G", "--fast-dryrun", "-c", "1", "--seed", "10", "--blocklist-file", TOP_LEVEL_DIR + BLOCKLIST_FILE
+        TOP_LEVEL_DIR + ZMAP_ABS_PATH, "-p", "80-81", "-T", "4", "--cores=0,1,2,3,4,5",
+        "-B", "200G", "--fast-dryrun", "-c", "0", "--batch", "256", "--seed", "10", "--blocklist-file", TOP_LEVEL_DIR + BLOCKLIST_FILE
     ]
     ports_to_scan = [80, 81]
 
