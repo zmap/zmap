@@ -9,7 +9,7 @@ from ipaddress import IPv4Address, IPv4Network
 
 # Constants
 IPV4_SPACE = 2**32  # Total number of IPv4 addresses
-MAX_ERRORS = 10
+MAX_ERRORS = -1
 TOP_LEVEL_DIR = "/Users/phillip/zmap-dev/zmap/"
 # TOP_LEVEL_DIR = "/home/pstephens/zmap-dev/zmap/"
 BLOCKLIST_FILE = "conf/blocklist.conf"
@@ -76,7 +76,7 @@ def validate_bitmap(bitmap, ports, blocked_bitmap:bitarray):
             err_str = f"{ip_str}:{port} was blocked and scanned"
             print(err_str)
             errors.append(err_str)
-            if len(errors) >= MAX_ERRORS:
+            if MAX_ERRORS != -1 and len(errors) >= MAX_ERRORS:
                 # early exit optimization
                 return errors
         difference_bitmap = ~(bitmap[port] | blocked_bitmap) # equiv. to not blocked and not scanned
@@ -85,7 +85,7 @@ def validate_bitmap(bitmap, ports, blocked_bitmap:bitarray):
             err_str = f"{ip_str}:{port} was not blocked and not scanned"
             print(err_str)
             errors.append(err_str)
-            if len(errors) >= MAX_ERRORS:
+            if MAX_ERRORS != -1 and len(errors) >= MAX_ERRORS:
                 # early exit optimization
                 return errors
     return errors
@@ -126,7 +126,7 @@ def run_test(scanner_command, ports):
     blocklist_bitmap = create_blocklist_bitmap(blocklist)
     print("DEBUG: blocklist loaded and bitmap created")
     bitmap = create_bitmap(ports)
-    errors = 0
+    errors = []
 
     size_of_struct = 6  # 4 bytes for IP, 2 bytes for port
     chunk_size = 1024 * 4 * size_of_struct  # 4k entries
@@ -149,6 +149,10 @@ def run_test(scanner_command, ports):
 
         ip = 0
         port = 0
+        # # Efficient iteration using struct.unpack_from
+        # # Assuming 8 byte/64 bit alignment, we'll pull out 8 structs at a time (48 bytes) to ensure byte boundary reads
+        # structs_per_chunk = 8
+        # struct_format_str = "!IH" * structs_per_chunk
         while True:
             # Read 6000 bytes/1k entries at a time
             chunk = process.stdout.read(size_of_struct * 128)
@@ -160,14 +164,14 @@ def run_test(scanner_command, ports):
                 ip, port = struct.unpack_from("!IH", chunk, i * size_of_struct)
                 if port not in ports:
                     print(f"{WARNING_COLOR}Unexpected port ({port}) with IP ({IPv4Address(ip)})")
-                    errors += 1
+                    errors.append(f"Unexpected port ({port}) with IP ({IPv4Address(ip)})")
                     continue
                 if bitmap[port][ip]:
                     print(f"{WARNING_COLOR}Error: {IPv4Address(ip)},{port} scanned more than once")
-                    errors += 1
+                    errors.append(f"Error: {IPv4Address(ip)},{port} scanned more than once")
                 bitmap[port][ip] = True
 
-            if errors >= MAX_ERRORS:
+            if MAX_ERRORS != -1 and len(errors) >= MAX_ERRORS:
                 break
 
         process.stdout.close()
@@ -178,29 +182,29 @@ def run_test(scanner_command, ports):
 
         print(f"Error during execution: {e} + {e.with_traceback()}")
         return
-    print(f"DEBUG: execution completed with {errors} errors, proceeding to bitmap validation")
+    print(f"DEBUG: execution completed with {len(errors)} errors, proceeding to bitmap validation")
+    for error in validate_bitmap(bitmap, ports, blocklist_bitmap):
+        print(f"Bitmap Validation Error: {error}")
+        errors.append(error)
 
-    # Final validation
-    validation_errors = validate_bitmap(bitmap, ports, blocklist_bitmap)
-    for error in validation_errors:
-        print(f"Validation Error: {error}")
-        errors += 1
-        if errors >= MAX_ERRORS:
-            break
-
-    if errors == 0:
+    # Final validation/summary
+    if len(errors) == 0:
         print("Integration test passed successfully.")
-        os._exit(0)
+        sys.exit(0)
     else:
-        print(f"Integration test failed with {errors} errors.")
-        os._exit(1)
+        print(f"{len(errors)} Errors encountered during scan:\n")
+        for error in errors:
+            print(f"During-Scan Error: {error}")
+        sys.exit(1)
+
 
 # def test_multi_port_scan_two_ports():
 if __name__ == "__main__":
     scanner_cmd = [
-        TOP_LEVEL_DIR + ZMAP_ABS_PATH, "-p", "80", "-T", "4", "--cores=0,1,2,3,4,5",
-        "-B", "200G", "--fast-dryrun", "-c", "0", "--batch", "256", "--seed", "2", "-n", "140308924", "--blocklist-file", TOP_LEVEL_DIR + BLOCKLIST_FILE
+        TOP_LEVEL_DIR + ZMAP_ABS_PATH, "-p", "80", "-T", "3", "--cores=0,1,2,3,4,5",
+        "-B", "200G", "--fast-dryrun", "-c", "0", "--batch", "256", "--seed", "2", "--blocklist-file", TOP_LEVEL_DIR + BLOCKLIST_FILE
     ]
+    print(" ".join(scanner_cmd))
     # Seed = 2 with port 80 gives us a more than once scan in 30 seconds, or -n 140308924
     ports_to_scan = [80]
 
