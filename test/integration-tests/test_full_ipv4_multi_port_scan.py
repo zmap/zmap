@@ -129,14 +129,12 @@ def run_test(scanner_command, ports):
     errors = []
 
     size_of_struct = 6  # 4 bytes for IP, 2 bytes for port
-    chunk_size = 1024 * 4 * size_of_struct  # 4k entries
-
     try:
         process = subprocess.Popen(
             scanner_command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            bufsize=chunk_size * 8,
+            bufsize=1024 * 1024 * 6,  # 6MB buffer
         )
         # Process stderr in real time and print it to sys.stdout
         def stream_stderr(proc_stderr):
@@ -147,21 +145,14 @@ def run_test(scanner_command, ports):
         stderr_thread = threading.Thread(target=stream_stderr, args=(process.stderr,))
         stderr_thread.start()
 
-        ip = 0
-        port = 0
-        # # Efficient iteration using struct.unpack_from
-        # # Assuming 8 byte/64 bit alignment, we'll pull out 8 structs at a time (48 bytes) to ensure byte boundary reads
-        # structs_per_chunk = 8
-        # struct_format_str = "!IH" * structs_per_chunk
+        format_str = "!IH"
+        chunk = bytearray(size_of_struct * 256)
         while True:
-            # Read 6000 bytes/1k entries at a time
-            chunk = process.stdout.read(size_of_struct * 128)
+            chunk = process.stdout.read(size_of_struct * 256)
             if not chunk:
                 break  # End of output
 
-            # Efficient iteration using struct.unpack_from
-            for i in range(len(chunk) // size_of_struct):
-                ip, port = struct.unpack_from("!IH", chunk, i * size_of_struct)
+            for ip, port in struct.iter_unpack(format_str, chunk):
                 if port not in ports:
                     print(f"{WARNING_COLOR}Unexpected port ({port}) with IP ({IPv4Address(ip)})")
                     errors.append(f"Unexpected port ({port}) with IP ({IPv4Address(ip)})")
