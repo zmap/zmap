@@ -192,11 +192,11 @@ def run_test(scanner_command, ports):
 # def test_multi_port_scan_two_ports():
 if __name__ == "__main__":
     scanner_cmd = [
-        TOP_LEVEL_DIR + ZMAP_ABS_PATH, "-p", "80", "-T", "3", "--cores=0,1,2,3,4,5",
+        TOP_LEVEL_DIR + ZMAP_ABS_PATH, "-p", "80", "-T", "4", "--cores=0,1,2,3,4,5",
         "-B", "200G", "--fast-dryrun", "-c", "0", "--batch", "256", "--seed", "2", "--blocklist-file", TOP_LEVEL_DIR + BLOCKLIST_FILE
     ]
     print(" ".join(scanner_cmd))
-    # Seed = 2 with port 80 gives us a more than once scan in 30 seconds, or -n 140308924
+    # Seed = 2,T = 4, -p = 80 with port 80 gives us a more than once scan in 30 seconds, or -n 140308924
     ports_to_scan = [80]
 
     run_test(scanner_cmd, ports_to_scan)
