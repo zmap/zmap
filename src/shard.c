@@ -111,7 +111,7 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 	// The candidate is upper-bounded by the modulus of the group, which is the prime number chosen in cyclic.c.
 	// All primes are chosen to be greater than the number of allowed targets.
 	// We must re-roll if the candidate is out of bounds of (2 ** 32) * (2 ** number of ports).
-	shard->max_candidate = 1ULL << (32 + bits_for_port);
+	shard->max_candidate = 1ULL << (32 + bits_for_port); // max candidate is inclusive
 
 
 	// Set the shard at the beginning.
@@ -186,7 +186,7 @@ target_t shard_get_next_target(shard_t *shard)
 			return (target_t){
 			    .ip = 0, .port = 0, .status = ZMAP_SHARD_DONE};
 		}
-		if (candidate > shard->max_candidate) {
+		if (candidate >= shard->max_candidate) {
 			// If the candidate is out of bounds, re-roll. This will happen since we choose primes/moduli that are
 			// larger than the number of allowed targets.
 			continue;
