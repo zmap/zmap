@@ -145,10 +145,6 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 	mpz_clear(prime_m);
 	mpz_clear(start_m);
 	mpz_clear(stop_m);
-
-	// Log Debug Info
-	log_debug("shard", "shard %u thread %u factor %llu modulus %llu: %llu -> %llu", shard_idx, thread_idx, shard->params.factor, shard->params.modulus,
-		  shard->params.first, shard->params.last);
 }
 
 target_t shard_get_cur_target(shard_t *shard)
