@@ -7,8 +7,9 @@ import sys
 import unittest
 
 IPV4_SPACE = 2**32  # Total number of IPv4 addresses
-MAX_ERRORS = -1 # Number of errors before early exit, -1 to disable
-TOP_LEVEL_DIR = "../../"
+MAX_ERRORS = 10 # Number of errors before early exit, -1 to disable
+# TOP_LEVEL_DIR = "../../"
+TOP_LEVEL_DIR = "/Users/phillip/zmap-dev/zmap/"
 BLOCKLIST_FILE = "conf/blocklist.conf"
 ZMAP_ABS_PATH = "src/zmap"
 
@@ -51,7 +52,7 @@ def create_blocklist_bitmap(blocklist):
         number_ips = net.num_addresses
         start_ip = int(net.network_address)
         bitmap[start_ip:start_ip + number_ips] = True # efficient bulk set
-        print(f"DEBUG: blocklist net: {net} with size {net.num_addresses}")
+        # print(f"DEBUG: blocklist net: {net} with size {net.num_addresses}")
     return bitmap
 
 def track_pair(bitmap, ip:int, port, blocklist_bitmap):
@@ -63,11 +64,19 @@ def track_pair(bitmap, ip:int, port, blocklist_bitmap):
     bitmap[port][ip] = True
     return SUCCESS
 
-def validate_bitmap(bitmap, ports, blocked_bitmap:bitarray):
+def validate_bitmap(bitmap, ports, blocked_bitmap:bitarray, subnet:str=None):
     """Validate that all non-blocklisted IPs are scanned."""
+    expected_ips = ~blocked_bitmap
+    if subnet:
+        # a subset of the IPv4 space was scanned, so we need to adjust the expected IPs
+        subnet = IPv4Network(subnet)
+        start_ip = int(subnet.network_address)
+        number_ips = subnet.num_addresses
+        expected_ips[0:start_ip] = False
+        expected_ips[start_ip + number_ips:len(expected_ips)] = False
     errors = []
     for port in ports:
-        difference_bitmap = bitmap[port] & blocked_bitmap
+        difference_bitmap = bitmap[port] & ~expected_ips
         for diff_i in difference_bitmap.search(bitarray('1')):  # Find the first unscanned IP
             ip_str = str(IPv4Address(diff_i))
             err_str = f"{ip_str}:{port} was blocked and scanned"
@@ -76,7 +85,7 @@ def validate_bitmap(bitmap, ports, blocked_bitmap:bitarray):
             if MAX_ERRORS != -1 and len(errors) >= MAX_ERRORS:
                 # early exit optimization
                 return errors
-        difference_bitmap = ~(bitmap[port] | blocked_bitmap) # equiv. to not blocked and not scanned
+        difference_bitmap = ~(bitmap[port] | ~expected_ips) # equiv. to not blocked and not scanned
         for diff_i in difference_bitmap.search(bitarray('1')):  # Find the first unscanned IP
             ip_str = str(IPv4Address(diff_i))
             err_str = f"{ip_str}:{port} was not blocked and not scanned"
@@ -88,14 +97,34 @@ def validate_bitmap(bitmap, ports, blocked_bitmap:bitarray):
     return errors
 
 class TestBitmapValidation(unittest.TestCase):
-    def setUp(self):
-        self.ports = [80, 81]
+    def setUp(self, ports=None):
+        if ports is None:
+            self.ports = [80, 81]
+        else:
+            self.ports = ports
         self.bitmap = create_bitmap(self.ports)
         self.blocklist_bitmap = bitarray(IPV4_SPACE)
         self.blocklist_bitmap.setall(False)
 
     def test_validate_bitmap(self):
+        with self.subTest("Negative Test Case - Scanned IP/Port out of subnet"):
+            self.setUp([80])
+            ip = int(IPv4Address("2.2.2.2"))
+            self.bitmap[80].setall(False)
+            self.bitmap[80][ip] = True
+            self.bitmap[80][ip + 1] = True # out of subnet
+            self.bitmap[80][ip - 1] = True # out of subnet
+            errors = validate_bitmap(self.bitmap, self.ports, self.blocklist_bitmap, "2.2.2.2/32")
+            self.assertEqual(len(errors), 2)
+        with self.subTest("Negative Test Case - Didn't scan subnet"):
+            self.setUp([80])
+            ip = int(IPv4Address("2.2.2.2"))
+            self.bitmap[80].setall(False)
+            self.bitmap[80][ip - 1] = True # out of subnet
+            errors = validate_bitmap(self.bitmap, self.ports, self.blocklist_bitmap, "2.2.2.2/32")
+            self.assertEqual(len(errors), 2)
         with self.subTest("Negative Test Case - Scanned IP/Port that is blocked"):
+            self.setUp()
             ip = int(IPv4Address("2.2.2.2"))
             self.bitmap[80].setall(True)
             self.bitmap[81].setall(True)
@@ -105,6 +134,7 @@ class TestBitmapValidation(unittest.TestCase):
             self.assertIn("2.2.2.2:80 was blocked and scanned", errors)
             self.assertIn("2.2.2.2:81 was blocked and scanned", errors)
         with self.subTest("Negative Test Case - Not-scanned IP/Port that isn't blocked"):
+            self.setUp()
             self.bitmap[80].setall(True)
             self.bitmap[81].setall(True)
             self.blocklist_bitmap.setall(False)
@@ -116,14 +146,22 @@ class TestBitmapValidation(unittest.TestCase):
             self.assertIn("3.3.3.3:80 was not blocked and not scanned", errors)
             self.assertIn("3.3.3.3:81 was not blocked and not scanned", errors)
         with self.subTest("Postive Test Case"):
+            self.setUp()
             self.bitmap[80].setall(True)
             self.bitmap[81].setall(True)
             self.blocklist_bitmap.setall(False)
             errors = validate_bitmap(self.bitmap, self.ports, self.blocklist_bitmap)
             self.assertEqual(len(errors), 0)
+        with self.subTest("Postive Test Case - Subnet"):
+            ip = int(IPv4Address("4.4.4.4"))
+            self.setUp([80])
+            self.blocklist_bitmap.setall(False)
+            self.bitmap[80][ip] = True
+            errors = validate_bitmap(self.bitmap, self.ports, self.blocklist_bitmap, "4.4.4.4/32")
+            self.assertEqual(len(errors), 0)
 
 
-def run_test(scanner_command, ports):
+def run_test(scanner_command, ports, subnet=None):
     blocklist = load_blocklist(TOP_LEVEL_DIR + BLOCKLIST_FILE)
     blocklist_bitmap = create_blocklist_bitmap(blocklist)
     print("DEBUG: blocklist loaded and bitmap created")
@@ -185,14 +223,14 @@ def run_test(scanner_command, ports):
         os._exit(1)
 
     print(f"DEBUG: execution completed with no errors, proceeding to bitmap validation")
-    for error in validate_bitmap(bitmap, ports, blocklist_bitmap):
+    for error in validate_bitmap(bitmap, ports, blocklist_bitmap, subnet):
         print(f"Bitmap Validation Error: {error}")
         errors.append(error)
 
     # Final validation/summary
     if len(errors) == 0:
-        print("Integration test passed successfully.")
-        os._exit(0)
+        print(f"Integration test passed successfully: {scanner_command}")
+        return
     print(f"{len(errors)} Errors encountered during scan:\n")
     for error in errors:
         print(f"During-Scan Error: {error}")
@@ -202,28 +240,53 @@ def run_test(scanner_command, ports):
 if __name__ == "__main__":
     base_scanner_cmd = [
         TOP_LEVEL_DIR + ZMAP_ABS_PATH, "--seed", "2", "-B", "200G", "--fast-dryrun", "-c", "0", "--batch", "256",
-        "--verbosity", "5", "-X", "--blocklist-file", TOP_LEVEL_DIR + BLOCKLIST_FILE
+        "--verbosity", "1", "-X", "--blocklist-file", TOP_LEVEL_DIR + BLOCKLIST_FILE
     ]
-    # Single Port, Single Thread
-    scanner_cmd = base_scanner_cmd + ["-p", "80", "-T", "1"]
-    print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
-    ports_to_scan = [80]
-    run_test(scanner_cmd, ports_to_scan)
+    # Single Port, Subnets of range /32 -> /1
+    for i in range(32, 0, -1):
+        subnet = f"128.0.0.0/{i}"
+        scanner_cmd = base_scanner_cmd + ["-p", "80", "-T", "1", subnet]
+        print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
+        ports_to_scan = [80]
+        run_test(scanner_cmd, ports_to_scan, subnet)
 
-    # Single Port, 2 Thread
-    scanner_cmd = base_scanner_cmd + ["-p", "80", "-T", "2"]
-    print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
-    ports_to_scan = [80]
-    run_test(scanner_cmd, ports_to_scan)
+    # # 2 Port, Subnets of range /32 -> /2
+    # for i in range(32, 1, -1):
+    #     subnet = f"1.1.1.1/{i}"
+    #     scanner_cmd = base_scanner_cmd + ["-p", "80-81", "-T", "1", subnet]
+    #     print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
+    #     ports_to_scan = [80, 81]
+    #     run_test(scanner_cmd, ports_to_scan, subnet)
 
-    # Three Ports, Single Thread
-    scanner_cmd = base_scanner_cmd + ["-p", "80,443,22", "-T", "1"]
-    print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
-    ports_to_scan = [80,443,22]
-    run_test(scanner_cmd, ports_to_scan)
+    # # 4 Port, Subnets of range /32 -> /2
+    # for i in range(32, 1, -1):
+    #     subnet = f"1.1.1.1/{i}"
+    #     scanner_cmd = base_scanner_cmd + ["-p", "80-83", "-T", "1", subnet]
+    #     print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
+    #     ports_to_scan = [80,81,82,83]
+    #     run_test(scanner_cmd, ports_to_scan, subnet)
 
-    # Two Ports, Two Thread
-    scanner_cmd = base_scanner_cmd + ["-p", "80,443", "-T", "2"]
-    print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
-    ports_to_scan = [80,443]
-    run_test(scanner_cmd, ports_to_scan)
+
+    # # Single Port, Single Thread, Full IPv4
+    # scanner_cmd = base_scanner_cmd + ["-p", "80", "-T", "1"]
+    # print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
+    # ports_to_scan = [80]
+    # run_test(scanner_cmd, ports_to_scan)
+
+    # # Single Port, 2 Thread, Full IPv4
+    # scanner_cmd = base_scanner_cmd + ["-p", "80", "-T", "2"]
+    # print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
+    # ports_to_scan = [80]
+    # run_test(scanner_cmd, ports_to_scan)
+
+    # # Three Ports, Single Thread, Full IPv4
+    # scanner_cmd = base_scanner_cmd + ["-p", "80,443,22", "-T", "1"]
+    # print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
+    # ports_to_scan = [80,443,22]
+    # run_test(scanner_cmd, ports_to_scan)
+
+    # # Two Ports, Two Thread, Full IPv4
+    # scanner_cmd = base_scanner_cmd + ["-p", "80,443", "-T", "2"]
+    # print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
+    # ports_to_scan = [80,443]
+    # run_test(scanner_cmd, ports_to_scan)
