@@ -1,17 +1,14 @@
-import os
-import subprocess
-import struct
-import socket
-import sys
-import unittest
 from bitarray import bitarray
 from ipaddress import IPv4Address, IPv4Network
+import os
+import struct
+import subprocess
+import sys
+import unittest
 
-# Constants
 IPV4_SPACE = 2**32  # Total number of IPv4 addresses
 MAX_ERRORS = -1 # Number of errors before early exit, -1 to disable
-TOP_LEVEL_DIR = "/Users/phillip/zmap-dev/zmap/"
-# TOP_LEVEL_DIR = "/home/pstephens/zmap-dev/zmap/"
+TOP_LEVEL_DIR = "../../"
 BLOCKLIST_FILE = "conf/blocklist.conf"
 ZMAP_ABS_PATH = "src/zmap"
 
@@ -140,6 +137,10 @@ def run_test(scanner_command, ports):
             stderr=subprocess.PIPE,
             bufsize=1024 * 1024 * 6,  # 6MB buffer
         )
+    except Exception as e:
+        print(f"Error during starting ZMap. You may need to set your top-level directory to the correct path: {e}")
+        return
+    try:
         # Process stderr in real time and print it to sys.stdout so we can see ZMap progress in logs
         def stream_stderr(proc_stderr):
             for line in proc_stderr:
@@ -165,7 +166,7 @@ def run_test(scanner_command, ports):
                 if bitmap[port][ip]:
                     print(f"{WARNING_COLOR}Error: {IPv4Address(ip)},{port} scanned more than once")
                     errors.append(f"Error: {IPv4Address(ip)},{port} scanned more than once")
-                    sys.exit(1)
+                    os._exit(1)
                 bitmap[port][ip] = True
 
             if MAX_ERRORS != -1 and len(errors) >= MAX_ERRORS:
@@ -178,7 +179,12 @@ def run_test(scanner_command, ports):
     except Exception as e:
         print(f"Error during execution: {e} + {e.with_traceback()}")
         return
-    print(f"DEBUG: execution completed with {len(errors)} errors, proceeding to bitmap validation")
+
+    if len(errors) != 0:
+        print(f"ERROR: execution completed with {len(errors)} errors")
+        os._exit(1)
+
+    print(f"DEBUG: execution completed with no errors, proceeding to bitmap validation")
     for error in validate_bitmap(bitmap, ports, blocklist_bitmap):
         print(f"Bitmap Validation Error: {error}")
         errors.append(error)
@@ -186,22 +192,38 @@ def run_test(scanner_command, ports):
     # Final validation/summary
     if len(errors) == 0:
         print("Integration test passed successfully.")
-        sys.exit(0)
-    else:
-        print(f"{len(errors)} Errors encountered during scan:\n")
-        for error in errors:
-            print(f"During-Scan Error: {error}")
-        sys.exit(1)
+        os._exit(0)
+    print(f"{len(errors)} Errors encountered during scan:\n")
+    for error in errors:
+        print(f"During-Scan Error: {error}")
+    os._exit(1)
 
 
-# def test_multi_port_scan_two_ports():
 if __name__ == "__main__":
-    scanner_cmd = [
-        TOP_LEVEL_DIR + ZMAP_ABS_PATH, "-p", "80,443", "-T", "1",# "--seed", "2",
-        "-B", "200G", "--fast-dryrun", "-c", "0", "--batch", "256", "--verbosity", "5", "--blocklist-file", TOP_LEVEL_DIR + BLOCKLIST_FILE
+    base_scanner_cmd = [
+        TOP_LEVEL_DIR + ZMAP_ABS_PATH, "--seed", "2", "-B", "200G", "--fast-dryrun", "-c", "0", "--batch", "256",
+        "--verbosity", "5", "-X", "--blocklist-file", TOP_LEVEL_DIR + BLOCKLIST_FILE
     ]
-    print(" ".join(scanner_cmd))
-    # Seed = 2,T = 4, -p = 80 with port 80 gives us a more than once scan in 30 seconds, or -n 140308924
-    ports_to_scan = [80,443]
+    # Single Port, Single Thread
+    scanner_cmd = base_scanner_cmd + ["-p", "80", "-T", "1"]
+    print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
+    ports_to_scan = [80]
+    run_test(scanner_cmd, ports_to_scan)
 
+    # Single Port, 2 Thread
+    scanner_cmd = base_scanner_cmd + ["-p", "80", "-T", "2"]
+    print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
+    ports_to_scan = [80]
+    run_test(scanner_cmd, ports_to_scan)
+
+    # Three Ports, Single Thread
+    scanner_cmd = base_scanner_cmd + ["-p", "80,443,22", "-T", "1"]
+    print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
+    ports_to_scan = [80,443,22]
+    run_test(scanner_cmd, ports_to_scan)
+
+    # Two Ports, Two Thread
+    scanner_cmd = base_scanner_cmd + ["-p", "80,443", "-T", "2"]
+    print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
+    ports_to_scan = [80,443]
     run_test(scanner_cmd, ports_to_scan)
