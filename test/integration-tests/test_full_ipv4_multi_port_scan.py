@@ -9,7 +9,7 @@ from ipaddress import IPv4Address, IPv4Network
 
 # Constants
 IPV4_SPACE = 2**32  # Total number of IPv4 addresses
-MAX_ERRORS = -1
+MAX_ERRORS = -1 # Number of errors before early exit, -1 to disable
 TOP_LEVEL_DIR = "/Users/phillip/zmap-dev/zmap/"
 # TOP_LEVEL_DIR = "/home/pstephens/zmap-dev/zmap/"
 BLOCKLIST_FILE = "conf/blocklist.conf"
@@ -91,7 +91,6 @@ def validate_bitmap(bitmap, ports, blocked_bitmap:bitarray):
     return errors
 
 class TestBitmapValidation(unittest.TestCase):
-
     def setUp(self):
         self.ports = [80, 81]
         self.bitmap = create_bitmap(self.ports)
@@ -99,7 +98,7 @@ class TestBitmapValidation(unittest.TestCase):
         self.blocklist_bitmap.setall(False)
 
     def test_validate_bitmap(self):
-        with self.subTest("Scanned IP/Port that is blocked"):
+        with self.subTest("Negative Test Case - Scanned IP/Port that is blocked"):
             ip = int(IPv4Address("2.2.2.2"))
             self.bitmap[80].setall(True)
             self.bitmap[81].setall(True)
@@ -108,7 +107,7 @@ class TestBitmapValidation(unittest.TestCase):
             self.assertGreater(len(errors), 0)
             self.assertIn("2.2.2.2:80 was blocked and scanned", errors)
             self.assertIn("2.2.2.2:81 was blocked and scanned", errors)
-        with self.subTest("Not-scanned IP/Port that isn't blocked"):
+        with self.subTest("Negative Test Case - Not-scanned IP/Port that isn't blocked"):
             self.bitmap[80].setall(True)
             self.bitmap[81].setall(True)
             self.blocklist_bitmap.setall(False)
@@ -119,6 +118,12 @@ class TestBitmapValidation(unittest.TestCase):
             self.assertGreater(len(errors), 0)
             self.assertIn("3.3.3.3:80 was not blocked and not scanned", errors)
             self.assertIn("3.3.3.3:81 was not blocked and not scanned", errors)
+        with self.subTest("Postive Test Case"):
+            self.bitmap[80].setall(True)
+            self.bitmap[81].setall(True)
+            self.blocklist_bitmap.setall(False)
+            errors = validate_bitmap(self.bitmap, self.ports, self.blocklist_bitmap)
+            self.assertEqual(len(errors), 0)
 
 
 def run_test(scanner_command, ports):
@@ -128,7 +133,6 @@ def run_test(scanner_command, ports):
     bitmap = create_bitmap(ports)
     errors = []
 
-    size_of_struct = 6  # 4 bytes for IP, 2 bytes for port
     try:
         process = subprocess.Popen(
             scanner_command,
@@ -136,7 +140,7 @@ def run_test(scanner_command, ports):
             stderr=subprocess.PIPE,
             bufsize=1024 * 1024 * 6,  # 6MB buffer
         )
-        # Process stderr in real time and print it to sys.stdout
+        # Process stderr in real time and print it to sys.stdout so we can see ZMap progress in logs
         def stream_stderr(proc_stderr):
             for line in proc_stderr:
                 sys.stdout.write(str(line) + "\n")  # Directly forward stderr to stdout in real time
@@ -145,7 +149,8 @@ def run_test(scanner_command, ports):
         stderr_thread = threading.Thread(target=stream_stderr, args=(process.stderr,))
         stderr_thread.start()
 
-        format_str = "!IH"
+        size_of_struct = 6  # 4 bytes for IP, 2 bytes for port
+        format_str = "!IH" # network byte order, unsigned int, unsigned short
         chunk = bytearray(size_of_struct * 256)
         while True:
             chunk = process.stdout.read(size_of_struct * 256)
@@ -160,6 +165,7 @@ def run_test(scanner_command, ports):
                 if bitmap[port][ip]:
                     print(f"{WARNING_COLOR}Error: {IPv4Address(ip)},{port} scanned more than once")
                     errors.append(f"Error: {IPv4Address(ip)},{port} scanned more than once")
+                    sys.exit(1)
                 bitmap[port][ip] = True
 
             if MAX_ERRORS != -1 and len(errors) >= MAX_ERRORS:
@@ -170,7 +176,6 @@ def run_test(scanner_command, ports):
         stderr_thread.join()  # Ensure stderr thread finishes
 
     except Exception as e:
-
         print(f"Error during execution: {e} + {e.with_traceback()}")
         return
     print(f"DEBUG: execution completed with {len(errors)} errors, proceeding to bitmap validation")
@@ -192,11 +197,11 @@ def run_test(scanner_command, ports):
 # def test_multi_port_scan_two_ports():
 if __name__ == "__main__":
     scanner_cmd = [
-        TOP_LEVEL_DIR + ZMAP_ABS_PATH, "-p", "80", "-T", "4", "--cores=0,1,2,3,4,5",
-        "-B", "200G", "--fast-dryrun", "-c", "0", "--batch", "256", "--seed", "2", "--blocklist-file", TOP_LEVEL_DIR + BLOCKLIST_FILE
+        TOP_LEVEL_DIR + ZMAP_ABS_PATH, "-p", "80,443", "-T", "1",# "--seed", "2",
+        "-B", "200G", "--fast-dryrun", "-c", "0", "--batch", "256", "--verbosity", "5", "--blocklist-file", TOP_LEVEL_DIR + BLOCKLIST_FILE
     ]
     print(" ".join(scanner_cmd))
     # Seed = 2,T = 4, -p = 80 with port 80 gives us a more than once scan in 30 seconds, or -n 140308924
-    ports_to_scan = [80]
+    ports_to_scan = [80,443]
 
     run_test(scanner_cmd, ports_to_scan)

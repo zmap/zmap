@@ -138,7 +138,7 @@ void synscan_print_packet(FILE *fp, void *packet)
 	struct ip *iph = (struct ip *)&ethh[1];
 	struct tcphdr *tcph = (struct tcphdr *)&iph[1];
 	if (zconf.fast_dryrun) {
-		// We'll just print a binary represenation of the dst IP and the dst Port
+		// We'll just print a binary representation of the dst IP and the dst Port to reduce data output/save time
 		struct in_addr *dest_IP = (struct in_addr *)&(iph->ip_dst);
 		// Writing binary IP addresses
 		const uint8_t IP_ADDR_LEN = 4;

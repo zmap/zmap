@@ -108,6 +108,12 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 	//
 	shard->bits_for_port = bits_for_port;
 
+	// The candidate is upper-bounded by the modulus of the group, which is the prime number chosen in cyclic.c.
+	// All primes are chosen to be greater than the number of allowed targets.
+	// We must re-roll if the candidate is out of bounds of (2 ** 32) * (2 ** number of ports).
+	shard->max_candidate = 1ULL << (32 + bits_for_port);
+
+
 	// Set the shard at the beginning.
 	shard->current = shard->params.first;
 
@@ -139,6 +145,10 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 	mpz_clear(prime_m);
 	mpz_clear(start_m);
 	mpz_clear(stop_m);
+
+	// Log Debug Info
+	log_debug("shard", "shard %u thread %u factor %llu modulus %llu: %llu -> %llu", shard_idx, thread_idx, shard->params.factor, shard->params.modulus,
+		  shard->params.first, shard->params.last);
 }
 
 target_t shard_get_cur_target(shard_t *shard)
@@ -159,7 +169,7 @@ static inline uint64_t shard_get_next_elem(shard_t *shard)
 {
 	shard->current *= shard->params.factor;
 	shard->current %= shard->params.modulus;
-	return (uint64_t)shard->current;
+	return shard->current;
 }
 
 target_t shard_get_next_target(shard_t *shard)
@@ -176,6 +186,12 @@ target_t shard_get_next_target(shard_t *shard)
 			return (target_t){
 			    .ip = 0, .port = 0, .status = ZMAP_SHARD_DONE};
 		}
+		if (candidate > shard->max_candidate) {
+			// If the candidate is out of bounds, re-roll. This will happen since we choose primes/moduli that are
+			// larger than the number of allowed targets.
+			continue;
+		}
+		// Good candidate, proceed with it.
 		uint32_t candidate_ip =
 		    extract_ip(candidate - 1, shard->bits_for_port);
 		uint16_t candidate_port =
