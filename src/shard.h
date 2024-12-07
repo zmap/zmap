@@ -37,7 +37,6 @@ typedef struct shard {
 	uint64_t iterations;
 	uint8_t thread_id;
 	uint8_t bits_for_port;
-	uint64_t max_candidate; // max allowed value for a candidate target
 	shard_complete_cb cb;
 	void *arg;
 } shard_t;

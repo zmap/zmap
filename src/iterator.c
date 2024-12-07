@@ -83,11 +83,17 @@ iterator_t *iterator_init(uint8_t num_threads, uint16_t shard,
 	iterator_t *it = xmalloc(sizeof(struct iterator));
 	const cyclic_group_t *group = get_group(group_min_size);
 	if (num_addrs > (1LL << 32)) {
-		zsend.max_index = 0xFFFFFFFF;
+		zsend.max_ip_index = 0xFFFFFFFF;
 	} else {
-		zsend.max_index = (uint32_t)num_addrs;
+		zsend.max_ip_index = (uint32_t)num_addrs;
 	}
-	log_debug("iterator", "max index %u", zsend.max_index);
+	log_debug("iterator", "max ip index %ul", zsend.max_ip_index);
+	// The candidate is upper-bounded by the modulus of the group, which is the prime number chosen in cyclic.c.
+	// All primes are chosen to be greater than the number of allowed targets.
+	// We must re-roll if the candidate target is out of bounds of (2 ** 32) * (2 ** number of ports).
+	zsend.max_target_index = 1ULL << (32 + bits_for_port);
+	log_debug("iterator", "max target index %ull", zsend.max_target_index);
+
 	it->cycle = make_cycle(group, zconf.aes);
 	it->num_threads = num_threads;
 	it->curr_threads = num_threads;
