@@ -66,6 +66,8 @@ option "retries"                - "Max number of times to try to send packet if 
     optional int
 option "dryrun"                 d "Don't actually send packets"
     optional
+option "fast-dryrun"            - "Don't actually send packets, print out a binary representation probe dst IP and dst Port. Used for faster integration tests, not for general use."
+    optional
 
 
 section "Scan Sharding"

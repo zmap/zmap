@@ -276,7 +276,11 @@ int send_run(sock_t st, shard_t *s)
 				   20;
 			last_time = steady_now();
 			assert(interval > 0);
-			assert(delay > 0);
+			if (delay == 0) {
+				// at extremely high bandwidths, the delay could be set to zero.
+				// this breaks the multiplier logic below, so we'll hard-set it to 1 in this case.
+				delay = 1;
+			}
 		}
 	}
 	int attempts = zconf.retries + 1;
@@ -413,10 +417,17 @@ int send_run(sock_t st, shard_t *s)
 			batch->packets[batch->len].len = (uint32_t)length;
 
 			if (zconf.dryrun) {
-				lock_file(stdout);
-				zconf.probe_module->print_packet(stdout,
-								 batch->packets[batch->len].buf);
-				unlock_file(stdout);
+				batch->len++;
+				if (batch->len == batch->capacity) {
+					lock_file(stdout);
+					for (int i = 0; i < batch->len; i++) {
+						zconf.probe_module->print_packet(stdout,
+														 batch->packets[i].buf);
+					}
+					unlock_file(stdout);
+					// reset batch length for next batch
+					batch->len = 0;
+				}
 			} else {
 				batch->len++;
 				if (batch->len == batch->capacity) {
@@ -465,6 +476,15 @@ int send_run(sock_t st, shard_t *s)
 cleanup:
 	if (!zconf.dryrun && send_batch(st, batch, attempts) < 0) {
 		log_error("send_batch cleanup", "could not send remaining batch packets: %s", strerror(errno));
+	} else if (zconf.dryrun) {
+		lock_file(stdout);
+		for (int i = 0; i < batch->len; i++) {
+			zconf.probe_module->print_packet(stdout,
+											 batch->packets[i].buf);
+		}
+		unlock_file(stdout);
+		// reset batch length for next batch
+		batch->len = 0;
 	}
 	free_packet_batch(batch);
 	s->cb(s->thread_id, s->arg);

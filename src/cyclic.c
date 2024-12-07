@@ -58,7 +58,7 @@ static cyclic_group_t groups[] = {
     {// 2^8 + 1
      .prime = 257,
      .known_primroot = 3,
-     .prime_factors = {2},
+     .prime_factors = {2}, // prime factors of prime - 1
      .num_prime_factors = 1},
     {// 2^16 + 1
      .prime = 65537,

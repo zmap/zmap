@@ -123,6 +123,7 @@ struct state_conf {
 	char *log_directory;
 	char *status_updates_file;
 	int dryrun;
+	int fast_dryrun;
 	int quiet;
 	int ignore_invalid_hosts;
 	int syslog;
@@ -171,8 +172,8 @@ struct state_send {
 	uint32_t first_scanned;
 	uint64_t max_targets;
 	uint32_t sendto_failures;
-	uint32_t max_index;
-	uint16_t max_port_index;
+	uint32_t max_ip_index;
+	uint64_t max_target_index;
 	uint8_t **list_of_ips_pbm;
 };
 extern struct state_send zsend;

@@ -152,11 +152,11 @@ double compute_remaining_time(double age, uint64_t packets_sent,
 			    (double)zrecv.filter_success / zconf.max_results;
 			remaining[3] = (1. - done) * (age / done);
 		}
-		if (zsend.max_index) {
+		if (zsend.max_ip_index) {
 			double done =
 			    (double)packets_sent /
-			    ((uint64_t)zsend.max_index * zconf.ports->port_count * zconf.packet_streams /
-			     zconf.total_shards);
+			    ((uint64_t)zsend.max_ip_index * zconf.ports->port_count * zconf.packet_streams /
+				 zconf.total_shards);
 			remaining[4] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;
 		}

@@ -256,6 +256,10 @@ targets.
      Print out each packet to stdout instead of sending it (useful for
      debugging)
 
+   * `--fast-dryrun`:
+     Don't actually send packets, print out a binary representation probe dst
+     IP and dst Port. Used for faster integration tests, not for general use.
+
    * `--max-sendto-failures`:
      Maximum NIC sendto failures before scan is aborted
 

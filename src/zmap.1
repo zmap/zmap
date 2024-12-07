@@ -1,7 +1,7 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "ZMAP" "1" "November 2024" "ZMap" "zmap"
+.TH "ZMAP" "1" "December 2024" "ZMap" "zmap"
 .
 .SH "NAME"
 \fBzmap\fR \- The Fast Internet Scanner
@@ -238,6 +238,10 @@ Read a configuration file, which can specify any other options\.
 .TP
 \fB\-d\fR, \fB\-\-dryrun\fR
 Print out each packet to stdout instead of sending it (useful for debugging)
+.
+.TP
+\fB\-\-fast\-dryrun\fR
+Don\'t actually send packets, print out a binary representation probe dst IP and dst Port\. Used for faster integration tests, not for general use\.
 .
 .TP
 \fB\-\-max\-sendto\-failures\fR
