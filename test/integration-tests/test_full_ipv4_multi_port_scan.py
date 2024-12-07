@@ -8,8 +8,8 @@ import unittest
 
 IPV4_SPACE = 2**32  # Total number of IPv4 addresses
 MAX_ERRORS = 10 # Number of errors before early exit, -1 to disable
-# TOP_LEVEL_DIR = "../../"
-TOP_LEVEL_DIR = "/Users/phillip/zmap-dev/zmap/"
+TOP_LEVEL_DIR = "../../"
+# TOP_LEVEL_DIR = "/Users/phillip/zmap-dev/zmap/" # Uncomment and set if running locally
 BLOCKLIST_FILE = "conf/blocklist.conf"
 ZMAP_ABS_PATH = "src/zmap"
 
@@ -283,20 +283,20 @@ if __name__ == "__main__":
         TOP_LEVEL_DIR + ZMAP_ABS_PATH, "--seed", "2", "-B", "200G", "--fast-dryrun", "-c", "0", "--batch", "256",
         "--verbosity", "1", "-X", "--blocklist-file", TOP_LEVEL_DIR + BLOCKLIST_FILE
     ]
+    # 3 Port, Subnets of range /32 -> /2
+    for i in range(32, 1, -1):
+        subnet = f"128.0.0.0/{i}"
+        scanner_cmd = base_scanner_cmd + ["-p", "80-81,443", "-T", "1", subnet]
+        print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
+        ports_to_scan = [80,81,443]
+        run_test(scanner_cmd, ports_to_scan, subnet)
+
     # Single Port, Subnets of range /32 -> /1
     for i in range(32, 0, -1):
         subnet = f"128.0.0.0/{i}"
         scanner_cmd = base_scanner_cmd + ["-p", "80", "-T", "1", subnet]
         print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
         ports_to_scan = [80]
-        run_test(scanner_cmd, ports_to_scan, subnet)
-
-    # 3 Port, Subnets of range /32 -> /2
-    for i in range(32, 1, -1):
-        subnet = f"128.0.0.0/{i}"
-        scanner_cmd = base_scanner_cmd + ["-p", "80-82", "-T", "1", subnet]
-        print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
-        ports_to_scan = [80,81,82]
         run_test(scanner_cmd, ports_to_scan, subnet)
 
     # Single Port, Single Thread, Full IPv4
