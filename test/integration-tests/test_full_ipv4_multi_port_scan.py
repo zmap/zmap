@@ -21,7 +21,14 @@ SUCCESS = 1
 
 
 def load_blocklist(file_path):
-    """Load blocklist CIDR ranges from a file."""
+    """
+    Load blocklist CIDR ranges from a file.
+    
+    Args:
+        file_path (str): Path to the blocklist file.
+    Returns:
+        blocklist: List of IPv4Network objects representing the blocklist ranges.
+    """
     blocklist = []
     try:
         with open(file_path, "r") as file:
@@ -35,18 +42,37 @@ def load_blocklist(file_path):
     return blocklist
 
 def is_blocklisted(ip:int, blocklist_bitmap):
-    """Check if an IP address is in the blocklist."""
+    """
+    Check if an IP address is in the blocklist
+
+    Args:
+        ip (int): IP address to check
+        blocklist_bitmap (bitarray): Bitmap of blocklisted IPs 1 = blocklisted, 0 = not blocklisted
+    Returns:
+        bool: True if the IP is blocklisted, False otherwise
+        
+    """
     return blocklist_bitmap[ip]
 
 def create_bitmap(ports):
-    """Create a bitmap for all IPs and each port."""
+    """Create a bitmap for all IPs and each port
+    Args:
+        ports (list[int]): List of ports to create bitmaps for
+    Returns:
+        dict: Dictionary of bitmaps, keyed by port
+    """
     bitmap_by_port = {}
     for port in ports:
         bitmap_by_port[port] = bitarray(IPV4_SPACE)
     return bitmap_by_port
 
 def create_blocklist_bitmap(blocklist):
-    """Create a bitmap for all blocklisted IPs."""
+    """Create a bitmap for all blocklisted IPs
+    Args:
+        blocklist (list[IPv4Network]): List of blocklisted networks
+    Returns:
+        bitarray: Bitmap of blocklisted IPs 1 = blocklisted, 0 = not blocklisted
+    """
     bitmap = bitarray(IPV4_SPACE)
     for net in blocklist:
         number_ips = net.num_addresses
@@ -55,17 +81,17 @@ def create_blocklist_bitmap(blocklist):
         # print(f"DEBUG: blocklist net: {net} with size {net.num_addresses}")
     return bitmap
 
-def track_pair(bitmap, ip:int, port, blocklist_bitmap):
-    """Mark an IP/port as scanned, unless it's blocklisted."""
-    if is_blocklisted(ip, blocklist_bitmap):
-        return BLOCKLISTED
-    if bitmap[port][ip]:
-        return DUPLICATE
-    bitmap[port][ip] = True
-    return SUCCESS
-
 def validate_bitmap(bitmap, ports, blocked_bitmap:bitarray, subnet:str=None):
-    """Validate that all non-blocklisted IPs are scanned."""
+    """Validate that all non-blocklisted IPs are scanned
+    Args:
+        bitmap (dict[int]bitarray): Dictionary of bitarrays, keyed by port
+        ports (list[int]): List of ports to validate
+        blocked_bitmap (bitarray): Bitmap of blocklisted IPs 1 = blocklisted, 0 = not blocklisted
+        subnet (str): Optional subnet to validate against. Used if we only scan a subset of the IPv4 space
+    
+    Returns:
+        list[str]: List of errors encountered during validation, capped at MAX_ERRORS
+    """
     expected_ips = ~blocked_bitmap
     if subnet:
         # a subset of the IPv4 space was scanned, so we need to adjust the expected IPs
@@ -77,7 +103,7 @@ def validate_bitmap(bitmap, ports, blocked_bitmap:bitarray, subnet:str=None):
     errors = []
     for port in ports:
         difference_bitmap = bitmap[port] & ~expected_ips
-        for diff_i in difference_bitmap.search(bitarray('1')):  # Find the first unscanned IP
+        for diff_i in difference_bitmap.search(bitarray('1')):  # Find the first unexpected + scanned IP
             ip_str = str(IPv4Address(diff_i))
             err_str = f"{ip_str}:{port} was blocked and scanned"
             print(err_str)
@@ -85,7 +111,7 @@ def validate_bitmap(bitmap, ports, blocked_bitmap:bitarray, subnet:str=None):
             if MAX_ERRORS != -1 and len(errors) >= MAX_ERRORS:
                 # early exit optimization
                 return errors
-        difference_bitmap = ~(bitmap[port] | ~expected_ips) # equiv. to not blocked and not scanned
+        difference_bitmap = ~(bitmap[port] | ~expected_ips) # equiv. to expected and not scanned
         for diff_i in difference_bitmap.search(bitarray('1')):  # Find the first unscanned IP
             ip_str = str(IPv4Address(diff_i))
             err_str = f"{ip_str}:{port} was not blocked and not scanned"
@@ -97,6 +123,9 @@ def validate_bitmap(bitmap, ports, blocked_bitmap:bitarray, subnet:str=None):
     return errors
 
 class TestBitmapValidation(unittest.TestCase):
+    """
+    Unit tests for validate_bitmap function
+    """
     def setUp(self, ports=None):
         if ports is None:
             self.ports = [80, 81]
@@ -162,6 +191,18 @@ class TestBitmapValidation(unittest.TestCase):
 
 
 def run_test(scanner_command, ports, subnet=None):
+    """
+    Runs an integration test for ZMap, using the provided scanner command and ports to scan.
+
+    Starts a sub-process to run ZMap, pipes it's stderr to the test's stdout so we can see progress in logs.
+    Reads stdout of ZMap to get the scanned IPs and ports and uses a per-port bitmap of the IPv4 address space
+    to validate that each IP is scanned and scanned exactly once.
+    Args:
+        scanner_command (list[str]): ZMap scanner command to run
+        ports (list[int]): List of ports to scan
+        subnet (str): Optional subnet to scan ex. 1.1.1.0/24
+
+    """
     blocklist = load_blocklist(TOP_LEVEL_DIR + BLOCKLIST_FILE)
     blocklist_bitmap = create_blocklist_bitmap(blocklist)
     print("DEBUG: blocklist loaded and bitmap created")
@@ -250,43 +291,28 @@ if __name__ == "__main__":
         ports_to_scan = [80]
         run_test(scanner_cmd, ports_to_scan, subnet)
 
-    # # 2 Port, Subnets of range /32 -> /2
-    # for i in range(32, 1, -1):
-    #     subnet = f"1.1.1.1/{i}"
-    #     scanner_cmd = base_scanner_cmd + ["-p", "80-81", "-T", "1", subnet]
-    #     print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
-    #     ports_to_scan = [80, 81]
-    #     run_test(scanner_cmd, ports_to_scan, subnet)
+    # 3 Port, Subnets of range /32 -> /2
+    for i in range(32, 1, -1):
+        subnet = f"128.0.0.0/{i}"
+        scanner_cmd = base_scanner_cmd + ["-p", "80-82", "-T", "1", subnet]
+        print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
+        ports_to_scan = [80,81,82]
+        run_test(scanner_cmd, ports_to_scan, subnet)
 
-    # # 4 Port, Subnets of range /32 -> /2
-    # for i in range(32, 1, -1):
-    #     subnet = f"1.1.1.1/{i}"
-    #     scanner_cmd = base_scanner_cmd + ["-p", "80-83", "-T", "1", subnet]
-    #     print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
-    #     ports_to_scan = [80,81,82,83]
-    #     run_test(scanner_cmd, ports_to_scan, subnet)
+    # Single Port, Single Thread, Full IPv4
+    scanner_cmd = base_scanner_cmd + ["-p", "80", "-T", "1"]
+    print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
+    ports_to_scan = [80]
+    run_test(scanner_cmd, ports_to_scan)
 
+    # Single Port, 2 Thread, Full IPv4
+    scanner_cmd = base_scanner_cmd + ["-p", "80", "-T", "2"]
+    print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
+    ports_to_scan = [80]
+    run_test(scanner_cmd, ports_to_scan)
 
-    # # Single Port, Single Thread, Full IPv4
-    # scanner_cmd = base_scanner_cmd + ["-p", "80", "-T", "1"]
-    # print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
-    # ports_to_scan = [80]
-    # run_test(scanner_cmd, ports_to_scan)
-
-    # # Single Port, 2 Thread, Full IPv4
-    # scanner_cmd = base_scanner_cmd + ["-p", "80", "-T", "2"]
-    # print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
-    # ports_to_scan = [80]
-    # run_test(scanner_cmd, ports_to_scan)
-
-    # # Three Ports, Single Thread, Full IPv4
-    # scanner_cmd = base_scanner_cmd + ["-p", "80,443,22", "-T", "1"]
-    # print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
-    # ports_to_scan = [80,443,22]
-    # run_test(scanner_cmd, ports_to_scan)
-
-    # # Two Ports, Two Thread, Full IPv4
-    # scanner_cmd = base_scanner_cmd + ["-p", "80,443", "-T", "2"]
-    # print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
-    # ports_to_scan = [80,443]
-    # run_test(scanner_cmd, ports_to_scan)
+    # Two Ports, Two Thread, Full IPv4
+    scanner_cmd = base_scanner_cmd + ["-p", "80,443", "-T", "2"]
+    print(f"Running ZMap Command: {" ".join(scanner_cmd)}")
+    ports_to_scan = [80,443]
+    run_test(scanner_cmd, ports_to_scan)
