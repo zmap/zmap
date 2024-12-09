@@ -2,7 +2,7 @@ FROM ubuntu:latest
 
 RUN apt-get update
 RUN apt-get install -y build-essential cmake libgmp3-dev gengetopt libpcap-dev flex \
-    byacc libjson-c-dev pkg-config libunistring-dev libjudy-dev cmake  make python3 python3-pytest python3-timeout-decorator curl
+    byacc libjson-c-dev pkg-config libunistring-dev libjudy-dev cmake  make python3 python3-pytest python3-timeout-decorator python3-bitarray curl
 RUN apt-get clean
 
 

@@ -22,6 +22,7 @@
 #include <json.h>
 
 #include <pthread.h>
+#include <stdbool.h>
 
 #include "../lib/includes.h"
 #include "../lib/blocklist.h"
@@ -213,11 +214,19 @@ static void start_zmap(void)
 		zconf.output_module->start(&zconf, &zsend, &zrecv);
 	}
 
+	if (zconf.fast_dryrun) {
+		// fast dryrun mode is a special case of dryrun mode
+		zconf.dryrun = 1;
+	}
+
 	// start threads
 	uint32_t cpu = 0;
 	pthread_t *tsend, trecv, tmon;
 	int r;
-	if (!zconf.dryrun) {
+	bool monitor_thread_started = (!zconf.quiet || zconf.status_updates_file) && (!zconf.dryrun || zconf.fast_dryrun);
+	bool recv_thread_started = !zconf.dryrun || monitor_thread_started; // monitor thread needs recv thread to exit
+	if (recv_thread_started) {
+		// only start recv thread if not in dryrun mode
 		recv_arg_t *recv_arg = xmalloc(sizeof(recv_arg_t));
 		recv_arg->cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
 		cpu += 1;
@@ -234,6 +243,7 @@ static void start_zmap(void)
 			pthread_mutex_unlock(&recv_ready_mutex);
 		}
 	}
+
 #ifdef PFRING
 	pfring_zc_worker *zw = pfring_zc_run_balancer(
 	    zconf.pf.queues, &zconf.pf.send, zconf.senders, 1,
@@ -263,14 +273,15 @@ static void start_zmap(void)
 	}
 	log_debug("zmap", "%d sender threads spawned", zconf.senders);
 
-	if (!zconf.dryrun) {
+	if (monitor_thread_started) {
+		// we'll print monitor for fast-dryrun so we can watch the long-running long tests OR under normal usage
 		monitor_init();
 		mon_start_arg_t *mon_arg = xmalloc(sizeof(mon_start_arg_t));
 		mon_arg->it = it;
 		mon_arg->recv_ready_mutex = &recv_ready_mutex;
 		mon_arg->cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
-		int r = pthread_create(&tmon, NULL, start_mon, mon_arg);
-		if (r != 0) {
+		int m = pthread_create(&tmon, NULL, start_mon, mon_arg);
+		if (m != 0) {
 			log_fatal("zmap", "unable to create monitor thread");
 			exit(EXIT_FAILURE);
 		}
@@ -294,20 +305,21 @@ static void start_zmap(void)
 	pfring_zc_sync_queue(zconf.pf.send, tx_only);
 	log_debug("zmap", "send queue flushed");
 #endif
-	// no receiving or monitoring thread is started in dry run mode
-	if (!zconf.dryrun) {
+	if (recv_thread_started) {
+		// only join recv thread if not in dryrun mode
 		r = pthread_join(trecv, NULL);
 		if (r != 0) {
 			log_fatal("zmap", "unable to join recv thread");
 			exit(EXIT_FAILURE);
 		}
-		if (!zconf.quiet || zconf.status_updates_file) {
-			pthread_join(tmon, NULL);
-			if (r != 0) {
-				log_fatal("zmap",
+	}
+
+	if (monitor_thread_started) {
+		r = pthread_join(tmon, NULL);
+		if (r != 0) {
+			log_fatal("zmap",
 					  "unable to join monitor thread");
-				exit(EXIT_FAILURE);
-			}
+			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -558,6 +570,7 @@ int main(int argc, char *argv[])
 	}
 	zconf.ignore_invalid_hosts = args.ignore_blocklist_errors_given;
 	SET_BOOL(zconf.dryrun, dryrun);
+	SET_BOOL(zconf.fast_dryrun, fast_dryrun);
 	SET_BOOL(zconf.quiet, quiet);
 	SET_BOOL(zconf.no_header_row, no_header_row);
 	zconf.cooldown_secs = args.cooldown_time_arg;

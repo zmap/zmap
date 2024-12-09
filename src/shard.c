@@ -32,7 +32,7 @@ static void shard_roll_to_valid(shard_t *s)
 {
 	uint64_t current_ip_index = (s->current - 1) >> s->bits_for_port;
 	uint16_t candidate_port = extract_port(s->current - 1, s->bits_for_port);
-	if (current_ip_index < zsend.max_index && candidate_port < zconf.ports->port_count) {
+	if (current_ip_index < zsend.max_ip_index && candidate_port < zconf.ports->port_count) {
 		return;
 	}
 	shard_get_next_target(s);
@@ -105,7 +105,6 @@ void shard_init(shard_t *shard, uint16_t shard_idx, uint16_t num_shards,
 	shard->params.last = (uint64_t)mpz_get_ui(stop_m);
 	shard->params.factor = cycle->generator;
 	shard->params.modulus = cycle->group->prime;
-	//
 	shard->bits_for_port = bits_for_port;
 
 	// Set the shard at the beginning.
@@ -159,7 +158,7 @@ static inline uint64_t shard_get_next_elem(shard_t *shard)
 {
 	shard->current *= shard->params.factor;
 	shard->current %= shard->params.modulus;
-	return (uint64_t)shard->current;
+	return shard->current;
 }
 
 target_t shard_get_next_target(shard_t *shard)
@@ -176,11 +175,17 @@ target_t shard_get_next_target(shard_t *shard)
 			return (target_t){
 			    .ip = 0, .port = 0, .status = ZMAP_SHARD_DONE};
 		}
+		if (candidate >= zsend.max_target_index) {
+			// If the candidate is out of bounds, re-roll. This will happen since we choose primes/moduli that are
+			// larger than the number of allowed targets. The IP is bounded below by checking against zsend.max_ip_index.
+			continue;
+		}
+		// Good candidate, proceed with it.
 		uint32_t candidate_ip =
 		    extract_ip(candidate - 1, shard->bits_for_port);
 		uint16_t candidate_port =
 		    extract_port(candidate - 1, shard->bits_for_port);
-		if (candidate_ip < zsend.max_index &&
+		if (candidate_ip < zsend.max_ip_index &&
 		    candidate_port < zconf.ports->port_count) {
 			shard->iterations++;
 			return (target_t){
