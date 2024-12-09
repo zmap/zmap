@@ -22,6 +22,7 @@
 #include <json.h>
 
 #include <pthread.h>
+#include <stdbool.h>
 
 #include "../lib/includes.h"
 #include "../lib/blocklist.h"
@@ -222,21 +223,27 @@ static void start_zmap(void)
 	uint32_t cpu = 0;
 	pthread_t *tsend, trecv, tmon;
 	int r;
-	recv_arg_t *recv_arg = xmalloc(sizeof(recv_arg_t));
-	recv_arg->cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
-	cpu += 1;
-	r = pthread_create(&trecv, NULL, start_recv, recv_arg);
-	if (r != 0) {
-		log_fatal("zmap", "unable to create recv thread");
-	}
-	for (;;) {
-		pthread_mutex_lock(&recv_ready_mutex);
-		if (zconf.recv_ready) {
-			pthread_mutex_unlock(&recv_ready_mutex);
-			break;
+	bool monitor_thread_started = (!zconf.quiet || zconf.status_updates_file) && (!zconf.dryrun || zconf.fast_dryrun);
+	bool recv_thread_started = !zconf.dryrun || monitor_thread_started; // monitor thread needs recv thread to exit
+	if (recv_thread_started) {
+		// only start recv thread if not in dryrun mode
+		recv_arg_t *recv_arg = xmalloc(sizeof(recv_arg_t));
+		recv_arg->cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
+		cpu += 1;
+		r = pthread_create(&trecv, NULL, start_recv, recv_arg);
+		if (r != 0) {
+			log_fatal("zmap", "unable to create recv thread");
 		}
-		pthread_mutex_unlock(&recv_ready_mutex);
+		for (;;) {
+			pthread_mutex_lock(&recv_ready_mutex);
+			if (zconf.recv_ready) {
+				pthread_mutex_unlock(&recv_ready_mutex);
+				break;
+			}
+			pthread_mutex_unlock(&recv_ready_mutex);
+		}
 	}
+
 #ifdef PFRING
 	pfring_zc_worker *zw = pfring_zc_run_balancer(
 	    zconf.pf.queues, &zconf.pf.send, zconf.senders, 1,
@@ -266,15 +273,18 @@ static void start_zmap(void)
 	}
 	log_debug("zmap", "%d sender threads spawned", zconf.senders);
 
-	monitor_init();
-	mon_start_arg_t *mon_arg = xmalloc(sizeof(mon_start_arg_t));
-	mon_arg->it = it;
-	mon_arg->recv_ready_mutex = &recv_ready_mutex;
-	mon_arg->cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
-	int m = pthread_create(&tmon, NULL, start_mon, mon_arg);
-	if (m != 0) {
-		log_fatal("zmap", "unable to create monitor thread");
-		exit(EXIT_FAILURE);
+	if (monitor_thread_started) {
+		// we'll print monitor for fast-dryrun so we can watch the long-running long tests OR under normal usage
+		monitor_init();
+		mon_start_arg_t *mon_arg = xmalloc(sizeof(mon_start_arg_t));
+		mon_arg->it = it;
+		mon_arg->recv_ready_mutex = &recv_ready_mutex;
+		mon_arg->cpu = zconf.pin_cores[cpu % zconf.pin_cores_len];
+		int m = pthread_create(&tmon, NULL, start_mon, mon_arg);
+		if (m != 0) {
+			log_fatal("zmap", "unable to create monitor thread");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 #ifndef PFRING
@@ -295,16 +305,20 @@ static void start_zmap(void)
 	pfring_zc_sync_queue(zconf.pf.send, tx_only);
 	log_debug("zmap", "send queue flushed");
 #endif
-	r = pthread_join(trecv, NULL);
-	if (r != 0) {
-		log_fatal("zmap", "unable to join recv thread");
-		exit(EXIT_FAILURE);
+	if (recv_thread_started) {
+		// only join recv thread if not in dryrun mode
+		r = pthread_join(trecv, NULL);
+		if (r != 0) {
+			log_fatal("zmap", "unable to join recv thread");
+			exit(EXIT_FAILURE);
+		}
 	}
-	if (!zconf.quiet || zconf.status_updates_file) {
+
+	if (monitor_thread_started) {
 		r = pthread_join(tmon, NULL);
 		if (r != 0) {
 			log_fatal("zmap",
-				  "unable to join monitor thread");
+					  "unable to join monitor thread");
 			exit(EXIT_FAILURE);
 		}
 	}
