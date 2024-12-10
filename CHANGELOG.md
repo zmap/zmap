@@ -251,3 +251,11 @@ ZMap 4.1.0 contains a number of bug fixes and performance enhancements, especial
 * Handle upgrade path for blacklist to blocklist by @phillip-stephens in https://github.com/zmap/zmap/pull/895
 * Fixes ubuntu docker base image versions in github tests by @phillip-stephens in https://github.com/zmap/zmap/pull/898
 * Fix Mac build CI step by @phillip-stephens in https://github.com/zmap/zmap/pull/906
+
+
+# 4.3.1 2024-12-10
+
+## BUGFIX
+
+* Missed an uint32 which caused multi-port scans to end early by @phillip-stephens in https://github.com/zmap/zmap/pull/914
+* Fix for #913 (where a handful of targets were scanned twice) and added IPv4 scan coverage integration test and python wrapper with --fast-dryrun by @phillip-stephens in https://github.com/zmap/zmap/pull/916
