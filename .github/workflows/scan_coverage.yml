@@ -1,0 +1,32 @@
+name: Daily ZMap Coverage Test
+# This workflow is triggered  daily against main
+# It tests that in --fast-dryrun mode that ZMap scans all expected IPs+ports and doesn't scan targets multiple times
+# This test takes a while to run
+
+on:
+  # Allow manual triggering via the GitHub Actions UI
+  workflow_dispatch:
+
+  # Schedule the workflow to run once per day
+  schedule:
+    - cron: "0 0 * * *" # Adjust the time as needed (this example runs at midnight UTC)
+
+
+env:
+  ENABLE_DEVELOPMENT: ON
+  ENABLE_LOG_TRACE: ON
+  WITH_AES_HW: ON
+
+jobs:
+  example_job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Run Scan Coverage Tests
+        run: |
+          docker build -t coverage-container -f .github/workflows/scan_coverage_pytest.Dockerfile .
+          docker run coverage-container
+          

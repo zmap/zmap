@@ -254,6 +254,8 @@ targets.</p>
 <dt> <code>-C</code>, <code>--config=filename</code></dt><dd><p> Read a configuration file, which can specify any other options.</p></dd>
 <dt> <code>-d</code>, <code>--dryrun</code></dt><dd><p> Print out each packet to stdout instead of sending it (useful for
  debugging)</p></dd>
+<dt> <code>--fast-dryrun</code></dt><dd><p> Don't actually send packets, print out a binary representation probe dst
+ IP and dst Port. Used for faster integration tests, not for general use.</p></dd>
 <dt> <code>--max-sendto-failures</code></dt><dd><p> Maximum NIC sendto failures before scan is aborted</p></dd>
 <dt> <code>--min-hitrate</code></dt><dd><p> Minimum hitrate that scan can hit before scan is aborted</p></dd>
 <dt> <code>--cores</code></dt><dd><p> Comma-separated list of cores to pin to</p></dd>
@@ -311,7 +313,7 @@ decreasing by 5%.</p>
 
   <ol class='man-decor man-foot man foot'>
     <li class='tl'>ZMap</li>
-    <li class='tc'>November 2024</li>
+    <li class='tc'>December 2024</li>
     <li class='tr'>zmap(1)</li>
   </ol>
 
