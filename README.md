@@ -31,10 +31,7 @@ Installation
 ------------
 
 The latest stable release of ZMap is  [4.3.1](https://github.com/zmap/zmap/releases/tag/v4.3.1) and supports Linux, macOS, and
-BSD. 
-
-**Instructions on building ZMap from source** can be found in [INSTALL](INSTALL.md).
-
+BSD. See [INSTALL](INSTALL.md) for instructions on to install ZMap through a package manager or from source.
 
 Architecture
 ------------
