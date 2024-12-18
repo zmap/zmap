@@ -18,7 +18,7 @@ env:
   WITH_AES_HW: ON
 
 jobs:
-  example_job:
+  daily_scan_coverage_test:
     runs-on: ubuntu-latest
 
     steps:
