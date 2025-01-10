@@ -185,7 +185,7 @@ static inline struct ip *get_ip_header(const u_char *packet, uint32_t len)
 static inline struct tcphdr *get_tcp_header(const struct ip *ip_hdr,
 					    uint32_t len)
 {
-	// buf not large enough to contain expected udp header
+	// buf not large enough to contain expected tcp header
 	if ((4 * ip_hdr->ip_hl + sizeof(struct tcphdr)) > len) {
 		return NULL;
 	}
@@ -205,7 +205,7 @@ static inline struct udphdr *get_udp_header(const struct ip *ip_hdr,
 static inline struct icmp *get_icmp_header(const struct ip *ip_hdr,
 					   uint32_t len)
 {
-	// buf not large enough to contain expected udp header
+	// buf not large enough to contain expected icmp header
 	if ((4 * ip_hdr->ip_hl + sizeof(struct icmp)) > len) {
 		return NULL;
 	}
