@@ -66,7 +66,7 @@ int icmp_global_initialize(struct state_conf *conf)
 			log_error("icmp",
 				  "unable to get size of ICMP data file '%s'",
 				  c);
-		fclose(inp);
+			fclose(inp);
 			return EXIT_FAILURE;
 		}
 		size_t input_size = ftell(inp);
@@ -75,13 +75,13 @@ int icmp_global_initialize(struct state_conf *conf)
 			    "icmp",
 			    "input file larger than %d bytes and will not fit on the wire (%llu bytes provided)",
 			    ICMP_MAX_PAYLOAD_LEN, input_size);
-		fclose(inp);
+			fclose(inp);
 			return EXIT_FAILURE;
 		}
 		if (fseek(inp, 0, SEEK_SET)) {
 			log_error("icmp", "unable to read ICMP data file '%s'",
 				  c);
-		fclose(inp);
+			fclose(inp);
 			return EXIT_FAILURE;
 		}
 		icmp_payload = xmalloc(ICMP_MAX_PAYLOAD_LEN);
