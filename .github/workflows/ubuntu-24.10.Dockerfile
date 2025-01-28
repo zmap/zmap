@@ -1,4 +1,4 @@
-FROM arm64v8/ubuntu:24.10
+FROM ubuntu:24.10
 # Set non-interactive mode so that apt-get does not prompt for input
 ARG DEBIAN_FRONTEND=noninteractive
 
