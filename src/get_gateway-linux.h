@@ -31,20 +31,25 @@ int read_nl_sock(int sock, char *buf, int buf_len)
 			log_debug("get-gw", "recv failed: %s", strerror(errno));
 			return -1;
 		}
-		struct nlmsghdr *nlhdr = (struct nlmsghdr *)pbuf;
-		if (NLMSG_OK(nlhdr, ((unsigned int)len)) == 0 ||
-		    nlhdr->nlmsg_type == NLMSG_ERROR) {
-			log_debug("get-gw", "recv failed: %s", strerror(errno));
-			return -1;
-		}
-		if (nlhdr->nlmsg_type == NLMSG_DONE) {
-			break;
-		} else {
-			msg_len += len;
-			pbuf += len;
-		}
-		if ((nlhdr->nlmsg_flags & NLM_F_MULTI) == 0) {
-			break;
+		int bytes_read = 0;
+		while (bytes_read < len) {
+			struct nlmsghdr *nlhdr = (struct nlmsghdr *)pbuf;
+			if (NLMSG_OK(nlhdr, ((unsigned int)len)) == 0 ||
+				nlhdr->nlmsg_type == NLMSG_ERROR) {
+				log_debug("get-gw", "recv failed: %s", strerror(errno));
+				return -1;
+			}
+			if (nlhdr->nlmsg_type == NLMSG_DONE) {
+				return msg_len;
+			} else {
+				msg_len += nlhdr->nlmsg_len;
+				pbuf += nlhdr->nlmsg_len;
+				bytes_read += nlhdr->nlmsg_len;
+			}
+			if ((nlhdr->nlmsg_flags & NLM_F_MULTI) == 0) {
+				return msg_len;
+			}
+
 		}
 	} while (1);
 	return msg_len;
