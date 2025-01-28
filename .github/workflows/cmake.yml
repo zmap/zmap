@@ -87,6 +87,16 @@ jobs:
           docker build -t ubuntu-24.04-container -f .github/workflows/ubuntu-24.04.Dockerfile .
           docker run ubuntu-24.04-container
 
+  build-ubuntu-24-10:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Compilation
+        run: |
+          docker build -t ubuntu-24.10-container -f .github/workflows/ubuntu-24.10.Dockerfile .
+          docker run ubuntu-24.10-container
+
   build-debian:
     runs-on: ubuntu-latest
     steps:
