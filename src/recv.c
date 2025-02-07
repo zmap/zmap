@@ -62,7 +62,7 @@ void handle_packet(uint32_t buflen, const u_char *bytes,
 		}
 	}
 
-	uint32_t validation[VALIDATE_BYTES / sizeof(uint8_t)];
+	uint32_t validation[VALIDATE_BYTES / sizeof(uint32_t)];
 	// TODO: for TTL exceeded messages, ip_hdr->saddr is going to be
 	// different and we must calculate off potential payload message instead
 	validate_gen(ip_hdr->ip_dst.s_addr, ip_hdr->ip_src.s_addr, src_port,
