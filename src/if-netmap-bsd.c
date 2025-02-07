@@ -117,17 +117,16 @@ bool if_stats_have_recv_ctr(if_stats_ctx_t *ctx)
 	return ctx->hwstats;
 }
 
-int if_stats_get(if_stats_ctx_t *ctx, uint32_t *ps_recv, uint32_t *ps_drop, uint32_t *ps_ifdrop)
+int if_stats_get(if_stats_ctx_t *ctx, uint64_t *ps_recv, uint64_t *ps_drop, uint64_t *ps_ifdrop)
 {
 	struct if_data ifd;
 	bzero(&ifd, sizeof(ifd));
 	fetch_if_data(&ifd, ctx->ifname, ctx->fd);
 
 	if (ctx->hwstats) {
-		*ps_recv = (uint32_t)(ifd.ifi_ipackets - ctx->ifi_ipackets);
+		*ps_recv = ifd.ifi_ipackets - ctx->ifi_ipackets;
 	}
-	*ps_drop = (uint32_t)(ifd.ifi_iqdrops - ctx->ifi_iqdrops);
-	*ps_ifdrop = (uint32_t)(ifd.ifi_ierrors - ctx->ifi_ierrors +
-				ifd.ifi_oerrors - ctx->ifi_oerrors);
+	*ps_drop = ifd.ifi_iqdrops - ctx->ifi_iqdrops;
+	*ps_ifdrop = ifd.ifi_ierrors - ctx->ifi_ierrors + ifd.ifi_oerrors - ctx->ifi_oerrors;
 	return 0;
 }
