@@ -206,15 +206,14 @@ bool if_stats_have_recv_ctr(UNUSED if_stats_ctx_t *ctx)
 	return false;
 }
 
-int if_stats_get(if_stats_ctx_t *ctx, UNUSED uint32_t *ps_recv, uint32_t *ps_drop, uint32_t *ps_ifdrop)
+int if_stats_get(if_stats_ctx_t *ctx, UNUSED uint64_t *ps_recv, uint64_t *ps_drop, uint64_t *ps_ifdrop)
 {
 	struct rtnl_link_stats64 rtlstats64;
 	memset(&rtlstats64, 0, sizeof(rtlstats64));
 	fetch_stats64(&rtlstats64, ctx->ifname, ctx->nlrtfd);
 
-	//*ps_recv = (uint32_t)(rtlstats64.rx_packets - ctx->rx_packets);
-	*ps_drop = (uint32_t)(rtlstats64.rx_dropped - ctx->rx_dropped);
-	*ps_ifdrop = (uint32_t)(rtlstats64.rx_errors - ctx->rx_errors +
-				rtlstats64.tx_errors - ctx->tx_errors);
+	//*ps_recv = rtlstats64.rx_packets - ctx->rx_packets;
+	*ps_drop = rtlstats64.rx_dropped - ctx->rx_dropped;
+	*ps_ifdrop = rtlstats64.rx_errors - ctx->rx_errors + rtlstats64.tx_errors - ctx->tx_errors;
 	return 0;
 }

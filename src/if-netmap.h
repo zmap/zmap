@@ -49,7 +49,7 @@ bool if_stats_have_recv_ctr(if_stats_ctx_t *ctx);
 // netmap mode.  In that case, *ps_recv* will not be set.
 // Check if_stats_have_recv_ctr() for whether the interface
 // supports received packet count in netmap mode.
-int if_stats_get(if_stats_ctx_t *ctx, uint32_t *ps_recv, uint32_t *ps_drop, uint32_t *ps_ifdrop);
+int if_stats_get(if_stats_ctx_t *ctx, uint64_t *ps_recv, uint64_t *ps_drop, uint64_t *ps_ifdrop);
 
 // Clean up and invalidate the if_stats_* context.
 void if_stats_fini(if_stats_ctx_t *ctx);
