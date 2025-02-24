@@ -48,7 +48,7 @@ pca_st_5632.pkt         This probe triggers a response from PC Anywhere services
 pcanywhere_5632.pkt
 portmap_111.pkt         This probe triggers a response from SunRPC portmapper services on UDP port 111
 qotd_17.pkt
-quicping.pkt           This probe consists of a QUIC initial packet with version 0xbabababa to force Version Negotiation. Generated using https://github.com/kelmenhorst/quic-ping/
+quic_ping_443.pkt           This probe consists of a QUIC initial packet with version 0xbabababa to force Version Negotiation. Generated using https://github.com/kelmenhorst/quic-ping/
 rdp_3389.pkt
 ripv1_520.pkt       	This probe triggers a response from the RIPv1 enabled routers/devices on UDP port 520
 sentinel_5093.pkt       This probe triggers a response from the Sentinel license manager service on UDP port 5093
