@@ -32,6 +32,9 @@
 #define MAX_UDP_PAYLOAD_LEN 1472
 #define ICMP_HEADER_SIZE 8
 
+#define JAN_1970 2208988800UL /* 1970 - 1900 in seconds. See RFC5905. */
+#define FRAC 4294967296.      /* 2^32 as a double */
+
 static uint8_t *udp_fixed_payload = NULL;
 static size_t udp_fixed_payload_len = 0;
 
@@ -77,7 +80,7 @@ static bool should_validate_src_port = SOURCE_PORT_VALIDATION_MODULE_DEFAULT
 probe_module_t module_udp;
 
 // Field definitions for template parsing and displaying usage
-static uint32_t udp_num_template_field_types = 12;
+static uint32_t udp_num_template_field_types = 16;
 static udp_payload_field_type_def_t udp_payload_template_fields[] = {
     {.name = "SADDR_N",
      .ftype = UDP_SADDR_N,
@@ -138,7 +141,11 @@ static udp_payload_field_type_def_t udp_payload_template_fields[] = {
     {.name = "UNIXTIME_USEC",
      .ftype = UDP_UNIXTIME_USEC,
      .max_length = 4,
-     .desc = "Microsecond part of Unix time in network byte order"}};
+     .desc = "Microsecond part of Unix time in network byte order"},
+    {.name = "NTP_TIMESTAMP",
+     .ftype = UDP_NTP_TIMESTAMP,
+     .max_length = 8,
+     .desc = "64 bit NTP timestamp in network byte order (RFC5905)"}};
 
 void udp_set_num_ports(int x) { num_ports = x; }
 
@@ -712,6 +719,25 @@ int udp_template_build(udp_payload_template_t *t, char *out, unsigned int len,
 			} else {
 				*i32 = htonl(tv.tv_usec);
 			}
+			p += 4;
+			break;
+
+		case UDP_NTP_TIMESTAMP:
+			if (p + 8 >= max) {
+				full = 1;
+				break;
+			}
+
+			if (tv.tv_sec == 0) {
+				gettimeofday(&tv, NULL);
+			}
+
+			u32 = (uint32_t *)p;
+			*u32 = htonl((uint32_t)(tv.tv_sec + JAN_1970));
+			p += 4;
+
+			u32 = (uint32_t *)p;
+			*u32 = htonl((uint32_t)(tv.tv_usec / 1e6 * FRAC));
 			p += 4;
 			break;
 		}
