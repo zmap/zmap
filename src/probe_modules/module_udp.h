@@ -37,7 +37,8 @@ typedef enum udp_payload_field_type {
 	UDP_RAND_ALPHANUM,
 	UDP_HEX,
 	UDP_UNIXTIME_SEC,
-	UDP_UNIXTIME_USEC
+	UDP_UNIXTIME_USEC,
+	UDP_NTP_TIMESTAMP
 } udp_payload_field_type_t;
 
 typedef struct udp_payload_field_type_def {
