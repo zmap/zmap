@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.12 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.5.0 FATAL_ERROR)
 project(ZMAP C)
 set(ZMAP_VERSION DEVELOPMENT) # Change DEVELOPMENT to version number for release
 
