@@ -68,7 +68,11 @@ Install the required dependencies with the following commands.
 
 ### Building and Installing ZMap
 
-Once these prerequisites are installed, ZMap can be compiled by running:
+Once these prerequisites are installed, clone the ZMap repository and navigate into the cloned directory.
+  ```sh
+  cd zmap
+  ```
+Then, ZMap can be compiled by running:
   ```sh
   cmake .
   make -j4
