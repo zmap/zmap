@@ -1,47 +1,33 @@
-Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Source: <url://example.com>
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: zmap
-Upstream-Contact: <preferred name and address to reach the upstream project>
+Source: https://zmap.io/
 
-Files:
- *
-Copyright:
- <years> <put author's name and email here>
- <years> <likewise for another author>
-License: <special license>
- <Put the license of the package here indented by 1 space>
- <This follows the format of Description: lines in control file>
- .
- <Including paragraphs>
+Files: *
+Copyright: 2013 Regents of the University of Michigan
+License: Apache-2.0
 
-# If you want to use GPL v2 or later for the /debian/* files use
-# the following clauses, or change it to suit. Delete these two lines
-Files:
- debian/*
-Copyright:
- 2025 Phillip Stephens <phillip@cs.stanford.edu>
-License: GPL-2+
- This package is free software; you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation; either version 2 of the License, or
- (at your option) any later version.
- .
- This package is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
- .
- You should have received a copy of the GNU General Public License
- along with this program. If not, see <https://www.gnu.org/licenses/>
-Comment:
- On Debian systems, the complete text of the GNU General
- Public License version 2 can be found in "/usr/share/common-licenses/GPL-2".
+Files: lib/rijndael-alg-fst.c lib/rijndael-alg-fst.h
+Copyright: public domain
+License: public-domain
 
-# Please also look if there are files or directories which have a
-# different copyright/license attached and list them here.
-# Please avoid picking licenses with terms that are more restrictive than the
-# packaged work, as it may make Debian's contributions unacceptable upstream.
-#
-# If you need, there are some extra license texts available in two places:
-#   /usr/share/debhelper/dh_make/licenses/
-#   /usr/share/common-licenses/
+Files: debian/*
+Copyright: 2025 Phillip Stephens <phillip@cs.stanford.edu>, 2014-2015 Dariusz Dwornikowski <dariusz.dwornikowski@cs.put.poznan.pl>, 2013 Clint Adams <clint@debian.org>
+License: Apache-2.0
+
+License: Apache-2.0
+ See /usr/share/common-licenses/Apache-2.0
+
+License: public-domain
+ This code is hereby placed in the public domain.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE AUTHORS ''AS IS'' AND ANY EXPRESS
+ OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE
+ LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+ BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+ OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
+ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

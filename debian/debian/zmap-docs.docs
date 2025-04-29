@@ -1,2 +1,0 @@
-README.Debian
-README.source

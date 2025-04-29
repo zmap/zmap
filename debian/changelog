@@ -1,5 +1,83 @@
-zmap (4.3.2-1) UNRELEASED; urgency=medium
+zmap (4.3.3-1) unstable; urgency=medium
 
-  * Initial release. (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+  * Many bug fixes and general enhancements
+  * added ability to do multi-port scans
 
- -- Phillip Stephens <phillip@cs.stanford.edu>  Tue, 29 Apr 2025 20:28:03 +0000
+ -- Phillip Stephens <phillip@cs.stanford.edu>  Tue, 29 Apr 2025 15:03:37 -0700
+
+zmap (2.1.1-2.1) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * d/p/fix-build-with-json-c-0.14.patch: Fix FTBFS with libjson-c.
+    (Closes: #1058349)
+
+ -- Sergio Durigan Junior <sergiodj@debian.org>  Tue, 23 Jan 2024 15:33:37 -0500
+
+zmap (2.1.1-2) unstable; urgency=medium
+
+  * Refreshed 02fix_conffiles to install conffile (Closes: #802641)
+
+ -- Dariusz Dwornikowski <dariusz.dwornikowski@cs.put.poznan.pl>  Thu, 29 Oct 2015 09:07:58 +0100
+
+zmap (2.1.1-1) unstable; urgency=medium
+
+  * Imported Upstream version 2.1.1
+  * d/patches:
+    - 01fix_ronn_files removed, fixed in upstream
+    - 02fix_conffiles refreshed
+    - fix_build_in_Debian added to fix cmake paths  
+  * wrap-and-sorted 
+  * added udp-probes to d/zmap.examples
+
+ -- Dariusz Dwornikowski <dariusz.dwornikowski@cs.put.poznan.pl>  Fri, 02 Oct 2015 15:07:14 +0200
+
+zmap (2.1.0-1) unstable; urgency=medium
+
+  * Imported Upstream version 2.1.0
+  * d/control: Bump standards to 3.9.6, no changes needed
+  * d/patches/01fix_ronn_files.patch: Generating man pages with whatis
+    header
+  * d/patches/02fix_conffiles.patch: Fix for conffiles installing in etc
+
+ -- Dariusz Dwornikowski <dariusz.dwornikowski@cs.put.poznan.pl>  Tue, 08 Sep 2015 16:16:13 +0200
+
+zmap (1.2.1-1) unstable; urgency=medium
+
+  * Spelling patch added
+  * Imported Upstream version 1.2.1
+
+ -- Dariusz Dwornikowski <dariusz.dwornikowski@cs.put.poznan.pl>  Mon, 30 Jun 2014 13:22:28 +0200
+
+zmap (1.2.0-1) unstable; urgency=medium
+
+  * Imported Upstream version 1.2.0
+
+ -- Dariusz Dwornikowski <dariusz.dwornikowski@cs.put.poznan.pl>  Mon, 10 Mar 2014 20:31:27 +0100
+
+zmap (1.1.2-2) unstable; urgency=medium
+
+  * Added json support
+  * Added patch to fix spelling error in redis.c
+  * Added redis support
+
+ -- Dariusz Dwornikowski <dariusz.dwornikowski@cs.put.poznan.pl>  Thu, 06 Mar 2014 12:46:42 +0100
+
+zmap (1.1.2-1) unstable; urgency=medium
+
+  * New maintainer (Closes: #738468)
+  * Added watch file
+  * debian/copyright added new maintainer
+  * debian/control
+    - spelling fix
+    - fixed Vcs fields to be canonical
+  * debian/patches/02-fix-hyphenation-in-man
+    - fixes hyphen-used-as-minus-sign in zmap.1
+  * New upstream version 
+
+ -- Dariusz Dwornikowski <dariusz.dwornikowski@cs.put.poznan.pl>  Tue, 18 Feb 2014 23:35:49 +0100
+
+zmap (1.1.0-1) unstable; urgency=low
+
+  * Initial release.
+
+ -- Clint Adams <clint@debian.org>  Tue, 10 Dec 2013 21:40:04 -0500

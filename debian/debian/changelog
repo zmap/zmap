@@ -1,5 +1,0 @@
-zmap (4.3.2-1) UNRELEASED; urgency=medium
-
-  * Initial release. (Closes: #nnnn)  <nnnn is the bug number of your ITP>
-
- -- Phillip Stephens <phillip@cs.stanford.edu>  Tue, 29 Apr 2025 20:28:03 +0000

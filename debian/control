@@ -1,21 +1,33 @@
 Source: zmap
-Section: unknown
+Section: net
 Priority: optional
 Maintainer: Phillip Stephens <phillip@cs.stanford.edu>
-Rules-Requires-Root: no
-Build-Depends:
- debhelper-compat (= 13),
- cmake,
-Standards-Version: 4.6.2
-Homepage: <insert the upstream URL, if relevant>
-#Vcs-Browser: https://salsa.debian.org/debian/zmap
-#Vcs-Git: https://salsa.debian.org/debian/zmap.git
+Build-Depends: build-essential,
+               byacc,
+               cmake (>= 3.5.0),
+               flex,
+               gengetopt,
+               libgmp3-dev,
+               libjson-c-dev,
+               libpcap-dev,
+               libunistring-dev,
+               libjudy-dev,
+Standards-Version: 3.9.6
+Homepage: https://zmap.io/
+Vcs-Git: git://anonscm.debian.org/collab-maint/zmap.git
+Vcs-Browser: http://anonscm.debian.org/gitweb/?p=collab-maint/zmap.git;a=summary
 
 Package: zmap
 Architecture: any
-Multi-Arch: foreign
-Depends:
- ${shlibs:Depends},
- ${misc:Depends},
-Description: <insert up to 60 chars description>
- <Insert long description, indented with spaces.>
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
+Description: network scanner for researchers
+ ZMap is a network scanner that enables researchers to
+ easily perform Internet-wide network studies. With a single
+ machine and a well provisioned network uplink, ZMap is capable of
+ performing a complete scan of the IPv4 address space in under 45
+ minutes, approaching the theoretical limit of gigabit Ethernet.
+ .
+ ZMap can be used to study protocol adoption over time, monitor
+ service availability, and help people better understand large systems
+ distributed across the Internet.

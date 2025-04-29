@@ -1,0 +1,3 @@
+shlibs:Depends=libc6 (>= 2.38), libgmp10 (>= 2:6.3.0+dfsg), libjson-c5 (>= 0.15), libjudydebian1, libpcap0.8t64 (>= 0.9.8), libunistring5 (>= 1.1)
+misc:Depends=
+misc:Pre-Depends=
