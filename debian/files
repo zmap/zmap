@@ -1,3 +1,3 @@
-zmap-dbgsym_4.3.3-1_amd64.ddeb debug optional automatic=yes
-zmap_4.3.3-1_amd64.buildinfo net optional
-zmap_4.3.3-1_amd64.deb net optional
+zmap-dbgsym_4.3.3-2_arm64.ddeb debug optional automatic=yes
+zmap_4.3.3-2_arm64.buildinfo net optional
+zmap_4.3.3-2_arm64.deb net optional

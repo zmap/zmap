@@ -2,9 +2,9 @@ Source: zmap
 Section: net
 Priority: optional
 Maintainer: Phillip Stephens <phillip@cs.stanford.edu>
-Build-Depends: build-essential,
-               byacc,
+Build-Depends: byacc,
                cmake (>= 3.5.0),
+	       debhelper-compat (= 13),
                flex,
                gengetopt,
                libgmp3-dev,

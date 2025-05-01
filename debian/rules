@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 
 %:
-	dh $@  --parallel
+	dh $@
 
 override_dh_auto_configure:
-	dh_auto_configure -- -DENABLE_HARDENING=ON  -DWITH_JSON=ON -DWITH_REDIS=ON
+	dh_auto_configure -- -DENABLE_HARDENING=ON

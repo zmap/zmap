@@ -1,3 +1,10 @@
+zmap (4.3.3-2) unstable; urgency=medium
+
+  * Build with correct ZMap version 
+  * 
+
+ -- Phillip Stephens <phillip@cs.stanford.edu>  Thu, 01 May 2025 14:09:04 -0700
+
 zmap (4.3.3-1) unstable; urgency=medium
 
   * Many bug fixes and general enhancements
