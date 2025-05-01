@@ -259,3 +259,24 @@ ZMap 4.1.0 contains a number of bug fixes and performance enhancements, especial
 
 * Missed an uint32 which caused multi-port scans to end early by @phillip-stephens in https://github.com/zmap/zmap/pull/914
 * Fix for #913 (where a handful of targets were scanned twice) and added IPv4 scan coverage integration test and python wrapper with --fast-dryrun by @phillip-stephens in https://github.com/zmap/zmap/pull/916
+
+# 4.3.2 2025-01-28
+
+## BUGFIX
+
+* use the x86 ubuntu dockerfile base image, should fix failing daily test by @phillip-stephens in #920
+* Fix typos by @BitHostDev in #923
+* Fix leaks by @rex4539 in #921
+* Fix NETLINK issues in ZMap caused by changes in latest linux kernel by @phillip-stephens in #925
+
+# 4.3.3 2025-04-29
+
+Misc bug fixes and improvements
+
+## ENHANCEMENT
+
+* Add QUIC init probe in #930
+
+## BUGFIX
+
+* Fix size of recv validation from uint32[16] to uint32[4] in #926
