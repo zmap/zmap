@@ -3,7 +3,7 @@
 ## Debian/Ubuntu
 
 1. Enviornment
-You'll need to take these steps from an Ubuntu/Debian VM.
+You'll need to take these steps from an Ubuntu/Debian VM and you'll need a GPG signing key. I'd recommend a local Ubuntu VM with local GPG key, I couldn't figure out how to setup USB passthrough for a Yubikey into a UTM VM.
 
 1. Install deps
 
