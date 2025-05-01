@@ -1,0 +1,2 @@
+version=3
+https://github.com/zmap/zmap/releases .*/archive/v(\d[\d\.]+)\.tar\.gz
