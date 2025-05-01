@@ -2,6 +2,9 @@
 
 ## Debian/Ubuntu
 
+1. Enviornment
+You'll need to take these steps from an Ubuntu/Debian VM.
+
 1. Install deps
 
 ```shell
