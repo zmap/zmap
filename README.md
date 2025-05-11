@@ -7,8 +7,8 @@ ZMap is a fast stateless single packet network scanner designed for Internet-wid
 surveys. On a typical desktop computer with a gigabit Ethernet connection, ZMap
 is capable of scanning the entire public IPv4 address space on a single port in 
 under 45 minutes. For example, sending a TCP SYN packet to every IPv4 address
-on port 25 to find all potential SMTP servers running on that port. With a 
-10gigE connection and [netmap](http://info.iet.unipi.it/~luigi/netmap/) or 
+on port 25 to find potential SMTP servers. With a 
+10gigE connection and either [netmap](http://info.iet.unipi.it/~luigi/netmap/) or 
 [PF_RING](http://www.ntop.org/products/packet-capture/pf_ring/), ZMap can scan 
 the IPv4 address space in under 5 minutes.
 
