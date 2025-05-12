@@ -280,3 +280,9 @@ Misc bug fixes and improvements
 ## BUGFIX
 
 * Fix size of recv validation from uint32[16] to uint32[4] in #926
+
+# 4.3.4 2025-05-12
+
+## ENHANCEMENT
+
+* Have tagged version printed with --version rather than development commit
