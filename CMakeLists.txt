@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5.0 FATAL_ERROR)
 project(ZMAP C)
-set(ZMAP_VERSION DEVELOPMENT) # Change DEVELOPMENT to version number for release
+set(ZMAP_VERSION v4.3.4) # Change DEVELOPMENT to version number for release
 
 option(ENABLE_DEVELOPMENT "Enable development specific compiler and linker flags" OFF)
 option(ENABLE_LOG_TRACE "Enable log trace messages" OFF)
