@@ -19,6 +19,4 @@ aesrand_t *aesrand_init_from_seed(uint64_t);
 
 uint64_t aesrand_getword(aesrand_t *aes);
 
-aesrand_t *aesrand_free(aesrand_t *aes);
-
 #endif
