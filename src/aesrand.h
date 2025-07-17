@@ -15,8 +15,6 @@ typedef struct aesrand aesrand_t;
 
 aesrand_t *aesrand_init_from_seed(uint64_t);
 
-aesrand_t *aesrand_init_from_random(void);
-
 uint64_t aesrand_getword(aesrand_t *aes);
 
 #endif

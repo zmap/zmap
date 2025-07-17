@@ -44,15 +44,6 @@ aesrand_t *aesrand_init_from_seed(uint64_t seed)
 	return _aesrand_init(key);
 }
 
-aesrand_t *aesrand_init_from_random(void)
-{
-       uint8_t key[AES128_KEY_BYTES];
-       if (!random_bytes(key, sizeof(key))) {
-               log_fatal("aesrand", "Couldn't get random bytes");
-       }
-       return _aesrand_init(key);
-}
-
 uint64_t aesrand_getword(aesrand_t *aes)
 {
 	uint64_t retval;
