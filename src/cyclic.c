@@ -177,6 +177,8 @@ const cyclic_group_t *get_group(uint64_t min_size)
 	// Should not reach, final group should always be larger than 2^48
 	// which is max based on 2**32 IPs and 2**16 ports
 	assert(0);
+
+	return 0;
 }
 
 cycle_t make_cycle(const cyclic_group_t *group, aesrand_t *aes)
