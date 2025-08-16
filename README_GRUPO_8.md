@@ -6,6 +6,17 @@
  
 ## Proyecto elegido: ZMap
 
+## Aportes Personales:
+## Omar Larrea
+
+
+## Rommel Arevalo
+La herramienta zmap resulta en una opcion interesante en comparación con la comunmente utilizada para escaneo de red NMAP, ademas de brindarnos mas información para la fase del descubrimiento, misma que puede ser utilizada para diversos laboratorios o ejercicios de pentester.
+
+## Henry Barreno
+
+
+
 **ZMap** es una herramienta de *scanning* de red de código abierto diseñada para realizar escaneos masivos de Internet de manera rápida y eficiente. Permite descubrir dispositivos conectados, servicios expuestos y configuraciones inseguras en cuestión de minutos.
  
 ## Utilidad
