@@ -14,7 +14,7 @@
 La herramienta zmap resulta en una opcion interesante en comparación con la comunmente utilizada para escaneo de red NMAP, ademas de brindarnos mas información para la fase del descubrimiento, misma que puede ser utilizada para diversos laboratorios o ejercicios de pentester.
 
 ## Henry Barreno
-
+ZMap es un escáner de red de alto rendimiento diseñado para realizar exploraciones masivas de Internet de forma rápida y eficiente, gracias a un algoritmo de permutación de direcciones IP basado en aritmética modular que permite recorrer el espacio IPv4 sin repeticiones ni altos consumos de memoria; esta arquitectura le permite enviar más de un millón de paquetes por segundo en hardware convencional, lo que lo convierte en una herramienta idónea para estudios de gran escala como la recolección de certificados TLS, la detección de servicios expuestos y la investigación en seguridad de IoT, diferenciándose de Nmap por priorizar velocidad y amplitud en lugar de profundidad, y consolidándose como una de las herramientas más citadas tanto en el ámbito académico como en la industria de la ciberseguridad
 
 
 **ZMap** es una herramienta de *scanning* de red de código abierto diseñada para realizar escaneos masivos de Internet de manera rápida y eficiente. Permite descubrir dispositivos conectados, servicios expuestos y configuraciones inseguras en cuestión de minutos.
