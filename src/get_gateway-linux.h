@@ -19,7 +19,7 @@
 #include <arpa/inet.h>
 #include <pcap/pcap.h>
 
-#define GW_BUFFER_SIZE 64000
+#define GW_BUFFER_SIZE 256000
 
 int read_nl_sock(int sock, char *buf, int buf_len)
 {
@@ -177,20 +177,21 @@ int _get_default_gw(struct in_addr *gw, char *iface)
 {
 	struct rtmsg req;
 	unsigned int nl_len;
-	char buf[8192];
 	struct nlmsghdr *nlhdr;
 
 	if (!gw || !iface) {
 		return -1;
 	}
+	char *buf = xmalloc(GW_BUFFER_SIZE);
 
 	// Send RTM_GETROUTE request
 	memset(&req, 0, sizeof(req));
 	int sock = send_nl_req(RTM_GETROUTE, 0, &req, sizeof(req));
 
 	// Read responses
-	nl_len = read_nl_sock(sock, buf, sizeof(buf));
+	nl_len = read_nl_sock(sock, buf, GW_BUFFER_SIZE);
 	if (nl_len <= 0) {
+		free(buf);
 		return -1;
 	}
 
@@ -229,10 +230,12 @@ int _get_default_gw(struct in_addr *gw, char *iface)
 		}
 
 		if (has_gw) {
+			free(buf);
 			return 0;
 		}
 		nlhdr = NLMSG_NEXT(nlhdr, nl_len);
 	}
+	free(buf);
 	return -1;
 }
 
