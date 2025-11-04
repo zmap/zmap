@@ -117,7 +117,7 @@ iterator_t *send_init(void)
 	}
 	if (zconf.rate < 2 * zconf.senders * zconf.batch) {
 		// we won't be able to send in a smooth manner at this rate, packets will be bunched up in bursts
-		log_warn("send", "desired rate of %d pps is low relative to number of senders (%u) and batch size (%u) and would result in bursty transmission. "
+		log_info("send", "desired rate of %d pps is low relative to number of senders (%u) and batch size (%u) and would result in bursty transmission. "
 				   "Using 1 sending thread and a packet batch size of 1 to smooth sending rates. "
 				   "There should not be any negative performance impact due to the low sending rates.",
 			 zconf.rate, zconf.senders, zconf.batch);
