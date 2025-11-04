@@ -584,7 +584,7 @@ int main(int argc, char *argv[])
 	SET_IF_GIVEN(zconf.max_runtime, max_runtime);
 	SET_IF_GIVEN(zconf.max_results, max_results);
 	SET_IF_GIVEN(zconf.rate, rate);
-	SET_IF_GIVEN(zconf.packet_streams, probes);
+	SET_IF_GIVEN(zconf.probes_per_target, probes);
 	SET_IF_GIVEN(zconf.status_updates_file, status_updates_file);
 	SET_IF_GIVEN(zconf.retries, retries);
 	SET_IF_GIVEN(zconf.max_sendto_failures, max_sendto_failures);
@@ -696,14 +696,14 @@ int main(int argc, char *argv[])
 				zconf.source_port_last = port;
 			}
 			int num_source_ports = (zconf.source_port_last - zconf.source_port_first) + 1;
-			if (zconf.packet_streams > num_source_ports) {
+			if (zconf.probes_per_target > num_source_ports) {
 				log_fatal("zmap", "The number of probes sent to each target ip/port (%i) "
 						  "must be smaller than the size of the source port range (%u-%u, size: %i). "
 						  "Otherwise, some generated probe packets will be identical.",
-					  zconf.packet_streams,
+					  zconf.probes_per_target,
 					  zconf.source_port_first, zconf.source_port_last,
 					  (zconf.source_port_last - zconf.source_port_first) + 1);
-			} else if (((float)zconf.packet_streams / (float)num_source_ports) > 0.1) {
+			} else if (((float)zconf.probes_per_target / (float)num_source_ports) > 0.1) {
 				log_warn("zmap", "ZMap is configured to use a relatively small number"
 						 " of source ports (fewer than 10x the number of probe packets per target ip/port),"
 						 " which limits the entropy that ZMap has available for "

@@ -266,7 +266,7 @@ int send_run(sock_t st, shard_t *s)
 	struct timespec ts, rem;
 	double send_rate =
 	    (double)zconf.rate /
-	    ((double)zconf.senders * zconf.packet_streams);
+	    (double)zconf.senders;
 	const double slow_rate = 1000; // packets per seconds per thread
 	// at which it uses the slow methods
 	long nsec_per_sec = 1000 * 1000 * 1000;
@@ -321,7 +321,7 @@ int send_run(sock_t st, shard_t *s)
 	}
 	while (1) {
 		// Send however many probes the user requested sent to each target
-		for (int i = 0; i < zconf.packet_streams; i++) {
+		for (int i = 0; i < zconf.probes_per_target; i++) {
 			// Adaptive timing delay
 			if (count && delay > 0) {
 				if (send_rate < slow_rate) {
@@ -444,6 +444,7 @@ int send_run(sock_t st, shard_t *s)
 			} else {
 				batch->len++;
 				if (batch->len == batch->capacity) {
+					// log_debug("send_batch", "sending batch");
 					// batch is full, sending
 					int rc = send_batch(st, batch, attempts);
 					// whether batch succeeds or fails, this was the only attempt. Any re-tries are handled within batch

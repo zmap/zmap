@@ -683,11 +683,11 @@ static int dns_global_initialize(struct state_conf *conf)
 		log_debug("dns", "number of dns questions: %d", num_questions);
 	}
 
-	if (conf->packet_streams % num_questions != 0) {
+	if (conf->probes_per_target % num_questions != 0) {
 		// probe count must be a multiple of the number of DNS questions
 		log_fatal("dns", "number of probes (%d) must be a multiple of the number of DNS questions (%d)."
 				 "Example: '-P 4 --probe-args \"A,google.com;AAAA,cloudflare.com\"'",
-			  conf->packet_streams, num_questions);
+			  conf->probes_per_target, num_questions);
 	}
 	// Setup the global structures
 	dns_packets = xmalloc(sizeof(char *) * num_questions);

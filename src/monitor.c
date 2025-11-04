@@ -139,7 +139,7 @@ double compute_remaining_time(double age, uint64_t packets_sent,
 			double done =
 			    (double)packets_sent /
 			    ((uint64_t)zsend.max_targets *
-			     zconf.packet_streams / zconf.total_shards);
+			     zconf.probes_per_target / zconf.total_shards);
 			remaining[1] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;
 		}
@@ -155,7 +155,7 @@ double compute_remaining_time(double age, uint64_t packets_sent,
 		if (zsend.max_ip_index) {
 			double done =
 			    (double)packets_sent /
-			    ((uint64_t)zsend.max_ip_index * zconf.ports->port_count * zconf.packet_streams /
+			    ((uint64_t)zsend.max_ip_index * zconf.ports->port_count * zconf.probes_per_target /
 				 zconf.total_shards);
 			remaining[4] =
 			    (1. - done) * (age / done) + zconf.cooldown_secs;
@@ -237,13 +237,14 @@ static void export_stats(int_status_t *intrnl, export_status_t *exp,
 		exp->hitrate = 0;
 		exp->app_hitrate = 0;
 	} else if (zconf.dedup_method == DEDUP_METHOD_NONE) {
-			// receive thread won't de-dupe packets, so don't need to care about number of probes
-			exp->hitrate = recv_success * 100.0 /  total_sent;
-			exp->app_hitrate = app_success * 100.0 / total_sent;
+		// receive thread won't de-dupe packets, so don't need to care about number of probes
+		exp->hitrate = (double) recv_success * 100.0 /  (double)total_sent;
+		exp->app_hitrate = app_success * 100.0 / (double)total_sent;
 	} else {
-		// receive thread will de-dupe packets for a given target, so we'll divide by the number of probes to get accurate hit-rate
-		exp->hitrate = recv_success * 100.0 / (total_sent / zconf.packet_streams);
-		exp->app_hitrate = app_success * 100.0 / (total_sent / zconf.packet_streams);
+		// receive thread will de-dupe packets for a given target, so we'll divide by the number of probes to get number of unique targets scanned
+		double targets_probed = ceil((double)total_sent / (double)zconf.probes_per_target);
+		exp->hitrate = (double)recv_success * 100.0 / targets_probed;
+		exp->app_hitrate = app_success * 100.0 / targets_probed;
 	}
 
 	if (age > WARMUP_PERIOD && exp->hitrate < zconf.min_hitrate) {

@@ -168,8 +168,8 @@ void json_metadata(FILE *file)
 	json_object_object_add(obj, "failure_total",
 			       json_object_new_int64(zrecv.failure_total));
 
-	json_object_object_add(obj, "packet_streams",
-			       json_object_new_int(zconf.packet_streams));
+	json_object_object_add(obj, "probes_per_target",
+			       json_object_new_int(zconf.probes_per_target));
 	json_object_object_add(
 	    obj, "probe_module",
 	    json_object_new_string(
