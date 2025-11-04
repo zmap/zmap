@@ -320,7 +320,7 @@ int send_run(sock_t st, shard_t *s)
 		}
 	}
 	while (1) {
-
+		// Send however many probes the user requested sent to each target
 		for (int i = 0; i < zconf.packet_streams; i++) {
 			// Adaptive timing delay
 			if (count && delay > 0) {
@@ -442,16 +442,8 @@ int send_run(sock_t st, shard_t *s)
 					batch->len = 0;
 				}
 			} else {
-				// TODO - We'll likely want to handle the case where users set a rate < 64 (our default batch size) which
-				// means we don't REALLY send at the expected rate. Maybe only enable batching (a batch size of > 1) when
-				// our rate exceeds a given threshold?
-				// Finding - batch size is per thread, so with 4 threads and default batch size of 64, we send 256 packets at a time.
-				// This really messes with our true packet rate-limiting when our rate limit is low.
-				// ADDITIONALLY, because we have no syncronization between threads, the result is a burst of each thread sending its packets
-				// all at once (all threads send at once and then wait the adaptive delay). With with 4 threads and a batch size of 1, --rate = 1, you get all threads send 1 packet, wait 4 seconds, send 4, etc.
 				batch->len++;
 				if (batch->len == batch->capacity) {
-					log_warn("sending batch", "Sending batch of size %u", batch->len);
 					// batch is full, sending
 					int rc = send_batch(st, batch, attempts);
 					// whether batch succeeds or fails, this was the only attempt. Any re-tries are handled within batch
