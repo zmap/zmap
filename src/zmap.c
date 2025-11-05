@@ -666,6 +666,9 @@ int main(int argc, char *argv[])
 			log_fatal("zmap", "unknown value for --validate-source-port, use either \"enable\" or \"disable\"");
 		}
 	}
+	if (zconf.probes_per_target < 1) {
+		log_fatal("zmap", "number of probes per target must be at least 1, else there's nothing to do");
+	}
 	if (zconf.probe_module->port_args) {
 		if (args.source_port_given) {
 			char *dash = strchr(args.source_port_arg, '-');
