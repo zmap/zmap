@@ -168,7 +168,10 @@ void json_metadata(FILE *file)
 	json_object_object_add(obj, "failure_total",
 			       json_object_new_int64(zrecv.failure_total));
 
-	json_object_object_add(obj, "probes_per_target",
+	// Packet Streams was the old name for this field. For clarity, I've renamed this field to probes_per_target
+	// throughout the codebase, but to maintain backward compatibility with existing JSON metadata consumers,
+	// we'll continue to use the old name here in metadata.
+	json_object_object_add(obj, "packet_streams",
 			       json_object_new_int(zconf.probes_per_target));
 	json_object_object_add(
 	    obj, "probe_module",
