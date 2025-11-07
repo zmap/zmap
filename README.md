@@ -3,6 +3,12 @@ ZMap: The Internet Scanner
 
 ![Build Status](https://github.com/zmap/zmap/actions/workflows/cmake.yml/badge.svg)
 
+> [!CAUTION]
+> Performing Internet-wide scans can have serious ethical and operational implications. While ZMap defaults to usually safe
+> settings, it is your responsibility to ensure that you're a good internet citizen. Rules of thumb are to scan at the
+> slowest speed necessary, scan slower if you're scanning a smaller target space, and provide a way for network operators
+> to opt-out. More information can be found [here](https://github.com/zmap/zmap/wiki/Getting-Started-Guide#%EF%B8%8F-warning-on-scanning-rate).
+
 ZMap is a fast stateless single packet network scanner designed for Internet-wide network
 surveys. On a typical desktop computer with a gigabit Ethernet connection, ZMap
 is capable of scanning the entire public IPv4 address space on a single port in 
@@ -11,12 +17,6 @@ on port 25 to find potential SMTP servers. With a
 10gigE connection and either [netmap](http://info.iet.unipi.it/~luigi/netmap/) or 
 [PF_RING](http://www.ntop.org/products/packet-capture/pf_ring/), ZMap can scan 
 the IPv4 address space in under 5 minutes.
-
-> [!WARNING]
-> Performing Internet-wide scans can have serious ethical and operational implications. While ZMap defaults to usually safe
-> settings, it is your responsibility to ensure that you're a good internet citizen. Rules of thumb are to scan at the
-> slowest speed necessary, scan slower if you're scanning a smaller target space, and provide a way for network operators
-> to opt-out. More information can be found [here](https://github.com/zmap/zmap/wiki/Getting-Started-Guide#%EF%B8%8F-warning-on-scanning-rate).
 
 ZMap operates on GNU/Linux, Mac OS, and BSD. ZMap currently has fully implemented
 probe modules for TCP SYN scans, ICMP, DNS queries, UPnP, BACNET, and can send a
