@@ -12,6 +12,12 @@ on port 25 to find potential SMTP servers. With a
 [PF_RING](http://www.ntop.org/products/packet-capture/pf_ring/), ZMap can scan 
 the IPv4 address space in under 5 minutes.
 
+> [!WARNING]
+> Performing Internet-wide scans can have serious ethical and operational implications. While ZMap defaults to usually safe
+> settings, it is your responsibility to ensure that you're a good internet citizen. Rules of thumb are to scan at the
+> slowest speed necessary, scan slower if you're scanning a smaller target space, and provide a way for network operators
+> to opt-out. More information can be found [here](https://github.com/zmap/zmap/wiki/Getting-Started-Guide#%EF%B8%8F-warning-on-scanning-rate).
+
 ZMap operates on GNU/Linux, Mac OS, and BSD. ZMap currently has fully implemented
 probe modules for TCP SYN scans, ICMP, DNS queries, UPnP, BACNET, and can send a
 large number of [UDP probes](https://github.com/zmap/zmap/blob/master/examples/udp-probes/README).
@@ -22,6 +28,21 @@ that performs stateful application-layer handshakes.
 
 Using ZMap
 ----------
+
+ZMap is easy to use. A simple scan of the entire IPv4 space on TCP port 80 can be performed with the following command (requires root privileges):
+
+```sh
+sudo zmap -p 80
+```
+
+```
+$ sudo zmap -p 80
+...
+ 0:00 0%; send: 5 1 p/s (185 p/s avg); recv: 0 0 p/s (0 p/s avg); drops: 0 p/s (0 p/s avg); hitrate: 0.00%
+52.8.107.196
+...
+ 0:01 0%; send: 10327 10.3 Kp/s (10.1 Kp/s avg); recv: 118 118 p/s (115 p/s avg); drops: 0 p/s (0 p/s avg); hitrate: 1.14%
+````
 
 If you haven't used ZMap before, we have a step-by-step [Getting Started Guide](https://github.com/zmap/zmap/wiki/Getting-Started-Guide) that details how to perform basic scans. Documentation about all of ZMap's options and more advanced functionality can be found in our [Wiki](https://github.com/zmap/zmap/wiki). For best practices, see [Scanning Best Practices](https://github.com/zmap/zmap/wiki/Scanning-Best-Practices). 
 
