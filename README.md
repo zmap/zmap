@@ -4,6 +4,8 @@ ZMap: The Internet Scanner
 ![Build Status](https://github.com/zmap/zmap/actions/workflows/cmake.yml/badge.svg)
 
 > [!CAUTION]
+> Ethical Scanning
+> 
 > Performing Internet-wide scans can have serious ethical and operational implications. While ZMap defaults to usually safe
 > settings, it is your responsibility to ensure that you're a good internet citizen. Rules of thumb are to scan at the
 > slowest speed necessary, scan slower if you're scanning a smaller target space, and provide a way for network operators
