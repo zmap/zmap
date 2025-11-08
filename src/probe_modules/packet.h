@@ -153,7 +153,7 @@ static inline int check_dst_port(uint16_t port, int num_ports,
 	}
 	int32_t to_validate = port - zconf.source_port_first;
 	int32_t min = validation[1] % num_ports;
-	int32_t max = (validation[1] + zconf.packet_streams - 1) % num_ports;
+	int32_t max = (validation[1] + zconf.probes_per_target - 1) % num_ports;
 
 	if (min <= max) {
 		return (to_validate <= max && to_validate >= min);

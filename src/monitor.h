@@ -8,6 +8,7 @@
 
 #include <pthread.h>
 #include "iterator.h"
+#include "math.h"
 
 #ifndef MONITOR_H
 #define MONITOR_H

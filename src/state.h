@@ -87,7 +87,7 @@ struct state_conf {
 	// sharding options
 	uint16_t shard_num;
 	uint16_t total_shards;
-	int packet_streams;
+	int probes_per_target;
 	struct probe_module *probe_module;
 	char *output_module_name;
 	struct output_module *output_module;

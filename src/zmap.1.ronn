@@ -81,11 +81,13 @@ on a gigabit network connection, reaching ~98% theoretical line speed.
      addresses in the same order for multiple ZMap runs.
 
    * `-P`, `--probes=n`:
-     Number of probes to send to each IP/Port pair (default=1). Since ZMap composes Ethernet
-     frames directly, probes can be lost en-route to destination. Increasing the
-     --probes increases the chance that an online host will receive a probe in an
-     unreliable network. This is contrasted with `--retries` which just gives the
-     number of attempts to send a single probe on the source NIC.
+     Number of probes to send to each IP/Port pair (default=1). Probes are sent
+     sequentially for a given IP/Port, so if --probes=4, we'll send 4 probe packets
+     sequentially to that target rather than iterating across the target space 4 times.
+     Since ZMap composes Ethernet frames directly, probes can be lost en-route to destination.
+     Increasing the --probes increases the chance that an online host will receive a probe in an
+     unreliable network. This is contrasted with `--retries` which just gives the number of
+     attempts to send a single probe on the source NIC.
 
    * `--retries=n`:
      Number of times to try resending a packet if the sendto call fails (default=10)

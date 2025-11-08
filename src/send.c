@@ -65,39 +65,6 @@ void sig_handler_decrease_speed(UNUSED int signal)
 // global sender initialize (not thread specific)
 iterator_t *send_init(void)
 {
-	// generate a new primitive root and starting position
-	iterator_t *it;
-	uint32_t num_subshards = (uint32_t)zconf.senders * (uint32_t)zconf.total_shards;
-	if (num_subshards > (blocklist_count_allowed() * zconf.ports->port_count)) {
-		log_fatal("send", "senders * shards > allowed probes");
-	}
-	if (zsend.max_targets && (num_subshards > zsend.max_targets)) {
-		log_fatal("send", "senders * shards > max targets");
-	}
-	uint64_t num_addrs = blocklist_count_allowed();
-	it = iterator_init(zconf.senders, zconf.shard_num, zconf.total_shards,
-			   num_addrs, zconf.ports->port_count);
-	// determine the source address offset from which we'll send packets
-	struct in_addr temp;
-	temp.s_addr = zconf.source_ip_addresses[0];
-	log_debug("send", "srcip_first: %s", inet_ntoa(temp));
-	temp.s_addr = zconf.source_ip_addresses[zconf.number_source_ips - 1];
-	log_debug("send", "srcip_last: %s", inet_ntoa(temp));
-
-	// process the source port range that ZMap is allowed to use
-	num_src_ports = zconf.source_port_last - zconf.source_port_first + 1;
-	log_debug("send", "will send from %u address%s on %hu source ports",
-		  zconf.number_source_ips,
-		  ((zconf.number_source_ips == 1) ? "" : "es"), num_src_ports);
-	// global initialization for send module
-	assert(zconf.probe_module);
-	if (zconf.probe_module->global_initialize) {
-		if (zconf.probe_module->global_initialize(&zconf)) {
-			log_fatal(
-			    "send",
-			    "global initialization for probe module failed.");
-		}
-	}
 	// only allow bandwidth or rate
 	if (zconf.bandwidth > 0 && zconf.rate > 0) {
 		log_fatal(
@@ -148,6 +115,17 @@ iterator_t *send_init(void)
 	if (zconf.rate > 0 && zconf.bandwidth <= 0) {
 		log_debug("send", "rate set to %d pkt/s", zconf.rate);
 	}
+	if (zconf.rate < 2 * zconf.senders * zconf.batch) {
+		// we won't be able to send in a smooth manner at this rate, packets will be bunched up in bursts
+		log_info("send", "desired rate of %d pps is low relative to number of senders (%u) and batch size (%u) and would result in bursty transmission. "
+				   "Using 1 sending thread and a packet batch size of 1 to smooth sending rates. "
+				   "There should not be any negative performance impact due to the low sending rates.",
+			 zconf.rate, zconf.senders, zconf.batch);
+
+		zconf.senders = 1;
+		zconf.batch = 1;
+	}
+
 	// Get the source hardware address, and give it to the probe
 	// module
 	if (!zconf.hw_mac_set) {
@@ -176,6 +154,41 @@ iterator_t *send_init(void)
 
 	if (zconf.dryrun) {
 		log_info("send", "dryrun mode -- won't actually send packets");
+	}
+	// Initialize iterator
+
+	// generate a new primitive root and starting position
+	iterator_t *it;
+	uint32_t num_subshards = (uint32_t)zconf.senders * (uint32_t)zconf.total_shards;
+	if (num_subshards > (blocklist_count_allowed() * zconf.ports->port_count)) {
+		log_fatal("send", "senders * shards > allowed probes");
+	}
+	if (zsend.max_targets && (num_subshards > zsend.max_targets)) {
+		log_fatal("send", "senders * shards > max targets");
+	}
+	uint64_t num_addrs = blocklist_count_allowed();
+	it = iterator_init(zconf.senders, zconf.shard_num, zconf.total_shards,
+			   num_addrs, zconf.ports->port_count);
+	// determine the source address offset from which we'll send packets
+	struct in_addr temp;
+	temp.s_addr = zconf.source_ip_addresses[0];
+	log_debug("send", "srcip_first: %s", inet_ntoa(temp));
+	temp.s_addr = zconf.source_ip_addresses[zconf.number_source_ips - 1];
+	log_debug("send", "srcip_last: %s", inet_ntoa(temp));
+
+	// process the source port range that ZMap is allowed to use
+	num_src_ports = zconf.source_port_last - zconf.source_port_first + 1;
+	log_debug("send", "will send from %u address%s on %hu source ports",
+		  zconf.number_source_ips,
+		  ((zconf.number_source_ips == 1) ? "" : "es"), num_src_ports);
+	// global initialization for send module
+	assert(zconf.probe_module);
+	if (zconf.probe_module->global_initialize) {
+		if (zconf.probe_module->global_initialize(&zconf)) {
+			log_fatal(
+				"send",
+				"global initialization for probe module failed.");
+		}
 	}
 	// initialize random validation key
 	validate_init();
@@ -253,7 +266,7 @@ int send_run(sock_t st, shard_t *s)
 	struct timespec ts, rem;
 	double send_rate =
 	    (double)zconf.rate /
-	    ((double)zconf.senders * zconf.packet_streams);
+	    (double)zconf.senders;
 	const double slow_rate = 1000; // packets per seconds per thread
 	// at which it uses the slow methods
 	long nsec_per_sec = 1000 * 1000 * 1000;
@@ -307,90 +320,90 @@ int send_run(sock_t st, shard_t *s)
 		}
 	}
 	while (1) {
-		// Adaptive timing delay
-		if (count && delay > 0) {
-			if (send_rate < slow_rate) {
-				double t = steady_now();
-				double last_rate = (1.0 / (t - last_time));
-
-				sleep_time *= ((last_rate / send_rate) + 1) / 2;
-				ts.tv_sec = sleep_time / nsec_per_sec;
-				ts.tv_nsec = sleep_time % nsec_per_sec;
-				log_debug("sleep",
-					  "sleep for %d sec, %ld nanoseconds",
-					  ts.tv_sec, ts.tv_nsec);
-				while (nanosleep(&ts, &rem) == -1) {
-				}
-				last_time = t;
-			} else {
-				for (vi = delay; vi--;)
-					;
-				if (!interval || (count % interval == 0)) {
+		// Send however many probes the user requested sent to each target
+		for (int i = 0; i < zconf.probes_per_target; i++) {
+			// Adaptive timing delay
+			if (count && delay > 0) {
+				if (send_rate < slow_rate) {
 					double t = steady_now();
-					assert(count > last_count);
-					assert(t > last_time);
-					double multiplier =
-					    (double)(count - last_count) /
-					    (t - last_time) /
-					    (zconf.rate / zconf.senders);
-					uint32_t old_delay = delay;
-					delay *= multiplier;
-					if (delay == old_delay) {
-						if (multiplier > 1.0) {
-							delay *= 2;
-						} else if (multiplier < 1.0) {
-							delay *= 0.5;
-						}
+					double last_rate = (1.0 / (t - last_time));
+
+					sleep_time *= ((last_rate / send_rate) + 1) / 2;
+					ts.tv_sec = sleep_time / nsec_per_sec;
+					ts.tv_nsec = sleep_time % nsec_per_sec;
+					log_debug("sleep",
+						  "sleep for %d sec, %ld nanoseconds",
+						  ts.tv_sec, ts.tv_nsec);
+					while (nanosleep(&ts, &rem) == -1) {
 					}
-					if (delay == 0) {
-						// delay could become zero if the actual send rate stays below the target rate for long enough
-						// this could be due to things like VM cpu contention, or the NIC being saturated.
-						// However, we never want delay to become 0, as this would remove any rate limiting for the rest
-						// of the ZMap invocation (since 0 * multiplier = 0 for any multiplier). To prevent the removal
-						// of rate-limiting we'll set delay to one here.
-						delay = 1;
-					}
-					last_count = count;
 					last_time = t;
+				} else {
+					for (vi = delay; vi--;)
+						;
+					if (!interval || (count % interval == 0)) {
+						double t = steady_now();
+						assert(count > last_count);
+						assert(t > last_time);
+						double multiplier =
+							(double)(count - last_count) /
+							(t - last_time) /
+							(zconf.rate / zconf.senders);
+						uint32_t old_delay = delay;
+						delay *= multiplier;
+						if (delay == old_delay) {
+							if (multiplier > 1.0) {
+								delay *= 2;
+							} else if (multiplier < 1.0) {
+								delay *= 0.5;
+							}
+						}
+						if (delay == 0) {
+							// delay could become zero if the actual send rate stays below the target rate for long enough
+							// this could be due to things like VM cpu contention, or the NIC being saturated.
+							// However, we never want delay to become 0, as this would remove any rate limiting for the rest
+							// of the ZMap invocation (since 0 * multiplier = 0 for any multiplier). To prevent the removal
+							// of rate-limiting we'll set delay to one here.
+							delay = 1;
+						}
+						last_count = count;
+						last_time = t;
+					}
 				}
 			}
-		}
+			// Check if the program has otherwise completed and break out of the send loop.
+			if (zrecv.complete) {
+				goto cleanup;
+			}
+			if (zconf.max_runtime &&
+				zconf.max_runtime <= now() - zsend.start) {
+				goto cleanup;
+				}
 
-		// Check if the program has otherwise completed and break out of the send loop.
-		if (zrecv.complete) {
-			goto cleanup;
-		}
-		if (zconf.max_runtime &&
-		    zconf.max_runtime <= now() - zsend.start) {
-			goto cleanup;
-		}
-
-		// Check if we've finished this shard or thread before sending each
-		// packet, regardless of batch size.
-		if (s->state.max_targets &&
-		    s->state.targets_scanned >= s->state.max_targets) {
-			log_debug(
-			    "send",
-			    "send thread %hhu finished (max targets of %u reached)",
-			    s->thread_id, s->state.max_targets);
-			goto cleanup;
-		}
-		if (s->state.max_packets &&
-		    s->state.packets_sent >= s->state.max_packets) {
-			log_debug(
-			    "send",
-			    "send thread %hhu finished (max packets of %u reached)",
-			    s->thread_id, s->state.max_packets);
-			goto cleanup;
-		}
-		if (current.status == ZMAP_SHARD_DONE) {
-			log_debug(
-			    "send",
-			    "send thread %hhu finished, shard depleted",
-			    s->thread_id);
-			goto cleanup;
-		}
-		for (int i = 0; i < zconf.packet_streams; i++) {
+			// Check if we've finished this shard or thread before sending each
+			// packet, regardless of batch size.
+			if (s->state.max_targets &&
+				s->state.targets_scanned >= s->state.max_targets) {
+				log_debug(
+					"send",
+					"send thread %hhu finished (max targets of %u reached)",
+					s->thread_id, s->state.max_targets);
+				goto cleanup;
+				}
+			if (s->state.max_packets &&
+				s->state.packets_sent >= s->state.max_packets) {
+				log_debug(
+					"send",
+					"send thread %hhu finished (max packets of %u reached)",
+					s->thread_id, s->state.max_packets);
+				goto cleanup;
+				}
+			if (current.status == ZMAP_SHARD_DONE) {
+				log_debug(
+					"send",
+					"send thread %hhu finished, shard depleted",
+					s->thread_id);
+				goto cleanup;
+			}
 			count++;
 			uint32_t src_ip = get_src_ip(current_ip, i);
 			uint8_t size_of_validation = VALIDATE_BYTES / sizeof(uint32_t);
@@ -431,6 +444,7 @@ int send_run(sock_t st, shard_t *s)
 			} else {
 				batch->len++;
 				if (batch->len == batch->capacity) {
+					// log_debug("send_batch", "sending batch");
 					// batch is full, sending
 					int rc = send_batch(st, batch, attempts);
 					// whether batch succeeds or fails, this was the only attempt. Any re-tries are handled within batch

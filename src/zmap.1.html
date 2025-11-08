@@ -128,11 +128,13 @@ be excluded.</p></dd>
 <dt> <code>-c</code>, <code>--cooldown-time=secs</code></dt><dd><p> How long to continue receiving after sending has completed (default=8)</p></dd>
 <dt> <code>-e</code>, <code>--seed=n</code></dt><dd><p> Seed used to select address permutation. Use this if you want to scan
  addresses in the same order for multiple ZMap runs.</p></dd>
-<dt> <code>-P</code>, <code>--probes=n</code></dt><dd><p> Number of probes to send to each IP/Port pair (default=1). Since ZMap composes Ethernet
- frames directly, probes can be lost en-route to destination. Increasing the
- --probes increases the chance that an online host will receive a probe in an
- unreliable network. This is contrasted with <code>--retries</code> which just gives the
- number of attempts to send a single probe on the source NIC.</p></dd>
+<dt> <code>-P</code>, <code>--probes=n</code></dt><dd><p> Number of probes to send to each IP/Port pair (default=1). Probes are sent
+ sequentially for a given IP/Port, so if --probes=4, we'll send 4 probe packets
+ sequentially to that target rather than iterating across the target space 4 times.
+ Since ZMap composes Ethernet frames directly, probes can be lost en-route to destination.
+ Increasing the --probes increases the chance that an online host will receive a probe in an
+ unreliable network. This is contrasted with <code>--retries</code> which just gives the number of
+ attempts to send a single probe on the source NIC.</p></dd>
 <dt> <code>--retries=n</code></dt><dd><p> Number of times to try resending a packet if the sendto call fails (default=10)</p></dd>
 <dt> <code>--batch=n</code></dt><dd><p> Number of packets to batch before calling the appropriate syscall to send. Used
  to take advantage of Linux's <code>sendmmsg</code> syscall to send the entire batch at once.
@@ -313,7 +315,7 @@ decreasing by 5%.</p>
 
   <ol class='man-decor man-foot man foot'>
     <li class='tl'>ZMap</li>
-    <li class='tc'>December 2024</li>
+    <li class='tc'>November 2025</li>
     <li class='tr'>zmap(1)</li>
   </ol>
 
