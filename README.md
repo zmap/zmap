@@ -3,14 +3,6 @@ ZMap: The Internet Scanner
 
 ![Build Status](https://github.com/zmap/zmap/actions/workflows/cmake.yml/badge.svg)
 
-> [!CAUTION]
-> Ethical Scanning
-> 
-> Performing Internet-wide scans can have serious ethical and operational implications. While ZMap defaults to usually safe
-> settings, it is your responsibility to ensure that you're a good internet citizen. Rules of thumb are to scan at the
-> slowest speed necessary, scan slower if you're scanning a smaller target space, and provide a way for network operators
-> to opt-out. More information can be found [here](https://github.com/zmap/zmap/wiki/Getting-Started-Guide#%EF%B8%8F-warning-on-scanning-rate).
-
 ZMap is a fast stateless single packet network scanner designed for Internet-wide network
 surveys. On a typical desktop computer with a gigabit Ethernet connection, ZMap
 is capable of scanning the entire public IPv4 address space on a single port in 
@@ -26,6 +18,14 @@ large number of [UDP probes](https://github.com/zmap/zmap/blob/master/examples/u
 If you are looking to do more involved scans (e.g., banner grab or TLS handshake), 
 take a look at [ZGrab 2](https://github.com/zmap/zgrab2), ZMap's sister project 
 that performs stateful application-layer handshakes.
+
+> [!CAUTION]
+> Ethical Scanning
+> 
+> Performing Internet-wide scans can have serious ethical and operational implications. While ZMap defaults to usually safe
+> settings, it is your responsibility to ensure that you're a good internet citizen. Rules of thumb are to scan at the
+> slowest speed necessary, scan slower if you're scanning a smaller target space, and provide a way for network operators
+> to opt-out. More information can be found [here](https://github.com/zmap/zmap/wiki/Getting-Started-Guide#%EF%B8%8F-warning-on-scanning-rate).
 
 
 Using ZMap
