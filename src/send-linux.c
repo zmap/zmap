@@ -51,6 +51,13 @@ int send_run_init(sock_t s)
 			  zconf.iface);
 		return EXIT_FAILURE;
 	}
+        // If we're sending IP packets (ie our socket is a AF_INET type, then we need to use the socket's SO_BINDTODEVICE option, only available for AF_INET sockets)
+	if (zconf.send_ip_pkts && setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, zconf.iface, strlen(zconf.iface)) < 0) {
+		log_error("send", "cannot bind to socket: %s", strerror(errno));
+		return EXIT_FAILURE;
+	}
+
+
 	strncpy(if_idx.ifr_name, zconf.iface, IFNAMSIZ - 1);
 	if (ioctl(sock, SIOCGIFINDEX, &if_idx) < 0) {
 		log_error("send", "%s", "SIOCGIFINDEX");
@@ -58,11 +65,6 @@ int send_run_init(sock_t s)
 	}
 	int ifindex = if_idx.ifr_ifindex;
 
-	// Bind to Socket. Without this, sometimes the specified interface wouldn't actually be used for sending traffic
-	if (setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, if_idx.ifr_ifrn.ifrn_name, strlen(if_idx.ifr_ifrn.ifrn_name)) < 0) {
-		log_error("send", "cannot bind to socket: %s", strerror(errno));
-		return EXIT_FAILURE;
-	}
 
 	// destination address for the socket
 	memset((void *)&sockaddr, 0, sizeof(struct sockaddr_ll));
