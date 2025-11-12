@@ -271,7 +271,8 @@ int get_default_gw(struct in_addr *gw, char *iface)
 		    "The specified network (\"%s\") does not match "
 		    "the interface associated with the default gateway (%s). You will "
 		    "need to manually specify the MAC address of your gateway using "
-		    "the \"--gateway-mac\" flag.",
+		    "the \"--gateway-mac\" flag or use \"--iplayer\" to send IP packets and "
+		    "let the kernel take care of ethernet frame creation.",
 		    iface, _iface);
 	}
 	return EXIT_SUCCESS;
