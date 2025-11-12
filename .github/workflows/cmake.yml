@@ -153,5 +153,6 @@ jobs:
           prepare: |
             freebsd-update cron
             freebsd-update install
-            pkg install -y judy byacc cmake flex gengetopt gmp json-c libunistring influxpkg-config python3
+            pkg update
+            pkg install -y Judy byacc cmake flex gengetopt gmp json-c libunistring influxpkg-config python3
           run: cd ~/work/zmap/zmap && cmake -DENABLE_DEVELOPMENT=${{env.ENABLE_DEVELOPMENT}} -DENABLE_LOG_TRACE=${{env.ENABLE_LOG_TRACE}} . && make && python3 ./scripts/check_manfile.py
