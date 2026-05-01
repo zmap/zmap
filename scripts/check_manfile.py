@@ -26,7 +26,8 @@ for ggo, ronn in checks:
                 option = l.split()[1].lstrip('"').rstrip('"')
                 options.append(option)
 
-    man = open("src/" + ronn).read()
+    with open("src/" + ronn) as f:
+        man = f.read()
 
     for option in options:
         if option not in man:
