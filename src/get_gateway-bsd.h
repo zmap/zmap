@@ -189,7 +189,7 @@ int _get_default_gw(struct in_addr *gw, char **iface)
 				}
 				char *_iface = xmalloc(sdl->sdl_nlen + 1);
 				memcpy(_iface, sdl->sdl_data, sdl->sdl_nlen);
-				_iface[sdl->sdl_nlen + 1] = 0;
+				_iface[sdl->sdl_nlen] = 0;
 				*iface = _iface;
 			}
 			if ((1 << i) == RTA_GATEWAY) {
