@@ -27,6 +27,9 @@ that performs stateful application-layer handshakes.
 > slowest speed necessary, scan slower if you're scanning a smaller target space, and provide a way for network operators
 > to opt-out. More information can be found [here](https://github.com/zmap/zmap/wiki/Getting-Started-Guide#%EF%B8%8F-warning-on-scanning-rate).
 
+> [!TIP]
+> We've collected some helpful tips and step-by-step walkthroughs for using ZMap in isolation or in a measurement pipeline with [ZGrab2](https://github.com/zmap/zgrab2) in our [Getting Started section](https://github.com/zmap/#getting-started).
+
 
 Using ZMap
 ----------
