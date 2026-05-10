@@ -479,7 +479,7 @@ static fielddef_t fields[] = {
     {.name = "tcpopt_ts_ecr", .type = "int", .desc = "TCP timestamp option echo reply"},
     CLASSIFICATION_SUCCESS_FIELDSET_FIELDS,
     ICMP_FIELDSET_FIELDS,
-    {.name = "rtt", .type = "string", .desc = "RTT in ms to one decimal place, max RTT reliably meausred = ~27min"},
+    {.name = "rtt", .type = "string", .desc = "RTT in ms to one decimal place, max RTT reliably measured = ~28min"},
 };
 
 probe_module_t module_tcp_synscan = {
@@ -507,7 +507,7 @@ probe_module_t module_tcp_synscan = {
 	"TCP options offer the highest hit-rate with a modest increase in probe size. "
 	"Include \"rtt\" in --output-fields to enable RTT measurement; this encodes a "
 	"timestamp in the TCP sequence number and reports RTT in units of 0.1 ms, with a max RTT "
-	"measurement of ~27 minutes. Works best with --batch 1.",
+	"measurement of ~28 minutes. Works best with --batch 1.",
     .output_type = OUTPUT_TYPE_STATIC,
     .fields = fields,
     .numfields = sizeof(fields) / sizeof(fields[0])};
