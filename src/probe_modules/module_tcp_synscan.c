@@ -82,23 +82,15 @@ static int synscan_global_initialize(struct state_conf *state)
 		state->probe_args = (char *)"windows";
 	}
 
-	// Parse comma-separated probe args, e.g. "windows,rtt" or "linux,rtt"
-	char *args_copy = strdup(state->probe_args);
-	if (!args_copy) {
-		log_fatal("tcp_synscan", "out of memory parsing probe-args");
-	}
-	const char *os_arg = NULL;
-	for (char *tok = strtok(args_copy, ","); tok; tok = strtok(NULL, ",")) {
-		if (strcmp(tok, "rtt") == 0) {
+	// Enable RTT if the user requested the "rtt" output field.
+	for (int i = 0; i < state->output_fields_len; i++) {
+		if (strcmp(state->output_fields[i], "rtt") == 0) {
 			rtt_enabled = true;
-		} else {
-			os_arg = tok;
+			break;
 		}
 	}
-	if (!os_arg) {
-		os_arg = "windows";
-	}
 
+	const char *os_arg = state->probe_args;
 	if (strcmp(os_arg, "smallest-probes") == 0) {
 		os_for_tcp_options = SMALLEST_PROBES_OS_OPTIONS;
 		zmap_tcp_synscan_tcp_header_len = 24;
@@ -117,12 +109,11 @@ static int synscan_global_initialize(struct state_conf *state)
 		zmap_tcp_synscan_packet_len = 74;
 	} else {
 		log_fatal("tcp_synscan", "unknown probe-args value: %s; "
-					 "probe-args should have format: \"--probe-args=os[,rtt]\" "
+					 "probe-args should have format: \"--probe-args=os\" "
 					 "where os can be \"smallest-probes\", \"bsd\", "
 					 "\"windows\", and \"linux\"",
 			  state->probe_args);
 	}
-	free(args_copy);
 
 	// set max packet length accordingly for accurate send rate calculation
 	module_tcp_synscan.max_packet_length = zmap_tcp_synscan_packet_len;
@@ -488,7 +479,7 @@ static fielddef_t fields[] = {
     {.name = "tcpopt_ts_ecr", .type = "int", .desc = "TCP timestamp option echo reply"},
     CLASSIFICATION_SUCCESS_FIELDSET_FIELDS,
     ICMP_FIELDSET_FIELDS,
-    {.name = "rtt", .type = "string", .desc = "RTT in ms to one decimal place (enable with --probe-args=...,rtt)"},
+    {.name = "rtt", .type = "string", .desc = "RTT in ms to one decimal place, max RTT reliably meausred = ~27min"},
 };
 
 probe_module_t module_tcp_synscan = {
@@ -508,15 +499,15 @@ probe_module_t module_tcp_synscan = {
 	"classifications are: synack and rst. A SYN-ACK packet is considered a "
 	"success and a reset packet is considered a failed response. "
 	"By default, TCP header options are set identically to the values used by "
-	"Windows (MSS, SACK permitted, and WindowScale = 8). Use \"--probe-args=os[,rtt]\" "
-	"to configure the probe. Valid OS options are "
+	"Windows (MSS, SACK permitted, and WindowScale = 8). Use \"--probe-args=os\" "
+	"to set the options, valid options are "
 	"\"smallest-probes\", \"bsd\", \"linux\", \"windows\" (default). "
 	"The \"smallest-probes\" option only sends MSS to achieve a better hit-rate "
 	"than no options while staying within the minimum Ethernet payload size. Windows-style "
 	"TCP options offer the highest hit-rate with a modest increase in probe size. "
-	"Append \",rtt\" to enable RTT measurement (e.g. \"--probe-args=windows,rtt\"); "
-	"this encodes a timestamp in the TCP sequence number and reports RTT in "
-	"units of 0.1 ms in the \"rtt\" output field. Works best with --batch 1.",
+	"Include \"rtt\" in --output-fields to enable RTT measurement; this encodes a "
+	"timestamp in the TCP sequence number and reports RTT in units of 0.1 ms, with a max RTT "
+	"measurement of ~27 minutes. Works best with --batch 1.",
     .output_type = OUTPUT_TYPE_STATIC,
     .fields = fields,
     .numfields = sizeof(fields) / sizeof(fields[0])};
