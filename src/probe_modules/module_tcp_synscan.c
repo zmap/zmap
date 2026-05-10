@@ -16,8 +16,9 @@
 #include <string.h>
 #include <assert.h>
 #include <math.h>
-
+#include <errno.h>
 #include "../../lib/includes.h"
+#include "../../lib/util.h"
 #include "../fieldset.h"
 #include "logger.h"
 #include "module_tcp_synscan.h"
@@ -35,59 +36,35 @@ probe_module_t module_tcp_synscan;
 
 static uint16_t num_source_ports;
 static uint8_t os_for_tcp_options;
+static bool rtt_enabled = false;
 
-#ifdef RTT
-#include <errno.h>
+// RTT is encoded in the lower RTT_TIMESTAMP_BITS of the TCP SYN sequence number
+// (XOR'd with validation[0]). The upper RTT_VALIDATION_BITS are used for packet
+// validation. Increasing RTT_TIMESTAMP_BITS extends the measurable range at the
+// cost of weaker validation (more false positives). At 0.1 ms resolution and 24
+// timestamp bits, the timestamp wraps after ~28 minutes; RTT values up to that
+// are computed correctly via unsigned modular arithmetic.
+#define RTT_TIMESTAMP_BITS  24
+#define RTT_VALIDATION_BITS 8
+#define RTT_TIMESTAMP_MASK  ((1u << RTT_TIMESTAMP_BITS) - 1)
+#define RTT_VALIDATION_MASK ((1u << RTT_VALIDATION_BITS) - 1)
 
-#ifndef NSEC_PER_SEC
-#define NSEC_PER_SEC 1000000000
-#endif
-#ifndef NSEC_PER_MSEC
-#define NSEC_PER_MSEC 1000000
-#endif
-#ifndef MSEC_PER_SEC
-#define MSEC_PER_SEC 1000
-#endif
+// steady_now() returns seconds; multiply by 10000 to get 0.1 ms ticks
+#define RTT_TICKS_PER_SEC 10000
 
-static void
-timespec_get_monotonic(struct timespec *t)
+static double t_begin;
+static double t_begin_realtime;
+
+static uint64_t rtt_ticks_since_begin(void)
 {
-	if (clock_gettime(CLOCK_MONOTONIC, t) == -1) {
-		log_fatal("recv-netmap", "Failed to obtain monotonic time: %d: %s", errno, strerror(errno));
-	}
+	return (uint64_t)((steady_now() - t_begin) * RTT_TICKS_PER_SEC);
 }
 
-static struct timespec
-timespec_diff(struct timespec const *t1, struct timespec const *t0)
+static uint64_t rtt_ticks_from_pcap_ts(struct timespec ts)
 {
-	struct timespec diff = {
-	    .tv_sec = t1->tv_sec - t0->tv_sec,
-	    .tv_nsec = t1->tv_nsec - t0->tv_nsec,
-	};
-	if (diff.tv_nsec < 0) {
-		diff.tv_sec--;
-		diff.tv_nsec += NSEC_PER_SEC;
-	}
-	return diff;
+	double ts_sec = (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;
+	return (uint64_t)((ts_sec - t_begin_realtime) * RTT_TICKS_PER_SEC);
 }
-
-static uint64_t
-timespec_to_ms64(struct timespec const *t)
-{
-	return (uint64_t)t->tv_sec * MSEC_PER_SEC + (uint64_t)t->tv_nsec / NSEC_PER_MSEC;
-}
-
-static uint64_t
-timespec_ticks_since(struct timespec const *t_ref)
-{
-	struct timespec t_now;
-	timespec_get_monotonic(&t_now);
-	struct timespec t_diff = timespec_diff(&t_now, t_ref);
-	return timespec_to_ms64(&t_diff);
-}
-
-static struct timespec t_begin;
-#endif // RTT
 
 static int synscan_global_initialize(struct state_conf *state)
 {
@@ -104,41 +81,65 @@ static int synscan_global_initialize(struct state_conf *state)
 					 "defaulting to Windows-style TCP options. Windows-style TCP options offer the highest hit-rate with the least bytes per probe.");
 		state->probe_args = (char *)"windows";
 	}
-	if (strcmp(state->probe_args, "smallest-probes") == 0) {
+
+	// Parse comma-separated probe args, e.g. "windows,rtt" or "linux,rtt"
+	char *args_copy = strdup(state->probe_args);
+	if (!args_copy) {
+		log_fatal("tcp_synscan", "out of memory parsing probe-args");
+	}
+	const char *os_arg = NULL;
+	for (char *tok = strtok(args_copy, ","); tok; tok = strtok(NULL, ",")) {
+		if (strcmp(tok, "rtt") == 0) {
+			rtt_enabled = true;
+		} else {
+			os_arg = tok;
+		}
+	}
+	if (!os_arg) {
+		os_arg = "windows";
+	}
+
+	if (strcmp(os_arg, "smallest-probes") == 0) {
 		os_for_tcp_options = SMALLEST_PROBES_OS_OPTIONS;
 		zmap_tcp_synscan_tcp_header_len = 24;
 		zmap_tcp_synscan_packet_len = 58;
-	} else if (strcmp(state->probe_args, "bsd") == 0) {
+	} else if (strcmp(os_arg, "bsd") == 0) {
 		os_for_tcp_options = BSD_OS_OPTIONS;
 		zmap_tcp_synscan_tcp_header_len = 44;
 		zmap_tcp_synscan_packet_len = 78;
-	} else if (strcmp(state->probe_args, "windows") == 0) {
+	} else if (strcmp(os_arg, "windows") == 0) {
 		os_for_tcp_options = WINDOWS_OS_OPTIONS;
 		zmap_tcp_synscan_tcp_header_len = 32;
 		zmap_tcp_synscan_packet_len = 66;
-	} else if (strcmp(state->probe_args, "linux") == 0) {
+	} else if (strcmp(os_arg, "linux") == 0) {
 		os_for_tcp_options = LINUX_OS_OPTIONS;
 		zmap_tcp_synscan_tcp_header_len = 40;
 		zmap_tcp_synscan_packet_len = 74;
 	} else {
-		log_fatal("tcp_synscan", "unknown "
-					 "probe-args value: %s, probe-args "
-					 "should have format: \"--probe-args=os\" "
+		log_fatal("tcp_synscan", "unknown probe-args value: %s; "
+					 "probe-args should have format: \"--probe-args=os[,rtt]\" "
 					 "where os can be \"smallest-probes\", \"bsd\", "
 					 "\"windows\", and \"linux\"",
 			  state->probe_args);
 	}
+	free(args_copy);
+
 	// set max packet length accordingly for accurate send rate calculation
 	module_tcp_synscan.max_packet_length = zmap_tcp_synscan_packet_len;
 	// double-check arithmetic
 	assert(zmap_tcp_synscan_packet_len - zmap_tcp_synscan_tcp_header_len == 34);
 
-#ifdef RTT
-	timespec_get_monotonic(&t_begin);
-	if (zconf.batch != 1) {
-		log_warn("tcp_synscan", "Warning: Batch size is not 1, RTT calculation works best with --batch 1");
+	if (rtt_enabled) {
+		t_begin = steady_now();
+		struct timespec ts_rt;
+		if (clock_gettime(CLOCK_REALTIME, &ts_rt) == -1) {
+			log_fatal("tcp_synscan", "Failed to obtain realtime clock: %s", strerror(errno));
+		}
+		t_begin_realtime = (double)ts_rt.tv_sec + (double)ts_rt.tv_nsec / 1e9;
+		if (zconf.batch != 1) {
+			log_warn("tcp_synscan", "Warning: Batch size is not 1, RTT calculation works best with --batch 1");
+		}
 	}
-#endif
 
 	return EXIT_SUCCESS;
 }
@@ -167,12 +168,13 @@ static int synscan_make_packet(void *buf, size_t *buf_len, ipaddr_n_t src_ip,
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
 	struct tcphdr *tcp_header = (struct tcphdr *)(&ip_header[1]);
 
-#ifdef RTT
-	uint64_t ticks = timespec_ticks_since(&t_begin);
-	uint32_t tcp_seq = validation[0] ^ ((uint32_t)ticks & 0x00FFFFFF);
-#else
-	uint32_t tcp_seq = validation[0];
-#endif
+	uint32_t tcp_seq;
+	if (rtt_enabled) {
+		uint64_t ticks = rtt_ticks_since_begin();
+		tcp_seq = validation[0] ^ ((uint32_t)ticks & RTT_TIMESTAMP_MASK);
+	} else {
+		tcp_seq = validation[0];
+	}
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
@@ -248,28 +250,28 @@ static int synscan_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		// We treat RST packets different from non RST packets
 		if (tcp->th_flags & TH_RST) {
 			// For RST packets, recv(ack) == sent(seq) + 0 or + 1
-#ifdef RTT
-			if ((htonl(tcp->th_ack) & 0xFF) != (htonl(validation[0]) & 0xFF) &&
-			    (htonl(tcp->th_ack) & 0xFF) != ((htonl(validation[0]) + 1) & 0xFF)) {
-				return PACKET_INVALID;
+			if (rtt_enabled) {
+				if ((ntohl(tcp->th_ack) & RTT_VALIDATION_MASK) != (ntohl(validation[0]) & RTT_VALIDATION_MASK) &&
+				    (ntohl(tcp->th_ack) & RTT_VALIDATION_MASK) != ((ntohl(validation[0]) + 1) & RTT_VALIDATION_MASK)) {
+					return PACKET_INVALID;
+				}
+			} else {
+				if (ntohl(tcp->th_ack) != ntohl(validation[0]) &&
+				    ntohl(tcp->th_ack) != ntohl(validation[0]) + 1) {
+					return PACKET_INVALID;
+				}
 			}
-#else
-			if (htonl(tcp->th_ack) != htonl(validation[0]) &&
-			    htonl(tcp->th_ack) != htonl(validation[0]) + 1) {
-				return PACKET_INVALID;
-			}
-#endif
 		} else {
 			// For non RST packets, recv(ack) == sent(seq) + 1
-#ifdef RTT
-			if ((htonl(tcp->th_ack) & 0xFF) != ((htonl(validation[0]) + 1) & 0xFF)) {
-				return PACKET_INVALID;
+			if (rtt_enabled) {
+				if ((ntohl(tcp->th_ack) & RTT_VALIDATION_MASK) != ((ntohl(validation[0]) + 1) & RTT_VALIDATION_MASK)) {
+					return PACKET_INVALID;
+				}
+			} else {
+				if (ntohl(tcp->th_ack) != ntohl(validation[0]) + 1) {
+					return PACKET_INVALID;
+				}
 			}
-#else
-			if (htonl(tcp->th_ack) != htonl(validation[0]) + 1) {
-				return PACKET_INVALID;
-			}
-#endif
 		}
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		struct ip *ip_inner;
@@ -390,9 +392,20 @@ break_loop:
 	add_tcpopt_to_fs(fs, &ts_ecr, "tcpopt_ts_ecr");
 }
 
+// Recover the RTT tick count encoded in the sent sequence number.
+// The remote echoes our seq as ack-ack_offset, so seq = ack - ack_offset.
+// seq = validation[0] ^ (ticks & RTT_TIMESTAMP_MASK), so:
+//   ticks = (ack - ack_offset converted back to net order) ^ validation[0]
+// htonl(ntohl(x)) = x on any platform, so this round-trip preserves bytes.
+static uint64_t
+recover_rtt_ticks(uint32_t th_ack, uint32_t *validation, int ack_offset)
+{
+	return (htonl(ntohl(th_ack) - (uint32_t)ack_offset) ^ validation[0]) & RTT_TIMESTAMP_MASK;
+}
+
 static void synscan_process_packet(const u_char *packet, UNUSED uint32_t len,
-				   fieldset_t *fs, UNUSED uint32_t *validation,
-				   UNUSED struct timespec ts)
+				   fieldset_t *fs, uint32_t *validation,
+				   struct timespec ts)
 {
 	struct ip *ip_hdr = get_ip_header(packet, len);
 	assert(ip_hdr);
@@ -413,17 +426,33 @@ static void synscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 			fs_add_bool(fs, "success", 1);
 		}
 		fs_add_null_icmp(fs);
-#ifdef RTT
-		if (tcp->th_flags & TH_RST) { // RST packet
+		if (rtt_enabled) {
+			uint64_t ticks_now = rtt_ticks_from_pcap_ts(ts) & RTT_TIMESTAMP_MASK;
+			int ack_offset;
+			if (tcp->th_flags & TH_RST) {
+				// RST ack may be sent_seq (offset 0) or sent_seq+1 (offset 1)
+				ack_offset = ((ntohl(tcp->th_ack) & RTT_VALIDATION_MASK) ==
+				              (ntohl(validation[0]) & RTT_VALIDATION_MASK)) ? 0 : 1;
+			} else {
+				ack_offset = 1;
+			}
+			// ticks_pkt is the time we sent the packet, encoded in the SEQ number
+			uint64_t ticks_pkt = recover_rtt_ticks(tcp->th_ack, validation, ack_offset);
+			// ticks_now is recovered from the pcap to minimize processing delay affecting the rtt measurement
+			uint64_t rtt_ticks = (ticks_now - ticks_pkt) & RTT_TIMESTAMP_MASK;
+			// format as "X.Y" ms (ticks are in 0.1 ms units)
+			char *rtt_str = malloc(16);
+			if (rtt_str) {
+				snprintf(rtt_str, 16, "%llu.%llu",
+					 (unsigned long long)(rtt_ticks / 10),
+					 (unsigned long long)(rtt_ticks % 10));
+				fs_add_string(fs, "rtt", rtt_str, 1);
+			} else {
+				fs_add_null(fs, "rtt");
+			}
+		} else {
 			fs_add_null(fs, "rtt");
-		} else { // SYNACK packet
-			uint64_t ticks_now = timespec_ticks_since(&t_begin) & 0x00FFFFFF;
-			uint64_t ticks_pkt = htonl(ntohl(tcp->th_ack) - 1) ^ validation[0];
-			assert(ticks_pkt < 0x01000000); // should not have gotten past validation
-			uint64_t rtt = (ticks_now - ticks_pkt) & 0x00FFFFFF;
-			fs_add_uint64(fs, "rtt", rtt);
 		}
-#endif
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		// tcp
 		fs_add_null(fs, "sport");
@@ -441,10 +470,8 @@ static void synscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 		fs_add_bool(fs, "success", 0);
 		// icmp
 		fs_populate_icmp_from_iphdr(ip_hdr, len, fs);
-#ifdef RTT
 		// rtt
 		fs_add_null(fs, "rtt");
-#endif
 	}
 }
 
@@ -461,9 +488,7 @@ static fielddef_t fields[] = {
     {.name = "tcpopt_ts_ecr", .type = "int", .desc = "TCP timestamp option echo reply"},
     CLASSIFICATION_SUCCESS_FIELDSET_FIELDS,
     ICMP_FIELDSET_FIELDS,
-#ifdef RTT
-    {.name = "rtt", .type = "int", .desc = "RTT in ms"},
-#endif
+    {.name = "rtt", .type = "string", .desc = "RTT in ms to one decimal place (enable with --probe-args=...,rtt)"},
 };
 
 probe_module_t module_tcp_synscan = {
@@ -483,12 +508,15 @@ probe_module_t module_tcp_synscan = {
 	"classifications are: synack and rst. A SYN-ACK packet is considered a "
 	"success and a reset packet is considered a failed response. "
 	"By default, TCP header options are set identically to the values used by "
-	"Windows (MSS, SACK permitted, and WindowScale = 8). Use \"--probe-args=n\" "
-	"to set the options, valid options are "
+	"Windows (MSS, SACK permitted, and WindowScale = 8). Use \"--probe-args=os[,rtt]\" "
+	"to configure the probe. Valid OS options are "
 	"\"smallest-probes\", \"bsd\", \"linux\", \"windows\" (default). "
 	"The \"smallest-probes\" option only sends MSS to achieve a better hit-rate "
 	"than no options while staying within the minimum Ethernet payload size. Windows-style "
-	"TCP options offer the highest hit-rate with a modest increase in probe size.",
+	"TCP options offer the highest hit-rate with a modest increase in probe size. "
+	"Append \",rtt\" to enable RTT measurement (e.g. \"--probe-args=windows,rtt\"); "
+	"this encodes a timestamp in the TCP sequence number and reports RTT in "
+	"units of 0.1 ms in the \"rtt\" output field. Works best with --batch 1.",
     .output_type = OUTPUT_TYPE_STATIC,
     .fields = fields,
     .numfields = sizeof(fields) / sizeof(fields[0])};
