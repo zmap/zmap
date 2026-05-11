@@ -74,51 +74,93 @@ static int synscan_global_initialize(struct state_conf *state)
 		log_debug("tcp_synscan", "disabling source port validation");
 		should_validate_src_port = false;
 	}
-	// Based on the OS, we'll set the TCP options differently
+
+	// Parse probe-args as comma-separated tokens.
+	// OS tokens: smallest-probes, bsd, windows (default), linux
+	// Option token: rtt (enables RTT measurement)
+	// Examples: --probe-args=windows, --probe-args=rtt, --probe-args=linux,rtt
+	os_for_tcp_options = WINDOWS_OS_OPTIONS;
+	zmap_tcp_synscan_tcp_header_len = 32;
+	zmap_tcp_synscan_packet_len = 66;
+	bool os_set = false;
+
+	const char *probe_args_str = state->probe_args ? state->probe_args : "windows";
 	if (!state->probe_args) {
-		// user didn't provide any probe args, defaulting to windows
-		log_debug("tcp_synscan", "no probe-args, "
-					 "defaulting to Windows-style TCP options. Windows-style TCP options offer the highest hit-rate with the least bytes per probe.");
-		state->probe_args = (char *)"windows";
+		log_debug("tcp_synscan", "no probe-args, defaulting to Windows-style TCP options. "
+			   "Windows-style TCP options offer the highest hit-rate with the least bytes per probe.");
 	}
 
-	// Enable RTT if the user requested the "rtt" output field.
-	for (int i = 0; i < state->output_fields_len; i++) {
-		if (strcmp(state->output_fields[i], "rtt") == 0) {
+	char *args_copy = strdup(probe_args_str);
+	if (!args_copy) {
+		log_fatal("tcp_synscan", "failed to allocate memory for probe-args parsing");
+	}
+	char *token = strtok(args_copy, ",");
+	while (token) {
+		if (strcmp(token, "rtt") == 0) {
 			rtt_enabled = true;
-			break;
+		} else if (strcmp(token, "smallest-probes") == 0) {
+			if (os_set) {
+				log_fatal("tcp_synscan", "multiple OS options specified in probe-args");
+			}
+			os_for_tcp_options = SMALLEST_PROBES_OS_OPTIONS;
+			zmap_tcp_synscan_tcp_header_len = 24;
+			zmap_tcp_synscan_packet_len = 58;
+			os_set = true;
+		} else if (strcmp(token, "bsd") == 0) {
+			if (os_set) {
+				log_fatal("tcp_synscan", "multiple OS options specified in probe-args");
+			}
+			os_for_tcp_options = BSD_OS_OPTIONS;
+			zmap_tcp_synscan_tcp_header_len = 44;
+			zmap_tcp_synscan_packet_len = 78;
+			os_set = true;
+		} else if (strcmp(token, "windows") == 0) {
+			if (os_set) {
+				log_fatal("tcp_synscan", "multiple OS options specified in probe-args");
+			}
+			os_for_tcp_options = WINDOWS_OS_OPTIONS;
+			zmap_tcp_synscan_tcp_header_len = 32;
+			zmap_tcp_synscan_packet_len = 66;
+			os_set = true;
+		} else if (strcmp(token, "linux") == 0) {
+			if (os_set) {
+				log_fatal("tcp_synscan", "multiple OS options specified in probe-args");
+			}
+			os_for_tcp_options = LINUX_OS_OPTIONS;
+			zmap_tcp_synscan_tcp_header_len = 40;
+			zmap_tcp_synscan_packet_len = 74;
+			os_set = true;
+		} else {
+			log_fatal("tcp_synscan",
+				  "unknown probe-arg: \"%s\"; "
+				  "probe-args should be comma-separated and valid options are: "
+				  "an OS option (\"smallest-probes\", \"bsd\", \"linux\", \"windows\"(default)) "
+				  "and optionally \"rtt\" to enable RTT measurement. "
+				  "Examples: --probe-args=windows, --probe-args=rtt, --probe-args=linux,rtt",
+				  token);
 		}
+		token = strtok(NULL, ",");
 	}
-
-	const char *os_arg = state->probe_args;
-	if (strcmp(os_arg, "smallest-probes") == 0) {
-		os_for_tcp_options = SMALLEST_PROBES_OS_OPTIONS;
-		zmap_tcp_synscan_tcp_header_len = 24;
-		zmap_tcp_synscan_packet_len = 58;
-	} else if (strcmp(os_arg, "bsd") == 0) {
-		os_for_tcp_options = BSD_OS_OPTIONS;
-		zmap_tcp_synscan_tcp_header_len = 44;
-		zmap_tcp_synscan_packet_len = 78;
-	} else if (strcmp(os_arg, "windows") == 0) {
-		os_for_tcp_options = WINDOWS_OS_OPTIONS;
-		zmap_tcp_synscan_tcp_header_len = 32;
-		zmap_tcp_synscan_packet_len = 66;
-	} else if (strcmp(os_arg, "linux") == 0) {
-		os_for_tcp_options = LINUX_OS_OPTIONS;
-		zmap_tcp_synscan_tcp_header_len = 40;
-		zmap_tcp_synscan_packet_len = 74;
-	} else {
-		log_fatal("tcp_synscan", "unknown probe-args value: %s; "
-					 "probe-args should have format: \"--probe-args=os\" "
-					 "where os can be \"smallest-probes\", \"bsd\", "
-					 "\"windows\", and \"linux\"",
-			  state->probe_args);
-	}
+	free(args_copy);
 
 	// set max packet length accordingly for accurate send rate calculation
 	module_tcp_synscan.max_packet_length = zmap_tcp_synscan_packet_len;
 	// double-check arithmetic
 	assert(zmap_tcp_synscan_packet_len - zmap_tcp_synscan_tcp_header_len == 34);
+
+	// Warn if "rtt" was explicitly requested as an output field but not enabled via probe-args
+	if (!rtt_enabled && state->raw_output_fields &&
+	    strcmp(state->raw_output_fields, "*") != 0) {
+		for (int i = 0; i < state->output_fields_len; i++) {
+			if (strcmp(state->output_fields[i], "rtt") == 0) {
+				log_warn("tcp_synscan",
+					 "\"rtt\" is listed in --output-fields but RTT is not enabled; "
+					 "add \"rtt\" to --probe-args to enable it "
+					 "(e.g. --probe-args=rtt or --probe-args=windows,rtt)");
+				break;
+			}
+		}
+	}
 
 	if (rtt_enabled) {
 		t_begin = steady_now();
@@ -128,7 +170,7 @@ static int synscan_global_initialize(struct state_conf *state)
 		}
 		t_begin_realtime = (double)ts_rt.tv_sec + (double)ts_rt.tv_nsec / 1e9;
 		if (zconf.batch != 1) {
-			log_warn("tcp_synscan", "Warning: Batch size is not 1, RTT calculation works best with --batch 1");
+			log_warn("tcp_synscan", "RTT measurement works best with --batch 1 for accurate time measurement");
 		}
 	}
 
@@ -493,16 +535,16 @@ probe_module_t module_tcp_synscan = {
 	"Probe module that sends a TCP SYN packet to a specific port. Possible "
 	"classifications are: synack and rst. A SYN-ACK packet is considered a "
 	"success and a reset packet is considered a failed response. "
-	"By default, TCP header options are set identically to the values used by "
-	"Windows (MSS, SACK permitted, and WindowScale = 8). Use \"--probe-args=os\" "
-	"to set the options, valid options are "
-	"\"smallest-probes\", \"bsd\", \"linux\", \"windows\" (default). "
-	"The \"smallest-probes\" option only sends MSS to achieve a better hit-rate "
-	"than no options while staying within the minimum Ethernet payload size. Windows-style "
-	"TCP options offer the highest hit-rate with a modest increase in probe size. "
-	"Include \"rtt\" in --output-fields to enable RTT measurement; this encodes a "
-	"timestamp in the TCP sequence number and reports RTT in units of 0.1 ms, with a max RTT "
-	"measurement of ~28 minutes. Works best with --batch 1.",
+	"--probe-args accepts comma-separated args:\n"
+		" 1.  An optional arg to control TCP header options, "
+		"making them identical to common OS stacks:\n"
+		"   - \"windows\" (default, MSS + SACK + WindowScale=8)\n"
+		"   - \"linux\" (MSS + SACK + Timestamps + WindowScale=7)\n"
+		"   - \"bsd\" (MSS + NOP + WindowScale=6 + Timestamps + SACK)\n"
+		"   - \"smallest-probes\" (MSS only, fits minimum Ethernet payload, gives a better hitrate than no options while retaining the same send performance)\n"
+	        " 2. Add \"rtt\" to enable RTT measurement to reports RTT in ms to 0.1 ms granularity (max ~28 min RTT).\n"
+	"Examples: --probe-args=windows, --probe-args=rtt (windows + RTT), "
+	"--probe-args=linux,rtt. RTT works best with --batch 1. ",
     .output_type = OUTPUT_TYPE_STATIC,
     .fields = fields,
     .numfields = sizeof(fields) / sizeof(fields[0])};
