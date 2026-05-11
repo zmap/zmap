@@ -42,17 +42,15 @@ static bool rtt_enabled = false;
 
 // RTT is encoded in the lower RTT_TIMESTAMP_BITS of the TCP SYN sequence number
 // (XOR'd with validation[0]). The upper RTT_VALIDATION_BITS are used for packet
-// validation. Increasing RTT_TIMESTAMP_BITS extends the measurable range at the
-// cost of weaker validation (more false positives). At 0.1 ms resolution and 24
-// timestamp bits, the timestamp wraps after ~28 minutes; RTT values up to that
-// are computed correctly via unsigned modular arithmetic.
+// validation. At 0.1 ms resolution and 24  timestamp bits, the timestamp wraps
+// after ~28 minutes; RTT values up to that are computed correctly via unsigned
+// modular arithmetic.
 #define RTT_TIMESTAMP_BITS  24
 #define RTT_VALIDATION_BITS 8
 #define RTT_TIMESTAMP_MASK  ((1u << RTT_TIMESTAMP_BITS) - 1)
 #define RTT_VALIDATION_MASK ((1u << RTT_VALIDATION_BITS) - 1)
 
-// steady_now() returns seconds; multiply by 10000 to get 0.1 ms ticks
-#define RTT_TICKS_PER_SEC 10000
+#define RTT_TICKS_PER_SEC 10000 // convert 0.1 ms to nanoseconds, returned by steady_now()
 
 static double t_begin;
 static double t_begin_realtime;
