@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <time.h>
 #include <string.h>
 #include <assert.h>
 #include <math.h>
