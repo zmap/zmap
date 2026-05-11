@@ -384,10 +384,6 @@ break_loop:
 }
 
 // Recover the RTT tick count encoded in the sent sequence number.
-// The remote echoes our seq as ack-ack_offset, so seq = ack - ack_offset.
-// seq = validation[0] ^ (ticks & RTT_TIMESTAMP_MASK), so:
-//   ticks = (ack - ack_offset converted back to net order) ^ validation[0]
-// htonl(ntohl(x)) = x on any platform, so this round-trip preserves bytes.
 static uint64_t
 recover_rtt_ticks(uint32_t th_ack, uint32_t *validation, int ack_offset)
 {
@@ -431,7 +427,6 @@ static void synscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 			uint64_t ticks_pkt = recover_rtt_ticks(tcp->th_ack, validation, ack_offset);
 			// ticks_now is recovered from the pcap to minimize processing delay affecting the rtt measurement
 			uint64_t rtt_ticks = (ticks_now - ticks_pkt) & RTT_TIMESTAMP_MASK;
-			// format as "X.Y" ms (ticks are in 0.1 ms units)
 			char *rtt_str = malloc(16);
 			if (rtt_str) {
 				snprintf(rtt_str, 16, "%llu.%llu",
