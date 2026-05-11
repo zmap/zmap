@@ -83,6 +83,7 @@ void fs_add_system_fields(fieldset_t *fs, int is_repeat, int in_cooldown, const 
 {
 	fs_add_bool(fs, "repeat", is_repeat);
 	fs_add_bool(fs, "cooldown", in_cooldown);
+	fs_add_null(fs, "blank");
 
 	char *timestr = xmalloc(TIMESTR_LEN + 1);
 	char *timestr_ms = xmalloc(TIMESTR_LEN + 1);
@@ -114,7 +115,7 @@ fielddef_t ip_fields[] = {
      .desc = "IP identification number of response"},
     {.name = "ttl", .type = "int", .desc = "time-to-live of response packet"}};
 
-int sys_fields_len = 5;
+int sys_fields_len = 6;
 fielddef_t sys_fields[] = {
     {.name = "repeat",
      .type = "bool",
@@ -122,6 +123,9 @@ fielddef_t sys_fields[] = {
     {.name = "cooldown",
      .type = "bool",
      .desc = "Was response received during the cooldown period"},
+    {.name = "blank",
+     .type = "null",
+     .desc = "inserts an empty column in CSV output; excluded from JSON output"},
     {.name = "timestamp_str",
      .type = "string",
      .desc = "timestamp of when response arrived in ISO8601 format."},
