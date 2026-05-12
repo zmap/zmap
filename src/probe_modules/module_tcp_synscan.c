@@ -50,7 +50,7 @@ static bool rtt_enabled = false;
 #define RTT_TIMESTAMP_MASK  ((1u << RTT_TIMESTAMP_BITS) - 1)
 #define RTT_VALIDATION_MASK ((1u << RTT_VALIDATION_BITS) - 1)
 
-#define RTT_TICKS_PER_SEC 10000 // convert 0.1 ms to nanoseconds, returned by steady_now()
+#define RTT_TICKS_PER_SEC 10000 // 10000 ticks/s -> 0.1 ms per tick
 
 static double t_begin;
 static double t_begin_realtime;
@@ -476,6 +476,7 @@ static void synscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 					 (unsigned long long)(rtt_ticks % 10));
 				fs_add_string(fs, "rtt", rtt_str, 1);
 			} else {
+				log_warn("tcp_synscan", "failed to allocate memory for RTT string, adding null RTT field");
 				fs_add_null(fs, "rtt");
 			}
 		} else {
