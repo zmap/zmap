@@ -33,4 +33,4 @@ Reviewing
   commit in a PR. Follow the commit formatting guidelines [here][guidelines].
 
 [kernelguide]: https://www.kernel.org/doc/Documentation/process/coding-style.rst
-[guidelines]: https://github.com/torvalds/subsurface-for-dirk/blob/master/README#L92
+[guidelines]: https://github.com/subsurface/subsurface#contributing
