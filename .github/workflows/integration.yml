@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
       - name: Run Pytest
         run: |
           docker build -t pytest-container -f .github/workflows/pytest.Dockerfile .
