@@ -118,6 +118,7 @@ probe_module_t module_tcp_synscan;
 static uint16_t num_source_ports;
 static uint8_t os_for_tcp_options;
 static bool rtt_enabled = false;
+static bool ja4ts_enabled = false;
 
 // RTT is encoded in the lower RTT_TIMESTAMP_BITS of the TCP SYN sequence number
 // (XOR'd with validation[0]). The upper RTT_VALIDATION_BITS are used for packet
@@ -177,6 +178,8 @@ static int synscan_global_initialize(struct state_conf *state)
 	while (token) {
 		if (strcmp(token, "rtt") == 0) {
 			rtt_enabled = true;
+		} else if (strcmp(token, "ja4ts") == 0) {
+			ja4ts_enabled = true;
 		} else if (strcmp(token, "smallest-probes") == 0) {
 			if (os_set) {
 				log_fatal("tcp_synscan", "multiple OS options specified in probe-args");
@@ -213,9 +216,10 @@ static int synscan_global_initialize(struct state_conf *state)
 			log_fatal("tcp_synscan",
 				  "unknown probe-arg: \"%s\"; "
 				  "probe-args should be comma-separated and valid options are: "
-				  "an OS option (\"smallest-probes\", \"bsd\", \"linux\", \"windows\"(default)) "
-				  "and optionally \"rtt\" to enable RTT measurement. "
-				  "Examples: --probe-args=windows, --probe-args=rtt, --probe-args=linux,rtt",
+				  "an OS option (\"smallest-probes\", \"bsd\", \"linux\", \"windows\"(default)), "
+				  "optionally \"rtt\" to enable RTT measurement, "
+				  "and optionally \"ja4ts\" to emit the JA4TS TCP fingerprint. "
+				  "Examples: --probe-args=windows, --probe-args=rtt, --probe-args=linux,rtt, --probe-args=ja4ts",
 				  token);
 		}
 		token = strtok(NULL, ",");
@@ -227,16 +231,21 @@ static int synscan_global_initialize(struct state_conf *state)
 	// double-check arithmetic
 	assert(zmap_tcp_synscan_packet_len - zmap_tcp_synscan_tcp_header_len == 34);
 
-	// Warn if "rtt" was explicitly requested as an output field but not enabled via probe-args
-	if (!rtt_enabled && state->raw_output_fields &&
+	// Warn if "rtt" or "ja4ts" was explicitly requested as an output field but not enabled via probe-args
+	if (state->raw_output_fields &&
 	    strcmp(state->raw_output_fields, "*") != 0) {
 		for (int i = 0; i < state->output_fields_len; i++) {
-			if (strcmp(state->output_fields[i], "rtt") == 0) {
+			if (!rtt_enabled &&
+			    strcmp(state->output_fields[i], "rtt") == 0) {
 				log_warn("tcp_synscan",
 					 "\"rtt\" is listed in --output-fields but RTT is not enabled; "
-					 "add \"rtt\" to --probe-args to enable it "
-					 "(e.g. --probe-args=rtt or --probe-args=windows,rtt)");
-				break;
+					 "add \"rtt\" to --probe-args to enable it");
+			}
+			if (!ja4ts_enabled &&
+			    strcmp(state->output_fields[i], "ja4ts") == 0) {
+				log_warn("tcp_synscan",
+					 "\"ja4ts\" is listed in --output-fields but JA4TS is not enabled; "
+					 "add \"ja4ts\" to --probe-args to enable it");
 			}
 		}
 	}
@@ -561,6 +570,32 @@ static void synscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 		} else {
 			fs_add_null(fs, "rtt");
 		}
+		if (ja4ts_enabled) {
+			if (tcp->th_flags & TH_RST) {
+				fs_add_null(fs, "ja4ts");
+			} else {
+				char ja4ts_buf[256];
+				size_t header_size = tcp->th_off * 4;
+				size_t opts_len = header_size > 20
+					? header_size - 20
+					: 0;
+				const uint8_t *opts =
+				    (const uint8_t *)tcp + 20;
+				compute_ja4ts(opts, opts_len,
+					      ntohs(tcp->th_win), ja4ts_buf,
+					      sizeof(ja4ts_buf));
+				char *ja4ts_str = strdup(ja4ts_buf);
+				if (ja4ts_str) {
+					fs_add_string(fs, "ja4ts", ja4ts_str, 1);
+				} else {
+					log_warn("tcp_synscan",
+						 "failed to allocate memory for JA4TS string, adding null JA4TS field");
+					fs_add_null(fs, "ja4ts");
+				}
+			}
+		} else {
+			fs_add_null(fs, "ja4ts");
+		}
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		// tcp
 		fs_add_null(fs, "sport");
@@ -580,6 +615,7 @@ static void synscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 		fs_populate_icmp_from_iphdr(ip_hdr, len, fs);
 		// rtt
 		fs_add_null(fs, "rtt");
+		fs_add_null(fs, "ja4ts");
 	}
 }
 
@@ -597,6 +633,8 @@ static fielddef_t fields[] = {
     CLASSIFICATION_SUCCESS_FIELDSET_FIELDS,
     ICMP_FIELDSET_FIELDS,
     {.name = "rtt", .type = "string", .desc = "RTT in ms to one decimal place, max RTT reliably measured = ~28min"},
+    {.name = "ja4ts", .type = "string",
+     .desc = "JA4TS fingerprint of SYN-ACK: window_options_mss_wscale (see FoxIO JA4T)"},
 };
 
 probe_module_t module_tcp_synscan = {
@@ -623,8 +661,9 @@ probe_module_t module_tcp_synscan = {
 		"   - \"bsd\" (MSS + NOP + WindowScale=6 + Timestamps + SACK)\n"
 		"   - \"smallest-probes\" (MSS only, fits minimum Ethernet payload, gives a better hitrate than no options while retaining the same send performance)\n"
 	        " 2. Add \"rtt\" to enable RTT measurement to reports RTT in ms to 0.1 ms granularity (max ~28 min RTT).\n"
+		" 3. Add \"ja4ts\" to emit the JA4TS TCP fingerprint of the SYN-ACK.\n"
 	"Examples: --probe-args=windows, --probe-args=rtt (windows + RTT), "
-	"--probe-args=linux,rtt. RTT works best with --batch 1. ",
+	"--probe-args=linux,rtt, --probe-args=ja4ts. RTT works best with --batch 1. ",
     .output_type = OUTPUT_TYPE_STATIC,
     .fields = fields,
     .numfields = sizeof(fields) / sizeof(fields[0])};
