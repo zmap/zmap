@@ -12,9 +12,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
+#include <stddef.h>
+
+#ifndef JA4TS_UNIT_TEST
 #include <unistd.h>
 #include <time.h>
-#include <string.h>
 #include <assert.h>
 #include <math.h>
 #include <errno.h>
@@ -27,6 +30,82 @@
 #include "probe_modules.h"
 #include "packet.h"
 #include "validate.h"
+#endif /* !JA4TS_UNIT_TEST */
+
+#define JA4TS_OPT_EOL    0
+#define JA4TS_OPT_NOP    1
+#define JA4TS_OPT_MSS    2
+#define JA4TS_OPT_WSCALE 3
+
+void compute_ja4ts(const uint8_t *opts, size_t opts_len, uint16_t window,
+		   char *out, size_t out_len)
+{
+	if (!opts) {
+		opts_len = 0;
+	}
+
+	/* TCP options region <= 40 bytes; worst case ~40 kinds * 4 chars ("xxx-") < 200. */
+	char kinds[200];
+	size_t kinds_off = 0;
+	kinds[0] = '\0';
+
+	int have_mss = 0;
+	uint16_t mss_val = 0;
+	int have_wscale = 0;
+	uint8_t wscale_val = 0;
+
+	size_t i = 0;
+	while (i < opts_len) {
+		uint8_t kind = opts[i];
+
+		int n = snprintf(kinds + kinds_off, sizeof(kinds) - kinds_off,
+				 kinds_off == 0 ? "%u" : "-%u", kind);
+		if (n <= 0 || (size_t)n >= sizeof(kinds) - kinds_off) {
+			break;
+		}
+		kinds_off += (size_t)n;
+
+		if (kind == JA4TS_OPT_EOL) {
+			break;
+		}
+		if (kind == JA4TS_OPT_NOP) {
+			i += 1;
+			continue;
+		}
+
+		if (i + 1 >= opts_len) {
+			break;
+		}
+		uint8_t len = opts[i + 1];
+		if (len < 2 || i + len > opts_len) {
+			break;
+		}
+
+		if (kind == JA4TS_OPT_MSS && len == 4 && !have_mss) {
+			mss_val = (uint16_t)(((uint16_t)opts[i + 2] << 8) | opts[i + 3]);
+			have_mss = 1;
+		} else if (kind == JA4TS_OPT_WSCALE && len == 3 && !have_wscale) {
+			wscale_val = opts[i + 2];
+			have_wscale = 1;
+		}
+
+		i += len;
+	}
+
+	if (have_mss && have_wscale) {
+		snprintf(out, out_len, "%u_%s_%u_%u", window, kinds, mss_val,
+			 wscale_val);
+	} else if (have_mss) {
+		snprintf(out, out_len, "%u_%s_%u_00", window, kinds, mss_val);
+	} else if (have_wscale) {
+		snprintf(out, out_len, "%u_%s_00_%u", window, kinds,
+			 wscale_val);
+	} else {
+		snprintf(out, out_len, "%u_%s_00_00", window, kinds);
+	}
+}
+
+#ifndef JA4TS_UNIT_TEST
 
 // defaults
 static uint8_t zmap_tcp_synscan_tcp_header_len = 20;
@@ -549,3 +628,5 @@ probe_module_t module_tcp_synscan = {
     .output_type = OUTPUT_TYPE_STATIC,
     .fields = fields,
     .numfields = sizeof(fields) / sizeof(fields[0])};
+
+#endif /* !JA4TS_UNIT_TEST */
