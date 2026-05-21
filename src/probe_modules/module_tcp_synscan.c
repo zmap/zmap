@@ -119,6 +119,8 @@ static uint16_t num_source_ports;
 static uint8_t os_for_tcp_options;
 static bool rtt_enabled = false;
 static bool ja4ts_enabled = false;
+static bool ja4t_enabled = false;
+static char ja4t_buf[256];
 
 // RTT is encoded in the lower RTT_TIMESTAMP_BITS of the TCP SYN sequence number
 // (XOR'd with validation[0]). The upper RTT_VALIDATION_BITS are used for packet
@@ -180,6 +182,8 @@ static int synscan_global_initialize(struct state_conf *state)
 			rtt_enabled = true;
 		} else if (strcmp(token, "ja4ts") == 0) {
 			ja4ts_enabled = true;
+		} else if (strcmp(token, "ja4t") == 0) {
+			ja4t_enabled = true;
 		} else if (strcmp(token, "smallest-probes") == 0) {
 			if (os_set) {
 				log_fatal("tcp_synscan", "multiple OS options specified in probe-args");
@@ -218,8 +222,9 @@ static int synscan_global_initialize(struct state_conf *state)
 				  "probe-args should be comma-separated and valid options are: "
 				  "an OS option (\"smallest-probes\", \"bsd\", \"linux\", \"windows\"(default)), "
 				  "optionally \"rtt\" to enable RTT measurement, "
-				  "and optionally \"ja4ts\" to emit the JA4TS TCP fingerprint. "
-				  "Examples: --probe-args=windows, --probe-args=rtt, --probe-args=linux,rtt, --probe-args=ja4ts",
+				  "optionally \"ja4ts\" to emit the JA4TS fingerprint of the SYN-ACK, "
+				  "and optionally \"ja4t\" to emit the JA4T fingerprint of zmap's own SYN. "
+				  "Examples: --probe-args=windows, --probe-args=rtt, --probe-args=linux,rtt, --probe-args=ja4ts,ja4t",
 				  token);
 		}
 		token = strtok(NULL, ",");
@@ -246,6 +251,12 @@ static int synscan_global_initialize(struct state_conf *state)
 				log_warn("tcp_synscan",
 					 "\"ja4ts\" is listed in --output-fields but JA4TS is not enabled; "
 					 "add \"ja4ts\" to --probe-args to enable it");
+			}
+			if (!ja4t_enabled &&
+			    strcmp(state->output_fields[i], "ja4t") == 0) {
+				log_warn("tcp_synscan",
+					 "\"ja4t\" is listed in --output-fields but JA4T is not enabled; "
+					 "add \"ja4t\" to --probe-args to enable it");
 			}
 		}
 	}
@@ -277,6 +288,14 @@ static int synscan_prepare_packet(void *buf, macaddr_t *src, macaddr_t *gw,
 	struct tcphdr *tcp_header = (struct tcphdr *)(&ip_header[1]);
 	make_tcp_header(tcp_header, TH_SYN);
 	set_tcp_options(tcp_header, os_for_tcp_options);
+	if (ja4t_enabled) {
+		size_t opts_len = zmap_tcp_synscan_tcp_header_len > 20
+			? zmap_tcp_synscan_tcp_header_len - 20
+			: 0;
+		const uint8_t *opts = (const uint8_t *)tcp_header + 20;
+		compute_ja4ts(opts, opts_len, ntohs(tcp_header->th_win),
+			      ja4t_buf, sizeof(ja4t_buf));
+	}
 	return EXIT_SUCCESS;
 }
 
@@ -596,6 +615,18 @@ static void synscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 		} else {
 			fs_add_null(fs, "ja4ts");
 		}
+		if (ja4t_enabled) {
+			char *ja4t_str = strdup(ja4t_buf);
+			if (ja4t_str) {
+				fs_add_string(fs, "ja4t", ja4t_str, 1);
+			} else {
+				log_warn("tcp_synscan",
+					 "failed to allocate memory for JA4T string, adding null JA4T field");
+				fs_add_null(fs, "ja4t");
+			}
+		} else {
+			fs_add_null(fs, "ja4t");
+		}
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		// tcp
 		fs_add_null(fs, "sport");
@@ -616,6 +647,7 @@ static void synscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 		// rtt
 		fs_add_null(fs, "rtt");
 		fs_add_null(fs, "ja4ts");
+		fs_add_null(fs, "ja4t");
 	}
 }
 
@@ -635,6 +667,8 @@ static fielddef_t fields[] = {
     {.name = "rtt", .type = "string", .desc = "RTT in ms to one decimal place, max RTT reliably measured = ~28min"},
     {.name = "ja4ts", .type = "string",
      .desc = "JA4TS fingerprint of SYN-ACK: window_options_mss_wscale (see FoxIO JA4T)"},
+    {.name = "ja4t", .type = "string",
+     .desc = "JA4T fingerprint of zmap's own SYN: window_options_mss_wscale (see FoxIO JA4T); constant per scan"},
 };
 
 probe_module_t module_tcp_synscan = {
@@ -662,8 +696,9 @@ probe_module_t module_tcp_synscan = {
 		"   - \"smallest-probes\" (MSS only, fits minimum Ethernet payload, gives a better hitrate than no options while retaining the same send performance)\n"
 	        " 2. Add \"rtt\" to enable RTT measurement to reports RTT in ms to 0.1 ms granularity (max ~28 min RTT).\n"
 		" 3. Add \"ja4ts\" to emit the JA4TS TCP fingerprint of the SYN-ACK.\n"
+		" 4. Add \"ja4t\" to emit the JA4T TCP fingerprint of zmap's own SYN (constant per scan).\n"
 	"Examples: --probe-args=windows, --probe-args=rtt (windows + RTT), "
-	"--probe-args=linux,rtt, --probe-args=ja4ts. RTT works best with --batch 1. ",
+	"--probe-args=linux,rtt, --probe-args=ja4ts,ja4t. RTT works best with --batch 1. ",
     .output_type = OUTPUT_TYPE_STATIC,
     .fields = fields,
     .numfields = sizeof(fields) / sizeof(fields[0])};
