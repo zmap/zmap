@@ -237,28 +237,51 @@ static int synscan_global_initialize(struct state_conf *state)
 	assert(zmap_tcp_synscan_packet_len - zmap_tcp_synscan_tcp_header_len == 34);
 
 	// Warn if "rtt" or "ja4ts" was explicitly requested as an output field but not enabled via probe-args
+	bool rtt_output_requested = false;
+	bool ja4ts_output_requested = false;
+	bool ja4t_output_requested = false;
 	if (state->raw_output_fields &&
 	    strcmp(state->raw_output_fields, "*") != 0) {
 		for (int i = 0; i < state->output_fields_len; i++) {
-			if (!rtt_enabled &&
-			    strcmp(state->output_fields[i], "rtt") == 0) {
-				log_warn("tcp_synscan",
-					 "\"rtt\" is listed in --output-fields but RTT is not enabled; "
-					 "add \"rtt\" to --probe-args to enable it");
+			if (strcmp(state->output_fields[i], "rtt") == 0) {
+				rtt_output_requested = true;
+				if (!rtt_enabled) {
+					log_warn("tcp_synscan",
+						 "\"rtt\" is listed in --output-fields but RTT is not enabled; "
+						 "add \"rtt\" to --probe-args to enable it");
+				}
 			}
-			if (!ja4ts_enabled &&
-			    strcmp(state->output_fields[i], "ja4ts") == 0) {
-				log_warn("tcp_synscan",
-					 "\"ja4ts\" is listed in --output-fields but JA4TS is not enabled; "
-					 "add \"ja4ts\" to --probe-args to enable it");
+			if (strcmp(state->output_fields[i], "ja4ts") == 0) {
+				ja4ts_output_requested = true;
+			    	if (!ja4ts_enabled) {
+			    		log_warn("tcp_synscan",
+						     "\"ja4ts\" is listed in --output-fields but JA4TS is not enabled; "
+						     "add \"ja4ts\" to --probe-args to enable it");
+			    	}
 			}
-			if (!ja4t_enabled &&
-			    strcmp(state->output_fields[i], "ja4t") == 0) {
-				log_warn("tcp_synscan",
-					 "\"ja4t\" is listed in --output-fields but JA4T is not enabled; "
-					 "add \"ja4t\" to --probe-args to enable it");
+			if ( strcmp(state->output_fields[i], "ja4t") == 0) {
+				ja4t_output_requested = true;
+				if (!ja4t_enabled) {
+					log_warn("tcp_synscan",
+						 "\"ja4t\" is listed in --output-fields but JA4T is not enabled; "
+						 "add \"ja4t\" to --probe-args to enable it");
+				}
 			}
 		}
+	} else if (state->raw_output_fields && strcmp(state->raw_output_fields, "*") == 0) {
+		// All output fields requested
+		rtt_output_requested = true;
+		ja4ts_output_requested = true;
+		ja4t_output_requested = true;
+	}
+	if (rtt_enabled && !rtt_output_requested) {
+		log_warn("tcp_synscan", "RTT measurement enabled through --probe-args but not requested in --output-fields. You may want to add --output-fields=\"...,rtt\"");
+	}
+	if (ja4ts_enabled && !ja4ts_output_requested) {
+		log_warn("tcp_synscan", "JA4TS enabled through --probe-args but not requested in --output-fields. You may want to add --output-fields=\"...,ja4ts\"");
+	}
+	if (ja4t_enabled && !ja4t_output_requested) {
+		log_warn("tcp_synscan", "JA4T enabled through --probe-args but not requested in --output-fields. You may want to add --output-fields=\"...,ja4t\"");
 	}
 
 	if (rtt_enabled) {
