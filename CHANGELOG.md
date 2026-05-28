@@ -280,3 +280,27 @@ Misc bug fixes and improvements
 ## BUGFIX
 
 * Fix size of recv validation from uint32[16] to uint32[4] in #926
+
+# 4.3.4 2025-05-13
+
+## ENHANCEMENT
+
+* Print out `v4.3.4` instead of the developmenet commit hash on `--version`
+
+# 4.4.0 2026-05-29
+
+## FEATURE
+* Adds a RTT measurment mode to the TCP SYN module. See `--help` for more info
+* Adds optional JA4TS fingerprints of SYN-ACKs, see `--help` on enabling this with `--probe-args`
+
+## ENHANCEMENT
+
+* Increase the size of the buffer array for gateway detection to prevent odds of array index out-of-bounds
+* General README improvements
+* Adds a "blank" `--output-fields` to allow for easier piping into ZGrab2 in multi-port mode
+
+## BUGFIX
+
+* Fixes issues with rate-limiting (`--bandwidth`, `--rate`, etc.) not being respected when using `--probes` and resulting in really bursty traffic patterns at low scan rates
+* Fixes bug where `--iface` wasn't being respected on Linux (#956)
+ 
