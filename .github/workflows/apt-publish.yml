@@ -117,18 +117,19 @@ jobs:
           done
 
       - name: Generate Release file
+        env:
+          RELEASE_HEADER: |
+            Origin: ZMap
+            Label: ZMap
+            Suite: stable
+            Codename: stable
+            Architectures: amd64 arm64
+            Components: main
+            Description: ZMap APT Repository
         run: |
           cd repo/dists/stable
           {
-            cat <<'EOF'
-Origin: ZMap
-Label: ZMap
-Suite: stable
-Codename: stable
-Architectures: amd64 arm64
-Components: main
-Description: ZMap APT Repository
-EOF
+            echo "$RELEASE_HEADER"
             echo "Date: $(date -Ru)"
             echo "MD5Sum:"
             find main -type f | sort | while read -r f; do
