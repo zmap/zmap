@@ -1,0 +1,63 @@
+name: Rotate APT Signing Key
+
+on:
+  workflow_dispatch:
+
+jobs:
+  rotate-key:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Generate new GPG signing key
+        run: |
+          gpg --batch --gen-key <<EOF
+          %no-protection
+          Key-Type: EdDSA
+          Key-Curve: ed25519
+          Subkey-Type: ECDH
+          Subkey-Curve: cv25519
+          Name-Real: ZMap Project
+          Name-Email: zmap-apt@zmap.io
+          Expire-Date: 0
+          %commit
+          EOF
+
+      - name: Store new key version in Secret Manager
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+        run: |
+          gpg --armor --export-secret-keys zmap-apt@zmap.io | \
+            gcloud secrets versions add zmap-apt-signing-key \
+              --project="$GCP_PROJECT_ID" \
+              --data-file=-
+
+      - name: Re-sign existing APT repository
+        run: |
+          mkdir -p repo
+          gsutil -m rsync -r gs://zmap-apt-repo/ repo/
+
+          cd repo/dists/stable
+          KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec/{print $5; exit}')
+          gpg --default-key "$KEY_ID" --clearsign -o InRelease Release
+          gpg --default-key "$KEY_ID" -abs -o Release.gpg Release
+
+      - name: Upload new public key and re-signed index files
+        run: |
+          gpg --armor --export zmap-apt@zmap.io > repo/gpg.key
+          gsutil cp repo/gpg.key gs://zmap-apt-repo/gpg.key
+          gsutil -m rsync -r repo/dists gs://zmap-apt-repo/dists
+          gsutil -m setmeta -h "Cache-Control:no-cache, no-store" \
+            "gs://zmap-apt-repo/dists/stable/Release" \
+            "gs://zmap-apt-repo/dists/stable/InRelease" \
+            "gs://zmap-apt-repo/dists/stable/Release.gpg"

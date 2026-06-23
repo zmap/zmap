@@ -1,6 +1,8 @@
 Contributing to ZMap
 ====================
 
+For maintainers: see [RELEASING.md](RELEASING.md) for the release process.
+
 ZMap accepts contributions in the form of issues and pull requests. In either
 case, before posting please [search](https://github.com/zmap/zmap/issues) to see
 if your change or bug report has been addressed previously.

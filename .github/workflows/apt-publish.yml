@@ -1,0 +1,176 @@
+name: Publish APT Package
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  build-deb:
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake libgmp3-dev gengetopt \
+            libpcap-dev flex byacc libjson-c-dev \
+            pkg-config libunistring-dev libjudy-dev
+
+      - name: Build and package
+        run: |
+          cmake -DCMAKE_BUILD_TYPE=Release .
+          make -j$(nproc)
+          cpack
+
+      - name: Upload deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zmap-deb-${{ matrix.arch }}
+          path: '*.deb'
+
+  publish-apt:
+    needs: build-deb
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Set target bucket
+        id: bucket
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "name=zmap-apt-repo" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ inputs.environment }}" == "production" ]]; then
+            echo "name=zmap-apt-repo" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=zmap-apt-repo-staging" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download deb artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: zmap-deb-*
+          merge-multiple: true
+          path: new-debs/
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install repo tools
+        run: sudo apt-get install -y dpkg-dev
+
+      - name: Import GPG signing key
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+        run: |
+          gcloud secrets versions access latest \
+            --secret=zmap-apt-signing-key \
+            --project="$GCP_PROJECT_ID" \
+            > /tmp/signing-key.asc
+          gpg --import /tmp/signing-key.asc
+          rm -f /tmp/signing-key.asc
+
+      - name: Download existing APT repo from GCS
+        run: |
+          mkdir -p repo
+          gsutil -m rsync -r gs://${{ steps.bucket.outputs.name }}/ repo/ || true
+
+      - name: Add new packages to pool
+        run: |
+          mkdir -p repo/pool/main/z/zmap
+          cp new-debs/*.deb repo/pool/main/z/zmap/
+
+      - name: Generate Packages indexes
+        run: |
+          cd repo
+          for ARCH in amd64 arm64; do
+            mkdir -p dists/stable/main/binary-${ARCH}
+            dpkg-scanpackages --arch ${ARCH} pool/main \
+              > dists/stable/main/binary-${ARCH}/Packages
+            gzip -k -f dists/stable/main/binary-${ARCH}/Packages
+          done
+
+      - name: Generate Release file
+        run: |
+          cd repo/dists/stable
+          {
+            cat <<'EOF'
+Origin: ZMap
+Label: ZMap
+Suite: stable
+Codename: stable
+Architectures: amd64 arm64
+Components: main
+Description: ZMap APT Repository
+EOF
+            echo "Date: $(date -Ru)"
+            echo "MD5Sum:"
+            find main -type f | sort | while read -r f; do
+              printf " %s %s %s\n" \
+                "$(md5sum "$f" | cut -d' ' -f1)" \
+                "$(wc -c < "$f")" \
+                "$f"
+            done
+            echo "SHA256:"
+            find main -type f | sort | while read -r f; do
+              printf " %s %s %s\n" \
+                "$(sha256sum "$f" | cut -d' ' -f1)" \
+                "$(wc -c < "$f")" \
+                "$f"
+            done
+          } > Release
+
+      - name: Sign Release file
+        run: |
+          cd repo/dists/stable
+          KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec/{print $5; exit}')
+          gpg --default-key "$KEY_ID" --clearsign -o InRelease Release
+          gpg --default-key "$KEY_ID" -abs -o Release.gpg Release
+
+      - name: Export public key
+        run: gpg --armor --export > repo/gpg.key
+
+      - name: Upload to GCS
+        env:
+          BUCKET: ${{ steps.bucket.outputs.name }}
+        run: |
+          # Pool files are immutable once written; never delete old versions
+          gsutil -m rsync -r repo/pool gs://${BUCKET}/pool
+
+          # Index files are always regenerated in full
+          gsutil -m rsync -r repo/dists gs://${BUCKET}/dists
+
+          # Prevent stale index caching
+          gsutil -m setmeta -h "Cache-Control:no-cache, no-store" \
+            "gs://${BUCKET}/dists/stable/Release" \
+            "gs://${BUCKET}/dists/stable/InRelease" \
+            "gs://${BUCKET}/dists/stable/Release.gpg"
+
+          # Public key
+          gsutil cp repo/gpg.key gs://${BUCKET}/gpg.key
