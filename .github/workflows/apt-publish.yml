@@ -26,7 +26,7 @@ jobs:
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install build dependencies
         run: |
@@ -43,7 +43,7 @@ jobs:
           cpack
 
       - name: Upload deb artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: zmap-deb-${{ matrix.arch }}
           path: '*.deb'
