@@ -237,10 +237,13 @@ jobs:
           # Pool files are immutable once written; never delete old versions
           gcloud storage rsync -r repo/pool gs://${BUCKET}/pool
 
-          # Packages indexes must be live before Release is updated
+          # Packages indexes must be live before Release is updated.
+          # no-cache on Packages/Packages.gz prevents stale CDN size mismatches
+          # that cause APT to reject the index ("File has unexpected size").
           for CODENAME in $(ls repo/pool/); do
             gcloud storage cp -r "repo/dists/${CODENAME}/main" \
-              "gs://${BUCKET}/dists/${CODENAME}/"
+              "gs://${BUCKET}/dists/${CODENAME}/" \
+              --cache-control="no-cache, no-store"
             for f in Release InRelease Release.gpg; do
               gcloud storage cp --cache-control="no-cache, no-store" \
                 "repo/dists/${CODENAME}/$f" \

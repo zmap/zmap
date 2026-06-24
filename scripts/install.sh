@@ -35,6 +35,33 @@ REPO_HOST=$(echo "$REPO_URL" | sed 's|https\?://||; s|/.*||')
 echo "Detected: ${PRETTY_NAME:-$ID $VERSION_ID}, codename=${CODENAME}, arch=${ARCH}"
 echo "Repo: ${REPO_URL}"
 
+# libjudy1 lives in Ubuntu's 'universe' component which isn't always present in
+# minimal container images. Add it if missing so the zmap package can be installed.
+if [ "${ID:-}" = "ubuntu" ]; then
+    if ! grep -rqE '^deb[[:space:]].+universe' /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null; then
+        case "$(uname -m)" in
+            aarch64) UBUNTU_MIRROR="http://ports.ubuntu.com/ubuntu-ports" ;;
+            *)       UBUNTU_MIRROR="http://archive.ubuntu.com/ubuntu" ;;
+        esac
+        printf 'deb %s %s universe\ndeb %s %s-updates universe\n' \
+            "$UBUNTU_MIRROR" "$CODENAME" "$UBUNTU_MIRROR" "$CODENAME" \
+            | $SUDO tee /etc/apt/sources.list.d/zmap-universe.list > /dev/null
+    fi
+fi
+
+# Debian 11 (bullseye) and older are EOL; packages live on archive.debian.org rather
+# than the default deb.debian.org mirrors.
+if [ "${ID:-}" = "debian" ]; then
+    EOL_THRESHOLD=11
+    VERSION_INT="${VERSION_ID%%.*}"
+    if [ "${VERSION_INT:-0}" -le "$EOL_THRESHOLD" ] 2>/dev/null; then
+        $SUDO sed -i \
+            -e 's|http://deb.debian.org/debian|http://archive.debian.org/debian|g' \
+            -e '/security\.debian\.org/d' \
+            /etc/apt/sources.list
+    fi
+fi
+
 $SUDO mkdir -p /usr/share/keyrings
 curl -fsSL "${REPO_URL}/gpg.key" \
     | $SUDO gpg --dearmor -o /usr/share/keyrings/zmap-archive-keyring.gpg
