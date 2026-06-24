@@ -17,6 +17,8 @@ on:
 
 jobs:
   build-deb:
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     strategy:
       fail-fast: false
       matrix:
@@ -245,3 +247,61 @@ jobs:
           done
 
           gcloud storage cp repo/gpg.key gs://${BUCKET}/gpg.key
+
+  verify-apt:
+    needs: [build-deb, publish-apt]
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - name: amd64
+            runner: ubuntu-24.04
+          - name: arm64
+            runner: ubuntu-24.04-arm
+        distro:
+          - { image: "ubuntu:20.04",    codename: focal     }
+          - { image: "ubuntu:22.04",    codename: jammy     }
+          - { image: "ubuntu:24.04",    codename: noble     }
+          - { image: "ubuntu:26.04",    codename: resolute  }
+          - { image: "debian:bullseye", codename: bullseye  }
+          - { image: "debian:bookworm", codename: bookworm  }
+          - { image: "debian:trixie",   codename: trixie    }
+          - { image: "debian:forky",    codename: forky     }
+    runs-on: ${{ matrix.arch.runner }}
+    steps:
+      - name: Set target bucket URL
+        id: bucket
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]] || [[ "${{ inputs.environment }}" == "production" ]]; then
+            echo "url=https://storage.googleapis.com/zmap-apt-repo" >> "$GITHUB_OUTPUT"
+          else
+            echo "url=https://storage.googleapis.com/zmap-apt-repo-staging" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify package installs and version matches
+        run: |
+          EXPECTED="${{ needs.build-deb.outputs.version }}"
+          BUCKET="${{ steps.bucket.outputs.url }}"
+          docker run --rm \
+            -e "EXPECTED_VERSION=${EXPECTED}" \
+            "${{ matrix.distro.image }}" \
+            bash -c "
+              set -e
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update -qq
+              apt-get install -y curl gpg
+              curl -fsSL ${BUCKET}/gpg.key \
+                | gpg --dearmor -o /usr/share/keyrings/zmap-archive-keyring.gpg
+              echo 'deb [arch=${{ matrix.arch.name }} signed-by=/usr/share/keyrings/zmap-archive-keyring.gpg] ${BUCKET} ${{ matrix.distro.codename }} main' \
+                > /etc/apt/sources.list.d/zmap.list
+              apt-get update -qq
+              apt-get install -y zmap
+              INSTALLED=\$(zmap --version 2>&1 | head -1)
+              echo \"Installed: \${INSTALLED}\"
+              if echo \"\${INSTALLED}\" | grep -qF \"\${EXPECTED_VERSION}\"; then
+                echo 'Version check passed'
+              else
+                echo \"FAIL: expected '\${EXPECTED_VERSION}' in '\${INSTALLED}'\"
+                exit 1
+              fi
+            "
