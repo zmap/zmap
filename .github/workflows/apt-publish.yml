@@ -118,6 +118,8 @@ jobs:
       id-token: write
       contents: read
     steps:
+      - uses: actions/checkout@v7
+
       - name: Set target bucket
         id: bucket
         run: |
@@ -248,6 +250,10 @@ jobs:
 
           gcloud storage cp repo/gpg.key gs://${BUCKET}/gpg.key
 
+          # install.sh is always overwritten so users get the latest version
+          gcloud storage cp --cache-control="no-cache, no-store" \
+            scripts/install.sh gs://${BUCKET}/install.sh
+
   verify-apt:
     needs: [build-deb, publish-apt]
     strategy:
@@ -290,11 +296,7 @@ jobs:
               export DEBIAN_FRONTEND=noninteractive
               apt-get update -qq
               apt-get install -y curl gpg
-              curl -fsSL ${BUCKET}/gpg.key \
-                | gpg --dearmor -o /usr/share/keyrings/zmap-archive-keyring.gpg
-              echo 'deb [arch=${{ matrix.arch.name }} signed-by=/usr/share/keyrings/zmap-archive-keyring.gpg] ${BUCKET} ${{ matrix.distro.codename }} main' \
-                > /etc/apt/sources.list.d/zmap.list
-              apt-get update -qq
+              curl -fsSL ${BUCKET}/install.sh | bash -s -- ${BUCKET}
               apt-get install -y zmap
               INSTALLED=\$(zmap --version 2>&1 | head -1)
               echo \"Installed: \${INSTALLED}\"
