@@ -298,7 +298,7 @@ jobs:
               apt-get install -y curl gpg
               curl -fsSL ${BUCKET}/install.sh | bash -s -- ${BUCKET}
               apt-get install -y zmap
-              INSTALLED=\$(zmap --version 2>&1 | head -1)
+              INSTALLED=\$(zmap --version 2>/dev/null)
               echo \"Installed: \${INSTALLED}\"
               if echo \"\${INSTALLED}\" | grep -qF \"\${EXPECTED_VERSION}\"; then
                 echo 'Version check passed'
