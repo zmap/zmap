@@ -147,6 +147,7 @@ jobs:
       - name: Sign Release file
         run: |
           cd repo/dists/stable
+          rm -f InRelease Release.gpg
           KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec/{print $5; exit}')
           gpg --batch --pinentry-mode loopback --default-key "$KEY_ID" --clearsign -o InRelease Release
           gpg --batch --pinentry-mode loopback --default-key "$KEY_ID" -abs -o Release.gpg Release
