@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5.0 FATAL_ERROR)
 project(ZMAP C)
-set(ZMAP_VERSION DEVELOPMENT) # Change DEVELOPMENT to version number for release
+set(ZMAP_VERSION "DEVELOPMENT" CACHE STRING "ZMap version string; set to release version for packaging")
 
 option(ENABLE_DEVELOPMENT "Enable development specific compiler and linker flags" OFF)
 option(ENABLE_LOG_TRACE "Enable log trace messages" OFF)
@@ -249,12 +249,27 @@ else()
     set(DEB_ARCH ${CMAKE_SYSTEM_PROCESSOR})
 endif()
 set(CPACK_DEBIAN_ARCHITECTURE ${DEB_ARCH})
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.1.3), libgmp10, libpcap0.8, libjson-c-dev")
+
+# Runtime dependency names vary across distro generations.
+# libjudy: Ubuntu 20.04/22.04 + Debian bullseye ship libjudy1; noble/bookworm+ ship libjudydebian1.
+# libjson-c: Ubuntu 20.04 ships libjson-c4; everything else ships libjson-c5.
+set(JUDY_RUNTIME_DEP "libjudy1" CACHE STRING "Judy runtime package name for Debian packaging")
+set(JSONC_RUNTIME_DEP "libjson-c5" CACHE STRING "libjson-c runtime package name for Debian packaging")
+# When set, the distro codename is embedded in the package filename so packages
+# for different distros don't collide in the same pool directory.
+set(DISTRO_CODENAME "" CACHE STRING "Distribution codename included in the package filename")
+
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.1.3), libgmp10, libpcap0.8 | libpcap0.8t64, ${JSONC_RUNTIME_DEP}, ${JUDY_RUNTIME_DEP}")
 
 set(CPACK_PACKAGE_DESCRIPTION "Internet-scale network scanner")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "ZMap is an open source network scanner that enables researchers to easily perform Internet-wide network studies. With a single machine and a well provisioned network uplink, ZMap is capable of performing a complete scan of the IPv4 address space in under five minutes, approaching the theoretical limit of gigabit Ethernet. ZMap can be used to study protocol adoption over time, monitor service availability, and help us better understand large systems distributed across the Internet.")
 set(CPACK_PACKAGE_CONTACT "Zakir Durumeric <zakird@gmail.com>")
-set(CPACK_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}_${ZMAP_VERSION}_${DEB_ARCH}")
+set(CPACK_DEBIAN_PACKAGE_NAME "zmap")
+if(DISTRO_CODENAME)
+    set(CPACK_PACKAGE_FILE_NAME "zmap_${ZMAP_VERSION}_${DISTRO_CODENAME}_${DEB_ARCH}")
+else()
+    set(CPACK_PACKAGE_FILE_NAME "zmap_${ZMAP_VERSION}_${DEB_ARCH}")
+endif()
 
 set(CPACK_COMPONENTS_ALL Libraries ApplicationData)
 

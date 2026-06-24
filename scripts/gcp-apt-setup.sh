@@ -119,7 +119,7 @@ gpg --armor --export-secret-keys "$GPG_KEY_EMAIL" | \
 
 echo "==> Uploading public key to GCS bucket"
 gpg --armor --export "$GPG_KEY_EMAIL" > /tmp/zmap-apt-gpg.key
-gsutil cp /tmp/zmap-apt-gpg.key "gs://${BUCKET}/gpg.key"
+gcloud storage cp /tmp/zmap-apt-gpg.key "gs://${BUCKET}/gpg.key"
 rm -f /tmp/zmap-apt-gpg.key
 
 PROVIDER_RESOURCE=$(gcloud iam workload-identity-pools providers describe "$PROVIDER_ID" \

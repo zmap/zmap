@@ -18,13 +18,48 @@ on:
 jobs:
   build-deb:
     strategy:
+      fail-fast: false
       matrix:
-        include:
-          - arch: amd64
+        arch:
+          - name: amd64
             runner: ubuntu-24.04
-          - arch: arm64
+          - name: arm64
             runner: ubuntu-24.04-arm
-    runs-on: ${{ matrix.runner }}
+        distro:
+          - image: "ubuntu:20.04"
+            codename: focal
+            judy_dep: libjudy1
+            jsonc_dep: libjson-c4
+          - image: "ubuntu:22.04"
+            codename: jammy
+            judy_dep: libjudy1
+            jsonc_dep: libjson-c5
+          - image: "ubuntu:24.04"
+            codename: noble
+            judy_dep: libjudydebian1
+            jsonc_dep: libjson-c5
+          - image: "ubuntu:26.04"
+            codename: resolute
+            judy_dep: libjudydebian1
+            jsonc_dep: libjson-c5
+          - image: "debian:bullseye"
+            codename: bullseye
+            judy_dep: libjudy1
+            jsonc_dep: libjson-c5
+          - image: "debian:bookworm"
+            codename: bookworm
+            judy_dep: libjudydebian1
+            jsonc_dep: libjson-c5
+          - image: "debian:trixie"
+            codename: trixie
+            judy_dep: libjudydebian1
+            jsonc_dep: libjson-c5
+          - image: "debian:forky"
+            codename: forky
+            judy_dep: libjudydebian1
+            jsonc_dep: libjson-c5
+
+    runs-on: ${{ matrix.arch.runner }}
     steps:
       - uses: actions/checkout@v7
 
@@ -42,25 +77,37 @@ jobs:
             echo "version=0~dev+$(date +%Y%m%d).$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Install build dependencies
+      - name: Build .deb in target distro container
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential cmake libgmp3-dev gengetopt \
-            libpcap-dev flex byacc libjson-c-dev \
-            pkg-config libunistring-dev libjudy-dev
-
-      - name: Build and package
-        run: |
-          cmake -DZMAP_VERSION="${{ steps.version.outputs.version }}" -DCMAKE_BUILD_TYPE=Release .
-          make -j$(nproc)
-          cpack
+          docker run --rm \
+            -v "$(pwd):/src" \
+            -w /src \
+            "${{ matrix.distro.image }}" \
+            bash -c "
+              set -e
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update -qq
+              apt-get install -y \
+                build-essential cmake libgmp3-dev gengetopt \
+                libpcap-dev flex byacc libjson-c-dev \
+                pkg-config libunistring-dev libjudy-dev
+              cmake \
+                -DZMAP_VERSION='${{ steps.version.outputs.version }}' \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DJUDY_RUNTIME_DEP='${{ matrix.distro.judy_dep }}' \
+                -DJSONC_RUNTIME_DEP='${{ matrix.distro.jsonc_dep }}' \
+                -DDISTRO_CODENAME='${{ matrix.distro.codename }}' \
+                .
+              make -j\$(nproc)
+              cpack
+            "
+          sudo chown "$(id -u):$(id -g)" zmap_*.deb
 
       - name: Upload deb artifact
         uses: actions/upload-artifact@v7
         with:
-          name: zmap-deb-${{ matrix.arch }}
-          path: '*.deb'
+          name: zmap-deb-${{ matrix.distro.codename }}-${{ matrix.arch.name }}
+          path: 'zmap_*.deb'
 
   publish-apt:
     needs: build-deb
@@ -113,58 +160,68 @@ jobs:
       - name: Download existing APT repo from GCS
         run: |
           mkdir -p repo
-          gsutil -m rsync -r gs://${{ steps.bucket.outputs.name }}/ repo/ || true
+          gcloud storage rsync -r gs://${{ steps.bucket.outputs.name }}/ repo/ || true
 
       - name: Add new packages to pool
         run: |
-          mkdir -p repo/pool/main/z/zmap
-          cp new-debs/*.deb repo/pool/main/z/zmap/
-
-      - name: Generate Packages indexes
-        run: |
-          cd repo
-          for ARCH in amd64 arm64; do
-            mkdir -p dists/stable/main/binary-${ARCH}
-            dpkg-scanpackages --arch ${ARCH} pool/main \
-              > dists/stable/main/binary-${ARCH}/Packages
-            gzip -k -f dists/stable/main/binary-${ARCH}/Packages
+          # Package filenames encode the codename: zmap_VERSION_CODENAME_ARCH.deb
+          for deb in new-debs/*.deb; do
+            filename=$(basename "$deb")
+            codename=$(echo "$filename" | cut -d_ -f3)
+            mkdir -p "repo/pool/${codename}/main/z/zmap"
+            cp "$deb" "repo/pool/${codename}/main/z/zmap/"
           done
 
-      - name: Generate Release file
+      - name: Generate Packages indexes and Release files
         run: |
-          cd repo/dists/stable
-          {
-            echo "Origin: ZMap"
-            echo "Label: ZMap"
-            echo "Suite: stable"
-            echo "Codename: stable"
-            echo "Architectures: amd64 arm64"
-            echo "Components: main"
-            echo "Description: ZMap APT Repository"
-            echo "Date: $(date -u '+%a, %d %b %Y %H:%M:%S UTC')"
-            echo "SHA256:"
-            find main -type f | sort | while read -r f; do
-              printf " %s %s %s\n" \
-                "$(sha256sum "$f" | cut -d' ' -f1)" \
-                "$(wc -c < "$f")" \
-                "$f"
+          for CODENAME in $(ls repo/pool/); do
+            for ARCH in amd64 arm64; do
+              mkdir -p "repo/dists/${CODENAME}/main/binary-${ARCH}"
+              (cd repo && dpkg-scanpackages --arch "${ARCH}" "pool/${CODENAME}/main") \
+                > "repo/dists/${CODENAME}/main/binary-${ARCH}/Packages"
+              gzip -c "repo/dists/${CODENAME}/main/binary-${ARCH}/Packages" \
+                > "repo/dists/${CODENAME}/main/binary-${ARCH}/Packages.gz"
             done
-            echo "SHA512:"
-            find main -type f | sort | while read -r f; do
-              printf " %s %s %s\n" \
-                "$(sha512sum "$f" | cut -d' ' -f1)" \
-                "$(wc -c < "$f")" \
-                "$f"
-            done
-          } > Release
 
-      - name: Sign Release file
+            {
+              echo "Origin: ZMap"
+              echo "Label: ZMap"
+              echo "Suite: ${CODENAME}"
+              echo "Codename: ${CODENAME}"
+              echo "Architectures: amd64 arm64"
+              echo "Components: main"
+              echo "Description: ZMap APT Repository"
+              echo "Date: $(date -u '+%a, %d %b %Y %H:%M:%S UTC')"
+              echo "SHA256:"
+              find "repo/dists/${CODENAME}/main" -type f | sort | while read -r f; do
+                rel="${f#repo/dists/${CODENAME}/}"
+                printf " %s %s %s\n" \
+                  "$(sha256sum "$f" | cut -d' ' -f1)" \
+                  "$(wc -c < "$f")" \
+                  "$rel"
+              done
+              echo "SHA512:"
+              find "repo/dists/${CODENAME}/main" -type f | sort | while read -r f; do
+                rel="${f#repo/dists/${CODENAME}/}"
+                printf " %s %s %s\n" \
+                  "$(sha512sum "$f" | cut -d' ' -f1)" \
+                  "$(wc -c < "$f")" \
+                  "$rel"
+              done
+            } > "repo/dists/${CODENAME}/Release"
+          done
+
+      - name: Sign Release files
         run: |
-          cd repo/dists/stable
-          rm -f InRelease Release.gpg
           KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec/{print $5; exit}')
-          gpg --batch --pinentry-mode loopback --default-key "$KEY_ID" --clearsign -o InRelease Release
-          gpg --batch --pinentry-mode loopback --default-key "$KEY_ID" -abs -o Release.gpg Release
+          for release in repo/dists/*/Release; do
+            dir=$(dirname "$release")
+            rm -f "${dir}/InRelease" "${dir}/Release.gpg"
+            gpg --batch --pinentry-mode loopback --default-key "$KEY_ID" \
+              --clearsign -o "${dir}/InRelease" "${dir}/Release"
+            gpg --batch --pinentry-mode loopback --default-key "$KEY_ID" \
+              -abs -o "${dir}/Release.gpg" "${dir}/Release"
+          done
 
       - name: Export public key
         run: gpg --armor --export > repo/gpg.key
@@ -174,17 +231,17 @@ jobs:
           BUCKET: ${{ steps.bucket.outputs.name }}
         run: |
           # Pool files are immutable once written; never delete old versions
-          gsutil -m rsync -r repo/pool gs://${BUCKET}/pool
+          gcloud storage rsync -r repo/pool gs://${BUCKET}/pool
 
-          # Index files are always regenerated in full; -c forces checksum comparison so
-          # files with matching sizes but different content (e.g. Packages.gz) are re-uploaded
-          gsutil -m rsync -c -r repo/dists gs://${BUCKET}/dists
+          # Packages indexes must be live before Release is updated
+          for CODENAME in $(ls repo/pool/); do
+            gcloud storage cp -r "repo/dists/${CODENAME}/main" \
+              "gs://${BUCKET}/dists/${CODENAME}/"
+            for f in Release InRelease Release.gpg; do
+              gcloud storage cp --cache-control="no-cache, no-store" \
+                "repo/dists/${CODENAME}/$f" \
+                "gs://${BUCKET}/dists/${CODENAME}/$f"
+            done
+          done
 
-          # Prevent stale index caching
-          gsutil -m setmeta -h "Cache-Control:no-cache, no-store" \
-            "gs://${BUCKET}/dists/stable/Release" \
-            "gs://${BUCKET}/dists/stable/InRelease" \
-            "gs://${BUCKET}/dists/stable/Release.gpg"
-
-          # Public key
-          gsutil cp repo/gpg.key gs://${BUCKET}/gpg.key
+          gcloud storage cp repo/gpg.key gs://${BUCKET}/gpg.key

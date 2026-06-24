@@ -45,7 +45,7 @@ jobs:
       - name: Re-sign existing APT repository
         run: |
           mkdir -p repo
-          gsutil -m rsync -r gs://zmap-apt-repo/ repo/
+          gcloud storage rsync -r gs://zmap-apt-repo/ repo/
 
           cd repo/dists/stable
           KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec/{print $5; exit}')
@@ -55,9 +55,9 @@ jobs:
       - name: Upload new public key and re-signed index files
         run: |
           gpg --armor --export zmap-apt@zmap.io > repo/gpg.key
-          gsutil cp repo/gpg.key gs://zmap-apt-repo/gpg.key
-          gsutil -m rsync -r repo/dists gs://zmap-apt-repo/dists
-          gsutil -m setmeta -h "Cache-Control:no-cache, no-store" \
-            "gs://zmap-apt-repo/dists/stable/Release" \
-            "gs://zmap-apt-repo/dists/stable/InRelease" \
-            "gs://zmap-apt-repo/dists/stable/Release.gpg"
+          gcloud storage cp repo/gpg.key gs://zmap-apt-repo/gpg.key
+          gcloud storage cp -r repo/dists/stable/main gs://zmap-apt-repo/dists/stable/
+          for f in Release InRelease Release.gpg; do
+            gcloud storage cp --cache-control="no-cache, no-store" \
+              repo/dists/stable/$f gs://zmap-apt-repo/dists/stable/$f
+          done
