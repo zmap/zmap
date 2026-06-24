@@ -28,6 +28,20 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Determine package version
+        id: version
+        run: |
+          CMAKE_VERSION=$(grep 'set(ZMAP_VERSION' CMakeLists.txt | sed 's/.*set(ZMAP_VERSION //; s/[) ].*//')
+          if [[ "${{ github.event_name }}" == "push" ]] || [[ "${{ inputs.environment }}" == "production" ]]; then
+            if [[ "$CMAKE_VERSION" == "DEVELOPMENT" ]]; then
+              echo "::error::CMakeLists.txt version is still 'DEVELOPMENT'. Set ZMAP_VERSION before releasing."
+              exit 1
+            fi
+            echo "version=$CMAKE_VERSION" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=0~dev+$(date +%Y%m%d).$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install build dependencies
         run: |
           sudo apt-get update
@@ -38,7 +52,7 @@ jobs:
 
       - name: Build and package
         run: |
-          cmake -DCMAKE_BUILD_TYPE=Release .
+          cmake -DZMAP_VERSION="${{ steps.version.outputs.version }}" -DCMAKE_BUILD_TYPE=Release .
           make -j$(nproc)
           cpack
 
