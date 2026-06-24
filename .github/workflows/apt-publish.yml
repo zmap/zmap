@@ -142,17 +142,17 @@ jobs:
             echo "Components: main"
             echo "Description: ZMap APT Repository"
             echo "Date: $(date -u '+%a, %d %b %Y %H:%M:%S UTC')"
-            echo "MD5Sum:"
-            find main -type f | sort | while read -r f; do
-              printf " %s %s %s\n" \
-                "$(md5sum "$f" | cut -d' ' -f1)" \
-                "$(wc -c < "$f")" \
-                "$f"
-            done
             echo "SHA256:"
             find main -type f | sort | while read -r f; do
               printf " %s %s %s\n" \
                 "$(sha256sum "$f" | cut -d' ' -f1)" \
+                "$(wc -c < "$f")" \
+                "$f"
+            done
+            echo "SHA512:"
+            find main -type f | sort | while read -r f; do
+              printf " %s %s %s\n" \
+                "$(sha512sum "$f" | cut -d' ' -f1)" \
                 "$(wc -c < "$f")" \
                 "$f"
             done
@@ -176,8 +176,9 @@ jobs:
           # Pool files are immutable once written; never delete old versions
           gsutil -m rsync -r repo/pool gs://${BUCKET}/pool
 
-          # Index files are always regenerated in full
-          gsutil -m rsync -r repo/dists gs://${BUCKET}/dists
+          # Index files are always regenerated in full; -c forces checksum comparison so
+          # files with matching sizes but different content (e.g. Packages.gz) are re-uploaded
+          gsutil -m rsync -c -r repo/dists gs://${BUCKET}/dists
 
           # Prevent stale index caching
           gsutil -m setmeta -h "Cache-Control:no-cache, no-store" \
