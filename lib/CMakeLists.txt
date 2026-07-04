@@ -1,6 +1,7 @@
 SET(LIB_SOURCES
     blocklist.c
     cachehash.c
+    cacheset.c
     constraint.c
     logger.c
     pbm.c
