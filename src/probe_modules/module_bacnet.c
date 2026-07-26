@@ -126,7 +126,7 @@ int bacnet_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		}
 		const size_t min_len =
 		    sizeof(struct udphdr) + sizeof(struct bacnet_vlc);
-		if (udp->uh_ulen < min_len) {
+		if (ntohs(udp->uh_ulen) < min_len) {
 			return PACKET_INVALID;
 		}
 		struct bacnet_vlc *vlc =

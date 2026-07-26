@@ -92,7 +92,7 @@ void upnp_process_packet(const u_char *packet, UNUSED uint32_t len,
 		    (struct udphdr *)((char *)ip_hdr + ip_hdr->ip_hl * 4);
 
 		char *payload = (char *)(&udp[1]);
-		uint16_t plen = udp->uh_ulen - 8;
+		uint16_t plen = ntohs(udp->uh_ulen) - 8;
 
 		char *s = xmalloc(plen + 1);
 		strncpy(s, payload, plen);
