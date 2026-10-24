@@ -388,6 +388,9 @@ static bool process_response_question(char **data, uint16_t *data_len,
 	// data is handle to the start of this RR
 	// data_len is a pointer to the how much total data we have to work
 	// with. This is awful. I'm bad and should feel bad.
+	if (list->len + 1 >= MAX_FIELDS) {
+		return true;
+	}
 	uint16_t bytes_consumed = 0;
 	char *question_name =
 	    get_name(*data, *data_len, payload, payload_len, &bytes_consumed);
@@ -435,6 +438,9 @@ static bool process_response_answer(char **data, uint16_t *data_len,
 	// data is handle to the start of this RR
 	// data_len is a pointer to the how much total data we have to work
 	// with. This is awful. I'm bad and should feel bad.
+	if (list->len + 1 >= MAX_FIELDS) {
+		return true;
+	}
 	uint16_t bytes_consumed = 0;
 	char *answer_name =
 	    get_name(*data, *data_len, payload, payload_len, &bytes_consumed);
