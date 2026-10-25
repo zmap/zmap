@@ -479,11 +479,11 @@ static void add_tcpopt_to_fs(fieldset_t *fs, int64_t *val, const char *label)
 	}
 }
 
-static void parse_tcp_opts(struct tcphdr *tcp, fieldset_t *fs)
+static void parse_tcp_opts(struct tcphdr *tcp, size_t header_size,
+			   fieldset_t *fs)
 {
 	int64_t mss = -1, wscale = -1, sack_perm = -1, ts_val = -1, ts_ecr = -1;
 
-	size_t header_size = tcp->th_off * 4;
 	for (size_t curr_idx = 20; curr_idx < header_size; ) {
 		uint8_t kind = *(((uint8_t *) tcp) + curr_idx);
 
@@ -562,7 +562,7 @@ recover_rtt_ticks(uint32_t th_ack, uint32_t *validation, int ack_offset)
 	return (htonl(ntohl(th_ack) - (uint32_t)ack_offset) ^ validation[0]) & RTT_TIMESTAMP_MASK;
 }
 
-static void synscan_process_packet(const u_char *packet, UNUSED uint32_t len,
+static void synscan_process_packet(const u_char *packet, uint32_t len,
 				   fieldset_t *fs, uint32_t *validation,
 				   struct timespec ts)
 {
@@ -571,12 +571,17 @@ static void synscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 	if (ip_hdr->ip_p == IPPROTO_TCP) {
 		struct tcphdr *tcp = get_tcp_header(ip_hdr, len);
 		assert(tcp);
+		size_t captured_len = len - ((const u_char *)tcp - packet);
+		size_t header_size = tcp->th_off * 4;
+		if (header_size > captured_len) {
+			header_size = captured_len;
+		}
 		fs_add_uint64(fs, "sport", (uint64_t)ntohs(tcp->th_sport));
 		fs_add_uint64(fs, "dport", (uint64_t)ntohs(tcp->th_dport));
 		fs_add_uint64(fs, "seqnum", (uint64_t)ntohl(tcp->th_seq));
 		fs_add_uint64(fs, "acknum", (uint64_t)ntohl(tcp->th_ack));
 		fs_add_uint64(fs, "window", (uint64_t)ntohs(tcp->th_win));
-		parse_tcp_opts(tcp, fs);
+		parse_tcp_opts(tcp, header_size, fs);
 		if (tcp->th_flags & TH_RST) { // RST packet
 			fs_add_constchar(fs, "classification", "rst");
 			fs_add_bool(fs, "success", 0);
@@ -617,7 +622,6 @@ static void synscan_process_packet(const u_char *packet, UNUSED uint32_t len,
 				fs_add_null(fs, "ja4ts");
 			} else {
 				char ja4ts_buf[256];
-				size_t header_size = tcp->th_off * 4;
 				size_t opts_len = header_size > 20
 					? header_size - 20
 					: 0;
