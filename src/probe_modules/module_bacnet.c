@@ -151,7 +151,6 @@ void bacnet_process_packet(const u_char *packet, uint32_t len, fieldset_t *fs,
 		fs_add_uint64(fs, "dport", ntohs(udp->uh_dport));
 		fs_add_constchar(fs, "classification", "bacnet");
 		fs_add_bool(fs, "success", 1);
-		fs_add_null_icmp(fs);
 		uint32_t udp_offset =
 		    sizeof(struct ether_header) + ip_hdr->ip_hl * 4;
 		uint32_t payload_offset = udp_offset + sizeof(struct udphdr);
