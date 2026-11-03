@@ -17,6 +17,7 @@
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 #include <arpa/inet.h>
+#include <ifaddrs.h>
 #include <pcap/pcap.h>
 
 #define GW_BUFFER_SIZE 256000
@@ -278,10 +279,69 @@ int get_default_gw(struct in_addr *gw, char *iface)
 	return EXIT_SUCCESS;
 }
 
+/* Rank the IPv4 addresses an interface can carry, so that an interface holding
+ * several of them still yields a usable source address. Higher is better, -1
+ * means "never use". */
+static int ipv4_preference(struct in_addr addr)
+{
+	uint32_t host = ntohl(addr.s_addr);
+	if (host == 0) {
+		return -1; /* unset */
+	}
+	if ((host >> 24) == 127) {
+		return 1; /* loopback */
+	}
+	if ((host >> 16) == 0xA9FE) {
+		return 1; /* link-local / APIPA */
+	}
+	if ((host >> 24) == 10 || (host >> 20) == 0xAC1 ||
+	    (host >> 16) == 0xC0A8) {
+		return 2; /* RFC1918 private */
+	}
+	return 3; /* globally routable */
+}
+
 int get_iface_ip(char *iface, struct in_addr *ip)
 {
+	struct ifaddrs *ifaddr = NULL;
+	struct ifaddrs *ifa;
+	struct in_addr best;
+	int best_rank = -1;
 	int sock;
 	struct ifreq ifr;
+
+	/* SIOCGIFADDR reports a single address per interface: whichever one the
+	 * kernel happens to list first. On an interface carrying both a loopback
+	 * alias and a routable address that is the wrong one, so walk every
+	 * address instead and keep the most useful. */
+	if (getifaddrs(&ifaddr) == 0) {
+		for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+			struct sockaddr_in *sin;
+			int rank;
+
+			if (ifa->ifa_addr == NULL ||
+			    ifa->ifa_addr->sa_family != AF_INET) {
+				continue;
+			}
+			if (strcmp(ifa->ifa_name, iface) != 0) {
+				continue;
+			}
+			sin = (struct sockaddr_in *)ifa->ifa_addr;
+			rank = ipv4_preference(sin->sin_addr);
+			if (rank > best_rank) {
+				best_rank = rank;
+				best = sin->sin_addr;
+			}
+		}
+		freeifaddrs(ifaddr);
+		if (best_rank >= 0) {
+			*ip = best;
+			return EXIT_SUCCESS;
+		}
+	}
+
+	/* Nothing was enumerated: fall back to the original ioctl so that an
+	 * interface getifaddrs() cannot describe behaves exactly as before. */
 	memset(&ifr, 0, sizeof(struct ifreq));
 	sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock < 0) {
