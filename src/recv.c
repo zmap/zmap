@@ -46,8 +46,7 @@ void handle_packet(uint32_t buflen, const u_char *bytes,
 	uint32_t src_ip = ip_hdr->ip_src.s_addr;
 	uint16_t src_port = 0;
 
-	uint32_t len_ip_and_payload =
-	    buflen - (zconf.send_ip_pkts ? 0 : sizeof(struct ether_header));
+	uint32_t len_ip_and_payload = buflen - zconf.data_link_size;
 	// extract port if TCP or UDP packet to both generate validation data and to
 	// check if the response is a duplicate
 	if (ip_hdr->ip_p == IPPROTO_TCP) {
