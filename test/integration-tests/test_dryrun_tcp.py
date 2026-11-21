@@ -592,3 +592,30 @@ def test_max_targets_option():
         packets = zmap_wrapper.Wrapper(threads=1, max_targets=max_targets, port=ports).run()
         assert len(
             packets) == expected_num_ips, "incorrect number of packets sent for test with max_targets = " + max_targets + " and ports = " + ports
+
+
+def test_max_targets_option_with_shards():
+    """
+    scan a sharded search space under a max-targets budget and ensure the shards together send exactly that many
+    packets. Regression test: the sender downshift only accounted for sender threads, so sharding made zmap abort with
+    "senders * shards > max targets" for budgets that the very same scan handles without sharding
+    """
+    tests = [
+        # Format: (max_targets, shards, threads)
+        (9, 4, 4),
+        (10, 4, 4),
+        (11, 4, 4),
+        (15, 4, 4),
+        (16, 4, 4),
+        (20, 4, 4),
+        (5, 2, 2),
+        (8, 2, 2)
+    ]
+    for max_targets, shards, threads in tests:
+        total = 0
+        for shard in range(shards):
+            packets = zmap_wrapper.Wrapper(threads=threads, max_targets=str(max_targets), shards=shards, shard=shard,
+                                           seed=123).run()
+            total += len(packets)
+        assert total == max_targets, ("incorrect number of packets sent for test with max_targets = " +
+                                      str(max_targets) + " split over " + str(shards) + " shards")
