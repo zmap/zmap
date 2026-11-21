@@ -1094,10 +1094,16 @@ int main(int argc, char *argv[])
 		log_debug("zmap", "capping to %i sender threads based on number of TX rings", zconf.senders);
 	}
 #endif
-	if (2 * zconf.senders >= zsend.max_targets) {
+	// Every sender thread drives one subshard per shard, and the send stage
+	// refuses to start when `senders * shards` exceeds the target budget
+	// (send.c). Sharding therefore belongs in the "too few targets" test as
+	// well, otherwise a budget that a single shard scans fine aborts as soon
+	// as the same scan is split up (-n 9 --shards 4, for instance).
+	if (2 * (uint64_t)zconf.senders * zconf.total_shards >=
+	    zsend.max_targets) {
 		log_warn(
 		    "zmap",
-		    "too few targets relative to senders, dropping to one sender");
+		    "too few targets relative to senders and shards, dropping to one sender");
 		zconf.senders = 1;
 	}
 	// reserving 1 core for the receiver/monitor thread
